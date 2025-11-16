@@ -1,0 +1,41 @@
+{
+  "name": "my-api-project",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@types/node": "^22.7.4",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.19.2",
+    "ics": "^3.7.6",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^6.8.0",
+    "multer": "^1.4.5-lts.1",
+    "nan": "^2.20.0",
+    "nodemailer": "^6.9.14",
+    "npmlog": "^7.0.1",
+    "opencv-build": "^0.1.9",
+    "opencv4nodejs": "^5.6.0",
+    "opencv4nodejs-prebuilt-install": "^4.1.209",
+    "pg": "^8.12.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.3",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "supertest": "^7.0.0"
+  },
+  "opencv4nodejs": {
+    "autoBuildWithoutContrib": 1,
+    "autoBuildOpencvVersion": "4.1.1",
+    "autoBuildFlags": "-DBUILD_opencv_world=1 -DBUILD_LIST=core,highgui,videoio -DOPENCV_FORCE_3RDPARTY_BUILD=ON -DBUILD_PNG=ON -DBUILD_TIFF=ON -DBUILD_JASPER=ON -DBUILD_JPEG=ON -DBUILD_ZLIB=ON -DBUILD_OPENEXR=ON -DWITH_FFMPEG=OFF -DWITH_GSTREAMER=ON -DBUILD_USE_SYMLINKS=OFF -DWITH_VTK=OFF",
+    "disableAutoBuild": 1
+  }
+}

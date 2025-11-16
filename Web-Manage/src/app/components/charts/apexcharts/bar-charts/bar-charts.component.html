@@ -1,0 +1,232 @@
+<app-page-header [title]="'Apex Bar Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Bar Charts'"></app-page-header>
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-basic">
+                                    <apx-chart
+                                    [series]="chartOptions.series"
+                                    [chart]="chartOptions.chart"
+                                    [dataLabels]="chartOptions.dataLabels"
+                                    [plotOptions]="chartOptions.plotOptions"
+                                    [xaxis]="chartOptions.xaxis"[colors]="chartOptions.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Grouped Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-group">
+                                    <apx-chart
+                                    [series]="chartOptions1.series"
+                                    [chart]="chartOptions1.chart"
+                                    [dataLabels]="chartOptions1.dataLabels"
+                                    [plotOptions]="chartOptions1.plotOptions"
+                                    [xaxis]="chartOptions1.xaxis"
+                                    [stroke]="chartOptions1.stroke"[colors]="chartOptions1.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Stacked Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-stacked">
+                                    <apx-chart
+                                    [series]="chartOptions2.series"
+                                    [chart]="chartOptions2.chart"
+                                    [dataLabels]="chartOptions2.dataLabels"
+                                    [plotOptions]="chartOptions2.plotOptions"
+                                    [xaxis]="chartOptions2.xaxis"
+                                    [stroke]="chartOptions2.stroke"
+                                    [fill]="chartOptions2.fill"
+                                    [yaxis]="chartOptions2.yaxis"
+                                    [title]="chartOptions2.title"
+                                    [tooltip]="chartOptions2.tooltip"
+                                    [legend]="chartOptions2.legend"
+                                    [colors]="chartOptions2.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">100% Stacked Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-full">
+                                    <apx-chart
+                                    [series]="chartOptions3.series"
+                                    [chart]="chartOptions3.chart"
+                                    [dataLabels]="chartOptions3.dataLabels"
+                                    [plotOptions]="chartOptions3.plotOptions"
+                                    [xaxis]="chartOptions3.xaxis"
+                                    [stroke]="chartOptions3.stroke"
+                                    [fill]="chartOptions3.fill"
+                                    [title]="chartOptions3.title"
+                                    [tooltip]="chartOptions3.tooltip"
+                                    [legend]="chartOptions3.legend"
+                                    [colors]="chartOptions3.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar Chart With Negative Values</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-negative">
+                                    <apx-chart
+                                    [series]="chartOptions4.series"
+                                    [chart]="chartOptions4.chart"
+                                    [dataLabels]="chartOptions4.dataLabels"
+                                    [stroke]="chartOptions4.stroke"
+                                    [colors]="chartOptions4.colors"
+                                    [title]="chartOptions4.title"
+                                    [grid]="chartOptions4.grid"
+                                    [tooltip]="chartOptions4.tooltip"
+                                    [plotOptions]="chartOptions4.plotOptions"
+                                    [yaxis]="chartOptions4.yaxis"
+                                    [xaxis]="chartOptions4.xaxis"
+                                    [colors]="chartOptions4.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar Chart With Markers</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-markers">
+                                    <apx-chart
+                                    [series]="chartOptions5.series"
+                                    [chart]="chartOptions5.chart"
+                                    [legend]="chartOptions5.legend"
+                                    [dataLabels]="chartOptions5.dataLabels"
+                                    [colors]="chartOptions5.colors"
+                                    [plotOptions]="chartOptions5.plotOptions"[colors]="chartOptions5.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Reversed Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-reversed">
+                                    <apx-chart
+                          [series]="chartOptions6.series"
+                          [chart]="chartOptions6.chart"
+                          [dataLabels]="chartOptions6.dataLabels"
+                          [plotOptions]="chartOptions6.plotOptions"
+                          [xaxis]="chartOptions6.xaxis"
+                          [yaxis]="chartOptions6.yaxis"
+                          [annotations]="chartOptions6.annotations"
+                          [colors]="chartOptions6.colors"
+                        ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar With Categogry DataLabels</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-categories">
+                                    <apx-chart
+                                    [series]="chartOptions7.series"
+                                    [chart]="chartOptions7.chart"
+                                    [dataLabels]="chartOptions7.dataLabels"
+                                    [stroke]="chartOptions7.stroke"
+                                    [colors]="chartOptions7.colors"
+                                    [title]="chartOptions7.title"
+                                    [subtitle]="chartOptions7.subtitle"
+                                    [plotOptions]="chartOptions7.plotOptions"
+                                    [yaxis]="chartOptions7.yaxis"
+                                    [xaxis]="chartOptions7.xaxis"
+                                    [tooltip]="chartOptions7.tooltip"
+                                    [colors]="chartOptions7.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Patterned Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-pattern">
+                                    <apx-chart
+                                    [series]="chartOptions8.series"
+                                    [chart]="chartOptions8.chart"
+                                    [dataLabels]="chartOptions8.dataLabels"
+                                    [plotOptions]="chartOptions8.plotOptions"
+                                    [yaxis]="chartOptions8.yaxis"
+                                    [legend]="chartOptions8.legend"
+                                    [xaxis]="chartOptions8.xaxis"
+                                    [stroke]="chartOptions8.stroke"
+                                    [tooltip]="chartOptions8.tooltip"
+                                    [fill]="chartOptions8.fill"
+                                    [states]="chartOptions8.states"
+                                    [title]="chartOptions8.title"
+                                    [colors]="chartOptions8.colors"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar With Image Fill</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bar-image">
+                                    <apx-chart
+                                    [series]="chartOptions9.series"
+                                    [chart]="chartOptions9.chart"
+                                    [dataLabels]="chartOptions9.dataLabels"
+                                    [stroke]="chartOptions9.stroke"
+                                    [colors]="chartOptions9.colors"
+                                    [title]="chartOptions9.title"
+                                    [grid]="chartOptions9.grid"
+                                    [plotOptions]="chartOptions9.plotOptions"
+                                    [yaxis]="chartOptions9.yaxis"
+                                    [fill]="chartOptions9.fill"
+                                    [labels]="chartOptions9.labels"
+                                  ></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

@@ -1,0 +1,119 @@
+<app-page-header [title]="'ChartJs'" [activeTitle]="'Charts'" [title1]="'ChartJs'"></app-page-header>
+
+ <!-- Start::row-1 -->
+ <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Line Chart</div>
+            </div>
+            <div class="box-body">
+            
+                    <canvas style="height: 500px; width: 100%;" id="chartjs-line" class="chartjs-chart" baseChart [data]="lineChartData"
+                    [options]="lineChartOptions" [type]="lineChartType"></canvas>
+
+                
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Bar Chart</div>
+            </div>
+            <div class="box-body">
+                    <canvas id="chartjs-bar" class="chartjs-chart" style="height: 500px; width: 100%;" baseChart [data]="barChartData" [options]="barChartOptions"
+                  [type]="barChartType"></canvas>
+              
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Pie Chart</div>
+            </div>
+            <div class="box-body">
+                    <canvas  id="chartjs-pie" class="chartjs-chart" baseChart [data]="PieChartData" [options]="PieChartOptions" [type]="PieChartType">
+                    </canvas>
+              
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Doughnut Chart</div>
+            </div>
+            <div class="box-body">
+                    <canvas id="chartjs-doughnut" class="chartjs-chart" baseChart [data]="PieChartData" [options]="PieChartOptions" [type]="DoughnutChartType">
+                    </canvas>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Mixed Chart</div>
+            </div>
+            <div class="box-body">
+                <canvas style="height: 300px; width: 100%;" id="chartjs-mixed" class="chartjs-chart" baseChart [data]="barChart2Data"
+                [options]="barChart2Options" [plugins]="barChart2Plugins" [legend]="barChart2Legend"
+                [type]="barChart2Type">
+            </canvas>
+                
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Polar Chart</div>
+            </div>
+            <div class="box-body">
+                <canvas id="chartjs-polar" class="chartjs-chart" baseChart [data]="polarChartData"
+                [options]="polarChartOptions" [type]="polarChartType"></canvas>
+                <!-- <canvas id="chartjs-polar" class="chartjs-chart"></canvas> -->
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Radial Chart</div>
+            </div>
+            <div class="box-body">
+                <canvas id="chartjs-radar" class="chartjs-chart" baseChart [data]="radarChartData"
+                [options]="radarChartOptions" [type]="radarChartType">
+
+            </canvas>
+                <!-- <canvas id="chartjs-radar" class="chartjs-chart"></canvas> -->
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Scatter Chart</div>
+            </div>
+            <div class="box-body">
+                <canvas style="height: 300px; width: 100%;" id="chartjs-scatter" class="chartjs-chart" baseChart [data]="scatterchartData"
+                [options]="ScatterchartOptions" [type]="ScatterchartType"></canvas>
+                <!-- <canvas id="chartjs-scatter" class="chartjs-chart"></canvas> -->
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Chartjs Bubble Chart</div>
+            </div>
+            <div class="box-body">
+                <canvas style="height: 300px; width: 100%;" id="chartjs-bubble" class="chartjs-chart" baseChart [data]="bubblechartData"
+                [options]="bubblechartOptions" [type]="bubblechartType"></canvas>
+                <!-- <canvas id="chartjs-bubble" class="chartjs-chart"></canvas> -->
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

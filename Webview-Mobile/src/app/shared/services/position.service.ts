@@ -1,0 +1,106 @@
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
+import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { PageResponseModel, ResponseModel } from '../models/base.model';
+import { forkJoin, Observable } from 'rxjs';
+import { PositionModel } from '../models/position.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PositionService {
+
+  apiBaseUrl = "/positions";
+  constructor(
+    private http: HttpClient,
+    private translateService: TranslateService
+  ) { }
+
+  getById(id: Number) {
+    return this.http
+      .get<PositionModel>(this.apiBaseUrl + "/" + id)
+      .pipe(map((e) => new PositionModel(e, this.translateService)));
+  }
+
+  getLists(companyId: string) {
+    return this.http
+      .get<PositionModel[]>(this.apiBaseUrl + "/company/" + companyId)
+      .pipe(
+        map((e) => e.map((e) => new PositionModel(e, this.translateService)))
+      );
+  }
+
+  getListByPageSize(body: { page: number; size: number }) {
+    return this.http
+      .get<PageResponseModel<PositionModel>>(this.apiBaseUrl, {
+        params: body,
+      })
+      .pipe(
+        map((page) => {
+          return {
+            ...page,
+            content: page.content.map(
+              (e) => new PositionModel(e, this.translateService)
+            ),
+          };
+        })
+      );
+  }
+
+  getListAllPageSize(): Observable<PositionModel[]> {
+    return this.http
+      .get<PageResponseModel<PositionModel>>(this.apiBaseUrl, {
+        params: { page: 0, size: 1 },
+      })
+      .pipe(
+        switchMap((checkData: any) => {
+          //console.log("checkData="+checkData)
+          const size = 500;
+
+          const numOfPages = checkData.totalElements / size;
+          const parallelList: Observable<PageResponseModel<PositionModel>>[] = [];
+
+          for (let page = 0; page < numOfPages; page++) {
+            parallelList.push(
+              this.getListByPageSize({
+                page,
+                size,
+              })
+            );
+          }
+          return forkJoin(parallelList).pipe(
+            map((response) => {
+              let data: PositionModel[] = [];
+              for (let i = 0; i < response.length; i++) {
+                data = data.concat(response[i].content);
+              }
+              return data;
+            })
+          );
+
+        })
+
+
+      );
+  }
+
+  save(body: PositionModel) {
+    return this.http.post<ResponseModel>(this.apiBaseUrl, new PositionModel(body));
+  }
+
+  update(body: PositionModel) {
+    return this.http.put<ResponseModel>(this.apiBaseUrl + "/" + body.positionId, new PositionModel(body));
+  }
+
+  delete(body: PositionModel) {
+    const options = {
+      headers: new HttpHeaders({
+        "Content-Type": "application/json",
+      }),
+      body: new PositionModel(body),
+    };
+    return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.positionId, options);
+  }
+
+}

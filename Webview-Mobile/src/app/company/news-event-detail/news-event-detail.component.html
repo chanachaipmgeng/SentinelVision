@@ -1,0 +1,33 @@
+<!-- <div class="modal">
+  <div class="modal-dialog modal-xsm modal-dialog-centered"> -->
+      <div class="modal-content" tabindex="-1" aria-labelledby="cammodalLabel" aria-hidden="true">
+          <div class="modal-header">
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="activeModal.close()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-auto">
+                <div class="avatar avatar-100 shadow-sm rounded-10 coverimg" style="background-image: url('{{picUrl}}');">
+                  <img [src]="picUrl" alt="" class="d-none">
+                </div>
+              </div>
+              <div class="col align-self-center">
+                <a class="text-color-theme text-normal">{{topic}}</a>
+                <p class="small text-muted">{{startDate | date:'dd/MM/yyyy' }} - {{endDate | date:'dd/MM/yyyy' }}
+                </p>
+                <p *ngIf="place" class="small text-muted">{{place }}
+                </p>
+                <a *ngIf="file" (click)="downloadFile(file)" class="text-color-theme text-normal">ดาวน์โหลดเอกสาร</a>
+              </div>
+            </div>
+            <div class="row ">
+              <div class="col-12">
+                <div [innerHtml]="desc"></div>
+              </div>
+
+            </div>
+          </div>
+
+      </div>
+  <!-- </div>
+</div> -->

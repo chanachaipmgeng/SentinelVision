@@ -1,0 +1,14 @@
+.fc-daygrid-block-event .fc-event-time, .fc-daygrid-block-event .fc-event-title {
+  padding: 0px !important;
+  margin: 0px !important;
+}
+
+.fc-daygrid-day-events{
+  font-size: 10px !important;
+  margin: auto;
+}
+
+.fc-event-title-container{
+  text-align: center;
+}
+

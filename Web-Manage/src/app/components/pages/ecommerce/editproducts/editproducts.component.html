@@ -1,0 +1,204 @@
+<app-page-header [title]="'Edit Product'" [activeTitle]="'Ecommerce'" [title1]="'Edit Product'"></app-page-header>
+
+        <!-- Start::row-1 -->
+        <div class="grid grid-cols-12">
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box custom-box">
+                    <div class="box-body add-products !p-0">
+                        <div class="p-6">
+                            <div class="grid grid-cols-12 gap-y-4 md:gap-[3rem]">
+                                <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-6 col-span-12">
+                                    <div class="grid grid-cols-12 gap-4">
+                                        <div class="xl:col-span-12 col-span-12">
+                                            <label for="product-name-add" class="form-label">Product Name</label>
+                                            <input type="text" class="form-control" id="product-name-add" placeholder="Name" value="Light Blue Sweat Shirt">
+                                            <label for="product-name-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] text-muted mb-0">*Product Name should not exceed 30 characters</label>
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-category-add" class="form-label">Category</label>
+                                            <ng-select  data-trigger name="product-category-add" id="product-category-add" placeholder="Clothing">
+                                                <ng-option value="Clothing">Clothing</ng-option>
+                                                <ng-option value="Footwear">Footwear</ng-option>
+                                                <ng-option value="Accesories">Accesories</ng-option>
+                                                <ng-option value="Grooming">Grooming</ng-option>
+                                                <ng-option value="Watches" selected>Watches</ng-option>
+                                                <ng-option value="Ethnic & Festive">Ethnic &amp; Festive</ng-option>
+                                                <ng-option value="Jewellery">Jewellery</ng-option>
+                                                <ng-option value="Toys & Babycare">Toys &amp; Babycare</ng-option>
+                                                <ng-option value="Festive Gifts">Festive Gifts</ng-option>
+                                                <ng-option value="Kitchen">Kitchen</ng-option>
+                                                <ng-option value="Dining">Dining</ng-option>
+                                                <ng-option value="Home Decors">Home Decors</ng-option>
+                                                <ng-option value="Stationery">Stationery</ng-option>
+                                            </ng-select>
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-gender-add" class="form-label">Gender</label>
+                                            <ng-select #select [items]="genders" [searchable]="false" [(ngModel)]="selectedGender" bindLabel="name" bindValue="name" value="name">
+                                                <ng-template ng-header-tmp>
+                                                    <input style="width: 100%; line-height: 24px" type="text" (input)="select.filter($any($event.target).value)"/>
+                                                </ng-template>
+                                            </ng-select>
+                                          
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-size-add" class="form-label">Size</label>
+                                          
+                                            <ng-select  data-trigger name="product-size-add" id="product-size-add" placeholder="Select">
+                                                <ng-option value="Extra Small">Extra Small</ng-option>
+                                                <ng-option value="Small">Small</ng-option>
+                                                <ng-option value="Medium" selected>Medium</ng-option>
+                                                <ng-option value="Large">Large</ng-option>
+                                                <ng-option value="Extra Large">Extra Large</ng-option>
+                                            </ng-select>
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-brand-add" class="form-label">Brand</label>
+                                            <ng-select  data-trigger name="product-brand-add" id="product-brand-add" placeholder="Select">
+                                                <ng-option value="Armani">Armani</ng-option>
+                                                <ng-option value="Lacoste">Lacoste</ng-option>
+                                                <ng-option value="Puma">Puma</ng-option>
+                                                <ng-option value="Spykar">Spykar</ng-option>
+                                                <ng-option value="Mufti" selected>Mufti</ng-option>
+                                                <ng-option value="Home Town">Home Town</ng-option>
+                                                <ng-option value="Arrabi">Arrabi</ng-option>
+                                            </ng-select>
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12 color-selection">
+                                            <label for="product-color-add" class="form-label">Colors</label>
+                                            <ng-select [multiple]="true" [(ngModel)]="selectedCars">
+                                                @for(car of cars;track car.id){
+                                   
+                                   <ng-option  [value]="car.id"
+                                     >{{car.name}}</ng-option>
+                                 }
+                                                
+                                            </ng-select>
+                                           
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-cost-add" class="form-label">Enter Cost</label>
+                                            <input type="text" class="form-control" id="product-cost-add" placeholder="Cost" value="$1299.99">
+                                            <label for="product-cost-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] text-muted mb-0">*Mention final price of the product</label>
+                                        </div>
+                                        <div class="xl:col-span-12 col-span-12">
+                                            <label for="product-description-add" class="form-label">Product Description</label>
+                                            <textarea class="form-control" id="product-description-add" rows="2">Ultra Soft: The fabric is extremely soft and comfortable, keeping you at ease for hours</textarea>
+                                            <label for="product-description-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] text-muted mb-0">*Description should not exceed 500 letters</label>
+                                        </div>
+                                        <div class="xl:col-span-12 col-span-12">
+                                            <label class="form-label">Product Features</label>
+                                            <div id="product-features">
+                                                        <form [formGroup]="form">
+                                                <ngx-editor-menu
+                                                class="border-1"
+                                                [editor]="editor"
+                                                [toolbar]="toolbar"
+                                              >
+                                              </ngx-editor-menu>
+                                              <ngx-editor [editor]="editor" formControlName="editorContent" >
+                                              </ngx-editor>
+                                              </form>
+                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-6 col-span-12">
+                                    <div class="grid grid-cols-12 gap-4">
+                                        <div class="xl:col-span-4 col-span-12">
+                                            <label for="product-actual-price" class="form-label">Actual Price</label>
+                                            <input type="text" class="form-control" id="product-actual-price" placeholder="Actual Price" value="$1,499.90">
+                                        </div>
+                                        <div class="xl:col-span-4 col-span-12">
+                                            <label for="product-dealer-price" class="form-label">Dealer Price</label>
+                                            <input type="text" class="form-control" id="product-dealer-price" placeholder="Dealer Price" value="$1,299.99">
+                                        </div>
+                                        <div class="xl:col-span-4 col-span-12">
+                                            <label for="product-discount" class="form-label">Discount</label>
+                                            <input type="text" class="form-control" id="product-discount" placeholder="Discount in %" value="0.75%">
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-type" class="form-label">Product Type</label>
+                                            <input type="text" class="form-control" id="product-type" placeholder="Type" value="Watch">
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-weight" class="form-label">Item Weight</label>
+                                            <input type="text" class="form-control" id="product-weight" placeholder="Weight in gms" value="180gms">
+                                        </div>
+                                        <div class="xl:col-span-12 col-span-12 product-documents-container">
+                                            <p class="font-semibold mb-2 text-[.875rem]">Product Images :</p>
+                                            @if(type === 'component'){
+                                            <dropzone  class="product-Images w-full"
+                    [config]="config1" [disabled]="disabled"
+                    [message]="'Click or drag images here to upload'"
+                    (init)="onUploadInit($event)" (error)="onUploadError($event)"
+                                            (success)="onUploadSuccess($event)"></dropzone>
+                                                }
+                                        </div>
+                                        <label class="xl:col-span-12 col-span-12 form-label opacity-[0.5] mt-3">Minimum 0f 6 images are need to be uploaded,make sure the image size match the proper background size and all images should be uniformly maintained with width and height to the image container,image size should not exceed 2MB,once uploaded to change the image you need to wait minimum of 24hrs. </label>
+                                        <div class="xl:col-span-12 col-span-12 product-documents-container">
+                                            <p class="font-semibold mb-2 text-[.875rem]">Warrenty Documents :</p>
+                                            <file-pond #myPond 
+                                            [options]="pondOptions" 
+                                            [files]="pondFiles"
+                                            (oninit)="pondHandleInit()"
+                                            (onaddfile)="pondHandleAddFile($event)"  >
+                                        </file-pond>
+                                            <!-- <input type="file" class="product-documents" name="filepond1" multiple data-allow-reorder="true" data-max-file-size="3MB" data-max-files="6"> -->
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="publish-date" class="form-label me-1 block">Publish Date</label>
+ 
+                                            <input type="text" class="form-control" id="publish-date" placeholder="Choose date" mwlFlatpickr
+                                            [altInput]="true"
+                                            [convertModelValue]="true">
+                                       
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="publish-time" class="form-label block">Publish Time</label>
+                                        
+                                            <input type="text" class="form-control" id="publish-time" placeholder="Choose time"  mwlFlatpickr
+                                            [noCalendar]="true"
+                                            [enableTime]="true"
+                                            [dateFormat]="'H:i'">
+                                        
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-status-add" class="form-label">Published Status</label>
+                                            <ng-select  data-trigger name="product-status-add" id="product-status-add" placeholder="Select">
+                                                <ng-option value="Published">Published</ng-option>
+                                                <ng-option value="Scheduled" selected>Scheduled</ng-option>
+                                            </ng-select>
+                                        </div>
+                                        <div class="xl:col-span-6 col-span-12">
+                                            <label for="product-tags" class="form-label">Product Tags</label>
+                                            <ng-select [multiple]="true" [(ngModel)]="selectedTags">
+                                                @for(tag of tags;track tag.id){
+                                   
+                                   <ng-option  [value]="tag.id"
+                                     >{{tag.name}}</ng-option>
+                                 }
+                                           
+                                            </ng-select>
+                                        </div>
+                                        <div class="xl:col-span-12 col-span-12">
+                                            <label for="product-availability" class="form-label">Availability</label>
+                                            <select class="form-control" data-trigger name="product-availability" id="product-availability" placeholder="Select">
+                                                <option value="In Stock" selected>In Stock</option>
+                                                <option value="Out Of Stock">Out Of Stock</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-4 py-3 border-t border-dashed dark:border-defaultborder/10 sm:flex justify-end">
+                            <button type="button" class="ti-btn ti-btn-primary m-1">Add Product<i class="bi bi-plus-lg ms-2"></i></button>
+                            <button type="button" class="ti-btn ti-btn-success m-1">Save Product<i class="bi bi-download ms-2"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!--End::row-1 -->

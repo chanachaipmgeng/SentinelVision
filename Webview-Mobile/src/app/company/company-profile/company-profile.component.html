@@ -1,0 +1,53 @@
+<div class="row justify-content-center">
+  <div class="col-12 col-md-6  mb-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <agm-map [latitude]="latitude" [longitude]="longitude" style="height: 300px" [zoom]="15">
+          <agm-marker *ngFor="let marker of markers" [latitude]="marker.latitude" [longitude]="marker.longitude"
+            (markerClick)="openDetail(content,marker.data)">
+          </agm-marker>
+        </agm-map>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col">
+    <h6>{{"Location information" | translate}}</h6>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm mb-4">
+      <ul class="list-group list-group-flush bg-none">
+        <li class="list-group-item" *ngFor="let item of locationList; let i=index">
+          <div class="row">
+            <a class="text-normal d-block" (click)="changeLoc(item)">
+              {{item.locationName}}
+            </a>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<ng-template #content let-modal>
+  <div class="modal-header">
+    <h6 class="modal-title" ngbAutofocus>{{"Detail"|translate}}</h6>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body p-0">
+    <div class="row p-3">
+      <div class="col-12">
+        <h6 class="mb-1">{{"Location_Name"|translate}} : {{locationSelect!.locationName}}</h6>
+        <p class="text-muted">
+          {{"Latitude"|translate}} : {{locationSelect!.latitude}}<br>
+          {{"Longitude"|translate}} : {{locationSelect!.longitude}}
+        </p>
+      </div>
+    </div>
+  </div>
+</ng-template>

@@ -1,0 +1,47 @@
+<app-page-header [title]="'Apex BoxPlot Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex BoxPlot Charts'"></app-page-header>
+
+  <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Boxplot Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="boxplot-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                    [plotOptions]="chartOptions.plotOptions" [title]="chartOptions.title"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Boxplot With Scatter Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="boxplot-scatter">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [xaxis]="chartOptions1.xaxis" [title]="chartOptions1.title" [colors]="chartOptions1.colors"
+                    [tooltip]="chartOptions1.tooltip" [plotOptions]="chartOptions.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Horizontal Boxplot Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="boxplot-horizontal">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [plotOptions]="chartOptions2.plotOptions" [title]="chartOptions2.title"
+                    [stroke]="chartOptions2.stroke"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

@@ -1,0 +1,37 @@
+<app-page-header [title]="'Apex Bubble Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Bubble Charts'"></app-page-header>
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Simple Bubble Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bubble-simple">
+                                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                                    [xaxis]="chartOptions.xaxis" [fill]="chartOptions.fill"
+                                    [dataLabels]="chartOptions.dataLabels" [title]="chartOptions.title"
+                                    [yaxis]="chartOptions.yaxis"[colors]="chartOptions.colors"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">3D Bubble Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="bubble-3d">
+                                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                                    [xaxis]="chartOptions1.xaxis" [fill]="chartOptions1.fill"
+                                    [dataLabels]="chartOptions1.dataLabels" [title]="chartOptions1.title"
+                                    [yaxis]="chartOptions1.yaxis" [tooltip]="chartOptions1.tooltip"
+                                    [theme]="chartOptions1.theme"[colors]="chartOptions1.colors"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

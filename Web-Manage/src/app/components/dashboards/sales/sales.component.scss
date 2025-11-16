@@ -1,0 +1,19 @@
+::ng-deep .leaflet-marker-icon.leaflet-zoom-animated.leaflet-interactive {
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+  }
+  
+  ::ng-deep #leaflet2 {
+    -ms-touch-action: none;
+        touch-action: none;
+  }
+  ::ng-deep .chart-container {
+    /* Make the chart container responsive */
+    max-width: 100%;
+    width: 100%;
+    margin: 0 auto; /* Optional: Center the container */
+  }
+  .apexcharts-toolbar{
+    display:none !important;
+  }

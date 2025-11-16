@@ -1,0 +1,16 @@
+<app-switcher></app-switcher>
+
+<div class="page">
+  <app-header></app-header>
+  <app-sidebar appHoverEffectSidebar></app-sidebar>
+  <div class="content">
+    <div class="main-content" (click)="togglesidemenuBody()"
+      [@routeAnimations]="o.isActivated && o.activatedRoute.routeConfig?.path">
+      <router-outlet #o="outlet"></router-outlet>
+    </div>
+  </div>
+  <app-footer></app-footer>
+  <app-tab-to-top></app-tab-to-top>
+
+</div>
+<div id="responsive-overlay" (click)="clearToggle()"></div>

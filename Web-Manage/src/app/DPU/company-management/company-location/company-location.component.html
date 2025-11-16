@@ -1,0 +1,288 @@
+<app-page-header [title]="'สถานที่การลงเวลา'" [activeTitle]="'จัดการการลงเวลา'"
+  [title1]="'สถานที่การลงเวลา'"></app-page-header>
+
+
+<div class="grid grid-cols-12 gap-6">
+  <div class="xl:col-span-12 col-span-12">
+    <div class="box">
+      <div class="box-header justify-between">
+        <div class="box-title">
+          {{ 'All List' | translate}} <span
+            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
+            translate}}
+          </a>
+
+          <!-- <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-success-full me-2" *ngIf="someSelected"
+            (click)="adjustSelect('A')"><i class="ri-user-follow-line font-semibold align-middle"></i>{{ 'Active' |
+            translate}}
+          </a>
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-secondary-full me-2"
+            *ngIf="someSelected" (click)="adjustSelect('U')"><i
+              class="ri-user-unfollow-line font-semibold align-middle"></i>{{ 'Unactive' |
+            translate}}
+          </a> -->
+
+
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2" *ngIf="someSelected"
+            (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
+            translate}}
+          </a>
+          <div>
+            <input class="form-control form-control" type="text" placeholder="ค้นหาสถานที่"
+              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+          </div>
+          <!-- <div>
+              <input class="form-control form-control" type="text" placeholder="กรองตามบริษัท"
+                aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+            </div> -->
+          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
+            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+          </a>
+          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
+          </ul> -->
+        </div>
+      </div>
+      <div class="box-body">
+        <div class="table-responsive">
+          <table class="table whitespace-nowrap min-w-full ti-custom-table-hover">
+            <thead>
+              <tr class="border-b border-defaultborder">
+                <th scope="col" class="!text-start">
+                  <input class="form-check-input check-all" type="checkbox" id="all-products"
+                    (change)="toggleAll($event)" [checked]="allSelected" aria-label="...">
+                </th>
+                <th scope="col" class="text-start">ชื่อสถานที่</th>
+                <th scope="col" class="text-start">ละติจูด</th>
+                <th scope="col" class="text-start">ลองจิจูด</th>
+                <th scope="col" class="text-start">{{"ประเภท" | translate}}</th>
+                <th scope="col" class="text-start">วันที่เริ่มต้น</th>
+                <th scope="col" class="text-start">วันที่สิ้นสุด</th>
+                <th scope="col" class="text-start">{{"Update Date" | translate}}</th>
+                <th scope="col" class="text-start"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(item of filterList;track filterList){
+
+              <tr class="border border-defaultborder dark:border-defaultborder/10">
+                <td class="product-checkbox"><input class="form-check-input" type="checkbox"
+                    [checked]="selectedItems.get(item.locationId)" (change)="onCheckboxChange(item.locationId)"
+                    aria-label="..." value="">
+                </td>
+                <td>
+                  <div class="flex">
+                    <div class="ms-2">
+                      <p class="font-semibold mb-0 flex items-center text-primary"><a (click)="view(item)"
+                          routerLinkActive="active">
+                          {{item.locationName}}</a></p>
+                      <p class="text-[0.75rem] text-muted mb-0">{{item.locationId}}</p>
+                    </div>
+                  </div>
+                </td>
+                <td> {{item.latitude}}</td>
+                <td> {{item.longitude}}</td>
+                <td> <span
+                    class="badge bg-{{ item.locationType == 0 ? 'primary' : 'warning'}} {{ item.locationType == 0 ? 'text-white' : ''}}">{{item.getStatus()}}</span>
+                </td>
+                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.startDate ?
+                    (item.startDate | date
+                    : 'medium') : '-'}}</span></td>
+
+                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.endDate ?
+                    (item.endDate | date
+                    : 'medium') : '-'}}</span></td>
+
+                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.updatedAt ?
+                    (item.updatedAt | date
+                    : 'medium') : '-'}}</span>
+                <td>
+
+                <td>
+                  <div class="flex flex-row items-center !gap-2 ">
+                    <a aria-label="anchor" (click)="view(item)" data-hs-overlay="#modal-detail"
+                      class="ti-btn ti-btn-wave  !gap-0 !m-0 bg-info/10 text-info hover:bg-info hover:text-white hover:border-info"><i
+                        class="ri-pencil-line"></i></a>
+                    <a aria-label="anchor" href="javascript:void(0);" (click)="delete(item)"
+                      class="ti-btn ti-btn-wave product-btn !gap-0 !m-0  bg-danger/10 text-danger hover:bg-danger hover:text-white hover:border-danger"><i
+                        class="ri-delete-bin-line"></i></a>
+                  </div>
+                </td>
+              </tr>
+              }
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="box-footer">
+        <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
+          <div class="mb-2 sm:mb-0">
+            <div>
+              {{'Showing' | translate}} {{filterList.length}} {{'entries'
+              | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+            </div>
+          </div>
+          <div class="ms-auto">
+            <nav aria-label="Page navigation">
+              <ul class="ti-pagination  mb-0">
+                <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
+                    class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous' | translate}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
+
+                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
+                    href="javascript:void(0);">{{pageIndex +1}}</a>
+                </li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
+                <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                  class="page-item"><a class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
+                    translate}}</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="xl:col-span-12 col-span-12">
+    <div class="box custom-box">
+      <div class="box-header justify-between">
+        <div class="box-title">แผนที่บริษัท</div>
+      </div>
+      <div class="box-body">
+        <div class="grid grid-cols-12 sm:gap-6">
+          <div class="xl:col-span-12 col-span-12">
+
+            <google-map class="xl:col-span-12 col-span-12" height="400px" [center]="center" [zoom]="zoom">
+              <map-circle *ngFor="let item of itemsList" [center]="{ lat:  item.latitude, lng:  item.longitude }"
+                [radius]="item.radius*1000" />
+              <map-marker *ngFor="let item of itemsList" #mapMarker="mapMarker"
+                [position]="{ lat:  item.latitude, lng:  item.longitude }" [options]="markerOptions" />
+
+            </google-map>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Start:: Create Contact -->
+<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">{{ 'Create' |
+          translate }} {{ 'Location' | translate }}
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail" #closeModal>
+          <span class="sr-only">{{'Close' | translate}}</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'ชื่อสถานที่' | translate}}</label>
+            <!-- <input type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.locationName"> -->
+            <input [(ngModel)]="selectModel.locationName" id="searchBox" #searchBox type="text"
+              placeholder="ค้นหาสถานที่..." class="form-control w-full p-2 border rounded mb-3">
+            <div class="text-danger" *ngIf="!selectModel.locationName">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+
+
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">{{'ประเภท' | translate}}</label>
+            <ng-select name="choices-multiple-remove-button2" id="choices-multiple-remove-button2" placeholder=""
+              [(ngModel)]="selectModel.locationType">
+              <ng-option [value]="0">{{'PERMANENT' | translate}}</ng-option>
+              <ng-option [value]="1" selected>{{'TEMPORARY' | translate}}</ng-option>
+            </ng-select>
+          </div>
+
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+            <label for="input-date" class="form-label">{{ "Plan Start" | translate}}</label>
+            <input type="date" class="form-control" id="input-date" [(ngModel)]="selectModel.startDate">
+          </div>
+
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+            <label for="input-date" class="form-label">{{ "Plan Start" | translate}}</label>
+            <input type="date" class="form-control" id="input-date" [(ngModel)]="selectModel.endDate">
+          </div>
+
+        </div>
+        <div class="grid grid-cols-12 sm:gap-6">
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
+            <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
+            <input type="text" class="form-control" id="input" [(ngModel)]="selectModel.latitude"
+              (ngModelChange)="changeMarker()">
+          </div>
+
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
+            <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
+            <input type="text" class="form-control" id="input" [(ngModel)]="selectModel.longitude"
+              (ngModelChange)="changeMarker()">
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'รัศมี (KM)' | translate}}</label>
+            <!-- <input type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.locationName"> -->
+            <input [(ngModel)]="selectModel.radius" type="number" placeholder="รัศมี"
+              class="form-control w-full p-2 border rounded mb-3">
+
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <div class="mb-4">
+
+            </div>
+            <google-map class="xl:col-span-12 col-span-12" height="400px"
+              [center]="{ lat: selectModel.latitude, lng: selectModel.longitude }" [zoom]="12"
+              (mapClick)="addMarker($event,mapMarker)">
+              <map-circle [center]="{ lat: selectModel.latitude, lng: selectModel.longitude }"
+                [radius]="selectModel.radius*1000" />
+              <map-marker #mapMarker="mapMarker" [position]="{ lat: selectModel.latitude, lng: selectModel.longitude }"
+                [options]="markerOptions" />
+
+            </google-map>
+
+          </div>
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail">
+          {{'Cancel' | translate}}
+        </button>
+        <button type="button" (click)="save()" class="ti-btn bg-primary text-white !font-medium">{{'Save' |
+          translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End:: Create Contact -->

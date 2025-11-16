@@ -1,0 +1,65 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-auto">
+                <figure class="avatar avatar-70 rounded-10">
+                    <img appShowLoading *ngIf="employee.getPicture() ;else personblank" src="{{employee.getPicture()}}">
+                    <ng-template #personblank>
+                        <img src="assets/img/icon/person.png">
+                    </ng-template>
+                </figure>
+            </div>
+            <div class="col px-0 align-self-center">
+                <h3 class="mb-0 text-color-theme">{{employee.getFullname()}}</h3>
+                <p class="text-muted ">{{checkText(employee.position)}}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <h6>{{"Boss" | translate}}</h6>
+    </div>
+</div>
+<div class="card shadow-sm mb-4" *ngIf="boss">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-auto">
+                <figure class="avatar avatar-70 rounded-10">
+                    <img appShowLoading *ngIf="bossEmp.getPicture() ;else personblank" src="{{bossEmp.getPicture()}}">
+                    <ng-template #personblank>
+                        <img src="assets/img/icon/person.png">
+                    </ng-template>
+                </figure>
+            </div>
+            <div class="col px-0 align-self-center">
+                <h3 class="mb-0 text-color-theme">{{checkText(bossEmp.getFullname())}}</h3>
+                <p class="text-muted ">{{checkText(bossEmp.position)}}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row h-100">
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="form-floating mb-3 is-valid">
+            <select class="form-control" id="boss" [(ngModel)]="boss" (ngModelChange)="selectBoss()">
+                <option [value]="''">
+                    {{'Boss_' | translate}}
+                </option>
+                <option *ngFor="let item of employeeList; let i=index" [value]="item.company_employeeId">{{item.getFullname()}}
+                </option>
+            </select>
+            <label for="boss">{{'Boss_' | translate}}</label>
+        </div>
+    </div>
+</div>
+
+<div class="row h-100 ">
+    <div class="col-12 mb-4">
+        <button class="btn btn-default btn-lg w-100" (click)="submit()" [disabled]="!boss||!employee.company_employeeId">
+            {{'BUTTON.SUBMIT' | translate}}
+        </button>
+    </div>
+</div>

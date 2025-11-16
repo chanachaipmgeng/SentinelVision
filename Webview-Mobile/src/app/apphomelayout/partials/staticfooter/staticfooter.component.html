@@ -1,0 +1,56 @@
+<div class="container">
+  <ul class="nav nav-pills nav-justified">
+    <li class="nav-item">
+      <a class="nav-link" routerLink="/company/home-company" routerLinkActive="active">
+        <span>
+          <i class="nav-icon bi bi-house"></i>
+          <span class="nav-text">{{"Home" | translate}}</span>
+        </span>
+      </a>
+    </li>
+    <!-- <li class="nav-item">
+      <a class="nav-link" routerLink="/company/feed-news" routerLinkActive="active">
+        <span>
+          <i class="nav-icon bi bi-newspaper"></i>
+          <span class="nav-text">{{"สถิติ" | translate}}</span>
+        </span>
+      </a>
+    </li> -->
+    <!-- <li class="nav-item">
+            <a class="nav-link" routerLink="/company/dashboard-company" routerLinkActive="active">
+                <span>
+                    <i class="nav-icon bi bi-laptop"></i>
+                    <span class="nav-text">Dashboard</span>
+                </span>
+            </a>
+        </li> -->
+    <li class="nav-item centerbutton">
+      <div class="nav-link" [class.active]="isVisited == true" routerLink="/company/face-scan">
+        <span class="theme-radial-gradient">
+          <i class="bi bi-camera-fill" style="font-size: 25px;"></i>
+          <!-- <img src="assets/img/infographic-camera.png" class="nav-icon" alt="" style="width: 40px;" /> -->
+        </span>
+
+      </div>
+    </li>
+
+    <!-- <li class="nav-item">
+      <a class="nav-link" routerLink="/services" routerLinkActive="active">
+        <span>
+          <i class="nav-icon bi bi-grid"></i>
+          <span class="nav-text">{{"ประวัติ" | translate}}</span>
+        </span>
+      </a>
+    </li> -->
+
+    <li class="nav-item">
+      <a class="nav-link" routerLink="/general" routerLinkActive="active">
+        <span>
+          <i class="nav-icon bi bi-person"></i>
+          <span class="nav-text">{{"Profile" | translate}}</span>
+        </span>
+      </a>
+    </li>
+
+  </ul>
+</div>

@@ -1,0 +1,111 @@
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-auto">
+        <figure class="avatar avatar-70 rounded-10">
+          <img appShowLoading *ngIf="employee.getPicture() ;else personblank" src="{{employee.getPicture()}}">
+          <ng-template #personblank>
+            <img src="assets/img/icon/person.png">
+          </ng-template>
+        </figure>
+      </div>
+      <div class="col px-0 align-self-center">
+        <h3 class="mb-0 text-color-theme">{{employee.getFullname()}}</h3>
+        <p class="text-muted ">{{employee.position.getName()}}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col">
+    <h6>{{"Subordinate_" | translate}}</h6>
+  </div>
+</div>
+<div class="row" *ngIf="memberIdParam">
+  <div class="col-12">
+    <div class="card shadow-sm mb-4">
+      <ul class="list-group list-group-flush bg-none">
+        <li class="list-group-item">
+          <div class="row p-1">
+            <a [routerLink]="'/company/personal-info/'+memberIdParam" class="text-normal d-block">
+              <i class="bi bi-person mx-2"></i>
+              {{"Personal Info" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+        <li class="list-group-item">
+          <div class="row">
+            <a [routerLink]="'/company/timestamp-log/'+memberIdParam" class="text-normal d-block">
+              <i class="bi bi-clock mx-2"></i>
+              {{"Timestamp Record2" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+        <!-- <li class="list-group-item">
+          <div class="row">
+            <a [routerLink]="'/company/sub-timestamp-criteria/'+memberIdParam" class="text-normal d-block">
+              <i class="bi bi-pin-map mx-2"></i>
+              {{"Approval Location for Permanent Timestamp" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li> -->
+        <!-- <li class="list-group-item">
+          <div class="row">
+            <a (click)="enrollment()" class="text-normal d-block">
+              <i class="bi bi-emoji-smile mx-2"></i>
+              {{"Register face" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+        <li class="list-group-item">
+          <div class="row">
+            <a [routerLink]="'/company/change-boss/'+memberIdParam" class="text-normal d-block">
+              <i class="bi bi-people mx-2"></i>
+              {{'Change Boss' | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+        <li class="list-group-item">
+          <div class="row">
+            <a [routerLink]="'/company/emp-resign/'+memberIdParam" class="text-normal d-block">
+              <i class="bi bi-person-x mx-2"></i>
+              {{"Resign Hr" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+        <li class="list-group-item">
+          <div class="row">
+            <a class="text-normal d-block" (click)="goTimestamp()">
+              <i class="bi bi-camera mx-2"></i>
+              {{"ลงเวลาทำงาน" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li> -->
+        <!-- <li class="list-group-item">
+                    <div class="row">
+                        <a [routerLink]="'/component/resign/'+memberIdParam" class="text-normal d-block">
+                            {{"Resign" | translate}}
+                            <i class="float-end bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </li>
+                <li class="list-group-item">
+                    <div class="row">
+                        <a [routerLink]="'/component/change-boss/'+memberIdParam" class="text-normal d-block">
+                            {{"Change Boss" | translate}}
+                            <i class="float-end bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </li> -->
+      </ul>
+    </div>
+  </div>
+</div>

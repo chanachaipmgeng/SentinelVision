@@ -1,0 +1,165 @@
+<app-page-header [title]="'Add Product'" [activeTitle]="'Ecommerce'" [title1]="'Add Product'"></app-page-header>
+
+    <!-- Start::row-1 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-12  col-span-12">
+            <div class="box">
+                <div class="box-body add-products !p-0">
+                    <div class="p-6">
+                        <div class="grid grid-cols-12 md:gap-x-[3rem] gap-0">
+                            <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-6 col-span-12">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="product-name-add" class="form-label">Product Name</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-name-add" placeholder="Name">
+                                        <label for="product-name-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] !text-[#8c9097] dark:text-white/50 !mb-0">*Product Name should not exceed 30 characters</label>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-category-add" class="form-label">Category</label>
+                                        <ng-select  class="w-full !rounded-md" data-trigger name="product-category-add" id="product-category-add" [items]="simpleItems" [(ngModel)]="selectedSimpleItem">
+                                        </ng-select>
+                                   
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-gender-add" class="form-label">Gender</label>
+                                        <ng-select class="w-full !rounded-md" data-trigger name="product-gender-add" id="product-gender-add"  [items]="simpleItems1" [(ngModel)]="selectedSimpleItem1">
+                                        </ng-select>
+                                    
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-size-add" class="form-label">Size</label>
+                                        <ng-select  class="w-full !rounded-md" data-trigger name="product-size-add" id="product-size-add"  [items]="simpleItems2" [(ngModel)]="selectedSimpleItem2">
+                                        </ng-select>
+                                 
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-brand-add" class="form-label">Brand</label>  
+                                        <ng-select class="w-full !rounded-md" data-trigger name="product-brand-add" id="product-brand-add" [items]="simpleItems3" [(ngModel)]="selectedSimpleItem3">
+                                        </ng-select>
+                                     
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12 color-selection">
+                                        <label for="product-color-add" class="form-label">Colors</label>
+                                        <ng-select [multiple]="true" class="w-full !rounded-md" name="product-color-add" id="product-color-add"  [items]="simpleItems4" [(ngModel)]="selectedSimpleItem4">
+                                        </ng-select>
+                                        
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-cost-add" class="form-label">Enter Cost</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-cost-add" placeholder="Cost">
+                                        <label for="product-cost-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] !text-[#8c9097] dark:text-white/50 mb-0">*Mention final price of the product</label>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="product-description-add" class="form-label">Product Description</label>
+                                        <textarea class="form-control w-full !rounded-md" id="product-description-add" rows="2"></textarea>
+                                        <label for="product-description-add" class="form-label mt-1 text-[0.75rem] opacity-[0.5] !text-[#8c9097] dark:text-white/50 mb-0">*Description should not exceed 500 letters</label>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12 mb-4">
+                                        <label class="form-label">Product Features</label>
+                                     
+                                        <div id="product-features">
+                                            <angular-editor  [config]="editorConfig"></angular-editor>
+
+                                          
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-6 col-span-12">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="product-actual-price" class="form-label">Actual Price</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-actual-price" placeholder="Actual Price">
+                                    </div>
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="product-dealer-price" class="form-label">Dealer Price</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-dealer-price" placeholder="Dealer Price">
+                                    </div>
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="product-discount" class="form-label">Discount</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-discount" placeholder="Discount in %">
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-type" class="form-label">Product Type</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-type" placeholder="Type">
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-discount" class="form-label">Item Weight</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="product-discount1" placeholder="Weight in gms">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12 product-documents-container">
+                                        <p class="font-semibold mb-2 text-[0.875rem]">Product Images :</p>
+                                        @if(type === 'component'){
+
+                                            <dropzone  class="product-Images w-full"
+                                            [config]="config1" [disabled]="disabled"
+                                            [message]="'Click or drag images here to upload'"
+                                            (init)="onUploadInit($event)" (error)="onUploadError($event)"
+                                            (success)="onUploadSuccess($event)"></dropzone>
+                                        }
+
+                                    </div>
+                                    <label class="form-label opacity-[0.5] mt-4 xl:col-span-12 col-span-12">Minimum 0f 6 images are need to be uploaded,make sure the image size match the proper background size and all images should be uniformly maintained with width and height to the image container,image size should not exceed 2MB,once uploaded to change the image you need to wait minimum of 24hrs. </label>
+                                    <div class="xl:col-span-12 col-span-12 product-documents-container">
+                                        <p class="font-semibold mb-2 text-[0.875rem]">Warrenty Documents :</p>
+                                        @if(type === 'component'){
+
+                                            <dropzone  class="product-Images w-full"
+                                            [config]="config1" [disabled]="disabled"
+                                            [message]="'Click or drag images here to upload'"
+                                            (init)="onUploadInit($event)" (error)="onUploadError($event)"
+                                            (success)="onUploadSuccess($event)"></dropzone>
+                                        }
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="publish-date" class="form-label">Publish Date</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="publish-date" placeholder="Choose date"  
+                                        mwlFlatpickr
+                                        [altInput]="true"
+                                        [convertModelValue]="true"
+                                        [enableTime]="true"
+                                        dateFormat="Y-m-dTH:i">
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="publish-time" class="form-label">Publish Time</label>
+                                        <input type="text" class="form-control w-full !rounded-md" id="publish-time" placeholder="Choose time"    mwlFlatpickr
+                                        [noCalendar]="true"
+                                        [enableTime]="true"
+                                        [dateFormat]="'h:i K'">
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-status-add" class="form-label">Published Status</label>
+                                        <ng-select class="w-full !rounded-md" name="product-color-add" id="product-color-add"  [items]="simpleItems5" [(ngModel)]="selectedSimpleItem5">
+                                        </ng-select>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="product-tags" class="form-label">Product Tags</label>
+                                        <ng-select class="w-full !rounded-md" data-trigger name="product-status-add1" id="product-status-add1" [multiple]="true" [(ngModel)]="selectedCars">
+                                            @for(car of cars;track car.id){
+                                   
+                                                <ng-option  [value]="car.id"
+                                                  >{{car.name}}</ng-option>
+                                              }
+                                           
+                                        </ng-select>
+                                      
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="product-status-add1" class="form-label">Availability</label>
+                                        <ng-select class="w-full !rounded-md" data-trigger name="product-status-add1" id="product-status-add1" [items]="simpleItems6" [(ngModel)]="selectedSimpleItem6">
+                                        </ng-select>
+                                       
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-dashed dark:border-defaultborder/10 sm:flex justify-end">
+                        <button type="button" class="ti-btn ti-btn-primary !font-medium m-1">Add Product<i class="bi bi-plus-lg ms-2"></i></button>
+                        <button type="button" class="ti-btn ti-btn-success !font-medium m-1">Save Product<i class="bi bi-download ms-2"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->

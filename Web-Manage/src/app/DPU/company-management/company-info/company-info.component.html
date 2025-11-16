@@ -1,0 +1,128 @@
+<app-page-header [title]="'ข้อมูลบริษัท'" [activeTitle]="'จัดการบริษัท'" [title1]="'ข้อมูลบริษัท'"></app-page-header>
+
+
+<!-- Start::row-1 -->
+<div class="grid grid-cols-12 gap-6">
+  <div class="xl:col-span-8 col-span-12">
+    <div class="box custom-box">
+      <div class="box-header justify-between flex">
+        <div class="box-title">
+          ข้อมูลบริษัท
+        </div>
+        <div>
+        </div>
+      </div>
+      <div class="box-body">
+        <div class="sm:p-4 p-0">
+          <h6 class="font-semibold mb-4 text-[1rem]">
+            รูปภาพ :
+          </h6>
+          <div class="mb-6 sm:flex items-center">
+            <div class="mb-0 me-[3rem]">
+              <span class="avatar avatar-xxl avatar-rounded">
+                <img [src]="companyModel.getPicture()" alt="" id="profile-img">
+                <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-primary avatar-badge">
+                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
+                    class="absolute w-full h-full opacity-0" id="profile-image">
+                  <i class="fe fe-camera !text-[0.65rem]"></i>
+                </a>
+              </span>
+            </div>
+            <!-- <div class="inline-flex">
+              <button type="button" class="ti-btn bg-primary text-white !rounded-e-none !font-medium">แก้ไข</button>
+              <button type="button" class="ti-btn ti-btn-light !font-medium !rounded-s-none">ลบ</button>
+            </div> -->
+          </div>
+          <div class="sm:grid grid-cols-12 gap-6 mb-6">
+            <div class="xl:col-span-6 col-span-12">
+              <label for="first-name" class="form-label">ชื่อบริษัท</label>
+              <input type="text" class="form-control w-full !rounded-md" id="first-name"
+                [(ngModel)]="companyModel.companyName" placeholder="ชื่อบริษัท">
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+              <label for="first-name" class="form-label">รหัสบริษัท</label>
+              <input type="text" class="form-control w-full !rounded-md" id="first-name" placeholder="CODE"
+                [(ngModel)]="companyModel.companyCode">
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+              <label for="bio" class="form-label">เกี่ยวกับบริษัท :</label>
+              <textarea class="form-control w-full !rounded-md dark:!text-defaulttextcolor/70" id="bio" rows="5"
+                [(ngModel)]="companyModel.companyInfo"></textarea>
+            </div>
+
+            <div class="xl:col-span-6 col-span-12">
+              <label for="bio" class="form-label">ที่อยู่ :</label>
+              <textarea class="form-control w-full !rounded-md dark:!text-defaulttextcolor/70" id="bio" rows="5"
+                [(ngModel)]="companyModel.address"></textarea>
+            </div>
+
+          </div>
+          <h6 class="font-semibold mb-4 text-[1rem]">
+            ข้อมูลเจ้าของบริษัท :
+          </h6>
+          <div class="sm:grid grid-cols-12 gap-6 mb-6">
+            <div class="xl:col-span-6 col-span-12">
+              <label for="email-address" class="form-label">ชื่อ-สกุล :</label>
+              <input type="text" class="form-control w-full !rounded-md" id="email-address"
+                [(ngModel)]="companyModel.ownerName" placeholder="ชื่อ-สกุล">
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+              <label for="Contact-Details" class="form-label">เบอร์ติดต่อ :</label>
+              <input type="text" class="form-control w-full !rounded-md" id="Contact-Details"
+                [(ngModel)]="companyModel.contact" placeholder="การติดต่อ">
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <div class="box-footer">
+        <div class="ltr:float-right rtl:float-left">
+          <button type="button" class="ti-btn bg-primary text-white m-1" (click)="save()">
+            บันทึกการเปลี่ยนแปลง
+          </button>
+          <button type="button" class="ti-btn ti-btn-ghost-secondary ti-btn-wave" (click)="reset()">ยกเลิก</button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="xl:col-span-4 col-span-12">
+    <div class="box custom-box">
+      <div class="box-header justify-between">
+        <div class="box-title">แผนที่บริษัท</div>
+      </div>
+      <div class="box-body">
+        <div class="grid grid-cols-12 sm:gap-6">
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
+            <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
+            <input type="text" class="form-control" id="input" [(ngModel)]="companyModel.latitude"
+              (ngModelChange)="changeMarker()">
+          </div>
+
+          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
+            <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
+            <input type="text" class="form-control" id="input" [(ngModel)]="companyModel.longitude"
+              (ngModelChange)="changeMarker()">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <div class="xl:col-span-12 col-span-12">
+              <input id="searchBox" #searchBox type="text" placeholder="ค้นหาสถานที่..."
+                class="form-control w-full p-2 border rounded mb-3">
+
+            </div>
+            <google-map class="xl:col-span-12 col-span-12" height="400px"
+              [center]="{ lat: companyModel.latitude, lng: companyModel.longitude }" [zoom]="12"
+              (mapClick)="addMarker($event,mapMarker)">
+
+              <map-marker #mapMarker="mapMarker"
+                [position]="{ lat: companyModel.latitude, lng: companyModel.longitude }" [options]="markerOptions" />
+
+            </google-map>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!--End::row-1 -->

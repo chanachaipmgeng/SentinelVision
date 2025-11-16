@@ -1,0 +1,134 @@
+<app-page-header [title]="'Jobs List'" [activeTitle]="'Jobs'" [title1]="'Jobs List'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box  overflow-hidden">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    All Jobs List
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a routerLink="/apps/jobs/job-post" class="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]">
+                                        <i class="ri-add-line  align-middle"></i>Post Job
+                                    </a>
+                                    <div>
+                                        <input class="form-control form-control-sm" type="text" placeholder="Search Here" aria-label=".form-control-sm example">
+                                    </div>
+                                    <div class="hs-dropdown ti-dropdown">
+                                        <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]" aria-expanded="false">
+                                            Sort By<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+                                        </a>
+                                        <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Posted Date</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Status</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Department</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Job Type</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="box-body !p-0">
+                                <div class="table-responsive">
+
+                                    <table class="table table-hover whitespace-nowrap min-w-full">
+                                        <thead>
+                                            <tr>
+                                                <th scope="row" class="!ps-6"><input class="form-check-input" type="checkbox" id="checkboxNoLabeljob1" value="" aria-label="..."></th>
+                                                <th scope="col" class="text-start">Job Title</th>
+                                                <th scope="col" class="text-start">Company</th>
+                                                <th scope="col" class="text-start">Department</th>
+                                                <th scope="col" class="text-start">Applications</th>
+                                                <th scope="col" class="text-start">Vacancies</th>
+                                                <th scope="col" class="text-start">Status</th>
+                                                <th scope="col" class="text-start">Job Type</th>
+                                                <th scope="col" class="text-start">Posted Date</th>
+                                                <th scope="col" class="text-start">Expires on</th>
+                                                <th scope="col" class="text-start">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for(job of jobs;track job.id){
+
+                                                <tr class="border-t hover:bg-gray-200 dark:hover:bg-light" >
+                                                    <td class="!ps-6"><input class="form-check-input" type="checkbox" id="checkboxNoLabeljob2" value="" aria-label="..." [checked]="job.check"></td>
+                                                    <td>
+                                                        <div class="flex">
+                                                            <span class="avatar avatar-md !rounded-full bg-primary/10 !fill-primary">
+                                                                @if(job.svg){
+    
+                                                                    <ng-container >
+                                                                        <span [innerHTML]="getSanitizedSVG(job.svg)"></span>
+                                                                      </ng-container>
+                                                                }
+                                                            </span>
+                                                            <div class="ms-2">
+                                                                <p class="font-semibold mb-0 flex items-center"><a routerLink="/apps/jobs/job-details"> {{job.role}}</a></p>
+                                                                <p class="text-[0.75rem] text-muted mb-0">Remote/Onsite</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="flex items-center">
+                                                            <span class="avatar avatar-sm p-1 me-1 bg-light !rounded-full">
+                                                                <img src= {{job.img}} alt="">
+                                                            </span>
+                                                            <a href="javascript:void(0);" class="font-semibold mb-0">{{job.company}}</a>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {{job.dept}}
+                                                    </td>
+                                                    <td>{{job.applications}}</td>
+                                                    <td>{{job.vacancies}}</td>
+                                                    <td><span class="badge !rounded-full bg-{{job.bg}}/10 text-{{job.text}}">{{job.status}}</span></td>
+                                                    <td>{{job.type}}</td>
+                                                    <td>
+                                                       {{job.date}}
+                                                    </td>
+                                                    <td><span class="badge bg-{{job.bg1}}/10 text-{{job.text1}}"><i class="bi bi-clock me-1"></i>{{job.expdate}}</span></td>
+                                                    <td>
+                                                        <a aria-label="anchor" routerLink="/apps/jobs/job-details" class="ti-btn ti-btn-icon ti-btn-sm ti-btn-primary me-2">
+                                                            <i class="ri-eye-line"></i>
+                                                        </a>
+                                                        <a aria-label="anchor" href="javascript:void(0);" class="ti-btn ti-btn-icon ti-btn-sm ti-btn-info me-2">
+                                                            <i class="ri-edit-line"></i>
+                                                        </a>
+                                                        <a aria-label="anchor" href="javascript:void(0);" class="ti-btn ti-btn-icon ti-btn-sm ti-btn-danger" (click)="click(job.id)">
+                                                            <i class="ri-delete-bin-line"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            }
+                                           
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="box-footer border-t-0">
+                                <div class="flex items-center flex-wrap overflow-auto">
+                                    <div class="mb-2 sm:mb-0">
+                                        Showing <b>1</b> to <b>10</b> of <b>10</b> entries <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <nav aria-label="Page navigation">
+                                            <ul class="ti-pagination  mb-0">
+                                                <li class="page-item disabled"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Previous</a></li>
+                                                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">4</a></li>
+                                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">5</a></li>
+                                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a></li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

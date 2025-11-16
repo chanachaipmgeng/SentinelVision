@@ -1,0 +1,270 @@
+<app-page-header [title]="'Borders'" [activeTitle]="'Utilities'" [title1]="'Borders'"></app-page-header>
+
+    <!-- Start:: row-1 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Borders
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleBorders()">Show Code
+                            <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <span class="border dark:border-defaultborder/10 border-container"></span>
+                    <span class="border-t dark:border-defaultborder/10 border-container"></span>
+                    <span class="border-e dark:border-defaultborder/10 border-container"></span>
+                    <span class="border-b dark:border-defaultborder/10 border-container"></span>
+                    <span class="border-s dark:border-defaultborder/10 border-container"></span>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible1){ 
+                        <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                      } @else { 
+                      }
+                    
+
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Remove borders
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleRemove()">Show Code
+                            <i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <span class="border-0 border-container"></span>
+                    <span class="border dark:border-defaultborder/10 border-t-0 border-container"></span>
+                    <span class="border dark:border-defaultborder/10 border-e-0 border-container"></span>
+                    <span class="border dark:border-defaultborder/10 border-b-0 border-container"></span>
+                    <span class="border dark:border-defaultborder/10 border-s-0 border-container"></span>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible2){ 
+                        <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                      } @else { 
+                      }
+                   
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-1 -->
+
+    <!-- Start:: row-2 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-5 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Border Widths
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleBorders1()">Show Code
+                            <i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <span class="border-1 dark:border-defaultborder/10 border-container"></span>
+                    <span class="border-container dark:border-defaultborder/10 border-2"></span>
+                    <span class="border-container dark:border-defaultborder/10 border-4"></span>
+                    <span class="border-container dark:border-defaultborder/10 border-8"></span>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible3){ 
+                        <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                      } @else { 
+                      }
+                  
+
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-7 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Border colors
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleColors()">Show Code
+                            <i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <span class="border border-container !border-primary"></span>
+                    <span class="border border-container !border-secondary"></span>
+                    <span class="border border-container !border-success"></span>
+                    <span class="border border-container !border-danger"></span>
+                    <span class="border border-container !border-warning"></span>
+                    <span class="border border-container !border-info"></span>
+                    <span class="border border-container !border-light"></span>
+                    <span class="border border-container !border-black"></span>
+                    <span class="border border-container !border-white"></span>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible4){ 
+                        <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                      } @else { 
+                      }
+                  
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-2 -->
+
+    <!-- Start:: row-3 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Border color Styling
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleBorderStylng()">Show Code
+                            <i class="ri-code-{{toggleClass5}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div class="mb-4">
+                        <label for="exampleFormControlInput1" class="form-label">Email
+                            address</label>
+                        <input type="email" class="form-control w-full !rounded-md !border-success"
+                            id="exampleFormControlInput1" placeholder="name&#64;example.com">
+                    </div>
+                    <div class="h4 pb-4 mb-4 text-danger border-b !border-danger">
+                        Below Shows Danger Border
+                    </div>
+                    <div
+                        class="p-4 bg-info/10 border !border-info  !border-s-0 rounded-e-md mb-1">
+                        Customizing borders with backgrounud colors
+                    </div>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible5){ 
+                        <pre class="language-html"><code class="language-html" >{{ts5}}</code></pre>   
+                      } @else { 
+                      }
+                  
+
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Border with opacity
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleOpactity()">Show Code
+                            <i class="ri-code-{{toggleClass6}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div class="border border-black dark:border-white p-2 mb-2">This is default success border</div>
+                    <div class="border border-black/75 dark:border-white/75 p-2 mb-2">This is 75%
+                        opacity
+                        success border
+                    </div>
+                    <div class="border border-black/50 dark:border-white/50 p-2 mb-2">This is 50%
+                        opacity
+                        success border
+                    </div>
+                    <div class="border border-black/25 dark:border-white/25 p-2 mb-2 ">This is 25%
+                        opacity
+                        success border
+                    </div>
+                    <div class="border border-black/10 dark:border-white/10 p-2">This is 10% opacity
+                        success
+                        border
+                    </div>
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible6){ 
+                        <pre class="language-html"><code class="language-html" >{{ts6}}</code></pre>   
+                      } @else { 
+                      }
+                  
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-3 -->
+
+    <!-- Start:: row-4 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Border Radius
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleRadius()">Show Code
+                            <i class="ri-code-{{toggleClass7}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body flex flex-wrap gap-2">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-t-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-e-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-b-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-s-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-full" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img  rounded-full" alt="...">
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible7){ 
+                        <pre class="language-html"><code class="language-html" >{{ts7}}</code></pre>   
+                      } @else { 
+                      }
+                 
+
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Sizes
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleSizes()">Show Code
+                            <i class="ri-code-{{toggleClass8}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body flex flex-wrap gap-2">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-none" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-sm" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-md" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-lg" alt="...">
+                    <img src="./assets/images/media/media-58.jpg" class="bd-placeholder-img rounded-xl" alt="...">
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    <div>
+                    @if(isContentVisible8){ 
+                        <pre class="language-html"><code class="language-html" >{{ts8}}</code></pre>   
+                      } @else { 
+                      }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-4 -->

@@ -1,0 +1,294 @@
+<app-page-header [title]="'TABLES'" [activeTitle]="'TABLES'" [title1]="'TABLES'"></app-page-header>
+
+
+
+          
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Basic Table
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="grid-example1" class="table-responsive">
+                                    <table mat-table [dataSource]="dataSource0" class="mat-elevation-z8">
+
+                                        <!--- Note that these columns can be defined in any order.
+                                              The actual rendered columns are set as a property on the row definition" -->
+                    
+                                        <!-- Position Column -->
+                                        <ng-container matColumnDef="position">
+                                            <th mat-header-cell *matHeaderCellDef> No. </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.position}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Name Column -->
+                                        <ng-container matColumnDef="name">
+                                            <th mat-header-cell *matHeaderCellDef> Name </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Weight Column -->
+                                        <ng-container matColumnDef="weight">
+                                            <th mat-header-cell *matHeaderCellDef> Weight </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.weight}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Symbol Column -->
+                                        <ng-container matColumnDef="symbol">
+                                            <th mat-header-cell *matHeaderCellDef> Symbol </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.symbol}} </td>
+                                        </ng-container>
+                    
+                                        <tr mat-header-row *matHeaderRowDef="displayedColumns0"></tr>
+                                        <tr mat-row *matRowDef="let row; columns: displayedColumns0;"></tr>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->
+
+                <!-- Start:: row-2 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Table With Pagination
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="grid-pagination" class="table-responsive">
+                                    <table mat-table [dataSource]="dataSource">
+        
+                                        <!-- Position Column -->
+                                        <ng-container matColumnDef="position">
+                                            <th mat-header-cell *matHeaderCellDef> No. </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.position}} </td>
+                                        </ng-container>
+                
+                                        <!-- Name Column -->
+                                        <ng-container matColumnDef="name">
+                                            <th mat-header-cell *matHeaderCellDef> Name </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                                        </ng-container>
+                
+                                        <!-- Weight Column -->
+                                        <ng-container matColumnDef="weight">
+                                            <th mat-header-cell *matHeaderCellDef> Weight </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.weight}} </td>
+                                        </ng-container>
+                
+                                        <!-- Symbol Column -->
+                                        <ng-container matColumnDef="symbol">
+                                            <th mat-header-cell *matHeaderCellDef> Symbol </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.symbol}} </td>
+                                        </ng-container>
+                
+                                        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                                        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+                                    </table>
+                
+                                    <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+                                    aria-label="Select page of periodic elements">
+                                </mat-paginator>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-2 -->
+
+                <!-- Start:: row-3 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Table With Search
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="grid-search" class="table-responsive">
+                                    <mat-form-field>
+                                        <mat-label>Filter</mat-label>
+                                        <input matInput (keyup)="applyFilter($event)" placeholder="Ex. ium" #input>
+                                    </mat-form-field>
+                                    <table mat-table [dataSource]="dataSource1">
+                
+                                        <!-- Position Column -->
+                                        <ng-container matColumnDef="position">
+                                            <th mat-header-cell *matHeaderCellDef> No. </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.position}} </td>
+                                        </ng-container>
+                
+                                        <!-- Name Column -->
+                                        <ng-container matColumnDef="name">
+                                            <th mat-header-cell *matHeaderCellDef> Name </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                                        </ng-container>
+                
+                                        <!-- Weight Column -->
+                                        <ng-container matColumnDef="weight">
+                                            <th mat-header-cell *matHeaderCellDef> Weight </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.weight}} </td>
+                                        </ng-container>
+                
+                                        <!-- Symbol Column -->
+                                        <ng-container matColumnDef="symbol">
+                                            <th mat-header-cell *matHeaderCellDef> Symbol </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.symbol}} </td>
+                                        </ng-container>
+                                        <ng-container matColumnDef="cost">
+                                            <th mat-header-cell *matHeaderCellDef> Cost </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.cost}} </td>
+                                        </ng-container>
+                
+                                        <tr mat-header-row *matHeaderRowDef="displayedColumns1"></tr>
+                                        <tr mat-row *matRowDef="let row; columns: displayedColumns1;"></tr>
+                                    </table>
+                
+                                    <mat-paginator #paginator1 [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+                                        aria-label="Select page of periodic elements">
+                                    </mat-paginator>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-3 -->
+
+                <!-- Start:: row-4 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Table Sorting
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="grid-sorting" class="table-responsive">
+                                    <div class="mat-elevation-z8">
+                                        <mat-form-field>
+                                            <mat-label>Filter</mat-label>
+                                            <input matInput (keyup)="applyFilter2($event)" placeholder="Ex. ium" #input>
+                                        </mat-form-field>
+                                        <table mat-table [dataSource]="dataSource2" matSort #sort1="matSort" class="border-t border-solid border-defaultborder dark:border-white/10">
+                
+                                            <!-- Position Column -->
+                                            <ng-container matColumnDef="position">
+                                                <th mat-header-cell *matHeaderCellDef mat-sort-header
+                                                    sortActionDescription="Sort by number"> No. </th>
+                                                <td mat-cell *matCellDef="let element"> {{element.position}} </td>
+                                            </ng-container>
+                
+                                            <!-- Name Column -->
+                                            <ng-container matColumnDef="name">
+                                                <th mat-header-cell *matHeaderCellDef mat-sort-header
+                                                    sortActionDescription="Sort by Name"> Name </th>
+                                                <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                                            </ng-container>
+                
+                                            <!-- Weight Column -->
+                                            <ng-container matColumnDef="weight">
+                                                <th mat-header-cell *matHeaderCellDef mat-sort-header
+                                                    sortActionDescription="Sort by Weight"> Weight </th>
+                                                <td mat-cell *matCellDef="let element"> {{element.weight}} </td>
+                                            </ng-container>
+                
+                                            <!-- Symbol Column -->
+                                            <ng-container matColumnDef="symbol">
+                                                <th mat-header-cell *matHeaderCellDef mat-sort-header
+                                                    sortActionDescription="Sort by Symbol"> Symbol </th>
+                                                <td mat-cell *matCellDef="let element"> {{element.symbol}} </td>
+                                            </ng-container>
+                
+                                            <tr class="mat-row" *matNoDataRow>
+                                                <td class="mat-cell" colspan="4">No data matching the filter "{{input.value}}"</td>
+                                            </tr>
+                                            <tr mat-header-row *matHeaderRowDef="displayedColumns2"></tr>
+                                            <tr mat-row *matRowDef="let row; columns: displayedColumns2;"></tr>
+                                        </table>
+                
+                                        <mat-paginator #paginator2 [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+                                            aria-label="Select page of periodic elements">
+                                        </mat-paginator>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-4 -->
+
+                <!-- Start:: row-5 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Table Loading
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="grid-loading"  class="table-responsive">
+                                    <mat-form-field>
+                                        <mat-label>Filter</mat-label>
+                                        <input matInput (keyup)="applyFilter3($event)" placeholder="Ex. ium" #input>
+                                    </mat-form-field>
+                                    <table mat-table [dataSource]="dataSource3" matSort #sort2="matSort" class="mat-elevation-z8">
+                    
+                                        <!-- Position Column -->
+                                        <ng-container matColumnDef="position">
+                                            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by number">
+                                                No.
+                                            </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.position}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Name Column -->
+                                        <ng-container matColumnDef="name">
+                                            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by name">
+                                                Name
+                                            </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Weight Column -->
+                                        <ng-container matColumnDef="weight">
+                                            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by weight">
+                                                Weight
+                                            </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.weight}} </td>
+                                        </ng-container>
+                    
+                                        <!-- Symbol Column -->
+                                        <ng-container matColumnDef="symbol">
+                                            <th mat-header-cell *matHeaderCellDef mat-sort-header sortActionDescription="Sort by symbol">
+                                                Symbol
+                                            </th>
+                                            <td mat-cell *matCellDef="let element"> {{element.symbol}} </td>
+                                        </ng-container>
+                    
+                                        <tr mat-header-row *matHeaderRowDef="displayedColumns3"></tr>
+                                        <tr mat-row *matRowDef="let row; columns: displayedColumns3;"></tr>
+                                    </table>
+                                    <mat-paginator #paginator3 [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons
+                                        aria-label="Select page of periodic elements">
+                                    </mat-paginator>
+                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-5 -->
+
+       

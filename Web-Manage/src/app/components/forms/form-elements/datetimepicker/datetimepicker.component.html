@@ -1,0 +1,282 @@
+<app-page-header [title]="'Date & Time Pickers'" [activeTitle]="'Form Elements'" [title1]="'Date & Time Pickers'"></app-page-header>
+   <!-- Start:: row-1 -->
+   <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Basic Date picker
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-calendar-line"></i> </div>
+                        <input type="text" class="form-control" id="date" placeholder="yyyy-mm-dd" name="dp" mwlFlatpickr/>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Date picker With Time
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-calendar-line"></i> </div>
+                        <input type="text" class="form-control" id="datetime" placeholder="Choose date with time"   mwlFlatpickr
+                        [altInput]="true"
+                        [convertModelValue]="true"
+                        [enableTime]="true"
+                        dateFormat="Y-m-dTH:i">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Human Friendly dates
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-calendar-line"></i> </div>
+                        <input type="text" class="form-control" id="humanfrienndlydate" placeholder="Human friendly dates"   mwlFlatpickr
+                        [altInput]="true"
+                        [convertModelValue]="true">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Date range picker
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-calendar-line"></i> </div>
+                        <input
+                        class="form-control"
+                        id="daterange"
+                        placeholder="Date range picker"
+                        mwlFlatpickr
+                        [altInput]="true"
+                        [convertModelValue]="true"
+                        mode="range"
+                      />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-1 -->
+
+<!-- Start:: row-2 -->
+<div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Basic Time picker
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-time-line"></i> </div>
+                        <input
+                        class="form-control"
+                        id="timepikcr"
+                        placeholder="Choose time"
+                        type="text"
+                        mwlFlatpickr
+                        [noCalendar]="true"
+                        [enableTime]="true"
+                        [dateFormat]="'h:i K'"
+                      />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Time Pickr with 24hr Format
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-time-line"></i> </div>
+                        <input
+                        class="form-control"
+                        id="timepikcr1"
+                        placeholder="Choose time in 24hr format"
+                        type="text"
+                        mwlFlatpickr
+                        [noCalendar]="true"
+                        [enableTime]="true"
+                        [dateFormat]="'H:i'"
+                      />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Time Picker with Limits
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-time-line"></i> </div>
+                        <input
+                        class="form-control"
+                        id="limittime"
+                        placeholder="Choose time between 16:00 and 22:30"
+                        type="text"
+                        mwlFlatpickr
+                        [enableTime]="true"
+                        [convertModelValue]="true"
+                        [dateFormat]="'Y-m-d H:i'"
+                      />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    DateTimePicker with Limited Time Range
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group">
+                    <div class="input-group">
+                        <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-time-line"></i> </div>
+                        <input
+                        type="text"
+                        class="form-control"
+                        id="limitdatetime"
+                        placeholder="date with time limit from 16:00 to 22:00"
+                        mwlFlatpickr
+                        [enableTime]="true"
+                        [convertModelValue]="true"
+                        [dateFormat]="'Y-m-d H:i'"
+                      />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-2 -->
+
+<!-- Start:: row-3 -->
+<div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="grid grid-cols-12">
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header">
+                        <div class="box-title">
+                            Date Picker with week numbers
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <div class="form-group mb-0">
+                            <div class="input-group">
+                                <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-calendar-line"></i> </div>
+                                <input type="text" class="form-control" id="weeknum" placeholder="Choose date" mwlFlatpickr
+                                [enableTime]="true"
+                                [convertModelValue]="true"
+                                [dateFormat]="'Y-m-d H:i'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header">
+                        <div class="box-title">
+                            Inline Time Picker
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <div class="form-group mb-0">
+                            <input
+                            class="form-control"
+                            id="inlinetime"
+                            placeholder="Choose time"
+                            type="text"
+                            mwlFlatpickr
+                        [noCalendar]="true"
+                        [enableTime]="true"
+                        [dateFormat]="'h:i K'"
+                          />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header">
+                        <div class="box-title">
+                            Preloading time
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <div class="form-group mb-0">
+                            <div class="input-group">
+                                <div class="input-group-text text-[#8c9097] dark:text-white/50"> <i class="ri-time-line"></i> </div>
+                                <input type="text" class="form-control" id="pretime" placeholder="Preloading time"   mwlFlatpickr
+                                [enableTime]="true"
+                                [convertModelValue]="true"
+                                [dateFormat]="'Y-m-d H:i'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Inline Calendar
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-group overflow-auto">
+                    <input type="text" class="form-control" id="date" placeholder="yyyy-mm-dd" name="dp" mwlFlatpickr/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-3 -->

@@ -1,0 +1,1299 @@
+/* global*/
+@media (min-width:992px) {
+  [data-vertical-style="doublemenu"] {
+    .simplebar-offset {
+      position: inherit !important;
+    }
+  }
+}
+
+@media (min-width: 992px) {
+  [data-vertical-style=doublemenu] .app-sidebar .slide.has-sub .slide-menu.child1 {
+    height: 100vh !important;
+  }
+}
+
+.ti-dropdown-menu {
+  z-index: 999;
+}
+
+#visitors-countries {
+  z-index: 11;
+}
+
+.h5 {
+  font-size: 1.25rem !important;
+}
+
+h6 {
+  font-size: 1rem;
+}
+
+
+.ng-select .ng-select-container {
+  @apply border-inputborder text-defaulttextcolor bg-white dark:border-white/10 dark:bg-bodybg text-[0.875rem] #{!important};
+}
+
+.ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-input>input {
+  @apply text-defaulttextcolor #{!important};
+}
+
+.form-control {
+  @apply border-inputborder text-defaulttextcolor bg-white dark:border-white/10 dark:bg-bodybg;
+}
+
+.input-group {
+  .ng-select .ng-select-container {
+    @apply rounded-ss-none rounded-es-none #{!important};
+  }
+}
+
+.simplebar-scrollbar.simplebar-visible:before {
+  @apply opacity-[.1] #{!important};
+}
+
+.ng-select.ng-select-focused:not(.ng-select-opened)>.ng-select-container {
+  @apply shadow-none #{!important};
+}
+
+[dir="rtl"] {
+  .table {
+    @apply me-[1px];
+  }
+}
+
+.avatar-list-stacked .avatar.avatar-xs {
+  @apply -me-[0.5rem] #{!important};
+}
+
+dropzone>.dropzone.dz-wrapper .dz-message {
+  @apply bg-white dark:border-white/10 border-inputborder dark:bg-bodybg min-h-[85px] #{!important};
+}
+
+.ng-dropdown-panel {
+  @apply bg-white text-defaulttextcolor dark:border-white/10 border-inputborder dark:bg-bodybg #{!important};
+
+  .ng-dropdown-panel-items .ng-option.ng-option-marked {
+    @apply bg-primary text-white #{!important};
+  }
+
+  .ng-dropdown-panel-items .ng-option {
+    @apply bg-white text-defaulttextcolor dark:border-white/10 border-inputborder dark:bg-bodybg #{!important};
+  }
+}
+
+.angular-editor-toolbar[_ngcontent-ng-c834769704] .angular-editor-toolbar-set[_ngcontent-ng-c834769704] .angular-editor-button[_ngcontent-ng-c834769704],
+.angular-editor-toolbar[_ngcontent-ng-c834769704],
+.ae-font .ae-picker-label {
+  @apply bg-white dark:border-white/10 border-inputborder dark:bg-bodybg #{!important};
+}
+
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-placeholder[_ngcontent-ng-c1917172166] {
+  @apply text-defaulttextcolor opacity-[0.5] #{!important};
+}
+
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-textarea[_ngcontent-ng-c1917172166] {
+  @apply dark:border-white/10 border-inputborder #{!important};
+}
+
+.swal-modal {
+  @apply bg-white dark:bg-bodybg #{!important};
+
+  .swal-title {
+    @apply text-defaulttextcolor #{!important};
+  }
+
+  .swal-text {
+    @apply text-[#8c9097] dark:text-white/50 opacity-[0.7] #{!important};
+  }
+}
+
+.ae-font .ae-picker-label svg .ae-stroke {
+  @apply stroke-defaulttextcolor #{!important};
+}
+
+.ae-font .ae-picker-options {
+  @apply bg-white dark:bg-bodybg #{!important};
+}
+
+.ae-font .ae-picker-label:before {
+  @apply bg-gradient-to-r from-white to-white dark:from-bodybg dark:to-bodybg #{!important};
+}
+
+.ae-font .ae-picker-label {
+  @apply bg-white dark:bg-bodybg dark:border-white/10 border-inputborder #{!important};
+}
+
+.ae-font .ae-picker-options .ae-picker-item {
+  @apply text-defaulttextcolor #{!important};
+
+  &.selected,
+  &.focused,
+  &:hover {
+    @apply dark:text-black #{!important};
+  }
+}
+
+.ae-font.ae-expanded .ae-picker-options {
+  @apply dark:border-white/10 border-inputborder #{!important};
+}
+
+[dir="rtl"] {
+  .ae-font .ae-picker-label {
+    @apply pl-[8px] pe-[10px] text-right float-right #{!important};
+  }
+
+  .ae-font .ae-picker-label:before {
+    @apply left-0 right-auto #{!important};
+  }
+
+  .ae-font .ae-picker-label:before,
+  .ae-font .ae-picker-label svg {
+    @apply left-0 right-auto #{!important};
+  }
+}
+
+.NgxEditor__MenuBar {
+  @apply bg-light #{!important};
+}
+
+.NgxEditor {
+  @apply bg-white dark:bg-bodybg dark:border-white/10 border-inputborder text-defaulttextcolor #{!important};
+}
+
+app-footer {
+  @apply mt-auto;
+}
+
+.tab-content .tab-pane,
+.mails-information .mail-attachment {
+  @apply dark:border-white/10;
+}
+
+.custom-toggle-switch>label:after {
+  @apply dark:bg-bodybg dark:shadow-none dark:border dark:border-white/10;
+}
+
+.mdc-text-field--filled:not(.mdc-text-field--disabled) {
+  @apply dark:bg-bodybg #{!important};
+}
+
+.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label,
+.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-floating-label--float-above,
+.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-text-field__input::placeholder {
+  @apply text-defaulttextcolor dark:text-white/50 #{!important};
+}
+
+.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-text-field__input {
+  @apply text-defaulttextcolor #{!important};
+}
+
+.mat-mdc-icon-button svg {
+  @apply fill-defaulttextcolor #{!important};
+}
+
+.NgxEditor__Dropdown:hover,
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-textarea[_ngcontent-ng-c1917172166],
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-textarea[_ngcontent-ng-c1917172166] {
+  @apply dark:bg-white/10 dark:text-white #{!important};
+}
+
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-textarea[_ngcontent-ng-c1917172166]:focus-within {
+  @apply outline-none #{!important};
+}
+
+.angular-editor[_ngcontent-ng-c1917172166] .angular-editor-wrapper[_ngcontent-ng-c1917172166] .angular-editor-textarea[_ngcontent-ng-c1917172166] {
+  @apply min-h-[15rem] #{!important};
+}
+
+@media (max-width: 375px) {
+  .ti-pagination li .page-link {
+    @apply text-sm #{!important};
+  }
+}
+
+[type=checkbox]:focus {
+  @apply dark:border-white/10 #{!important};
+}
+
+:is(.dark .progress-custom .progress-bar-value) {
+  --tw-shadow-color: rgba(255, 255, 255, .08) #{!important};
+}
+
+// .ti-main-tooltip-content {
+//   @apply border-0 #{!important};
+// }
+#hs-input-group-with-checkbox[type='checkbox'] {
+  // @apply dark:bg-white/10 dark:--tw-ring-offset-color:white/10 #{!important};
+}
+
+// .ng-select {
+//   @apply z-[8] #{!important};
+// }
+.ng-dropdown-panel .ng-dropdown-panel-items .ng-optgroup {
+  @apply text-defaulttextcolor opacity-[6] #{!important};
+}
+
+[dir="rtl"] {
+  .ngx-slider.vertical .ngx-slider-bar-wrapper {
+    margin: 0 -16px 0 0;
+    padding: 0 16px 0 0;
+  }
+
+  .ngx-slider.vertical .ngx-slider-bar {
+    @apply left-0 right-auto #{!important};
+  }
+
+  .ngx-slider.vertical .ngx-slider-pointer {
+    @apply left-0 right-[-14px] #{!important};
+  }
+
+  .ngx-slider .ngx-slider-pointer:after {
+    @apply left-0 right-[12px] #{!important};
+  }
+
+  .ngx-slider.vertical .ngx-slider-bubble {
+    @apply left-0 right-[16px] #{!important};
+  }
+}
+
+.color-pickr-slider {
+  #result {
+    @apply mt-12 ms-8 mb-6 #{!important};
+
+    #result {
+      @apply mt-0 ms-0 mb-0 #{!important};
+    }
+  }
+
+  #color1,
+  #color2,
+  #color3 {
+    @apply hidden #{!important};
+  }
+}
+
+.Single-file-upload {
+  .filepond--drop-label.filepond--drop-label label {
+    @apply mt-12 #{!important};
+  }
+
+  .filepond--panel-root {
+    @apply rounded-full #{!important};
+  }
+}
+
+#lightPrimaryColorID,
+#transparentBgColorID,
+.pickr-container1 input {
+  @apply mt-[-4px] w-[2rem] h-[2rem] rounded-md #{!important};
+}
+
+.color-picker .box {
+  /* align-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    flex-direction: row-reverse; */
+  @apply flex-wrap flex-row-reverse justify-start content-between dark:bg-transparent #{!important};
+}
+
+.NgxEditor__MenuItem:hover {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.br-units[_ngcontent-ng-c3013319537] {
+  @apply flex-wrap #{!important};
+}
+
+#external-events[_ngcontent-ng-c3653271785] {
+  @apply dark:border-white/10 border-defaultborder border-0 border-b #{!important};
+}
+
+.cal-month-view .cal-cell-row .cal-cell:hover,
+.cal-month-view .cal-cell-row:hover {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.cal-month-view .cal-day-cell.cal-today {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.cal-cell,
+.cal-header,
+.cal-month-view .cal-days .cal-cell-row,
+.cal-month-view .cal-days,
+.cal-month-view .cal-day-cell.cal-today {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-month-view .cal-day-cell.cal-weekend .cal-day-number,
+.cal-month-view .cal-day-cell.cal-out-month .cal-day-number,
+.cal-month-view .cal-day-number {
+  @apply text-defaulttextcolor #{!important};
+}
+
+.owl-theme .owl-nav [class*=owl-] {
+  @apply dark:bg-white/10 bg-black/30 #{!important};
+}
+
+.ng-select.select-md.ng-select-single .ng-select-container {
+  @apply h-[48px] #{!important}
+}
+
+.ng-select.select-lg.ng-select-single .ng-select-container {
+  @apply h-[56px] #{!important}
+}
+
+.companies-search-input {
+  .ng-select.ng-select-single .ng-select-container {
+    @apply h-[44px] #{!important}
+  }
+
+}
+
+.ng-select.form-control {
+  @apply p-0 #{!important};
+}
+
+.ng-dropdown-panel {
+  @apply z-[2] #{!important}
+}
+
+ng-select.ng-select-searchable.ng-select-clearable.ng-select.ng-select-single.ng-select-opened.ng-select-bottom {
+  @apply z-[1] #{!important}
+}
+
+#carousel-container[_ngcontent-ng-c1271098887]>.current-figure[_ngcontent-ng-c1271098887]>.current-image[_ngcontent-ng-c1271098887]>img[_ngcontent-ng-c1271098887],
+.previews-container[_ngcontent-ng-c1488287478]>.preview-inner-container[_ngcontent-ng-c1488287478]>.preview-image[_ngcontent-ng-c1488287478] {
+  @apply rounded-lg #{!important}
+}
+
+.previews-container[_ngcontent-ng-c1488287478]>.preview-inner-container[_ngcontent-ng-c1488287478] {
+  @apply gap-0.5 #{!important}
+}
+
+h4 {
+  @apply text-[1.5rem] #{!important}
+}
+
+h3, .h3 {
+  @apply text-[1.75rem] #{!important}
+}
+
+.nft-tag.nft-tag-dark {
+
+  &:hover,
+  &.active {
+    .nft-tag-text {
+      @apply text-defaulttextcolor opacity-[0.8] #{!important};
+    }
+  }
+}
+
+.ng-select.ng-select-single.Buy-crypto-input .ng-select-container {
+  @apply h-[40px] #{!important}
+}
+
+.mat-mdc-table tbody, .mat-mdc-table tfoot, .mat-mdc-table thead, .mat-mdc-cell, .mat-mdc-footer-cell, .mat-mdc-header-row, .mat-mdc-row, .mat-mdc-footer-row, .mat-mdc-table .mat-mdc-header-cell {
+  @apply bg-white dark:bg-bodybg text-defaulttextcolor border-defaultborder dark:border-white/10 #{!important}
+}
+
+.mat-mdc-paginator {
+  @apply bg-white dark:bg-bodybg text-defaulttextcolor border-defaultborder dark:border-white/10 #{!important}
+}
+
+.mat-mdc-table {
+  @apply bg-white dark:bg-bodybg #{!important}
+}
+
+.mat-mdc-select-arrow, .mat-mdc-select {
+  @apply dark:text-white/20 text-defaulttextcolor #{!important}
+}
+
+
+@media (min-width: 992px) {
+
+  // [data-menu-styles="light"] {
+  //     &[data-nav-layout="horizontal"] {
+  //         .app-sidebar .main-menu-container .slide-left, .app-sidebar .main-menu-container .slide-right {
+  //             @apply text-black bg-transparent border-defaultborder #{!important};
+  //             svg {
+  //               @apply fill-black;
+  //             }
+  //         }
+  //         &[data-page-style="classic"] {
+  //             .app-sidebar {
+  //                 @apply border-b border-defaultborder #{!important};
+  //             }
+  //         }
+  //     }
+  //     }
+  [data-menu-styles="dark"] {
+    &[data-nav-layout="horizontal"] {
+      &[data-page-style="classic"] {
+        .app-sidebar {
+          @apply border-b border-white/10 #{!important};
+        }
+      }
+    }
+  }
+
+  [data-nav-layout=horizontal] .app-sidebar .slide.has-sub .slide-menu.child1 {
+    inset-inline-start: auto !important;
+    inset-inline-end: auto !important;
+  }
+
+  [data-nav-layout="vertical"][data-toggled="icon-hover-closed"][data-nav-style="icon-hover"] {
+    .app-sidebar {
+      .simplebar-content {
+        @apply absolute #{!important};
+      }
+
+      .simplebar-track.simplebar-horizontal {
+        @apply fixed #{!important};
+      }
+    }
+
+    .app-sidebar .side-menu__item {
+      margin-top: 0.25rem !important;
+    }
+  }
+
+  [data-vertical-style=icontext][data-toggled=icon-text-close] .app-sidebar .side-menu__item {
+    margin-top: 0.25rem !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .mail-navigation {
+    @apply hidden;
+  }
+}
+
+[type=checkbox]:focus {
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+.progress-bar-striped {
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+  background-size: 1rem 1rem;
+}
+
+.ti-btn-outline-light:hover,
+.product-sizes {
+  @apply dark:border-white/10 #{!important};
+}
+
+.product-details-page {
+  #carousel-container[_ngcontent-ng-c1271098887] {
+    @apply bg-light #{!important};
+  }
+
+  .previews-container[_ngcontent-ng-c1488287478]>.preview-inner-container[_ngcontent-ng-c1488287478]>.preview-image[_ngcontent-ng-c1488287478] {
+    @apply border border-defaultborder dark:border-white/10 #{!important};
+  }
+}
+
+[_nghost-ng-c1488287478] {
+  @apply p-[5px] #{!important};
+}
+
+@media (min-width: 992px) {
+  [data-nav-layout=horizontal] .landing-body .app-sidebar {
+    @apply pe-[1rem] ps-[1rem] #{!important};
+  }
+}
+
+.hs-accordion.active>.hs-accordion-toggle.hs-accordion-active\:text-primary {
+  @apply bg-defaultbackground dark:bg-light;
+}
+
+.ti-btn-outline-light:focus-visible {
+  @apply outline-0 #{!important};
+}
+
+.code-section {
+  display: block;
+  /* Add any other styling for the code section */
+}
+
+// .hidden {
+//   display: none;
+// }
+.select2-img {
+  display: inline-flex;
+  margin-inline-end: 0.25rem !important;
+  height: 1.45rem !important;
+  width: 1.45rem !important;
+  border-radius: 1.25rem !important;
+}
+
+.custom-width {
+  @apply w-[4.5rem];
+}
+
+#carousel-container[_ngcontent-ng-c1271098887]>.current-figure[_ngcontent-ng-c1271098887] .nav[_ngcontent-ng-c1271098887],
+#carousel-container[_ngcontent-ng-c1271098887]>.current-figure[_ngcontent-ng-c1271098887]>.nav-right[_ngcontent-ng-c1271098887],
+#carousel-container[_ngcontent-ng-c1271098887]>.current-figure[_ngcontent-ng-c1271098887]>.nav-left[_ngcontent-ng-c1271098887] {
+  @apply text-white bg-black/30 rounded-md #{!important}
+}
+
+.arrow-image, .right-arrow-image, .left-arrow-image, .empty-arrow-image {
+  @apply w-[15px] h-[15px] m-[5px] bg-contain #{!important}
+}
+
+.scrollable-modal-max {
+  .ti-modal .ti-modal-body {
+    overflow-y: auto;
+  }
+}
+
+.ae-font .ae-picker-label {
+  @apply dark:text-white #{!important};
+}
+
+.ng-clear-wrapper {
+  @apply hidden #{!important};
+}
+
+.dropzone .dz-preview:hover,
+.dropzone.dz-wrapper .dz-preview .dz-progress,
+.dropzone .dz-preview .dz-success-mark,
+.dropzone .dz-preview .dz-error-message,
+.dropzone .dz-preview .dz-error-mark {
+  @apply z-[9] #{!important};
+}
+
+.dropzone .dz-preview .dz-image {
+  @apply z-[8] #{!important};
+}
+
+.ng-select .ng-select-container .ng-value-container .ng-input>input {
+  @apply hidden #{!important}
+}
+
+.dropzone .dz-preview.dz-image-preview {
+  @apply dark:bg-bodybg #{!important};
+}
+
+// dropzone>.dropzone.dz-wrapper.dz-single .dz-preview .dz-image {
+//   @apply w-[120px] h-[120px] mx-auto #{!important}
+// }
+dropzone>.dropzone.dz-wrapper.dz-single .dz-preview {
+  @apply max-h-[10rem] #{!important};
+}
+
+dropzone>.dropzone.dz-wrapper .dz-message {
+  @apply border-0 #{!important}
+}
+
+.ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value .ng-value-icon.left {
+  @apply border-white/10 #{!important}
+}
+
+.ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value .ng-value-icon:hover {
+  @apply bg-black/10 #{!important}
+}
+
+input::-webkit-datetime-edit {
+  @apply rtl:justify-end #{!important}
+}
+
+input {
+
+  &[type="week"],
+  &[type="month"],
+  &[type="date"],
+  &[type="datetime-local"],
+  &[type="time"] {
+    &::-webkit-calendar-picker-indicator {
+      @apply rtl:absolute #{!important};
+    }
+  }
+}
+
+.mat-stepper-vertical,
+.mat-stepper-horizontal {
+  @apply dark:bg-bodybg #{!important}
+}
+
+.mat-stepper-horizontal-line {
+  @apply border-t-defaultborder dark:border-t-white/10 #{!important}
+}
+
+@media (max-width: 480px) {
+  .mat-vertical-content-container {
+    @apply ml-0 rtl:mr-0 #{!important}
+  }
+
+  .mat-vertical-content {
+    @apply p-0 #{!important}
+  }
+
+  .mat-stepper-vertical-line::before {
+    @apply hidden #{!important}
+  }
+
+  .mat-vertical-stepper-header .mat-step-icon {
+    @apply mr-0 rtl:ml-0 rtl:ml-0 #{!important}
+  }
+
+  .mat-step-icon {
+    @apply w-full h-[32px] rounded-[5px] #{!important}
+  }
+
+  .checkout-payment-success {
+    @apply p-[1rem] #{!important}
+  }
+}
+
+.mat-step-icon {
+  @apply bg-light text-defaulttextcolor #{!important}
+}
+
+.mat-step-icon.mat-step-icon-selected {
+  @apply bg-primary text-white #{!important}
+}
+
+.ng-dropdown-panel .ng-dropdown-header {
+  @apply dark:border-b-white/10 #{!important}
+}
+
+input.ng-star-inserted {
+  @apply dark:bg-bodybg dark:border-white/10 #{!important}
+}
+
+.NgxEditor__Dropdown .NgxEditor__Dropdown--Selected, .NgxEditor__Dropdown .NgxEditor__Dropdown--Open {
+  @apply dark:bg-bodybg text-defaulttextcolor #{!important};
+}
+
+.NgxEditor__Dropdown .NgxEditor__Dropdown--DropdownMenu {
+  @apply dark:bg-bodybg #{!important};
+}
+
+.NgxEditor__Dropdown .NgxEditor__Dropdown--Item:hover {
+  @apply dark:bg-black/10 #{!important};
+}
+
+.NgxEditor__Dropdown .NgxEditor__Dropdown--Text:after {
+  @apply rtl:ml-[0] rtl:mr-[24px] #{!important};
+}
+
+.product-details-page {
+  #carousel-container[_ngcontent-ng-c1271098887]>.current-figure[_ngcontent-ng-c1271098887]>.current-image[_ngcontent-ng-c1271098887]>img[_ngcontent-ng-c1271098887] {
+    @apply w-auto mx-auto #{!important}
+  }
+}
+
+.NgxEditor__Seperator {
+  @apply dark:border-white/10;
+}
+
+.ti-pagination li .page-link:hover {
+  @apply dark:border-white/10 #{!important};
+}
+
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing {
+  @apply dark:border-white/10 #{!important};
+}
+
+div.mat-mdc-select-panel {
+  @apply dark:bg-bodybg #{!important};
+}
+
+.mat-mdc-option {
+  @apply dark:text-white #{!important};
+}
+
+.mat-elevation-z8,
+.mat-mdc-elevation-specific.mat-elevation-z8 {
+  @apply shadow-none border dark:border-white/10 border-defaultborder #{!important};
+}
+
+.mdc-data-table__table {
+  @apply border dark:border-white/10 border-solid border-defaultborder #{!important};
+}
+
+.mat-elevation-z8 {
+  .mdc-data-table__table {
+    @apply border-0 #{!important};
+  }
+
+}
+
+.mat-mdc-paginator-page-size {
+  @apply my-[0.5rem];
+}
+
+.mdc-checkbox .mdc-checkbox__native-control:enabled:focus:focus:not(:checked):not(:indeterminate)~.mdc-checkbox__background {
+  @apply dark:border-white/10 #{!important};
+}
+
+.mdc-checkbox .mdc-checkbox__native-control:enabled:not(:checked):not(:indeterminate):not([data-indeterminate=true])~.mdc-checkbox__background {
+  @apply dark:border-white/10 #{!important};
+}
+
+// .mdc-checkbox .mdc-checkbox__native-control:enabled:focus:focus:not(:checked):not(:indeterminate)~.mdc-checkbox__background {
+
+// }
+.mat-mdc-raised-button:not(:disabled) {
+  @apply bg-light text-defaulttextcolor dark:text-white #{!important};
+}
+
+#external-events[_ngcontent-ng-c2392543396] {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-week-view .cal-day-headers {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-week-view {
+  @apply dark:border-white/10 dark:bg-bodybg #{!important};
+}
+
+.cal-week-view .cal-hour:not(:last-child) .cal-hour-segment,
+.cal-week-view .cal-hour:last-child :not(:last-child) .cal-hour-segment {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-week-view .cal-hour-odd {
+  @apply dark:bg-bodybg #{!important};
+}
+
+.cal-week-view .cal-all-day-events {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-week-view .cal-time-events {
+  @apply dark:border-white/10 #{!important};
+}
+
+.cal-week-view .cal-day-headers .cal-header:hover,
+.cal-week-view .cal-day-headers .cal-drag-over {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.cal-week-view .cal-header.cal-today {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.cal-week-view .cal-time-events .cal-day-columns:not(.cal-resize-active) .cal-hour-segment:hover {
+  @apply dark:bg-white/10 #{!important};
+}
+
+.cal-week-view .cal-day-column {
+  @apply dark:border-white/10 #{!important};
+}
+
+#calendar2 .btn-group .btn-primary:last-child {
+  @apply rounded-e-[2px] #{!important};
+}
+
+h5 {
+  @apply text-[1.25rem];
+}
+
+.ng-select.ng-select-single .ng-select-container .ng-value-container .ng-input {
+  @apply top-0;
+}
+
+.nft-details-bg.product-details-page #carousel-container[_ngcontent-ng-c1271098887] {
+  @apply dark:bg-transparent #{!important};
+}
+
+.br-square .br-unit-inner {
+  @apply dark:bg-bodybg #{!important};
+}
+
+select {
+  @apply rtl:bg-left rtl:bg-[0.5rem] #{!important};
+}
+
+.ng-select .ng-select-container .ng-value-container .ng-placeholder {
+  @apply dark:text-white text-defaulttextcolor opacity-[0.7] #{!important};
+}
+
+.ngx-slider .ngx-slider-bar:not(.ngx-slider-selection) {
+  @apply dark:bg-black/20 #{!important};
+}
+
+.color-pickr-slider #result {
+  @apply dark:border-white/10 #{!important};
+}
+
+.custom-fileupload.single-fileupload {
+  .filepond--root .filepond--drop-label {
+    // min-height: 7.5em;
+    @apply min-h-[7.5em] #{!important};
+  }
+}
+
+.ng-select.ng-select-multiple.ng-select-disabled>.ng-select-container .ng-value-container .ng-value {
+  @apply dark:border-white/10 #{!important};
+}
+
+select {
+  @apply bg-white dark:bg-bodybg border border-solid border-inputborder text-defaulttextcolor text-defaultsize rounded-md focus:border focus:border-primary;
+
+  option {
+    @apply bg-white dark:bg-bodybg py-[0.35rem] px-3 rounded-sm border border-primary/10;
+  }
+
+  option:checked {
+    @apply bg-primary/20 text-primary;
+  }
+}
+
+.angular-editor-toolbar[_ngcontent-ng-c834769704] .angular-editor-toolbar-set[_ngcontent-ng-c834769704] .foreground[_ngcontent-ng-c834769704] [_ngcontent-ng-c834769704]:after {
+  @apply dark:bg-white #{!important};
+}
+
+.NgxEditor__Popup {
+  @apply dark:bg-bodybg #{!important};
+}
+
+.mdc-notched-outline__leading,
+.mdc-notched-outline__trailing {
+  @apply dark:border-white/10 #{!important};
+}
+
+.mat-mdc-select-arrow svg {
+  /* fill: currentColor; */
+  @apply dark:fill-white #{!important};
+}
+
+.mat-mdc-select-value-text {
+  @apply dark:text-white #{!important};
+}
+
+.ngx-slider .ngx-slider-bubble {
+  @apply dark:text-white #{!important};
+}
+
+[type='text'],
+input:where(:not([type])),
+[type='email'],
+[type='url'],
+[type='password'],
+[type='number'],
+[type='date'],
+[type='datetime-local'],
+[type='month'],
+[type='search'],
+[type='tel'],
+[type='time'],
+[type='week'],
+[multiple],
+textarea,
+select {
+  @apply bg-white dark:bg-bodybg border-inputborder text-defaulttextcolor text-defaultsize;
+}
+
+.angular-editor-toolbar .angular-editor-toolbar-set .foreground:after {
+  @apply dark:bg-white #{!important}
+}
+
+.angular-editor-toolbar .angular-editor-toolbar-set .foreground i:after {
+  @apply rtl:right-[13px] rtl:left-auto #{!important}
+}
+
+.angular-editor-toolbar .angular-editor-toolbar-set .background {
+  @apply dark:text-white dark:bg-white/10 #{!important}
+}
+
+.swal-button--cancel {
+  @apply dark:text-white dark:bg-white/10 dark:border-white/10 dark:shadow-none #{!important};
+}
+
+#invoice-list-stats .apexcharts-canvas {
+  @apply w-full #{!important};
+}
+
+#invoice-list-stats .apexcharts-canvas svg {
+  @apply w-full #{!important};
+}
+
+ngx-colors-panel .opened,
+.color-picker {
+  @apply dark:bg-bodybg #{!important}
+}
+
+.opened .manual-input-wrapper .g-input input {
+  @apply dark:border-white/10 #{!important};
+}
+
+.opened button {
+  @apply dark:text-white #{!important};
+}
+
+ngx-colors-panel svg {
+  @apply dark:invert-[1] #{!important};
+}
+
+ngx-colors-panel .circle.button {
+  @apply dark:bg-white/10 #{!important}
+}
+
+// .ri-arrow-left-s-line, .ri-arrow-right-s-line {
+//   @apply  rtl:scale-x-[-1] #{!important}
+// }
+.mdc-text-field--filled:not(.mdc-text-field--disabled) .mdc-line-ripple::before {
+  @apply dark:border-white/20 #{!important};
+}
+
+[data-nav-layout="vertical"] {
+  .main-menu {
+    @apply m-0 #{!important};
+  }
+}
+
+#mail-reply-editor .NgxEditor {
+  @apply min-h-[12rem] #{!important};
+}
+
+.mat-mdc-form-field:not(.mat-form-field-no-animations) .mdc-text-field__input {
+  @apply bg-transparent #{!important};
+}
+
+#grid-sorting .mat-elevation-z8 .mdc-data-table__table {
+  @apply border-t-[1px] border-b-[1px] #{!important};
+}
+
+#basic-table,
+#download-table,
+#reactivity-table {
+  .mdc-data-table__table {
+    @apply border-0 #{!important};
+  }
+}
+
+#line-chart .apexcharts-canvas {
+  @apply w-full #{!important};
+}
+
+#line-chart .apexcharts-canvas svg {
+  @apply w-full #{!important};
+}
+
+@media (max-width: 375px) {
+  .header-content-right .hs-dropdown.open>.ti-dropdown-menu {
+    @apply w-full translate-x-0 translate-y-[71px] #{!important};
+  }
+}
+
+#timeline-colors {
+  .apexcharts-grid-row {
+    @apply fill-transparent #{!important};
+  }
+}
+
+// .marketcap-chart {
+//   .apexcharts-canvas {
+//     @apply w-[auto] #{!important};
+//   }
+// }
+uhfdsj {
+  .ngx-colors-overlay.undefined {
+    .ng-star-inserted:not(.circle.button){
+      @apply rtl:left-[304px] #{!important};
+    }
+  }
+}
+.NgxEditor__Dropdown .NgxEditor__Dropdown--Active {
+  @apply dark:bg-bodybg2;
+}
+
+[data-nav-layout="horizontal"][class="dark"][data-header-styles="transparent"] {
+  .app-header .horizontal-logo .header-logo .toggle-white {
+    @apply hidden;
+  }
+}
+
+[data-nav-layout="horizontal"] {
+
+  &[data-nav-style="menu-hover"],
+  &[data-nav-style="icon-hover"] {
+    .app-sidebar .slide.has-sub .slide-menu {
+      @apply left-[auto] rtl:right-[auto] #{!important};
+    }
+  }
+}
+
+.ng-dropdown-panel {
+  @apply z-[99999] #{!important};
+}
+
+[dir="rtl"] {
+  .ri-arrow-right-s-line:before {
+    content: "\ea64";
+  }
+
+  .ri-arrow-left-s-line:before {
+    content: "\ea6e";
+  }
+}
+
+.h4 {
+  font-size: 1.5rem;
+}
+
+.dz-message .dz-text {
+  @apply text-defaulttextcolor/70;
+}
+.apexcharts-title-text {
+  @apply dark:fill-defaulttextcolor/70;
+}
+#radialbar-multiple {
+  .apexcharts-text.apexcharts-datalabel-label {
+    @apply dark:fill-defaulttextcolor/70;
+  }
+}
+[data-nav-layout="vertical"]  {
+  .main-menu > .slide.has-sub > .slide-menu.child1 > .slide {
+    @apply my-[2px]
+  }
+}
+#calendar2 {
+  .btn-primary.active {
+    @apply bg-primary/80 #{!important};
+  }
+}
+
+.apexcharts-canvas:not(.marketcap-chart .apexcharts-canvas) {
+  @apply w-full #{!important};
+}
+
+.apexcharts-canvas svg {
+  @apply w-full #{!important};
+}
+
+#calendar2 .btn-group {
+  @apply relative inline-flex align-middle;
+}
+
+:is([dir=ltr] #calendar2 .btn-group .btn-primary:first-child) {
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+}
+
+#calendar2 .btn-group .btn-primary {
+  cursor: pointer;
+  --tw-bg-opacity: 1;
+  background-color: rgb(82 43 0 67 / var(--tw-bg-opacity));
+  padding: 5px 10px;
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+
+.ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-value {
+
+  color: #fff;
+  background-color: rgb(var(--primary)) !important;
+}
+
+
+// .cdk-overlay-backdrop.cdk-overlay-backdrop-showing{
+//   background:#000000de !important;
+// }
+pre[class*=language-]>code {
+  position: relative;
+  z-index: 1;
+
+  background-size: 3em 3em;
+  background-origin: content-box;
+  background-attachment: local;
+}
+
+pre {
+  overflow: auto;
+}
+
+.owl-nav {
+  .owl-prev {
+    position: absolute;
+    top: 29% !important;
+    left: 2px;
+  }
+
+  .owl-next {
+    position: absolute;
+    top: 29% !important;
+    right: 2px;
+  }
+}
+
+
+.owl-theme .owl-nav [class*="owl-"] {
+  color: #fff;
+  font-size: 14px;
+  margin: 5px;
+  padding: 3px 10px;
+  display: inline-block;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+}
+
+.authentication {
+  .owl-nav .owl-prev {
+    top: 45% !important;
+
+  }
+
+  .owl-nav .owl-next {
+    top: 45% !important;
+
+  }
+
+  .owl-theme .owl-nav [class*=owl-] {
+
+    background: rgb(0 0 0 / 0.3) !important;
+
+  }
+}
+
+
+code[class*=language-] {
+  max-height: inherit;
+  height: inherit;
+  padding: 0 1em;
+  display: block;
+  overflow: auto;
+}
+
+pre[class*=language-]>code {
+  position: relative;
+  z-index: 1;
+  border-left: 10px solid #358ccb;
+  box-shadow: -1px 0 0 0 #358ccb, 0 0 0 1px #dfdfdf;
+  background-color: #fdfdfd;
+  background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, .04) 50%);
+  background-size: 3em 3em;
+  background-origin: content-box;
+  background-attachment: local;
+}
+
+code[class*=language-],
+pre[class*=language-] {
+  color: #000;
+  background: 0 0;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 1em;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.5;
+  -moz-tab-size: 4;
+  -o-tab-size: 4;
+  tab-size: 4;
+  -webkit-hyphens: none;
+  -moz-hyphens: none;
+  -ms-hyphens: none;
+  hyphens: none;
+}
+
+#crm-main {
+  .apexcharts-canvas {
+    @apply w-[100px] #{!important};
+  }
+}
+
+#leads-source {
+  .apexcharts-canvas {
+    @apply w-[300px] #{!important};
+  }
+}
+
+.showcode {
+
+  @apply border-0 p-0 #{!important};
+
+}
+
+.mat-horizontal-stepper-wrapper {
+  .mat-stepper-horizontal-line {
+    @apply hidden;
+  }
+
+  .mat-horizontal-stepper-header-container {
+    @apply justify-between;
+  }
+}
+
+@media (min-width:992px) {
+  [data-nav-layout="vertical"][data-nav-style="menu-click"][data-toggled="menu-click-closed"] {
+    .main-sidebar .simplebar-track.simplebar-horizontal {
+      @apply hidden #{!important};
+    }
+  }
+}
+
+.ng-select.ng-select-multiple .ng-select-container .ng-value-container .ng-placeholder {
+  @apply z-0 #{!important};
+}
+
+.swal-modal {
+  .swal-footer {
+    @apply text-center #{!important};
+  }
+}
+
+.swal-icon--success:after,
+.swal-icon--success:before,
+.swal-icon--success__hide-corners {
+  @apply dark:bg-bodybg2 #{!important};
+}
+
+.swal-icon--success__ring {
+  @apply -left-[14px] top-[7px] #{!important};
+}
+
+.swal-icon--success__line--long {
+  @apply w-[47px] right-[19px] top-[45px] #{!important};
+}
+
+.swal-icon--success__line--tip {
+  @apply w-[25px] left-0.5 top-[53px] #{!important};
+}
+
+.cal-month-view {
+  @apply  dark:bg-bodybg2 dark:border-[#303234] #{!important};
+}
+[data-menu-styles="gradient"][data-vertical-style="doublemenu"]:not([data-nav-layout="horizontal"])
+  .app-sidebar
+  .slide.has-sub
+  .slide-menu
+  .slide-menu.child2 {
+  @apply z-[99999] #{!important};
+}
+.pickr-container-primary .pickr .pcr-button,
+.pickr-container-background .pickr .pcr-button {
+  @apply bg-[color:var(--primary-color)];
+}
+.pickr-container-background .pickr .pcr-button::after,
+.pickr-container-primary .pickr .pcr-button::after {
+  @apply content-["\efc5"] text-[rgba(255,255,255,0.7)] leading-[1.4] text-xl;
+  font-family: remixicon !important;
+}
+@media (min-width:992px) {
+  [data-nav-layout="vertical"][data-nav-style="icon-click"][data-toggled="icon-click-closed"]{
+    .app-sidebar .main-sidebar .simplebar-content-wrapper{
+      @apply overflow-visible #{!important};
+    }
+  }
+}
+@media (min-width:992px) {
+  [data-nav-layout="vertical"][data-nav-style="menu-click"][data-toggled="menu-click-closed"]{
+    .app-sidebar .main-sidebar .simplebar-content-wrapper{
+      @apply overflow-visible #{!important};
+    }
+  }
+}
+/* global*/

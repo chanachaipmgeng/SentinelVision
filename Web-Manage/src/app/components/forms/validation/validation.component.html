@@ -1,0 +1,576 @@
+<app-page-header [title]="'Validation'" [activeTitle]="'Forms'" [title1]="'Validation'"></app-page-header>
+
+
+
+<!-- Start::row-1 -->
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-12">
+  <div class="box">
+    <div class="box-header">
+      <h5 class="box-title">Default Validation</h5>
+    </div>
+    <div class="box-body">
+      <form
+        class="ti-validation"
+        [formGroup]="customForm"
+        (ngSubmit)="Submit()"
+        novalidate
+      >
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">First Name</label>
+            <input
+              type="text"
+              formControlName="firstname"
+              class="my-auto ti-form-input form-control"
+              placeholder="Firstname"
+            />
+            @if(  customForm.controls['firstname'].invalid &&
+            (customForm.controls['firstname'].dirty ||
+              customForm.controls['firstname'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  First Name is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Last Name</label>
+            <input
+              type="text"
+              formControlName="lastname"
+              class="my-auto ti-form-input form-control"
+              placeholder="Lastname"
+            />
+            @if(      customForm.controls['lastname'].invalid &&
+            (customForm.controls['lastname'].dirty ||
+              customForm.controls['lastname'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  Last Name is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Phone Number</label>
+            <input
+              type="number"
+              formControlName="phonenumber"
+              class="my-auto ti-form-input form-control"
+              placeholder="+91 123-456-789"
+            />
+            @if(  customForm.controls['phonenumber'].invalid &&
+            (customForm.controls['phonenumber'].dirty ||
+              customForm.controls['phonenumber'].touched)){
+
+                <div class="text-danger" >
+                  Phone Number is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Email Address</label>
+            <input
+              type="email"
+              formControlName="email"
+              class="my-auto ti-form-input form-control"
+              placeholder="your@site.com"
+            />
+            @if( customForm.controls['email'].invalid &&
+            (customForm.controls['email'].dirty ||
+              customForm.controls['email'].touched)){
+
+                <div class="text-danger"
+                >
+                  Email is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Password</label>
+            <input
+              type="password"
+              class="ti-form-input form-control"
+              placeholder="password"
+              required
+            />
+            @if(  customForm.controls['password'].invalid &&
+            (customForm.controls['password'].dirty ||
+              customForm.controls['password'].touched)){
+
+                <div class="text-danger"
+                >
+                  password is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Confirm Password</label>
+            <input
+              type="password"
+              class="ti-form-input"
+              placeholder="password"
+              required
+            />
+            @if(  customForm.controls['password'].invalid &&
+            (customForm.controls['password'].dirty ||
+              customForm.controls['password'].touched)){
+
+                <div class="text-danger"
+                >
+                  password is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Date Of Birth</label>
+            <input type="text" class="ti-form-input rounded-sm flatpickr-input active" id="date" readonly="readonly" required=""  mwlFlatpickr
+            [altInput]="true"
+            [convertModelValue]="true">
+         
+            
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label dark:text-defaulttextcolor/70 mb-0">Gender</label>
+            <ul class="flex flex-col sm:flex-row">
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-e-none dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-1" name="ti-radio-validation" type="radio" class="ti-form-radio" checked required>
+                    </div>
+                    <label for="ti-radio-validation-1" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                     Female
+                    </label>
+                  </div>
+                </li>
+
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-none  dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-2" name="ti-radio-validation" type="radio" class="ti-form-radio" required>
+                    </div>
+                    <label for="ti-radio-validation-2" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                      Male
+                    </label>
+                  </div>
+                </li>
+
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-s-sm  dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-3" name="ti-radio-validation" type="radio" class="ti-form-radio" required>
+                    </div>
+                    <label for="ti-radio-validation-3" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                    Others
+                    </label>
+                  </div>
+                </li>
+              </ul>
+          </div>
+        </div>
+        <div class="my-5">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Address</label>
+            <input
+              type="text"
+              formControlName="address"
+              class="my-auto ti-form-input form-control"
+              placeholder="Address"
+              required
+            />
+            @if(   customForm.controls['address'].invalid &&
+            (customForm.controls['address'].dirty ||
+              customForm.controls['address'].touched)){
+
+                <div class="text-danger"
+                >
+                  address is required.
+                </div>
+            }
+          </div>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">City</label>
+            <input
+              type="text"
+              formControlName="city"
+              class="my-auto ti-form-input form-control"
+              placeholder="city"
+              required
+            />
+            @if(     customForm.controls['city'].invalid &&
+            (customForm.controls['city'].dirty ||
+              customForm.controls['city'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  city is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">State</label>
+            <input
+              type="text"
+              formControlName="state"
+              class="my-auto ti-form-input form-control"
+              placeholder="state"
+              required
+            />
+            @if(  customForm.controls['state'].invalid &&
+            (customForm.controls['state'].dirty ||
+              customForm.controls['state'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  state is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Pincode</label>
+            <input
+              type="number"
+              formControlName="pincode"
+              class="my-auto ti-form-input form-control"
+              placeholder="pincode"
+            />
+            @if(  customForm.controls['pincode'].invalid &&
+            (customForm.controls['pincode'].dirty ||
+              customForm.controls['pincode'].touched)){
+
+                <div   class="text-danger"
+                >
+                  pincode is required.
+                </div>
+            }
+          </div>
+        </div>
+        <div class="my-5">
+          <input
+            type="checkbox"
+            pincode
+            class="ti-form-checkbox mt-0.5 form-check-input"
+            id="hs-checkbox-group-1"
+            required
+          />
+          <label
+            for="hs-checkbox-group-1"
+            class="text-sm text-gray-500 ltr:ml-3 rtl:mr-3 dark:text-white/70 form-check-label"
+            >I agree with the
+                <a href="javascript:void(0);" class="text-primary hover:underline ms-1"
+              >  terms and conditions</a
+            ></label
+          >
+          @if(customForm.controls['agreement'].invalid &&
+          (customForm.controls['agreement'].dirty ||
+            customForm.controls['agreement'].touched)){
+
+              <div
+                class="text-danger"
+              >
+                You must agree to the terms and conditions.
+              </div>
+          }
+        </div>
+        <button type="submit" class="ti-btn ti-btn-primary">Submit</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="col-span-12">
+  <div class="box">
+    <div class="box-header">
+      <h5 class="box-title">Custom Validation</h5>
+    </div>
+    <div class="box-body">
+     <form
+        class="ti-validation"
+        [formGroup]="customForm"
+        (ngSubmit)="Submit()"
+        novalidate
+      >
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">First Name</label>
+            <input
+              type="text"
+              formControlName="firstname"
+              class="my-auto ti-form-input form-control"
+              placeholder="Firstname"
+            />
+            @if( customForm.controls['firstname'].invalid &&
+            (customForm.controls['firstname'].dirty ||
+              customForm.controls['firstname'].touched)){
+
+                <div  class="text-danger"
+                >
+                  First Name is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Last Name</label>
+            <input
+              type="text"
+              formControlName="lastname"
+              class="my-auto ti-form-input form-control"
+              placeholder="Lastname"
+            />
+            @if( customForm.controls['lastname'].invalid &&
+            (customForm.controls['lastname'].dirty ||
+              customForm.controls['lastname'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  Last Name is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Phone Number</label>
+            <input
+              type="number"
+              formControlName="phonenumber"
+              class="my-auto ti-form-input form-control"
+              placeholder="+91 123-456-789"
+            />
+            @if(customForm.controls['phonenumber'].invalid &&
+            (customForm.controls['phonenumber'].dirty ||
+              customForm.controls['phonenumber'].touched)){
+
+                <div class="text-danger"
+                >
+                  Phone Number is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Email Address</label>
+            <input
+              type="email"
+              formControlName="email"
+              class="my-auto ti-form-input form-control"
+              placeholder="your@site.com"
+            />
+            @if( customForm.controls['email'].invalid &&
+            (customForm.controls['email'].dirty ||
+              customForm.controls['email'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  Email is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Password</label>
+            <input
+              type="password"
+              class="ti-form-input form-control"
+              placeholder="password"
+              required
+            />
+            @if( customForm.controls['password'].invalid &&
+            (customForm.controls['password'].dirty ||
+              customForm.controls['password'].touched)){
+
+                <div
+               
+                  class="text-danger"
+                >
+                  password is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Confirm Password</label>
+            <input
+              type="password"
+              class="ti-form-input"
+              placeholder="password"
+              required
+            />
+            @if(  customForm.controls['password'].invalid &&
+            (customForm.controls['password'].dirty ||
+              customForm.controls['password'].touched)){
+
+                <div class="text-danger" >
+                  password is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Date Of Birth</label>
+           <input type="date" class="ti-form-input joining-date  date active" id="date">
+           @if(   customForm.controls['date'].invalid &&
+           (customForm.controls['date'].dirty ||
+             customForm.controls['date'].touched)){
+
+               <div class="text-danger" >
+                 date is required.
+               </div>
+           }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label dark:text-defaulttextcolor/70 mb-0">Gender</label>
+            <ul class="flex flex-col sm:flex-row">
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-e-none dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-1" name="ti-radio-validation" type="radio" class="ti-form-radio" checked required>
+                    </div>
+                    <label for="ti-radio-validation-1" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                     Female
+                    </label>
+                  </div>
+                </li>
+
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-none  dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-2" name="ti-radio-validation" type="radio" class="ti-form-radio" required>
+                    </div>
+                    <label for="ti-radio-validation-2" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                      Male
+                    </label>
+                  </div>
+                </li>
+
+                <li class="ti-list-group w-full gap-x-2.5 py-2 px-4 bg-white dark:bg-bodybg border text-gray-800 sm:-ms-px sm:mt-0 !rounded-s-sm  dark:bg-bgdark dark:border-white/10 dark:text-white">
+                  <div class="relative flex items-start w-full">
+                    <div class="flex items-center h-5">
+                      <input id="ti-radio-validation-3" name="ti-radio-validation" type="radio" class="ti-form-radio" required>
+                    </div>
+                    <label for="ti-radio-validation-3" class="ms-3 block w-full text-sm text-gray-600 dark:text-[#8c9097] dark:text-white/50">
+                    Others
+                    </label>
+                  </div>
+                </li>
+              </ul>
+          </div>
+        </div>
+        <div class="my-5">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Address</label>
+            <input
+              type="text"
+              formControlName="address"
+              class="my-auto ti-form-input form-control"
+              placeholder="Address"
+              required
+            />
+            @if( customForm.controls['address'].invalid &&
+            (customForm.controls['address'].dirty ||
+              customForm.controls['address'].touched)){
+
+                <div class="text-danger"  >
+                  address is required.
+                </div>
+            }
+          </div>
+        </div>
+        <div class="grid lg:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">City</label>
+            <input
+              type="text"
+              formControlName="city"
+              class="my-auto ti-form-input form-control"
+              placeholder="city"
+              required
+            />
+            @if(  customForm.controls['city'].invalid &&
+            (customForm.controls['city'].dirty ||
+              customForm.controls['city'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  city is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">State</label>
+            <input
+              type="text"
+              formControlName="state"
+              class="my-auto ti-form-input form-control"
+              placeholder="state"
+              required
+            />
+            @if( customForm.controls['state'].invalid &&
+            (customForm.controls['state'].dirty ||
+              customForm.controls['state'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  state is required.
+                </div>
+            }
+          </div>
+          <div class="space-y-2">
+            <label class="ti-form-label mb-0">Pincode</label>
+            <input
+              type="number"
+              formControlName="pincode"
+              class="my-auto ti-form-input form-control"
+              placeholder="pincode"
+            />
+            @if(  customForm.controls['pincode'].invalid &&
+            (customForm.controls['pincode'].dirty ||
+              customForm.controls['pincode'].touched)){
+
+                <div
+                  class="text-danger"
+                >
+                  pincode is required.
+                </div>
+            }
+          </div>
+        </div>
+        <div class="my-5">
+          <input
+            type="checkbox"
+            pincode
+            class="ti-form-checkbox mt-0.5 form-check-input"
+            id="hs-checkbox-group-2"
+            required
+          />
+          <label
+            for="hs-checkbox-group-2"
+            class="text-sm text-gray-500 ltr:ml-3 rtl:mr-3 dark:text-white/70 form-check-label"
+            >I agree with the
+            <a href="javascript:void(0);" class="text-primary hover:underline"
+              >terms and conditions</a
+            ></label
+          >
+          @if(        customForm.controls['agreement'].invalid &&
+          (customForm.controls['agreement'].dirty ||
+            customForm.controls['agreement'].touched)){
+
+              <div
+                class="text-danger"
+              >
+                You must agree to the terms and conditions.
+              </div>
+          }
+        </div>
+        <button type="submit" class="ti-btn ti-btn-primary">Submit</button>
+      </form>
+    </div>
+  </div>
+</div>
+</div>
+<!-- End::row-1 -->

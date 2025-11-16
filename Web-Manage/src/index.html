@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" dir="ltr" data-nav-layout="vertical" class="" data-header-styles="color" data-menu-styles="color"
+  data-vertical-style="overlay" data-page-style="modern">
+
+<head>
+  <meta charset="utf-8">
+  <title>Time Attendance System</title>
+  <base href="/">
+  <!-- <base href="/ynex-tailwind/preview/"> -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Spruko Technologies Private Limited">
+  <meta name="keywords" content="tailwind template, angular front end, angular framework ,angular dashboard ,admin panel,angular,tailwind,admin template,template dashboard,ngbootstrap,template angular,admin,tailwind admin template,tailwind css,angular admin template,admin dashboard,dashboard
+  ">
+  <link rel="icon" type="image/x-icon" href="./assets/images/brand-logos/favicon.ico">
+  <link rel="stylesheet" href="assets/JS/pace/themes/silver/pace-theme-flash.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap" rel="stylesheet">
+  <!-- <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap"
+      rel="stylesheet"
+    /> -->
+  <style type="text/css">
+    body,
+    html {
+      height: 100%;
+    }
+
+    .app-loading {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background-color: white;
+    }
+
+    .app-loading .spinner {
+      height: 200px;
+      width: 200px;
+      animation: rotate 2s linear infinite;
+      transform-origin: center center;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      margin: auto;
+    }
+
+    .app-loading .spinner .path {
+      stroke-dasharray: 1, 200;
+      stroke-dashoffset: 0;
+      animation: dash 1.5s ease-in-out infinite;
+      stroke-linecap: round;
+      stroke: #ddd;
+    }
+
+    .app-loading .logo {
+      width: 64px;
+      height: 64px;
+      background: url("assets/images/logo/logo-myhr.png") center center no-repeat;
+      background-size: cover;
+
+    }
+
+
+    @keyframes rotate {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes dash {
+      0% {
+        stroke-dasharray: 1, 200;
+        stroke-dashoffset: 0;
+      }
+
+      50% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -35px;
+      }
+
+      100% {
+        stroke-dasharray: 89, 200;
+        stroke-dashoffset: -124px;
+      }
+    }
+  </style>
+  <script type="text/javascript">
+    window.paceOptions = {
+      document: true,
+      eventLag: true,
+      restartOnPushState: true,
+      restartOnRequestAfter: true,
+      ajax: {
+        trackMethods: ['POST', 'GET']
+      }
+    };
+  </script>
+  <script src="assets/JS/pace/pace.js"></script>
+</head>
+
+<body>
+  <!-- <script>
+    (g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", ['geometry', 'places'] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })({
+      v: "weekly",
+      key: "AIzaSyDWyV4FNQLMx9rdpy6eABvSlnNe_3GrW6s"
+    });
+  </script> -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWyV4FNQLMx9rdpy6eABvSlnNe_3GrW6s&callback=initAutocomplete&libraries=places&v=weekly"
+    defer></script>
+  <app-root>
+    <div class="app-loading">
+      <div class="logo">
+        <svg class="spinner" viewBox="25 25 50 50">
+          <circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="2" stroke-miterlimit="10" />
+        </svg>
+      </div>
+    </div>
+  </app-root>
+</body>
+
+</html>

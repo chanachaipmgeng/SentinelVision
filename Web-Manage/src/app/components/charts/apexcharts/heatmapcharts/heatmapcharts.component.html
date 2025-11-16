@@ -1,0 +1,64 @@
+<app-page-header [title]="'Apex HeatMap Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex HeatMap Charts'"></app-page-header>
+
+      <!-- Start::row-1 -->
+      <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Basic Heatmap Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="heatmap-basic">
+                        <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                        [dataLabels]="chartOptions.dataLabels" [title]="chartOptions.title"
+                        [colors]="chartOptions.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Multi Series Heatmap Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="heatmap-multiseries">
+                        <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                        [dataLabels]="chartOptions1.dataLabels" [colors]="chartOptions1.colors"
+                        [grid]="chartOptions1.grid" [xaxis]="chartOptions1.xaxis"
+                        [title]="chartOptions1.title"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Color Range Heatmap Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="heatmap-colorrange">
+                        <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                        [dataLabels]="chartOptions2.dataLabels" [plotOptions]="chartOptions2.plotOptions"
+                        [title]="chartOptions2.title"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Heatmap Range Without Shades</div>
+                </div>
+                <div class="box-body">
+                    <div id="heatmap-range">
+                        <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                        [dataLabels]="chartOptions3.dataLabels" [colors]="chartOptions3.colors"
+                        [stroke]="chartOptions3.stroke" [plotOptions]="chartOptions3.plotOptions"
+                        [xaxis]="chartOptions3.xaxis" [title]="chartOptions3.title"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->

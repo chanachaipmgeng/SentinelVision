@@ -1,0 +1,347 @@
+<app-page-header [title]="'Companies'" [activeTitle]="'CRM'" [title1]="'Companies'"></app-page-header>
+
+                    <!-- Start::row-1 -->
+                    <div class="grid grid-cols-12 gap-6">
+                        <div class="xl:col-span-12 col-span-12">
+                            <div class="box custom-box">
+                                <div class="box-header justify-between">
+                                    <div class="box-title">
+                                        Companies <span class="badge bg-light text-defaulttextcolor rounded-full ms-1 text-[0.75rem] align-middle">14</span>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]" data-hs-overlay="#todo-compose"><i class="ri-add-line font-semibold align-middle"></i>Add Company
+                                        </a>
+                                        <button type="button" class="ti-btn ti-btn-success !py-1 !px-2 !text-[0.75rem] btn-wave">Export As CSV</button>
+                                        <div class="hs-dropdown ti-dropdown">
+                                            <a href="javascript:void(0);" class="ti-btn ti-btn-light !py-1 !px-2 !text-[0.75rem] btn-wave" aria-expanded="false">
+                                                Sort By<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+                                            </a>
+                                            <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+                                                <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+                                                <li><a class="ti-dropdown-item" href="javascript:void(0);">Date Added</a></li>
+                                                <li><a class="ti-dropdown-item" href="javascript:void(0);">A - Z</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="box-body !p-0">
+                                    <div class="table-responsive">
+                                        <table class="table whitespace-nowrap min-w-full">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">
+                                                        <input class="form-check-input" type="checkbox" id="checkboxNoLabel" value="" aria-label="...">
+                                                    </th>
+                                                    <th scope="col" class="text-start">Company Name</th>
+                                                    <th scope="col" class="text-start">Email</th>
+                                                    <th scope="col" class="text-start">Phone</th>
+                                                    <th scope="col" class="text-start">Industry</th>
+                                                    <th scope="col" class="text-start">Company Size</th>
+                                                    <th scope="col" class="text-start">Key Contact</th>
+                                                    <th scope="col" class="text-start">Total Deals</th>
+                                                    <th scope="col" class="text-start">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for(company of companies;track company.id){
+                                                    <tr class="border border-defaultborder crm-contact" >
+                                                        <td>
+                                                            <input class="form-check-input" type="checkbox" id="checkboxNoLabel1" value="" aria-label="...">
+                                                        </td>
+                                                        <td>
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="leading-none">
+                                                                    <span class="avatar avatar-sm p-1 bg-light avatar-rounded">
+                                                                        <img src= {{company.img}} alt="">
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <a   routerLink="/apps/crm/companies" aria-controls="offcanvasExample">{{company.name}}</a>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <span class="block mb-1"><i class="ri-mail-line me-2 align-middle text-[.875rem] text-[#8c9097] dark:text-white/50 inline-flex"></i>{{company.mail}}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div>
+                                                                <span class="block"><i class="ri-phone-line me-2 align-middle text-[.875rem] text-[#8c9097] dark:text-white/50 inline-flex"></i>{{company.phnum}}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                          {{company.type}}
+                                                        </td>
+                                                        <td>
+                                                            <div class="flex items-center flex-wrap gap-1">
+                                                                <span class="badge bg-{{company.bg}} text-{{company.text}}">{{company.size}}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="flex items-center gap-2">
+                                                                <div class="leading-none">
+                                                                    <span class="avatar avatar-rounded avatar-sm">
+                                                                        <img src={{company.img2}} alt="">
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <span class="block font-semibold">{{company.name2}}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            {{company.deals}}
+                                                        </td>
+                                                        <td>
+                                                            <div class="btn-list">
+                                                                <button aria-label="button" type="button" class="ti-btn ti-btn-sm ti-btn-warning me-2" data-hs-overlay="#hs-overlay-contacts"><i class="ri-eye-line"></i></button>
+                                                                <button aria-label="button" type="button" class="ti-btn ti-btn-sm ti-btn-info me-2"><i class="ri-pencil-line"></i></button>
+                                                                <button aria-label="button" type="button" class="ti-btn ti-btn-sm ti-btn-danger contact-delete" (click)="click(company.id)"><i class="ri-delete-bin-line"></i></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                              
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="box-footer !border-t-0">
+                                    <div class="flex items-center">
+                                        <div>
+                                            Showing 10 Entries <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+                                        </div>
+                                        <div class="ms-auto">
+                                            <nav aria-label="Page navigation" class="pagination-style-4">
+                                                <ul class="ti-pagination mb-0">
+                                                    <li class="page-item disabled">
+                                                        <a class="page-link" href="javascript:void(0);">
+                                                            Prev
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item "><a class="page-link active" href="javascript:void(0);">1</a></li>
+                                                    <li class="page-item"><a class="page-link" href="javascript:void(0);">2</a></li>
+                                                    <li class="page-item">
+                                                        <a class="page-link text-primary" href="javascript:void(0);">
+                                                            next
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!--End::row-1 -->
+                    
+                     <!-- Start:: Company Details Offcanvas -->
+                     <div class="hs-overlay hidden ti-offcanvas ti-offcanvas-right !max-w-[25rem] !border-0" tabindex="-1" id="hs-overlay-contacts" aria-labelledby="offcanvasExample">
+                        <div class="ti-offcanvas-body !p-0">
+                            <div class="sm:flex items-start p-6 border-b border-dashed border-defaultborder main-profile-cover">
+                                <div>
+                                    <span class="avatar avatar-xxl avatar-rounded me-3 bg-light/10 p-2">
+                                        <img src="./assets/images/company-logos/12.png" alt="">
+                                    </span>
+                                </div>
+                                <div class="flex-fill main-profile-info w-full">
+                                    <div class="flex items-center justify-between">
+                                        <h6 class="font-semibold mb-1 text-white">Spruko Technologies</h6>
+                                        <button type="button" class="ti-btn flex-shrink-0 !p-0  transition-none text-white opacity-70 hover:opacity-100 hover:text-white focus:ring-0 focus:ring-offset-0 focus:ring-offset-transparent focus:outline-0 focus-visible:outline-0 !mb-0" data-hs-overlay="#hs-overlay-contacts">
+                                            <span class="sr-only">Close modal</span>
+                                            <i class="ri-close-line leading-none text-lg"></i>
+                                        </button>
+                                    </div>
+                                    <p class="mb-1 text-white opacity-70">Telecommunications</p>
+                                    <p class="text-[0.75rem] text-white mb-4 opacity-50">
+                                        <span class="me-3"><i class="ri-building-line me-1 align-middle"></i>Georgia</span>
+                                        <span><i class="ri-map-pin-line me-1 align-middle"></i>Washington D.C</span>
+                                    </p>
+                                    <div class="flex mb-0">
+                                        <div class="me-4">
+                                            <p class="font-bold text-xl text-white text-shadow mb-0">113</p>
+                                            <p class="mb-0 text-[0.6875rem] opacity-50 text-white">Deals</p>
+                                        </div>
+                                        <div class="me-4">
+                                            <p class="font-bold text-xl text-white text-shadow mb-0">$12.2k</p>
+                                            <p class="mb-0 text-[0.6875rem] opacity-50 text-white">Contributions</p>
+                                        </div>
+                                        <div class="me-4">
+                                            <p class="font-bold text-xl text-white text-shadow mb-0">$10.67k</p>
+                                            <p class="mb-0 text-[0.6875rem] opacity-50 text-white">Comitted</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-6 border-b border-dashed border-defaultborder">
+                                <div class="mb-0">
+                                    <p class="text-[0.9375rem] mb-2 font-semibold">Professional Bio :</p>
+                                    <p class="text-[#8c9097] dark:text-white/50 op-8 mb-0">
+                                        <b class="text-default">Spruko</b> Technologies is a leading technology company specializing in innovative software solutions for businesses worldwide. With a strong focus on cutting-edge technologies and a team of skilled professionals.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="p-6 border-b border-dashed border-defaultborder">
+                                <p class="text-[.875rem] mb-2 me-4 font-semibold">Contact Information :</p>
+                                <div class="">
+                                    <div class="flex items-center mb-2">
+                                        <div class="me-2">
+                                            <span class="avatar avatar-sm avatar-rounded bg-light !text-[#8c9097] dark:text-white/50">
+                                                <i class="ri-mail-line align-middle text-[.875rem]"></i>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            sprukotechnologies2981#64;gmail.com
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center mb-2">
+                                        <div class="me-2">
+                                            <span class="avatar avatar-sm avatar-rounded bg-light !text-[#8c9097] dark:text-white/50">
+                                                <i class="ri-phone-line align-middle text-[.875rem]"></i>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            1678-28993-223
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center mb-0">
+                                        <div class="me-2">
+                                            <span class="avatar avatar-sm avatar-rounded bg-light !text-[#8c9097] dark:text-white/50">
+                                                <i class="ri-map-pin-line align-middle text-[.875rem]"></i>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            MIG-1-11, Monroe Street, Georgetown, Washington D.C, USA,20071
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-6 border-b border-dashed border-defaultborder flex items-center">
+                                <p class="text-[.875rem] mb-0 me-4 font-semibold">Social Networks :</p>
+                                <div class="btn-list mb-0 gap-2 flex">
+                                    <button aria-label="button" type="button" class="ti-btn w-[1.75rem] h-[1.75rem] text-[0.8rem] py-[0.26rem] px-2 rounded-sm ti-btn-primary mb-0">
+                                        <i class="ri-facebook-line font-semibold"></i>
+                                    </button>
+                                    <button aria-label="button" type="button" class="ti-btn w-[1.75rem] h-[1.75rem] text-[0.8rem] py-[0.26rem] px-2 rounded-sm ti-btn-secondary mb-0">
+                                        <i class="ri-twitter-line font-semibold"></i>
+                                    </button>
+                                    <button aria-label="button" type="button" class="ti-btn w-[1.75rem] h-[1.75rem] text-[0.8rem] py-[0.26rem] px-2 rounded-sm ti-btn-warning mb-0">
+                                        <i class="ri-instagram-line font-semibold"></i>
+                                    </button>
+                                    <button aria-label="button" type="button" class="ti-btn w-[1.75rem] h-[1.75rem] text-[0.8rem] py-[0.26rem] px-2 rounded-sm ti-btn-success mb-0">
+                                        <i class="ri-github-line font-semibold"></i>
+                                    </button>
+                                    <button aria-label="button" type="button" class="ti-btn w-[1.75rem] h-[1.75rem] text-[0.8rem] py-[0.26rem] px-2 rounded-sm ti-btn-danger mb-0">
+                                        <i class="ri-youtube-line font-semibold"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-6 border-b border-dashed border-defaultborder flex items-center gap-3">
+                                <div class="text-[.875rem] font-semibold">Company Size:</div>
+                                <div>
+                                    <span class="badge bg-primary/10 m-1">Corporate</span> - 1001+ Employees
+                                </div>
+                            </div>
+                            <div class="p-4 flex items-center gap-3">
+                                <div class="text-[.875rem] font-semibold">
+                                    Key Contact :
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="leading-none">
+                                        <span class="avatar avatar-rounded avatar-sm">
+                                            <img src="./assets/images/faces/2.jpg" alt="img">
+                                        </span>
+                                    </div>
+                                    <div class="font-semibold">Lisa Convay</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End:: Company Details Offcanvas -->
+
+                    <!-- Start:: Add Company -->
+                    <div id="todo-compose" class="hs-overlay hidden ti-modal">
+                        <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+                        <div class="ti-modal-content">
+                            <div class="ti-modal-header">
+                                <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">Add Company</h6>
+                                <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#todo-compose">
+                                    <span class="sr-only">Close</span>
+                                    <i class="ri-close-line"></i>
+                                </button>
+                            </div>
+                            <div class="ti-modal-body px-4">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <div class="mb-0 text-center">
+                                            <span class="avatar avatar-xxl avatar-rounded">
+                                                <img [src]="url1 ? url1 : './assets/images/company-logos/11.png'"  alt="" id="profile-img">
+                                                <span class="badge rounded-pill bg-primary avatar-badge">
+                                                    <input type="file" name="photo" class="absolute w-full h-full opacity-0" id="profile-change"  (change)="handleFileInput($event)">
+                                                    <i class="fe fe-camera text-[.625rem]"></i>
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="company-name" class="form-label">Company Name</label>
+                                        <input type="text" class="form-control" id="company-name" placeholder="Contact Name">
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label for="company-lead-score" class="form-label">Total Deals</label>
+                                        <input type="number" class="form-control" id="company-lead-score" placeholder="Total Deals">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="company-mail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="company-mail" placeholder="Enter Email">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="company-phone" class="form-label">Phone No</label>
+                                        <input type="tel" class="form-control" id="company-phone" placeholder="Enter Phone Number">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="key-contact" class="form-label">Key Contact</label>
+                                        <input type="text" class="form-control" id="key-contact" placeholder="Contact Name">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label class="form-label">Industry</label>
+                                        <ng-select class="form-control" data-trigger placeholder="Select Insustry">
+                                            <ng-option value="">Select Insustry</ng-option>
+                                            <ng-option value="Choice 1">Information Technology</ng-option>
+                                            <ng-option value="Choice 2">Telecommunications</ng-option>
+                                            <ng-option value="Choice 3">Logistics</ng-option>
+                                            <ng-option value="Choice 4">Professional Services</ng-option>
+                                            <ng-option value="Choice 5">Education</ng-option>
+                                            <ng-option value="Choice 6">Education</ng-option>
+                                            <ng-option value="Choice 7">Manufacturing</ng-option>
+                                            <ng-option value="Choice 8">Healthcare</ng-option>
+                                        </ng-select>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label class="form-label">Company Size</label>
+                                        <ng-select class="form-control" data-trigger placeholder="Company Size">
+                                            <ng-option value="">Company Size</ng-option>
+                                            <ng-option value="Choice 1">Corporate</ng-option>
+                                            <ng-option value="Choice 2">Small Business</ng-option>
+                                            <ng-option value="Choice 3">Micro Business</ng-option>
+                                            <ng-option value="Choice 4">Startup</ng-option>
+                                            <ng-option value="Choice 5">Large Enterprise</ng-option>
+                                            <ng-option value="Choice 6">Medium Size</ng-option>
+                                        </ng-select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ti-modal-footer">
+                                <button type="button"
+                                class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+                                data-hs-overlay="#todo-compose">
+                                Cancel
+                            </button>
+                                <button type="button" class="ti-btn bg-primary text-white !font-medium">Create Contact</button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    <!-- End:: Add Company -->

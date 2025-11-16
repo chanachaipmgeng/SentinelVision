@@ -1,0 +1,112 @@
+<!-- Search -->
+<div class="form-group form-floating mb-3">
+  <input type="text" class="form-control " id="search" placeholder='{{"Search" | translate}}' [(ngModel)]="search">
+  <label class="form-control-label" for="search">{{"Search" | translate}}</label>
+  <button type="button" class="text-color-theme tooltip-btn">
+    <i class="bi bi-search"></i>
+  </button>
+</div>
+
+
+<div class="row" *ngIf="filterListEmp().length > 0">
+  <div class="col-12">
+    <div class="card shadow-sm mb-4">
+      <ul class="list-group list-group-flush bg-none">
+        <li class="list-group-item" *ngFor="let item of filterListEmp() ">
+          <div class="row">
+            <div class="col-auto cp d-flex align-items-center">
+              <figure class="avatar avatar-70 rounded-10 shadow-sm">
+                <img appShowLoading
+                  [src]="item.getPicture()"
+                  alt="">
+                <ng-template #personblank>
+                  <img src="assets/img/icon/person.png" alt="">
+                </ng-template>
+              </figure>
+            </div>
+            <div class="col px-0 cp">
+              <p>{{item.getFullname()}}<br>
+                <small class="text-muted"> {{item.startDate | date: "dd/MM/yyyy HH:mm" : "en"}}</small><br>
+                <small class="text-muted">{{item.position.getName()}}</small><br>
+                <!-- <small class="text-muted">{{item.departmentName?item.departmentName:'-'}}</small> -->
+              </p>
+            </div>
+            <div class="col-auto d-flex align-items-center">
+              <button class="btn btn-44 btn-light text-success shadow-sm" (click)="openApply(empApply,item)">
+                <i class="bi bi-person-fill-gear"></i>
+              </button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<ng-template #empApply let-modal>
+  <div class="modal-header">
+    <h6 class="modal-title" ngbAutofocus>{{'Employee Information' | translate}}</h6>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss()"></button>
+  </div>
+  <div class="modal-body p-0 my-3">
+    <div class="row  m-0 mb-4">
+      <div class="col-12">
+        <div class="form-group form-floating mb-3  is-valid">
+          <input type="text" class="form-control" id="empname" placeholder="{{'Employee Name' | translate}}" disabled
+            [(ngModel)]="modelApply.employeeName">
+          <label for="empname">{{'Employee Name' | translate}}</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="form-group form-floating mb-3  is-valid">
+          <input type="text" class="form-control" id="empid" placeholder="{{'Employee ID' | translate}}"
+            [(ngModel)]="modelApply.employeeId">
+          <label for="empid">{{'Employee ID' | translate}}</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="form-floating mb-3 is-valid">
+          <select class="form-control" id="Position" [(ngModel)]="modelApply.positionApplyForm">
+            <option *ngFor="let item of positionList; let i=index" [value]="item">
+              {{item.getName() }}
+            </option>
+          </select>
+          <label for="Position">{{'Position' | translate}}</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="form-floating mb-3 is-valid">
+          <select class="form-control" id="Department" [(ngModel)]="modelApply.departmentApplyForm">
+            <option *ngFor="let item of departmentList; let i=index" [value]="item">
+              {{item.getName()}}
+            </option>
+          </select>
+          <label for="Department">{{'Department' | translate}}</label>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="form-floating mb-3 is-valid">
+          <select class="form-control" id="Boss" [(ngModel)]="modelApply.bossMajorApplyForm">
+            <option *ngFor="let item of employeeBossList; let i=index" [value]="item.company_employeeId">
+              {{item.getFullname()}}
+            </option>
+          </select>
+          <label for="Boss">{{'Boss' | translate}}</label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="modal-footer p-0 justify-content-around modal-footer-height">
+    <button type="button" class="col-5 btn btn-danger rounded-15 btn-model" (click)="onSubmit(3);"
+      [disabled]="!modelApply.employeeId">
+      {{"DISAPPROVED" | translate}}
+    </button>
+    <button type="button" class="col-5 btn btn-primary rounded-15 btn-model" (click)="onSubmit(2);"
+      [disabled]="!modelApply.employeeId || !modelApply.branch || !modelApply.positionApplyForm">
+      {{"APPROVED" | translate}}
+    </button>
+  </div>
+</ng-template>

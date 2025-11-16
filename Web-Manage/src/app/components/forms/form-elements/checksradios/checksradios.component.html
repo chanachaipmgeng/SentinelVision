@@ -1,0 +1,678 @@
+<app-page-header [title]="'Checks & Radios'" [activeTitle]="'Form Elements'" [title1]="'Checks & Radios'"></app-page-header>
+
+  <!-- Start:: row-1 -->
+  <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-3 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    
+                    Checks
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleChecks()">Show Code
+                        <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault">
+                    <label class="form-check-label" for="flexCheckDefault">
+                        Default checkbox
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="flexCheckChecked"
+                        checked>
+                    <label class="form-check-label" for="flexCheckChecked">
+                        Checked checkbox
+                    </label>
+                </div>
+                
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible1){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Disabled
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleDisabled()">Show Code
+                        <i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="flexCheckDisabled"
+                        disabled>
+                    <label class="form-check-label" for="flexCheckDisabled">
+                        Disabled checkbox
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input opacity-[0.6]" type="checkbox" value=""
+                        id="flexCheckCheckedDisabled" checked disabled>
+                    <label class="form-check-label" for="flexCheckCheckedDisabled">
+                        Disabled checked checkbox
+                    </label>
+                </div>
+             
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible2){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Radios
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleRadios()">Show Code
+                        <i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="flexRadioDefault"
+                        id="flexRadioDefault1">
+                    <label class="form-check-label" for="flexRadioDefault1">
+                        Default radio
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="flexRadioDefault"
+                        id="flexRadioDefault2" checked>
+                    <label class="form-check-label" for="flexRadioDefault2">
+                        Default checked radio
+                    </label>
+                </div>
+            
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible3){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-3 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Disabled
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleDisabled2()">Show Code
+                        <i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="flexRadioDisabled"
+                        id="flexRadioDisabled" disabled>
+                    <label class="form-check-label" for="flexRadioDisabled">
+                        Disabled radio
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input opacity-[0.6]" type="radio" name="flexRadioDisabled"
+                        id="flexRadioCheckedDisabled" checked disabled>
+                    <label class="form-check-label" for="flexRadioCheckedDisabled">
+                        Disabled checked radio
+                    </label>
+                </div>
+                
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible4){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-1 -->
+
+<!-- Start:: row-2 -->
+ <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-6 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Default (stacked)
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleDefault()">Show Code
+                        <i class="ri-code-{{toggleClass5}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
+                    <label class="form-check-label" for="defaultCheck1">
+                        Default checkbox
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="defaultCheck2"
+                        disabled>
+                    <label class="form-check-label" for="defaultCheck2">
+                        Disabled checkbox
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="exampleRadios"
+                        id="exampleRadios1" value="option1" checked>
+                    <label class="form-check-label" for="exampleRadios1">
+                        Default radio
+                    </label>
+                </div>
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="radio" name="exampleRadios"
+                        id="exampleRadios3" value="option3" disabled>
+                    <label class="form-check-label" for="exampleRadios3">
+                        Disabled radio
+                    </label>
+                </div>
+              
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible5){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts5}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Switches
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleISwitch()">Show Code
+                        <i class="ri-code-{{toggleClass6}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body flex flex-col gap-y-4">
+                  <div class="flex items-center">
+                    <input type="checkbox" id="hs-basic-with-description-checked" class="ti-switch" checked>
+                    <label for="hs-basic-with-description-checked" class="text-sm text-gray-500 ms-3 dark:text-[#8c9097] dark:text-white/50">Checked</label>
+                  </div>
+                  <div class="flex items-center">
+                    <input type="checkbox" id="hs-basic-with-description-unchecked" class="ti-switch">
+                    <label for="hs-basic-with-description-unchecked" class="text-sm text-gray-500 ms-3 dark:text-[#8c9097] dark:text-white/50">Unchecked</label>
+                  </div>
+                  <div class="flex items-center">
+                    <label class="text-sm text-gray-500 me-3 dark:text-[#8c9097] dark:text-white/50">On</label>
+                    <input type="checkbox" id="hs-basic-with-description" class="ti-switch">
+                    <label class="text-sm text-gray-500 ms-3 dark:text-[#8c9097] dark:text-white/50">Off</label>
+                  </div>
+                 
+               </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible6){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts6}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-2 -->
+
+<!-- Start:: row-3 -->
+ <div class="grid grid-cols-12 gap-6">
+    <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header  justify-between">
+                <div class="box-title">
+                    Checkbox Sizes
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleSizes()">Show Code
+                        <i class="ri-code-{{toggleClass7}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body sm:flex items-center justify-between">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="checkebox-sm" checked>
+                    <label class="form-check-label" for="checkebox-sm">
+                        Default
+                    </label>
+                </div>
+                <div class="form-check form-check-md flex items-center">
+                    <input class="form-check-input" type="checkbox" value="" id="checkebox-md" checked>
+                    <label class="form-check-label" for="checkebox-md">
+                        Medium
+                    </label>
+                </div>
+                <div class="form-check form-check-lg flex items-center">
+                    <input class="form-check-input" type="checkbox" value="" id="checkebox-lg" checked>
+                    <label class="form-check-label" for="checkebox-lg">
+                        Large
+                    </label>
+                </div>
+             
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible7){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts7}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xxl:col-span-6 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Radio Sizes
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleRadioSizes()">Show Code
+                        <i class="ri-code-{{toggleClass8}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body sm:flex items-center justify-between">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="Radio" id="Radio-sm">
+                    <label class="form-check-label" for="Radio-sm">
+                        default
+                    </label>
+                </div>
+                <div class="form-check form-check-md">
+                    <input class="form-check-input" type="radio" name="Radio" id="Radio-md">
+                    <label class="form-check-label" for="Radio-md">
+                        Medium
+                    </label>
+                </div>
+                <div class="form-check form-check-lg">
+                    <input class="form-check-input" type="radio" name="Radio" id="Radio-lg" checked>
+                    <label class="form-check-label" for="Radio-lg">
+                        Large
+                    </label>
+                </div>
+               
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible8){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts8}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-3 -->
+
+<!-- Start:: row-4 -->
+ <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-6 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Inline
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleInline()">Show Code
+                        <i class="ri-code-{{toggleClass9}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body sm:flex gap-2">
+                <div class="flex gap-2">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="inlineCheckbox1"
+                            value="option1">
+                        <label class="form-check-label" for="inlineCheckbox1">1</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="inlineCheckbox2"
+                            value="option2">
+                        <label class="form-check-label" for="inlineCheckbox2">2</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="inlineCheckbox3"
+                            value="option3" disabled>
+                        <label class="form-check-label" for="inlineCheckbox3">3 (disabled)</label>
+                    </div>
+               </div>
+               <div class="flex gap-2">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inlineRadioOptions"
+                        id="inlineRadio1" value="option1">
+                    <label class="form-check-label" for="inlineRadio1">1</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inlineRadioOptions"
+                        id="inlineRadio2" value="option2">
+                    <label class="form-check-label" for="inlineRadio2">2</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inlineRadioOptions"
+                        id="inlineRadio3" value="option3" disabled>
+                    <label class="form-check-label" for="inlineRadio3">3 (disabled)</label>
+                </div>
+            </div>
+          
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible9){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts9}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6  lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Reverse
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium"(click)="toggleReverse()">Show Code
+                        <i class="ri-code-{{toggleClass10}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="form-check form-check-reverse mb-4">
+                    <input class="form-check-input" type="checkbox" value=""
+                        id="reverseCheck1">
+                    <label class="form-check-label" for="reverseCheck1">
+                        Reverse checkbox
+                    </label>
+                </div>
+                <div class="form-check form-check-reverse mb-4">
+                    <input class="form-check-input" type="checkbox" value=""
+                        id="reverseCheck2" disabled>
+                    <label class="form-check-label" for="reverseCheck2">
+                        Disabled reverse checkbox
+                    </label>
+                </div>
+              
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible10){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts10}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-4 -->
+
+<!-- Start:: row-7 -->
+ <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-6  lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Toggle Switches Style-1
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleSwitch()">Show Code
+                        <i class="ri-code-{{toggleClass11}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="grid grid-cols-12 gap-y-1">
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent1()" [ngClass]="status1 ? 'on' : '' " class="toggle on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent2()" [ngClass]="status2 ? 'on' : '' " class="toggle toggle-secondary on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent3()" [ngClass]="status3 ? 'on' : '' " class="toggle toggle-warning on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent4()" [ngClass]="status4 ? 'on' : '' " class="toggle toggle-info on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent5()" [ngClass]="status5 ? 'on' : '' " class="toggle toggle-success on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent6()" [ngClass]="status6 ? 'on' : '' " class="toggle toggle-danger on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent7()" [ngClass]="status7 ? 'on' : '' " class="toggle toggle-light on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div (click)="clickEvent8()" [ngClass]="status8 ? 'on' : '' " class="toggle toggle-dark on mb-4">
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+          
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible11){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts11}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6  lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Toggle Switches Style-2
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleSwitch2()">Show Code
+                        <i class="ri-code-{{toggleClass12}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <div class="grid grid-cols-12 gap-y-1">
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchPrimary" name="toggleswitch001" type="checkbox" checked>
+                            <label for="toggleswitchPrimary" class="label-primary"></label><span class="ms-3">Primary</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchSecondary" name="toggleswitch002" type="checkbox" checked>
+                            <label for="toggleswitchSecondary" class="label-secondary"></label><span class="ms-3">Secondary</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchWarning" name="toggleswitch003" type="checkbox" checked>
+                            <label for="toggleswitchWarning" class="label-warning"></label><span class="ms-3">Warning</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchInfo" name="toggleswitch004" type="checkbox" checked>
+                            <label for="toggleswitchInfo" class="label-info"></label><span class="ms-3">Info</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchSuccess" name="toggleswitch005" type="checkbox" checked>
+                            <label for="toggleswitchSuccess" class="label-success"></label><span class="ms-3">Success</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchDanger" name="toggleswitch006" type="checkbox" checked>
+                            <label for="toggleswitchDanger" class="label-danger"></label><span class="ms-3">Danger</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchLight" name="toggleswitch007" type="checkbox" checked>
+                            <label for="toggleswitchLight" class="label-light"></label><span class="ms-3">Light</span>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 col-span-12">
+                        <div class="custom-toggle-switch flex items-center mb-4">
+                            <input id="toggleswitchDark" name="toggleswitch008" type="checkbox" checked>
+                            <label for="toggleswitchDark" class="label-dark"></label><span class="ms-3">Dark</span>
+                        </div>
+                    </div>
+                </div>
+               
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible12){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts12}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-7 -->
+
+<!-- Start:: row-8 -->
+ <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-6  lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Toggle Switch-1 Sizes
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="togglesizes1()">Show Code
+                        <i class="ri-code-{{toggleClass13}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body flex flex-col">
+                <div class="flex items-center flex-wrap mb-4">
+                    <div class=""> <p class="text-muted m-0">Small size toggle switch <code>toggle-sm</code></p></div>
+                    <div (click)="clickEvent9()" [ngClass]="status9 ? 'on' : '' " class="toggle toggle-sm on mb-0">
+                        <span></span>
+                    </div>
+                </div>
+                <div class="flex items-center flex-wrap mb-4">
+                    <div class=""> <p class="text-muted m-0">Default toggle switch <code></code></p></div>
+                    <div (click)="clickEvent10()" [ngClass]="status10 ? 'on' : '' " class="toggle toggle-secondary on mb-0">
+                        <span></span>
+                    </div>
+                </div>
+                <div class="flex items-center flex-wrap">
+                    <div class=""> <p class="text-muted m-0">Large size toggle switch <code>toggle-lg</code></p></div>
+                    <div (click)="clickEvent11()" [ngClass]="status11 ? 'on' : '' " class="toggle toggle-lg toggle-success on mb-0">
+                        <span></span>
+                    </div>
+                </div>
+              
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible13){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts13}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6  lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12 ">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                    Toggle Switch-2 Sizes
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleSizes2()">Show Code
+                        <i class="ri-code-{{toggleClass14}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body ">
+                <div class="flex items-center flex-wrap mb-4">
+                    <div class=""><p class="text-muted m-0">Small size toggle switch <code>toggle-sm</code></p></div>
+                    <div class="custom-toggle-switch toggle-sm ms-2">
+                        <input id="size-sm" name="toggleswitchsize" type="checkbox" checked>
+                        <label for="size-sm" class="label-primary"></label>
+                    </div>
+                </div>
+                <div class="flex items-center flex-wrap mb-4">
+                    <div class=""><p class="text-muted m-0">Default toggle switch</p></div>
+                    <div class="custom-toggle-switch ms-2">
+                        <input id="size-default" name="toggleswitchsize1" type="checkbox" checked>
+                        <label for="size-default" class="label-secondary mb-1"></label>
+                    </div>
+                </div>
+                <div class="sm:flex flex items-center flex-wrap">
+                    <div class="sm:mb-0 me-2"><p class="text-muted m-0">Large size toggle switch <code>toggle-lg</code></p></div>
+                    <div class="custom-toggle-switch toggle-lg sm:ms-2 ms-0">
+                        <input id="size-lg" name="toggleswitchsize2" type="checkbox" checked>
+                        <label for="size-lg " class="label-success mb-2"></label>
+                    </div>
+                </div>
+             
+            </div>
+            <div class="box-footer showcode border-t-0">
+                @if(isContentVisible14){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts14}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End:: row-8 -->

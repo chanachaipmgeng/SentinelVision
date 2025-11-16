@@ -1,0 +1,12 @@
+.swiper-container-fade .swiper-slide {
+    transition: opacity 1s ease;
+  }
+  
+  .swiper-container-fade .swiper-slide-active {
+    opacity: 1;
+  }
+  
+  .swiper-container-fade .swiper-slide-next,
+  .swiper-container-fade .swiper-slide-prev {
+    opacity: 0.5;
+  }

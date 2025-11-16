@@ -1,0 +1,22 @@
+<!-- add-face-camera.component.html -->
+<div class="row" style="height: 85vh;max-height: 80vh;">
+  <div class="col-12 p-0" style="position: relative; height: 100%;">
+    <div class="card shadow-sm h-100" style="border: none;">
+      <div class="card-body p-0 justify-content-center" style="position: relative; height: 100%;">
+
+        <!-- Video element -->
+        <video #video width="640" height="480"
+               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+               autoplay
+               (loadedmetadata)="detectFace()">
+        </video>
+
+        <!-- Canvas element -->
+        <canvas #canvas width="640" height="480"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+        </canvas>
+        <button *ngIf="checkMatch" class="btn btn-primary" style="position: absolute;  left: 0;bottom: 0;margin-bottom: 3rem;width: 100%;" (click)="captureImage()">บันทึกใบหน้า</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,14 @@
+<div class="modal-header">
+    <h6 class="modal-title" ngbAutofocus>{{headModal | translate}}</h6>
+    <button type="button" class="btn-close" aria-label="Close" (click)="activeModal.dismiss()"></button>
+</div>
+<div class="modal-body p-0 my-3">
+    <p style="padding-left: 16px;">{{message | translate}}
+    </p>
+</div>
+<div class="modal-footer p-0 justify-content-around modal-footer-height my-3" *ngIf="confirmModal">
+    <button type="button" class="col-5 btn btn-danger rounded-15 btn-model" data-bs-dismiss="modal"
+        (click)="activeModal.dismiss()">{{"BUTTON.Cancel" | translate}}</button>
+    <button type="button" class="col-5 btn btn-primary rounded-15 btn-model" data-bs-dismiss="modal"
+        (click)="activeModal.close()">{{"BUTTON.SUBMIT" | translate}}</button>
+</div>

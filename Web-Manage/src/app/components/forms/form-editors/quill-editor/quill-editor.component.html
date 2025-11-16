@@ -1,0 +1,52 @@
+<app-page-header [title]="'Quill Editor'" [activeTitle]="'Forms'" [title1]="'Quill Editor'"></app-page-header>
+
+                <!-- Start:: row-1 -->
+                <div class="grid grid-cols-12 gp-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Quill Snow Editor
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="editor">
+                                    <angular-editor [(ngModel)]="htmlContent" [config]="config1">
+                             
+                                    </angular-editor>
+                                   
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-1 -->
+
+                <!-- Start:: row-2 -->
+                <div class="grid grid-cols-12 gp-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Quill Bubble Editor
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="editor1">
+                                    <form [formGroup]="form">
+                                        <ngx-editor-menu
+                                        class="border-1"
+                                        [editor]="editor"
+                                        [toolbar]="toolbar"
+                                      >
+                                      </ngx-editor-menu>
+                                      <ngx-editor [editor]="editor" formControlName="editorContent" >
+                                      </ngx-editor>
+                                      </form>
+                                  
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-2 -->

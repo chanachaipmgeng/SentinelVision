@@ -1,0 +1,48 @@
+<app-page-header [title]="'Apex Scatter Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Scatter Charts'"></app-page-header>
+
+ <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Scatter Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="scatter-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                            [xaxis]="chartOptions.xaxis" [yaxis]="chartOptions.yaxis"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Datetime Scatter Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="scatter-datetime">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [xaxis]="chartOptions1.xaxis" [yaxis]="chartOptions1.yaxis"
+                    [dataLabels]="chartOptions1.dataLabels" [grid]="chartOptions1.grid"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Image Fill Scatter Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="scatter-image">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [xaxis]="chartOptions2.xaxis" [yaxis]="chartOptions2.yaxis" [colors]="chartOptions2.colors"
+                    [grid]="chartOptions2.grid" [markers]="chartOptions2.markers"
+                    [fill]="chartOptions2.fill"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

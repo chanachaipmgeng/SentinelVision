@@ -1,0 +1,155 @@
+<app-page-header [title]="'Apex Area Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Area Charts'"></app-page-header>
+
+  
+  <!-- Start::row-1 -->
+   <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Area Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="area-basic" class="chart-container">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [xaxis]="chartOptions1.xaxis" [stroke]="chartOptions1.stroke"
+                    [dataLabels]="chartOptions1.dataLabels" [yaxis]="chartOptions1.yaxis"
+                    [labels]="chartOptions1.labels" [legend]="chartOptions1.legend"
+                    [title]="chartOptions1.title" [subtitle]="chartOptions1.subtitle"[colors]="chartOptions1.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Spline Area Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="area-spline"  class="chart-container1">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [xaxis]="chartOptions2.xaxis" [stroke]="chartOptions2.stroke"
+                    [tooltip]="chartOptions2.tooltip" [dataLabels]="chartOptions2.dataLabels" [colors]="chartOptions2.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Area Chart With Negative Values</div>
+            </div>
+            <div class="box-body">
+                <div id="area-negative"  class="chart-container2">
+                    <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                    [xaxis]="chartOptions3.xaxis" [stroke]="chartOptions3.stroke"
+                    [tooltip]="chartOptions3.tooltip" [dataLabels]="chartOptions3.dataLabels"
+                    [fill]="chartOptions3.fill" [yaxis]="chartOptions3.yaxis"
+                    [title]="chartOptions3.title"[colors]="chartOptions3.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12" >
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Selection-Github Style Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="chart-months"  class="chart-container3">
+                    <apx-chart [series]="chartMonths.series" [chart]="chartMonths.chart"
+                    [colors]="chartMonths.colors" [yaxis]="chartMonths.yaxis"
+                    [dataLabels]="commonOptions.dataLabels" [fill]="commonOptions.fill"
+                    [stroke]="commonOptions.stroke" [xaxis]="commonOptions.xaxis"[colors]="chartMonths.colors"></apx-chart>
+                </div>
+                <div class="github-style flex items-center">
+                    <div class="me-2">
+                        <img class="userimg rounded" src="./assets/images/faces/1.jpg"
+                            data-hoverbox-user-id="634573" alt="" width="38" height="38">
+                    </div>
+                    <div class="userdetails lh-1">
+                        <a class="username fw-semibold text-sm">coder</a>
+                        <span class="cmeta block mt-1">
+                            <span class="commits"></span> commits
+                        </span>
+                    </div>
+                </div>
+                <div id="chart-years"  class="chart-container4">
+                    <apx-chart [series]="chartYears.series" [chart]="chartYears.chart" [colors]="chartYears.colors"
+                            [legend]="chartYears.legend" [dataLabels]="commonOptions.dataLabels"
+                            [fill]="commonOptions.fill" [stroke]="commonOptions.stroke"
+                            [xaxis]="commonOptions.xaxis" [colors]="chartYears.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Stacked Area Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="area-stacked"  class="chart-container5">
+                    <apx-chart [series]="chartOptions5.series" [chart]="chartOptions5.chart"
+                    [xaxis]="chartOptions5.xaxis" [dataLabels]="chartOptions5.dataLabels"
+                    [yaxis]="chartOptions5.yaxis" [colors]="chartOptions5.colors"
+                    [legend]="chartOptions5.legend" [fill]="chartOptions5.fill"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Irregular Time Series Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="area-irregular"  class="chart-container6">
+                    <apx-chart [series]="chartOptions6.series" [chart]="chartOptions6.chart"
+                    [xaxis]="chartOptions6.xaxis" [dataLabels]="chartOptions6.dataLabels"
+                    [yaxis]="chartOptions6.yaxis" [legend]="chartOptions6.legend" [fill]="chartOptions6.fill"
+                    [markers]="chartOptions6.markers" [title]="chartOptions6.title"
+                    [tooltip]="chartOptions6.tooltip"[colors]="chartOptions6.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Area Chart With Null Values</div>
+            </div>
+            <div class="box-body">
+                <div id="area-null"  class="chart-container7">
+                    <apx-chart [series]="chartOptions8.series" [chart]="chartOptions8.chart"
+                    [xaxis]="chartOptions8.xaxis" [stroke]="chartOptions8.stroke" [tooltip]="chartOptions8.tooltip"
+                    [dataLabels]="chartOptions8.dataLabels" [fill]="chartOptions8.fill"
+                    [markers]="chartOptions8.markers" [theme]="chartOptions8.theme" [yaxis]="chartOptions8.yaxis"
+                    [title]="chartOptions8.title"[colors]="chartOptions8.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header flex">
+                <div class="box-title">Area Chart-Datetime X-Axis Chart</div>
+                <div class="btn-group ms-auto">
+                    <button type="button" class="btn btn-primary btn-sm" id="one_month">1M</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="six_months">6M</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="one_year">1Y</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="all">ALL</button>
+                    <!-- <button class="btn btn-primary btn-sm" id="ytd">ALL</button> -->
+                </div>
+            </div>
+            <div class="box-body">
+                <div id="area-datetime"  class="chart-container8">
+                    <apx-chart [series]="ChartOptions.series" [colors]="ChartOptions.colors"
+                        [chart]="ChartOptions.chart" [dataLabels]="ChartOptions.dataLabels"
+                        [stroke]="ChartOptions.stroke" [xaxis]="ChartOptions.xaxis"
+                        [tooltip]="ChartOptions.tooltip"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

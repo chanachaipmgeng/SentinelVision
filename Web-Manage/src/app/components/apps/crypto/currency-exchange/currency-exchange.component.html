@@ -1,0 +1,310 @@
+<app-page-header [title]="'Currency Exchange'" [activeTitle]="'Crypto'" [title1]="'Currency Exchange'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box currency-exchange-box">
+                            <div class="box-body !p-[3rem] flex items-center justify-center">
+                                <div class="container">
+                                    <h3 class="text-white text-center">Buy and Sell Coins without additional fees</h3>
+                                    <span class="block text-[1rem] text-white text-center opacity-[0.8] !mb-4 ">
+                                        Buy now and get +50% extra bonus Minimum pre-sale amount 100 Crypto Coin. We accept BTC crypto-currency..
+                                    </span>
+                                    <div class="p-4 mb-4 rounded currency-exchange-area">
+                                        <div class="grid grid-cols-12 sm:gap-4 gap-2">
+                                            <div class="xxl:col-span-3 col-span-12">
+                                                <input type="text" class="form-control" value="0.0453" placeholder="Enter Amount">
+                                            </div>
+                                            <div class="xxl:col-span-2 col-span-12">
+                                                <div>
+                                                    <ng-select class="form-control" data-trigger name="Vacancies" placeholder="Bitcoin">
+                                                        <ng-option value="Choice 1">Bitcoin</ng-option>
+                                                        <ng-option value="Choice 2">Etherium</ng-option>
+                                                        <ng-option value="Choice 3">Litecoin</ng-option>
+                                                        <ng-option value="Choice 4">Ripple</ng-option>
+                                                        <ng-option value="Choice 5">Cardano</ng-option>
+                                                        <ng-option value="Choice 6">Neo</ng-option>
+                                                        <ng-option value="Choice 7">Stellar</ng-option>
+                                                        <ng-option value="Choice 8">EOS</ng-option>
+                                                        <ng-option value="Choice 9">NEM</ng-option>
+                                                    </ng-select>
+                                                </div>
+                                            </div>
+                                            <div class="xxl:col-span-2 col-span-12 flex items-center justify-center">
+                                                <div class="!text-[0.9rem] text-white text-center op-8 leading-none">
+                                                    =
+                                                </div>
+                                            </div>
+                                            <div class="xxl:col-span-3 col-span-12">
+                                                <input type="text" class="form-control" value="1350.93" placeholder="Exchange Amount">
+                                            </div>
+                                            <div class="xxl:col-span-2 col-span-12">
+                                                <ng-select class="form-control" data-trigger placeholder="USD">
+                                                    <ng-option value="Choice 1">USD</ng-option>
+                                                    <ng-option value="Choice 2">Pound</ng-option>
+                                                    <ng-option value="Choice 3">Rupee</ng-option>
+                                                    <ng-option value="Choice 4">Euro</ng-option>
+                                                    <ng-option value="Choice 5">Won</ng-option>
+                                                    <ng-option value="Choice 6">Dinar</ng-option>
+                                                    <ng-option value="Choice 7">Rial</ng-option>
+                                                </ng-select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <button type="button" class="ti-btn ti-btn-success-full btn-wave">Exchange Now</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->
+
+                <!-- Start:: row-2 -->
+                <div class="grid grid-cols-12 gap-x-6 justify-center">
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Bitcoin.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Bitcoin - BTC</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">24.3% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+0.59<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span><span class="badge bg-success-transparent text-[.625rem] ms-2">24H</span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-primary">0.00434</span>
+                                        <span class="block text-success font-semibold">$30.29</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="btc-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                                [xaxis]="chartOptions.xaxis" [dataLabels]="chartOptions.dataLabels"
+                                [colors]="chartOptions.colors" [fill]="chartOptions.fill"
+                                [markers]="chartOptions.markers" [stroke]="chartOptions.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Ethereum.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Etherium - ETH</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-secondary">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="eth-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                                [xaxis]="chartOptions1.xaxis" [dataLabels]="chartOptions1.dataLabels"
+                                [colors]="chartOptions1.colors" [fill]="chartOptions1.fill"
+                                [markers]="chartOptions1.markers" [stroke]="chartOptions1.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Dash.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Dash - DASH</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-success">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="dash-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                                [xaxis]="chartOptions2.xaxis" [dataLabels]="chartOptions2.dataLabels"
+                                [colors]="chartOptions2.colors" [fill]="chartOptions2.fill"
+                                [markers]="chartOptions2.markers" [stroke]="chartOptions2.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Litecoin.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Litecoin - LTC</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-warning">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="ltc-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                                [xaxis]="chartOptions3.xaxis" [dataLabels]="chartOptions3.dataLabels"
+                                [colors]="chartOptions3.colors" [fill]="chartOptions3.fill"
+                                [markers]="chartOptions3.markers" [stroke]="chartOptions3.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Ripple.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Ripple - XRS</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-pink">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="xrs-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions4.series" [chart]="chartOptions4.chart"
+                                [xaxis]="chartOptions4.xaxis" [dataLabels]="chartOptions4.dataLabels"
+                                [colors]="chartOptions4.colors" [fill]="chartOptions4.fill"
+                                [markers]="chartOptions4.markers" [stroke]="chartOptions4.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Golem.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Golem - GLM</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-purple">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="glm-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions5.series" [chart]="chartOptions5.chart"
+                                [xaxis]="chartOptions5.xaxis" [dataLabels]="chartOptions5.dataLabels"
+                                [colors]="chartOptions5.colors" [fill]="chartOptions5.fill"
+                                [markers]="chartOptions5.markers" [stroke]="chartOptions5.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Monero.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">Monero</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-danger">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="monero-currency-chart" class="mt-1 w-full">
+                                  <apx-chart [series]="chartOptions6.series" [chart]="chartOptions6.chart"
+                                [xaxis]="chartOptions6.xaxis" [dataLabels]="chartOptions6.dataLabels"
+                                [colors]="chartOptions6.colors" [fill]="chartOptions6.fill"
+                                [markers]="chartOptions6.markers" [stroke]="chartOptions6.stroke"></apx-chart>
+                            
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-3 col-span-12">
+                        <div class="box custom-box overflow-hidden">
+                            <div class="box-body mb-4">
+                                <div class="flex items-start justify-between mb-4 flex-wrap">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="leading-none">
+                                                <span class="avatar avatar-rounded avatar-xs">
+                                                    <img src="./assets/images/crypto-currencies/square-color/EOS.svg" alt="">
+                                                </span>
+                                            </div>
+                                            <h6 class="font-semibold mb-0">EOS</h6>
+                                        </div>
+                                        <span class="text-[1.5625rem] flex items-center">17.67% <span class="text-[0.75rem] text-warning opacity-[0.7] ms-2">+1.30<i class="ti ti-arrow-big-up-line ms-1 inline-flex"></i></span></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="block text-[.875rem] mb-1 text-info">1.2923</span>
+                                        <span class="block text-success font-semibold">$2,283.73</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="eos-currency-chart" class="mt-1 w-full">
+                                <apx-chart [series]="chartOptions7.series" [chart]="chartOptions7.chart"
+                                [xaxis]="chartOptions7.xaxis" [dataLabels]="chartOptions7.dataLabels"
+                                [colors]="chartOptions7.colors" [fill]="chartOptions7.fill"
+                                [markers]="chartOptions7.markers" [stroke]="chartOptions7.stroke"></apx-chart>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-12 col-span-12">
+                         <div class="text-center my-6">
+                            <button class="ti-btn ti-btn-primary !border !border-primary" type="button" disabled>
+                                <span class="ti-spinner  !w-[1rem] !h-[1rem] align-middle" role="status"
+                                    aria-hidden="true"></span>
+                                Loading...
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <!-- End:: row-2 -->

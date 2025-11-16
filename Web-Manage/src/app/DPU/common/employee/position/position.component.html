@@ -1,0 +1,172 @@
+<app-page-header [title]="'Position'" [activeTitle]="'จัดการบริษัท'" [title1]="'Position'"></app-page-header>
+
+
+<div class="grid grid-cols-12 gap-6">
+  <div class="xl:col-span-12 col-span-12">
+    <div class="box">
+      <div class="box-header justify-between">
+        <div class="box-title">
+          {{ 'All List' | translate}} <span
+            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
+            translate}}
+          </a>
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2" *ngIf="someSelected"
+            (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
+            translate}}
+          </a>
+          <div>
+            <input class="form-control form-control" type="text" placeholder="{{ 'Search' | translate}}"
+              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+          </div>
+
+        </div>
+      </div>
+      <div class="box-body">
+        <div class="table-responsive">
+          <table class="table whitespace-nowrap min-w-full ti-custom-table-hover">
+            <thead>
+              <tr class="border-b border-defaultborder">
+                <th scope="col" class="!text-start">
+                  <input class="form-check-input check-all" type="checkbox" id="all-products"
+                    (change)="toggleAll($event)" [checked]="allSelected" aria-label="...">
+                </th>
+                <th scope="col" class="text-start">{{ 'ID' | translate}}</th>
+                <th scope="col" class="text-start">{{ 'ชื่อตำแหน่ง' | translate}}</th>
+                <!-- <th scope="col" class="text-start">{{ 'Name (EN)' | translate}}</th> -->
+                <th scope="col" class="text-start"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(item of filterList;track filterList){
+
+              <tr class="border border-defaultborder dark:border-defaultborder/10">
+                <td class="product-checkbox"><input class="form-check-input" type="checkbox"
+                    [checked]="selectedItems.get(item.positionId)" (change)="onCheckboxChange(item.positionId)"
+                    aria-label="..." value="">
+                </td>
+                <td><span class="font-semibold text-primary">{{item.positionId}}</span></td>
+                <td> {{item.thName}}</td>
+
+                <td>
+                  <div class="flex flex-row items-center !gap-2 ">
+                    <a aria-label="anchor" (click)="view(item)" data-hs-overlay="#modal-detail"
+                      class="ti-btn ti-btn-wave  !gap-0 !m-0 bg-info/10 text-info hover:bg-info hover:text-white hover:border-info"><i
+                        class="ri-pencil-line"></i></a>
+                    <a aria-label="anchor" href="javascript:void(0);" (click)="delete(item)"
+                      class="ti-btn ti-btn-wave product-btn !gap-0 !m-0  bg-danger/10 text-danger hover:bg-danger hover:text-white hover:border-danger"><i
+                        class="ri-delete-bin-line"></i></a>
+                  </div>
+                </td>
+              </tr>
+              }
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="box-footer">
+        <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
+          <div class="mb-2 sm:mb-0">
+            <div>
+              {{'Showing' | translate}} {{filterList.length}} {{'entries'
+              | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+            </div>
+          </div>
+          <div class="ms-auto">
+            <nav aria-label="Page navigation">
+              <ul class="ti-pagination  mb-0">
+                <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
+                    class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous' | translate}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
+
+                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
+                    href="javascript:void(0);">{{pageIndex +1}}</a>
+                </li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
+                <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                  class="page-item"><a class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
+                    translate}}</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- Start:: Create Contact -->
+<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">{{ 'Create' |
+          translate }} {{ 'Position' | translate }}
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail" #closeModal>
+          <span class="sr-only">{{'Close' | translate}}</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+
+          <!-- <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'ID' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.positionId">
+            <div class="text-danger" *ngIf="!selectModel.positionId">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div> -->
+          <div class="xl:col-span-6 col-span-12">
+            <label for="contact-lead-score" class="form-label">{{'Name (TH)' | translate}}</label>
+            <input type="text" class="form-control" id="contact-lead-score" placeholder=""
+              [(ngModel)]="selectModel.thName">
+            <div class="text-danger" *ngIf="!selectModel.thName">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="contact-mail" class="form-label">{{'Name (EN)' | translate}}</label>
+            <input type="text" class="form-control" id="contact-mail" placeholder="" [(ngModel)]="selectModel.engName">
+            <div class="text-danger" *ngIf="!selectModel.engName">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail">
+          {{'Cancel' | translate}}
+        </button>
+        <button type="button" [disabled]="!selectModel.thName || !selectModel.engName"
+          class="ti-btn bg-primary text-white !font-medium {{!selectModel.thName || !selectModel.engName ? 'ti-btn-disabled' : ''}}"
+          (click)="save()">{{'Save' |
+          translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End:: Create Contact -->

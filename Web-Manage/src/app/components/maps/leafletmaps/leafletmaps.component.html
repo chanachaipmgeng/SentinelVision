@@ -1,0 +1,37 @@
+<app-page-header [title]="'Leaflet Maps'" [activeTitle]="'Maps'" [title1]="'Leaflet Maps'"></app-page-header>
+
+<!-- Start::row-1 -->
+      <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Leaflet Map</div>
+                </div>
+                <div class="box-body">
+                    <div id="map"  leaflet [leafletOptions]="options1"></div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Map With Markers,Circes and Polygons</div>
+                </div>
+                <div class="box-body">
+                    <div id="map1" leaflet [leafletOptions]="options2" ></div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Map With Popup</div>
+                </div>
+                <div class="box-body">
+                    <div id="map-popup" leaflet [leafletOptions]="options3" ></div>
+                </div>
+            </div>
+        </div>
+     
+    </div>
+    <!--End::row-1 -->

@@ -1,0 +1,15 @@
+@charset "UTF-8";
+@font-face {
+  font-family: prompt;
+  src: url('../fonts/Prompt-Black.ttf') format('truetype');
+  src: url('../fonts/Prompt-BlackItalic.ttf') format('truetype');
+  src: url('../fonts/Prompt-BoldItalic.ttf') format('truetype');
+  src: url('../fonts/Prompt-ExtraLight.ttf') format('truetype');
+  src: url('../fonts/Prompt-Medium.ttf') format('truetype');
+  src: url('../fonts/Prompt-MediumItalic.ttf') format('truetype');
+  src: url('../fonts/Prompt-Regular.ttf') format('truetype');
+  src: url('../fonts/Prompt-SemiBold.ttf') format('truetype');
+  src: url('../fonts/Prompt-SemiBoldItalic.ttf') format('truetype');
+  src: url('../fonts/Prompt-Thin.ttf') format('truetype');
+  src: url('../fonts/Prompt-ThinItalic.ttf') format('truetype');
+}

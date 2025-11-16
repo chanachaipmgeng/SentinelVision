@@ -1,0 +1,67 @@
+<app-page-header [title]="'Apex CandleStick Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex CandleStick Charts'"></app-page-header>
+
+  <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Candlestick Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="candlestick-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                    [xaxis]="chartOptions.xaxis" [yaxis]="chartOptions.yaxis"
+                    [title]="chartOptions.title"[colors]="chartOptions.colors"[plotOptions]="chartOptions.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Candlestick Synced With Brush Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="chart-candlestick"></div>
+                <apx-chart #chartCandle [series]="chartCandleOptions1.series"
+                [chart]="chartCandleOptions1.chart" [xaxis]="chartCandleOptions1.xaxis"
+                [plotOptions]="chartCandleOptions1.plotOptions"></apx-chart>
+                <div id="chart-bar">
+                    <apx-chart #chartBar [series]="chartBarOptions.series" [chart]="chartBarOptions.chart"
+                            [xaxis]="chartBarOptions.xaxis" [yaxis]="chartBarOptions.yaxis"
+                            [dataLabels]="chartBarOptions.dataLabels" [stroke]="chartBarOptions.stroke"
+                            [plotOptions]="chartBarOptions.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Candlestick With Cateory X-axis</div>
+            </div>
+            <div class="box-body">
+                <div id="candlestick-categoryx">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [xaxis]="chartOptions2.xaxis" [yaxis]="chartOptions2.yaxis" [title]="chartOptions2.title"
+                    [tooltip]="chartOptions2.tooltip"[plotOptions]="chartOptions2.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Candlestick With Line Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="candlestick-line">
+                    <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                    [xaxis]="chartOptions3.xaxis" [title]="chartOptions3.title" [tooltip]="chartOptions3.tooltip"
+                    [stroke]="chartOptions3.stroke"[plotOptions]="chartOptions3.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

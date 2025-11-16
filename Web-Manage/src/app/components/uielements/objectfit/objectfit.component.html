@@ -1,0 +1,425 @@
+<app-page-header [title]="'Object Fit'" [activeTitle]="'Ui Elements'" [title1]="'Object Fit'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleObject()" >Show
+                                        Code<i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="object-contain border dark:border-defaultborder/10 !rounded-md"
+                                    alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                    @if(isContentVisible1){
+
+                                        <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>
+                                    }
+                               
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Cover</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleObjectFit()">Show
+                                        Code<i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="object-cover border dark:border-defaultborder/10 md:!rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible2){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                    </div>
+                }
+                               
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Fill</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]"  (click)="toggleObjectFill()">Show
+                                        Code<i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="object-fill border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                    @if(isContentVisible3){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                    </div>
+                }
+                            
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Scale Down</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitScale()">Show
+                                        Code<i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="object-scale-down border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                         @if(isContentVisible4){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                </div>
+            }
+                             
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit None</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitNone()">Show
+                                        Code<i class="ri-code-{{toggleClass5}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="object-none border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                         @if(isContentVisible5){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts5}}</code></pre>   
+                </div>
+            }
+                              
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain (SM - responsive)</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitContain()">Show
+                                        Code<i class="ri-code-{{toggleClass6}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="sm:object-contain border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible6){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts6}}</code></pre>   
+                </div>
+            }
+                            
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain (MD - responsive)</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitMd()">Show
+                                        Code<i class="ri-code-{{toggleClass7}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="md:object-contain border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible7){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts7}}</code></pre>   
+                </div>
+            }
+                             
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain (LG - responsive)</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitLg()">Show
+                                        Code<i class="ri-code-{{toggleClass8}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="lg:object-contain border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible8){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts8}}</code></pre>   
+                </div>
+            }
+                       
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain (XL - responsive)</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitLgxl()" >Show
+                                        Code<i class="ri-code-{{toggleClass9}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="xl:object-contain border dark:border-defaultborder/10 !rounded-md" alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible9){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts9}}</code></pre>   
+                </div>
+            }
+                           
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">Object Fit Contain (XXL - responsive)</div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitxxl()" >Show
+                                        Code<i class="ri-code-{{toggleClass10}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <img src="./assets/images/media/media-28.jpg"
+                                    class="xxl:object-contain border dark:border-defaultborder/10 !rounded-md"
+                                    alt="...">
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible10){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts10}}</code></pre>   
+                </div>
+            }
+                            
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Object Fit Contain Video
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitvideo()" >Show
+                                        Code<i class="ri-code-{{toggleClass11}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <video src="./assets/video/1.mp4"
+                                    class="object-contain !rounded-md border dark:border-defaultborder/10"
+                                    autoplay loop muted></video>
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible11){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts11}}</code></pre>   
+                </div>
+            }
+                              
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Object Fit Cover Video
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitCovervideo()">Show
+                                        Code<i class="ri-code-{{toggleClass12}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <video src="./assets/video/1.mp4"
+                                    class="object-cover !rounded-md border dark:border-defaultborder/10"
+                                    autoplay loop muted></video>
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible12){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts12}}</code></pre>   
+                </div>
+            }
+                               
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Object Fit Fill Video
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitFillvideo()">Show
+                                        Code<i class="ri-code-{{toggleClass13}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <video src="./assets/video/1.mp4"
+                                    class="object-fill !rounded-md border dark:border-defaultborder/10"
+                                    autoplay loop muted></video>
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                        @if(isContentVisible13){
+                 <div>
+                    <pre class="language-html"><code class="language-html" >{{ts13}}</code></pre>   
+                </div>
+            }
+
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Object Fit Scale Video
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleFitCoverscale()">Show
+                                        Code<i class="ri-code-{{toggleClass14}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <video src="./assets/video/1.mp4"
+                                    class="object-scale-down !rounded-md border dark:border-defaultborder/10"
+                                    autoplay loop muted></video>
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                    @if(isContentVisible14){
+
+                                        <pre class="language-html"><code class="language-html" >{{ts14}}</code></pre>
+                                    }
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Object Fit None Video
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="Video()">Show
+                                        Code<i class="ri-code-{{toggleClass15}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body object-fit-container">
+                                <video src="./assets/video/1.mp4"
+                                    class="object-none !rounded-md border dark:border-defaultborder/10"
+                                    autoplay loop muted></video>
+                                    
+                                    
+                                </div>
+                                <div class="box-footer showcode border-t-0">
+                                    <!-- Prism Code -->
+                                    
+                                    @if(isContentVisible15){
+
+                                        <pre class="language-html"><code class="language-html" >{{ts15}}</code></pre>
+                                    }
+                                <!-- Prism Code -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End::row-1 -->

@@ -1,0 +1,104 @@
+<app-page-header [title]="'Apex Radialbar Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Radialbar Charts'"></app-page-header>
+
+
+   <!-- Start::row-1 -->
+   <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Pie Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="radialbar-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                    [plotOptions]="chartOptions.plotOptions" [labels]="chartOptions.labels" [colors]="chartOptions.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Multiple Radialbar Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="radialbar-multiple">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [plotOptions]="chartOptions1.plotOptions" [labels]="chartOptions1.labels" [colors]="chartOptions1.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Circle Chart - Custom Angle</div>
+            </div>
+            <div class="box-body">
+                <div id="circle-custom">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [plotOptions]="chartOptions2.plotOptions" [labels]="chartOptions2.labels"
+                    [legend]="chartOptions2.legend" [colors]="chartOptions2.colors"
+                    [responsive]="chartOptions2.responsive"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Gradient Circle Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="gradient-circle">
+                    <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                    [plotOptions]="chartOptions3.plotOptions" [labels]="chartOptions3.labels"
+                    [stroke]="chartOptions3.stroke" [fill]="chartOptions3.fill"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Stroked Circular Gauge</div>
+            </div>
+            <div class="box-body">
+                <div id="circular-stroked">
+                    <apx-chart [series]="chartOptions4.series" [chart]="chartOptions4.chart"
+                    [plotOptions]="chartOptions4.plotOptions" [labels]="chartOptions4.labels"
+                    [fill]="chartOptions4.fill" [stroke]="chartOptions4.stroke"[colors]="chartOptions4.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Circle Chart With Image</div>
+            </div>
+            <div class="box-body">
+                <div id="circle-image">
+                    <apx-chart [series]="chartOptions5.series" [chart]="chartOptions5.chart"
+                    [plotOptions]="chartOptions5.plotOptions" [labels]="chartOptions5.labels" 
+                    [fill]="chartOptions5.fill" [stroke]="chartOptions5.stroke"[colors]="chartOptions5.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Semi Circular Gauge</div>
+            </div>
+            <div class="box-body">
+                <div id="circular-semi">
+                    <apx-chart [series]="chartOptions7.series" [chart]="chartOptions7.chart" [colors]="chartOptions7.colors"
+                            [plotOptions]="chartOptions7.plotOptions" [labels]="chartOptions7.labels"
+                            [fill]="chartOptions7.fill"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

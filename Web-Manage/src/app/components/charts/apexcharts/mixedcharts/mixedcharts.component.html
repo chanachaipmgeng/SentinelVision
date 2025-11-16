@@ -1,0 +1,70 @@
+<app-page-header [title]="'Apex Mixed Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Mixed Charts'"></app-page-header>
+
+     <!-- Start::row-1 -->
+     <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Line &amp; Column Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="mixed-linecolumn">
+                        <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                        [yaxis]="chartOptions.yaxis" [xaxis]="chartOptions.xaxis" [labels]="chartOptions.labels"
+                        [stroke]="chartOptions.stroke" [title]="chartOptions.title"
+                        [dataLabels]="chartOptions.dataLabels" [fill]="chartOptions.fill"
+                        [tooltip]="chartOptions.tooltip"[colors]="chartOptions.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Multiple Y-Axis Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="mixed-multiple-y">
+                        <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                        [xaxis]="chartOptions2.xaxis" [markers]="chartOptions2.markers"
+                        [stroke]="chartOptions2.stroke" [yaxis]="chartOptions2.yaxis"
+                        [dataLabels]="chartOptions2.dataLabels" [title]="chartOptions2.title"
+                        [fill]="chartOptions2.fill" [tooltip]="chartOptions2.tooltip"
+                        [legend]="chartOptions2.legend" [colors]="chartOptions2.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Line &amp; Area Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="mixed-linearea">
+                        <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                        [yaxis]="chartOptions2.yaxis" [xaxis]="chartOptions2.xaxis" [labels]="chartOptions2.labels"
+                        [stroke]="chartOptions2.stroke" [markers]="chartOptions2.markers"
+                        [fill]="chartOptions2.fill" [tooltip]="chartOptions2.tooltip" [colors]="chartOptions2.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Line,Column &amp; Area Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="mixed-all">
+                        <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                            [yaxis]="chartOptions3.yaxis" [xaxis]="chartOptions3.xaxis" [labels]="chartOptions3.labels"
+                            [stroke]="chartOptions3.stroke" [plotOptions]="chartOptions3.plotOptions"
+                            [markers]="chartOptions3.markers" [fill]="chartOptions3.fill"
+                            [tooltip]="chartOptions3.tooltip"[colors]="chartOptions3.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->

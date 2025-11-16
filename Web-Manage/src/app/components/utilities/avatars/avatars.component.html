@@ -1,0 +1,420 @@
+<app-page-header [title]="'Avatars'" [activeTitle]="'Utilities'" [title1]="'Avatars'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatars
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleAvatars()">Show Code
+                                        <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body py-4">
+                                <span class="avatar me-2 avatar-radius-0">
+                                    <img src="./assets/images/faces/1.jpg" alt="img">
+                                </span>
+                                <span class="avatar me-2">
+                                    <img src="./assets/images/faces/2.jpg" alt="img">
+                                </span>
+                                <span class="avatar me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/3.jpg" alt="img">
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible1){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatar Sizes
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Avatars of different sizes
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium"(click)="toggleSizes()">Show Code
+                                        <i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs me-2">
+                                    <img src="./assets/images/faces/4.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-sm me-2">
+                                    <img src="./assets/images/faces/5.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-md me-2">
+                                    <img src="./assets/images/faces/6.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-lg me-2">
+                                    <img src="./assets/images/faces/7.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xl me-2">
+                                    <img src="./assets/images/faces/8.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xxl me-2">
+                                    <img src="./assets/images/faces/9.jpg" alt="img">
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible2){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatar With Icons
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Avatar contains icons to perform respective action.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleIcons()">Show Code
+                                        <i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/2.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge bg-success rounded-full avatar-badge"><i class="fe fe-camera text-[.5rem]"></i></a>
+                                </span>
+                                <span class="avatar avatar-sm me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/3.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-secondary avatar-badge"><i class="fe fe-edit text-[.5rem]"></i></a>
+                                </span>
+                                <span class="avatar avatar-md me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/14.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-warning avatar-badge"><i class="fe fe-plus text-[.5rem]"></i></a>
+                                </span>
+                                <span class="avatar avatar-lg me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/13.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-info avatar-badge"><i class="fe fe-edit text-[.625rem]"></i></a>
+                                </span>
+                                <span class="avatar avatar-xl me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/15.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-success avatar-badge"><i class="fe fe-camera text-[.625rem]"></i></a>
+                                </span>
+                                <span class="avatar avatar-xxl me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/9.jpg" alt="img">
+                                    <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-danger avatar-badge"><i class="fe fe-plus text-[.625rem]"></i></a>
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible3){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End::row-1 -->
+
+                <!-- Start::row-2 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatar With Online Status Indicators
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        avatars having online status indicator.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleIndicators()">Show Code
+                                        <i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs me-2 online avatar-rounded">
+                                    <img src="./assets/images/faces/8.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-sm online me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/10.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-md me-2 online avatar-rounded">
+                                    <img src="./assets/images/faces/12.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-lg me-2 online avatar-rounded">
+                                    <img src="./assets/images/faces/13.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xl me-2 online avatar-rounded">
+                                    <img src="./assets/images/faces/14.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xxl me-2 online avatar-rounded">
+                                    <img src="./assets/images/faces/15.jpg" alt="img">
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible4){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatar With Ofline Status Indicators
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        avatars having a offline status indicator.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStatus()">Show Code
+                                        <i class="ri-code-{{toggleClass5}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs me-2 offline avatar-rounded">
+                                    <img src="./assets/images/faces/2.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-sm offline me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/3.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-md me-2 offline avatar-rounded">
+                                    <img src="./assets/images/faces/4.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-lg me-2 offline avatar-rounded">
+                                    <img src="./assets/images/faces/5.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xl me-2 offline avatar-rounded">
+                                    <img src="./assets/images/faces/6.jpg" alt="img">
+                                </span>
+                                <span class="avatar avatar-xxl me-2 offline avatar-rounded">
+                                    <img src="./assets/images/faces/7.jpg" alt="img">
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible5){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts5}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatars With Number Badges
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Avatar numbers indicates the no. of unread notififactions/messages.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]"(click)="toggleBadges()" >Show Code
+                                        <i class="ri-code-{{toggleClass6}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/2.jpg" alt="img">
+                                    <span class="badge rounded-full bg-primary avatar-badge">2</span>
+                                </span>
+                                <span class="avatar avatar-sm me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/3.jpg" alt="img">
+                                    <span class="badge rounded-full bg-secondary avatar-badge">5</span>
+                                </span>
+                                <span class="avatar avatar-md me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/14.jpg" alt="img">
+                                    <span class="badge rounded-full bg-warning avatar-badge">1</span>
+                                </span>
+                                <span class="avatar avatar-lg me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/13.jpg" alt="img">
+                                    <span class="badge rounded-full bg-info avatar-badge">7</span>
+                                </span>
+                                <span class="avatar avatar-xl me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/15.jpg" alt="img">
+                                    <span class="badge rounded-full bg-success avatar-badge">3</span>
+                                </span>
+                                <span class="avatar avatar-xxl me-2 avatar-rounded">
+                                    <img src="./assets/images/faces/9.jpg" alt="img">
+                                    <span class="badge rounded-full bg-danger avatar-badge">9</span>
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible6){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts6}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End::row-2 -->
+
+                <!-- Start::row-3 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Avatar With Initials
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Avatar contains intials when user profile doesn't exist.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleIntials()">Show Code
+                                        <i class="ri-code-{{toggleClass7}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <span class="avatar avatar-xs m-2 bg-primary">
+                                    xs
+                                </span>
+                                <span class="avatar avatar-sm m-2 bg-secondary">
+                                    SM
+                                </span>
+                                <span class="avatar avatar-md m-2 bg-warning">
+                                    MD
+                                </span>
+                                <span class="avatar avatar-lg m-2 bg-danger">
+                                    LG
+                                </span>
+                                <span class="avatar avatar-xl m-2 bg-success">
+                                    XL
+                                </span>
+                                <span class="avatar avatar-xxl m-2 bg-info">
+                                    XXL
+                                </span>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible7){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts7}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Stacked Avatars
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Group of avatars stacked together.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStacked()">Show Code
+                                        <i class="ri-code-{{toggleClass8}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div class="avatar-list-stacked">
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/2.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/8.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/2.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/10.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/4.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar">
+                                        <img src="./assets/images/faces/13.jpg" alt="img">
+                                    </span>
+                                    <a class="avatar bg-primary text-white" href="javascript:void(0);">
+                                        +8
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible8){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts8}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-4 lg:col-span-6 md:col-span-12 sm:col-span-12 col-span-12">
+                        <div class="box">
+                            <div class="box-header justify-between">
+                                <div class="box-title">
+                                    Rounded Stacked Avatars
+                                    <p class="subtitle text-muted text-[0.75rem] font-normal">
+                                        Group of avatars stacked together.
+                                    </p>
+                                </div>
+                                <div class="prism-toggle">
+                                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleRounded()">Show Code
+                                        <i class="ri-code-{{toggleClass9}} ms-2 inline-block align-middle"></i></button>
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div class="avatar-list-stacked">
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/2.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/8.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/2.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/10.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/4.jpg" alt="img">
+                                    </span>
+                                    <span class="avatar avatar-rounded">
+                                        <img src="./assets/images/faces/13.jpg" alt="img">
+                                    </span>
+                                    <a class="avatar bg-primary avatar-rounded text-white" href="javascript:void(0);">
+                                        +8
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="box-footer showcode border-t-0">
+                                @if(isContentVisible9){ 
+                                    <pre class="language-html"><code class="language-html" >{{ts9}}</code></pre>   
+                                  } @else { 
+                                  }
+                                
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End::row-3 -->

@@ -1,0 +1,16 @@
+<app-page-header [title]="'Gallery'" [activeTitle]="'Apps'" [title1]="'Gallery'"></app-page-header>
+
+   <!-- Start::row-1 -->
+   <div class="grid grid-cols-12 gap-x-6" gallerize>
+    @for(img of imageData; track img.id){
+
+        <div class="lg:col-span-3 md:col-span-3 sm:col-span-6 col-span-12" >
+            <a class="glightbox box" data-gallery="gallery1">
+                <img [src]="img.srcUrl"alt="image" >
+    
+            </a>
+        </div>
+    }
+   
+</div>
+<!--End::row-1 -->

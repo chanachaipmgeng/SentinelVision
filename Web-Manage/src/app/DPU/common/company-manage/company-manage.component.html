@@ -1,0 +1,271 @@
+<app-page-header [title]="'จัดการบริษัท'" [activeTitle]="'ผู้ดูแลระบบ'" [title1]="'จัดการบริษัท'"></app-page-header>
+
+
+<div class="grid grid-cols-12 gap-6">
+  <div class="xl:col-span-12 col-span-12">
+    <div class="box">
+      <div class="box-header justify-between">
+        <div class="box-title">
+          {{ 'All List' | translate}} <span
+            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
+            translate}}
+          </a>
+
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-success-full me-2" *ngIf="someSelected"
+            (click)="adjustSelect(1)"><i class="ri-user-follow-line font-semibold align-middle"></i>{{ 'Active' |
+            translate}}
+          </a>
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-secondary-full me-2"
+            *ngIf="someSelected" (click)="adjustSelect(0)"><i
+              class="ri-user-unfollow-line font-semibold align-middle"></i>{{ 'Unactive' |
+            translate}}
+          </a>
+
+
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2" *ngIf="someSelected"
+            (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
+            translate}}
+          </a>
+          <div>
+            <input class="form-control form-control" type="text" placeholder="ค้นหาบริษัท"
+              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+          </div>
+          <!-- <div>
+            <input class="form-control form-control" type="text" placeholder="กรองตามบริษัท"
+              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+          </div> -->
+          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
+            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+          </a>
+          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
+          </ul> -->
+        </div>
+      </div>
+      <div class="box-body">
+        <div class="table-responsive">
+          <table class="table whitespace-nowrap min-w-full ti-custom-table-hover">
+            <thead>
+              <tr class="border-b border-defaultborder">
+                <th scope="col" class="!text-start">
+                  <input class="form-check-input check-all" type="checkbox" id="all-products"
+                    (change)="toggleAll($event)" [checked]="allSelected" aria-label="...">
+                </th>
+                <th scope="col" class="text-start">บริษัท</th>
+                <th scope="col" class="text-start">รหัสย่อบริษัท</th>
+                <th scope="col" class="text-start">ข้อมูลบริษัท</th>
+                <th scope="col" class="text-start">{{"Status" | translate}}</th>
+                <th scope="col" class="text-start">{{"Update Date" | translate}}</th>
+                <th scope="col" class="text-start"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for(item of filterList;track filterList){
+
+              <tr class="border border-defaultborder dark:border-defaultborder/10">
+                <td class="product-checkbox"><input class="form-check-input" type="checkbox"
+                    [checked]="selectedItems.get(item.companyId)" (change)="onCheckboxChange(item.companyId)"
+                    aria-label="..." value="">
+                </td>
+                <td>
+                  <div class="flex items-center">
+                    <span class="avatar avatar-sm p-1 me-1 bg-light !rounded-full">
+                      <img [src]="item.getPicture()" alt="" id="profile-img">
+                    </span>
+                    <div class="ms-2">
+                      <p class="font-semibold mb-0 flex items-center text-primary"><a
+                          routerLink="/company/home/{{item.companyId}}" routerLinkActive="active">
+                          {{item.companyName}}</a></p>
+                      <p class="text-[0.75rem] text-muted mb-0">{{item.companyId}}</p>
+                    </div>
+                  </div>
+                </td>
+                <!-- <td>
+                  <div class="flex">
+                    <div class="ms-2">
+                      <p class="font-semibold mb-0 flex items-center text-primary"><a routerLink="/company/home/{{item.companyId}}" routerLinkActive="active">
+                          {{item.companyName}}</a></p>
+                      <p class="text-[0.75rem] text-muted mb-0">{{item.companyId}}</p>
+                    </div>
+                  </div>
+                </td> -->
+                <td> {{item.companyCode}}</td>
+                <td>
+                  <div>
+                    <span class="block mb-1"><i
+                        class="ri-home-line me-2 align-middle text-[.875rem] text-[#8c9097] dark:text-white/50 inline-flex"></i>{{item.companyInfo}}</span>
+                  </div>
+                </td>
+                <td> <span
+                    class="badge bg-{{ item.status == 1 ? 'primary' : 'danger'}} text-white">{{item.getStatus()}}</span>
+                </td>
+                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.updatedAt | date
+                    : 'medium'}}</span></td>
+                <td>
+
+                <td>
+                  <div class="flex flex-row items-center !gap-2 ">
+                    <a aria-label="anchor" (click)="view(item)" data-hs-overlay="#modal-detail"
+                      class="ti-btn ti-btn-wave  !gap-0 !m-0 bg-info/10 text-info hover:bg-info hover:text-white hover:border-info"><i
+                        class="ri-pencil-line"></i></a>
+                    <a aria-label="anchor" href="javascript:void(0);" (click)="delete(item)"
+                      class="ti-btn ti-btn-wave product-btn !gap-0 !m-0  bg-danger/10 text-danger hover:bg-danger hover:text-white hover:border-danger"><i
+                        class="ri-delete-bin-line"></i></a>
+                  </div>
+                </td>
+              </tr>
+              }
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="box-footer">
+        <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
+          <div class="mb-2 sm:mb-0">
+            <div>
+              {{'Showing' | translate}} {{filterList.length}} {{'entries'
+              | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+            </div>
+          </div>
+          <div class="ms-auto">
+            <nav aria-label="Page navigation">
+              <ul class="ti-pagination  mb-0">
+                <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
+                    class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous' | translate}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
+                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
+
+                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
+                    href="javascript:void(0);">{{pageIndex +1}}</a>
+                </li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
+                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                    *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                    (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
+                <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                  class="page-item"><a class="page-link px-3 py-[0.375rem]"
+                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
+                    translate}}</a>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- Start:: Create Contact -->
+<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">{{ 'Create' |
+          translate }} {{ 'Company' | translate }}
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail" #closeModal>
+          <span class="sr-only">{{'Close' | translate}}</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+
+          <div class="xl:col-span-12 col-span-12">
+            <div class="mb-0 text-center">
+              <span class="avatar avatar-xxl avatar-rounded">
+                <img [src]="selectModel.getPicture()" alt="" id="profile-img">
+                <span class="badge rounded-full bg-primary avatar-badge">
+                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
+                    class="absolute w-full h-full opacity-[0]" id="profile-change">
+                  <i class="fe fe-camera text-[.625rem]"></i>
+                </span>
+              </span>
+            </div>
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'ชื่อบริษัท' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.companyName">
+            <div class="text-danger" *ngIf="!selectModel.companyName">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'รหัสบริษัท' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.companyCode">
+            <div class="text-danger" *ngIf="!selectModel.companyCode">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'ข้อมูลบริษัท' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.companyInfo">
+            <div class="text-danger" *ngIf="!selectModel.companyInfo">
+              {{'Please fill in information' | translate}}
+            </div>
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'ที่อยู่' | translate}}</label>
+            <textarea type="text" class="form-control" id="deal-title" placeholder=""
+              [(ngModel)]="selectModel.address"></textarea>
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'เจ้าของ' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.ownerName">
+          </div>
+
+          <div class="xl:col-span-12 col-span-12">
+            <label for="deal-title" class="form-label">{{'เบอร๋ติดต่อ' | translate}}</label>
+            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.contact">
+          </div>
+
+
+
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">{{'Status' | translate}}</label>
+            <ng-select name="choices-multiple-remove-button2" id="choices-multiple-remove-button2" placeholder=""
+              [(ngModel)]="selectModel.status">
+              <ng-option [value]="0">{{'Pending' | translate}}</ng-option>
+              <ng-option [value]="1" selected>{{'Public' | translate}}</ng-option>
+            </ng-select>
+          </div>
+
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail">
+          {{'Cancel' | translate}}
+        </button>
+        <button type="button" (click)="save()" class="ti-btn bg-primary text-white !font-medium">{{'Save' |
+          translate}}</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End:: Create Contact -->

@@ -1,0 +1,52 @@
+<app-page-header [title]="'Apex Radar Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Radar Charts'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Radar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="radar-basic">
+                                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                            [xaxis]="chartOptions.xaxis" [title]="chartOptions.title"[colors]="chartOptions.colors"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Radar Chart-Multiple Series</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="radar-multiple">
+                                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                                    [xaxis]="chartOptions1.xaxis" [stroke]="chartOptions1.stroke"
+                                    [markers]="chartOptions1.markers" [fill]="chartOptions1.fill" [colors]="chartOptions1.colors"
+                                    [title]="chartOptions1.title"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Radar Chart Poygon Fill</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="radar-polygon">
+                                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                                    [xaxis]="chartOptions2.xaxis" [stroke]="chartOptions2.stroke" [colors]="chartOptions2.colors"
+                                    [dataLabels]="chartOptions2.dataLabels" [tooltip]="chartOptions2.tooltip"
+                                    [plotOptions]="chartOptions2.plotOptions" [markers]="chartOptions2.markers"
+                                    [yaxis]="chartOptions2.yaxis" [fill]="chartOptions2.fill"
+                                    [title]="chartOptions2.title"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

@@ -1,0 +1,84 @@
+<div class="card shadow-sm mb-2">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-auto">
+        <figure class="avatar avatar-70 rounded-10">
+          <img appShowLoading *ngIf="pictureTimeStamp ;else personblank" src="{{pictureTimeStamp}}">
+          <ng-template #personblank>
+            <img src="assets/img/icon/person.png">
+          </ng-template>
+        </figure>
+      </div>
+      <div class="col px-0 align-self-center">
+        <!-- <h3 class="mb-0 text-color-theme">{{data?.memberName}}</h3> -->
+        <p><b class="text-color-theme">{{swipDateTime| thaidate : "fullSpace"}}</b> <br>
+          <small class="text-muted">{{swipDateTime | date : 'HH:mm'}} {{swipeTypeName | translate}} </small>
+        </p>
+      </div>
+      <!-- <div class="form-group form-floating mt-2">
+        <input type="text" class="form-control" id="locationName"
+            placeholder="{{'Location Name' | translate}}">
+        <label for="locationName">{{'Location Name' | translate}}</label>
+    </div> -->
+    </div>
+  </div>
+</div>
+
+<!-- <div class="form-floating mb-2 shadow-sm">
+  <input type="text" class="form-control" id="floatingLocationName" [(ngModel)]="locationName" placeholder="{{'Location Name' | translate}}">
+  <input type="text" class="form-control" id="floatingLocationName" [(ngModel)]="locationName">
+  <label for="floatingLocationName">{{'Location Name' | translate}}</label>
+</div> -->
+<div class="form-group form-floating mb-2 shadow-sm is-valid" [ngClass]="{'is-valid': (locationName || appoveType == 1),'is-invalid':(!locationName && appoveType == 2)}">
+  <input type="text" class="form-control" id="floatingLocationName" placeholder="{{'Location Name' | translate}}"
+  [(ngModel)]="locationName">
+  <label class="form-control-label" for="email">{{'Location Name' | translate}}</label>
+  <button type="button" class="text-danger tooltip-btn" data-bs-toggle="tooltip" data-bs-placement="left"
+    title="{{'MESSAGE.Please enter the name of the place.' | translate}}" id="locationName" *ngIf="!locationName && appoveType == 2">
+    <i class="bi bi-info-circle"></i>
+  </button>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm mb-2">
+      <div class="card-body">
+
+        <!-- <div class="row form-check d-flex">
+          <div class="col">
+            <input class="form-check-input" type="radio" name="selectType" id="single" (change)="appoveType = 1" checked>
+            <label class="form-check-label" for="single"> {{ "Single" | translate}} </label>
+          </div>
+          <div class="col">
+            <input class="form-check-input" type="radio" name="selectType" id="permanent" (change)="appoveType = 2">
+            <label class="form-check-label" for="permanent"> {{ "Permanent" | translate}} </label>
+          </div>
+        </div> -->
+        <div>
+          <div class="modal-footer p-0 justify-content-around">
+            <button type="button" class="col-5 btn btn-primary rounded-15" (click)="submit(1)">
+                {{"BUTTON.Approved" | translate}}
+            </button>
+            <button type="button" class="col-5 btn btn-danger rounded-15" (click)="submit(2)">
+              {{"BUTTON.Disapproved" | translate}}
+          </button>
+        </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm mb-2">
+      <div class="card-body">
+        <agm-map [latitude]="latitude" [longitude]="longitude" style="height: 350px" [zoom]="15">
+          <agm-marker [latitude]="latitude" [longitude]="longitude" optimized="false">
+          </agm-marker>
+        </agm-map>
+      </div>
+    </div>
+  </div>
+</div>

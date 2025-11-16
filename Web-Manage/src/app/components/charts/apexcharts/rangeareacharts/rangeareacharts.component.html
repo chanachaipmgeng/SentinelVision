@@ -1,0 +1,43 @@
+<app-page-header [title]="'Apex Range Area Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Range Area Charts'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Basic Range Area Chart
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="rangearea-basic">
+                                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                                    [dataLabels]="chartOptions.dataLabels" [markers]="chartOptions.markers"
+                                    [xaxis]="chartOptions.xaxis" [yaxis]="chartOptions.yaxis" [stroke]="chartOptions.stroke"
+                                    [title]="chartOptions.title"[colors]="chartOptions.colors"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Combo Range Area Chart
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div id="rangearea-combo">
+                                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                                    [dataLabels]="chartOptions1.dataLabels" [markers]="chartOptions1.markers"
+                                    [xaxis]="chartOptions1.xaxis" [yaxis]="chartOptions1.yaxis" [stroke]="chartOptions1.stroke"
+                                    [title]="chartOptions1.title" [colors]="chartOptions1.colors" [fill]="chartOptions1.fill"
+                                    [forecastDataPoints]="chartOptions1.forecastDataPoints"
+                                    [legend]="chartOptions1.legend" [colors]="chartOptions1.colors"></apx-chart>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

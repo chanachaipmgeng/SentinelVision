@@ -1,0 +1,62 @@
+<app-page-header [title]="'Apex Treemap Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Treemap Charts'"></app-page-header>
+
+   <!-- Start::row-1 -->
+   <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Treemap Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="treemap-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                    [dataLabels]="chartOptions.dataLabels" [plotOptions]="chartOptions.plotOptions"
+                    [title]="chartOptions.title" [legend]="chartOptions.legend" [colors]="chartOptions.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div> 
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Multi Dimensional Treemap Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="treemap-multi">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [dataLabels]="chartOptions1.dataLabels" [plotOptions]="chartOptions1.plotOptions"
+                    [title]="chartOptions1.title" [legend]="chartOptions1.legend" [colors]="chartOptions1.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Distributed Treemap Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="treemap-distributed">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                    [dataLabels]="chartOptions2.dataLabels" [plotOptions]="chartOptions2.plotOptions"
+                    [title]="chartOptions2.title" [colors]="chartOptions2.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Treemap with color ranges</div>
+            </div>
+            <div class="box-body">
+                <div id="treemap-colorranges">
+                    <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                    [dataLabels]="chartOptions3.dataLabels" [plotOptions]="chartOptions3.plotOptions"
+                    [title]="chartOptions3.title" [legend]="chartOptions3.legend" [colors]="chartOptions3.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

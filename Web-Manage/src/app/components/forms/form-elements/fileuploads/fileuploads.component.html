@@ -1,0 +1,145 @@
+<app-page-header [title]="'File Uploads'" [activeTitle]="'Form Elements'" [title1]="'File Uploads'"></app-page-header>
+  <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 lg:col-span-6 ">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">Basic File Input</h5>
+            </div>
+            <div class="box-body">
+                <div>
+                    <label for="file-input" class="sr-only">Choose file</label>
+                    <input type="file" name="file-input" id="file-input" class="block w-full border border-gray-200 focus:shadow-sm dark:focus:shadow-white/10 rounded-sm text-sm focus:z-10 focus:outline-0 focus:border-gray-200 dark:focus:border-white/10 dark:border-white/10 dark:text-white/50
+                       file:border-0
+                      file:bg-light file:me-4
+                      file:py-3 file:px-4
+                      dark:file:bg-black/20 dark:file:text-white/50">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-span-12 lg:col-span-6 ">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">File Input Buttons</h5>
+            </div>
+            <div class="box-body">
+                <div>
+                    <label class="block">
+                        <span class="sr-only">Choose Profile photo</span>
+                        <input type="file" class="block w-full border border-gray-200 focus:shadow-sm dark:focus:shadow-white/10 rounded-sm text-sm focus:z-10 focus:outline-0 focus:border-gray-200 dark:focus:border-white/10 dark:border-white/10 dark:text-[#8c9097] dark:text-white/50
+                        file:me-4 file:py-2 file:px-4
+                        file:rounded-s-sm file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-primary file:text-white
+                        hover:file:bg-primary focus-visible:outline-none
+                      ">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End::row-1 -->
+
+<!-- Start::row-2 -->
+<div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 lg:col-span-6">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">File Input Sizes</h5>
+            </div>
+            <div class="box-body space-y-3">
+                <div>
+                    <label for="small-file-input" class="sr-only">Choose file</label>
+                    <input type="file" name="small-file-input" id="small-file-input" class="block w-full border border-gray-200 focus:shadow-sm dark:focus:shadow-white/10 rounded-sm text-sm focus:z-10 focus:outline-0 focus:border-gray-200 dark:focus:border-white/10 dark:border-white/10 dark:text-white/50
+                       file:border-0
+                      file:bg-light file:me-4
+                      file:py-2 file:px-4
+                      dark:file:bg-black/20 dark:file:text-white/50">
+                </div>
+
+                <div>
+                    <label for="file-input-medium" class="sr-only">Choose file</label>
+                    <input type="file" name="file-input-medium" id="file-input-medium" class="block w-full border border-gray-200 focus:shadow-sm dark:focus:shadow-white/10 rounded-sm text-sm focus:z-10 focus:outline-0 focus:border-gray-200 dark:focus:border-white/10 dark:border-white/10 dark:text-white/50
+                       file:border-0
+                      file:bg-light file:me-4
+                      file:py-3 file:px-4
+                      dark:file:bg-black/20 dark:file:text-white/50">
+                </div>
+
+                <div>
+                    <label for="large-file-input" class="sr-only">Choose file</label>
+                    <input type="file" name="large-file-input" id="large-file-input" class="block w-full border border-gray-200 focus:shadow-sm dark:focus:shadow-white/10 rounded-sm text-sm focus:z-10 focus:outline-0 focus:border-gray-200 dark:focus:border-white/10 dark:border-white/10 dark:text-[#8c9097] dark:text-white/50
+                       file:border-0
+                      file:bg-light file:me-4
+                      file:py-3 file:px-4 file:sm:py-5
+                      dark:file:bg-black/20 dark:file:text-white/50">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-span-12 lg:col-span-6">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">Dropzone File Upload</h5>
+            </div>
+            <div class="box-body">
+                <file-pond #myPond [options]="singlepondOptions" class="single-fileupload" [files]="pondFiles"
+                (oninit)="pondHandleInit()" (onaddfile)="pondHandleAddFile($event)"
+                (onactivatefile)="pondHandleActivateFile($event)">
+            </file-pond>
+                <!-- <div data-single="true" action="/file-upload" class="dropzone"></div> -->
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Start::row-2 -->
+<!-- End::row-3 -->
+<div class="grid grid-cols-12 gap-6">
+    <div class="col-span-12 lg:col-span-4">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">Single File Upload</h5>
+            </div>
+            <div class="box-body Single-file-upload">
+                <!-- <input type="file" class="filepond basic-filepond" data-allow-reorder="true" data-max-file-size="3MB" data-max-files="1"> -->
+                <file-pond #myPond [options]="singlepondOptions" class="single-fileupload" [files]="pondFiles"
+                (oninit)="pondHandleInit()" (onaddfile)="pondHandleAddFile($event)"
+                (onactivatefile)="pondHandleActivateFile($event)">
+            </file-pond>
+            </div>
+        </div>
+    </div>
+    <div class="col-span-12 lg:col-span-4">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">Multiple File Upload</h5>
+            </div>
+            <div class="box-body">
+                <!-- <input type="file" class="filepond multiple-filepond" multiple data-allow-reorder="true" data-max-file-size="3MB" data-max-files="5"> -->
+                <file-pond #myPond [options]="pondOptions" class="multiple-filepond" [files]="pondFiles"
+                (oninit)="pondHandleInit()" (onaddfile)="pondHandleAddFile($event)"
+                (onactivatefile)="pondHandleActivateFile($event)">
+            </file-pond>
+            </div>
+        </div>
+    </div>
+    <div class="col-span-12 lg:col-span-4">
+        <div class="box">
+            <div class="box-header">
+                <h5 class="box-title">circular File Upload</h5>
+            </div>
+            <div class="box-body">
+                @if(type === 'component'){
+
+                    <dropzone  class="dropzone-container flex" [config]="config"
+                    [disabled]="disabled" [message]="'Click or drag images here to upload'"
+                    (init)="onUploadInit($event)" (error)="onUploadError($event)"
+                    (success)="onUploadSuccess($event)"></dropzone>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+<!-- End::row-3 -->

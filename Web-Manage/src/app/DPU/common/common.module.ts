@@ -1,0 +1,53 @@
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { CommonComponent } from './common.component';
+import { RouterModule, Routes } from '@angular/router';
+export const admin: Routes = [
+  {
+    path: 'admin', children: [{
+      path: 'home',
+      loadComponent: () =>
+        import('./home-common/home-common.component').then((m) => m.HomeCommonComponent),
+    },
+    {
+      path: 'member-manage',
+      loadComponent: () =>
+        import('./user-management/user-setting/user-setting.component').then((m) => m.UserSettingComponent),
+    },
+    {
+      path: 'manage-companys',
+      loadComponent: () =>
+        import('./company-manage/company-manage.component').then((m) => m.CompanyManageComponent),
+    },
+    {
+      path: 'admin-manage',
+      loadComponent: () =>
+        import('./admin-manage/admin-manage.component').then((m) => m.AdminManageComponent),
+    },
+    //////////////emp/////////////////
+    {
+      path: 'emp/department',
+      loadComponent: () =>
+        import('./employee/department/department.component').then((m) => m.DepartmentComponent),
+    },
+    {
+      path: 'emp/position',
+      loadComponent: () =>
+        import('./employee/position/position.component').then((m) => m.PositionComponent),
+    }
+    ]
+  }
+];
+
+
+@NgModule({
+  imports: [
+    CommonModule,
+    RouterModule.forChild(admin)
+  ],
+  exports: [RouterModule],
+  declarations: [CommonComponent]
+})
+export class CommonManageModule {
+  static routes = admin;
+}

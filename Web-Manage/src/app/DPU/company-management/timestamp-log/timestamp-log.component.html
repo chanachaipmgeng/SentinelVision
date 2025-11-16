@@ -1,0 +1,232 @@
+<app-page-header [title]="'ข้อมูลการลงเวลา'" [activeTitle]="'จัดการข้อมูลการลงเวลา'"
+  [title1]="'ข้อมูลการลงเวลา'"></app-page-header>
+
+
+<!-- Start::row-1 -->
+<div class="grid grid-cols-12 gap-6">
+  <div class="xl:col-span-12 col-span-12">
+
+    <div class="flex flex-wrap gap-2">
+      <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2"
+        routerLink="/company/timestamp-face"><i class="ri-add-line font-semibold align-middle"></i>{{ 'ลงเวลาพนักงาน' |
+        translate}}
+      </a>
+      <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
+            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+          </a>
+          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Posted Date</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Status</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Department</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Job Type</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
+          </ul> -->
+    </div>
+
+  </div>
+  <div class="xxl:col-span-12 xl:col-span-8 col-span-12">
+    <div class="grid grid-cols-12 gap-6 items-center mb-6">
+      <div class="lg:col-span-12 col-span-12">
+        <div class="inline-flex !w-full companies-search-input">
+          <input type="text" class="form-control !rounded-e-none border-e-0"
+            aria-label="Text input with segmented dropdown button" placeholder="ค้นหาจากข้อมูลพนักงาน"
+            [(ngModel)]="searchTerm">
+
+          <input class="form-control" id="daterange" [(ngModel)]="dateRange" placeholder="ช่วงวันที่" mwlFlatpickr
+            [altInput]="true" [convertModelValue]="true" mode="range" />
+          <ng-select class="form-control !rounded-none" name="choices-multiple-remove-button1"
+            id="choices-multiple-remove-button1" placeholder="พนักงาน" [(ngModel)]="empSelect">
+            <ng-option value="">ทั้งหมด</ng-option>
+            @for(item of empList;track empList){
+            <ng-option [value]="item.company_employeeId">{{item.getFullname()}}</ng-option>
+            }
+          </ng-select>
+          <ng-select class="form-control !rounded-none" name="choices-multiple-remove-button1"
+            id="choices-multiple-remove-button1" placeholder="สถานะ" [(ngModel)]="statusSelect">
+            <ng-option value="">ทั้งหมด</ng-option>
+            <ng-option value="WARNING">Warning</ng-option>
+            <ng-option value="CHECK_IN">Complete</ng-option>
+            <ng-option value="DISAPPROVE">Absent</ng-option>
+          </ng-select>
+          <button (click)="getTimestamp()" type="button" aria-label="button"
+            class="ti-btn ti-btn-primary-full !mb-0 !rounded-s-none"><i class="ri-search-line"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="xxl:col-span-8 xl:col-span-8 col-span-12">
+
+    <div class="xxl:col-span-8 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+      <ul class="list-none mb-0 notification-container">
+        @for(item of filterList;track filterList){
+        <li>
+          <div
+            class="box border-s-[0.25rem] {{item.timestampType==0?'border-warning':''}} {{item.timestampType==1||item.timestampType==2?'border-success':''}} {{item.timestampType==3?'border-danger':''}}"
+            (click)="view(item)">
+            <div class="box-body !p-4">
+              <a href="javascript:void(0);">
+                <div class="flex items-start mt-0 flex-wrap">
+                  <span class="avatar avatar-xl avatar-rounded">
+                    <img [src]="item.getPicture()" alt="">
+                  </span>
+                  <div class="flex-grow">
+                    <div class="sm:flex items-center">
+                      <div class="sm:mt-0 mt-2 mx-2">
+                        <p class="font-semibold mb-0 flex items-center text-primary">{{item.employee.member.firstName+ "
+                          "+item.employee.member.lastName}}</p>
+                        <p class="mb-0 text-secondary dark:text-white/50">{{item.getLocation()}}
+                        </p>
+                        <p class="mb-0 text-[#8c9097] dark:text-white/50"><span
+                            class="badge {{item.timestampType==0?'bg-warning':''}} {{item.timestampType==1||item.timestampType==2?'bg-success':''}} {{item.timestampType==3?'bg-danger':''}} text-white">{{item.getStatus()}}</span>
+                        </p>
+                      </div>
+                      <div class="ms-auto">
+                        <h5
+                          class="ltr:float-right rtl:float-left badge bg-light font-semibold text-primary dark:text-white whitespace-nowrap">
+                          {{item.timestamp | date: "HH:mm"}} {{item.timestamp | date: "medium"}}
+                        </h5>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+        </li>
+        }
+      </ul>
+    </div>
+    <ul class="ti-pagination mb-4 justify-end">
+      <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
+        <div class="mb-2 sm:mb-0">
+          <div>
+            {{'Showing' | translate}} {{filterList.length}} {{'entries'
+            | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+          </div>
+        </div>
+        <div class="ms-auto">
+          <nav aria-label="Page navigation">
+            <ul class="ti-pagination  mb-0">
+              <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
+                  class="page-link px-3 py-[0.375rem]" (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous'
+                  | translate}}</a></li>
+              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
+              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
+                  (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
+
+              <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
+                  href="javascript:void(0);">{{pageIndex +1}}</a>
+              </li>
+              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                  (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
+              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                  (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
+              <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
+                class="page-item"><a class="page-link px-3 py-[0.375rem]"
+                  (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
+                  translate}}</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </ul>
+  </div>
+  <div class="xxl:col-span-4 xl:col-span-4 col-span-12" *ngIf="selectModel">
+    <div class="box custom-box">
+      <div class="box-header justify-between">
+        <div class="box-title">
+          รายละเอียดการลงเวลา
+        </div>
+        <div>
+        </div>
+      </div>
+      <div class="box-body !p-0">
+        <!-- <div class="box-body p-6">
+          <div class="text-center">
+            <span class="avatar avatar-xl avatar-rounded">
+              <img src="./assets/images/faces/2.jpg" alt="">
+            </span>
+            <div class="mt-2">
+              <p class="mb-0 font-semibold">Samantha May</p>
+              <p class="text-[0.75rem] opacity-[0.7] mb-1 text-[#8c9097] dark:text-white/50">
+                09:00</p>
+              <p class="mb-0 text-[#8c9097] dark:text-white/50"><span
+                  class="badge bg-danger text-white">ลงเวลาผิดสถานที่</span></p>
+            </div>
+          </div>
+        </div>
+        <div class="box-footer text-center">
+          <div class="btn-list">
+            <button type="button" class="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] me-2 ti-btn-light">อนุมัติ</button>
+            <button type="button"
+              class="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] text-white bg-primary">ไม่อนุมัติ</button>
+          </div>
+        </div> -->
+        <div class="box product-card">
+          <div class="box-body">
+            <div class="grid grid-cols-12 gap-6">
+              <div class="xxl:col-span-6 xl:col-span-6 col-span-12">
+                <!-- <span class="avatar avatar-xl avatar-rounded">
+                  <img [src]="item.getPicture()" alt="">
+                </span> -->
+                <img src="{{selectModel.getPicture()}}" class="card-img mb-3 avatar-rounded" alt="...">
+              </div>
+              <div class="xxl:col-span-6 xl:col-span-6 col-span-12">
+                <div class="flex-grow">
+                  <div class="sm:flex items-center">
+                    <div class="sm:mt-0 mt-2 mx-2">
+                      <p class="font-semibold mb-0 flex items-center text-primary">{{selectModel.employee.member.firstName+ "
+                        "+selectModel.employee.member.lastName}}</p>
+                      <p class="mb-0 text-secondary dark:text-white/50">{{selectModel.latitude}} , {{selectModel.longitude}}
+                      </p>
+                      <p class="mb-0 text-[#8c9097] dark:text-white/50"><span
+                          class="badge {{selectModel.timestampType==0?'bg-warning':''}} {{selectModel.timestampType==1||selectModel.timestampType==2?'bg-success':''}} {{selectModel.timestampType==3?'bg-danger':''}} text-white">{{selectModel.getStatus()}}</span>
+                      </p>
+                    </div>
+                    <div class="ms-auto">
+                      <h5
+                        class="ltr:float-right rtl:float-left badge bg-light font-semibold text-primary dark:text-white whitespace-nowrap">
+                        {{selectModel.timestamp | date: "HH:mm"}} {{selectModel.timestamp | date: "medium"}}
+                      </h5>
+                    </div>
+                  </div>
+                </div>
+                <input type="text" class="form-control !rounded-e-none border-e-0 mt-5"
+                  aria-label="Text input with segmented dropdown button" placeholder="ชื่อสถานที่"
+                  [(ngModel)]="selectModel.locationName" [disabled]="selectModel.timestampType!=0">
+                <a *ngIf="selectModel.timestampType==0" (click)="approveTime(selectModel)" routerLink="/pages/ecommerce/cart"
+                  class="ti-btn ti-btn-primary m-1 !me-2 !font-medium"><i
+                    class="ri-check-line me-1 align-middle"></i>อนุมัติ</a>
+                <a *ngIf="selectModel.timestampType==0"  (click)="disapproveTime(selectModel)" routerLink="/pages/ecommerce/product-details"
+                  class="ti-btn ti-btn-success m-1 !font-medium"><i
+                    class="ri-close-line me-1 align-middle"></i>ไม่อนุมัติ</a>
+              </div>
+              <div class="xxl:col-span-12 xl:col-span-12 col-span-12">
+                <google-map height="400px"
+                  [center]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }" [zoom]="12">
+
+                  <map-marker #mapMarker="mapMarker"
+                    [position]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }"
+                    [options]="markerOptions" />
+
+                </google-map>
+              </div>
+
+
+            </div>
+
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<!--End::row-1 -->

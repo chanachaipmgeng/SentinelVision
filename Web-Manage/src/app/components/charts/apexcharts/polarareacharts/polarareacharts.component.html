@@ -1,0 +1,35 @@
+<app-page-header [title]="'Apex Polar Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Polar Charts'"></app-page-header>
+
+   <!-- Start::row-1 -->
+   <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Polar Area Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="polararea-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart" [legend]="chartOptions.legend"
+                    [labels]="chartOptions.labels" [fill]="chartOptions.fill" [stroke]="chartOptions.stroke"
+                    [responsive]="chartOptions.responsive"[colors]="chartOptions.colors"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Polar Area Monochrome Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="polararea-monochrome">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                    [labels]="chartOptions1.labels" [title]="chartOptions1.title" [theme]="chartOptions1.theme"
+                    [fill]="chartOptions1.fill" [yaxis]="chartOptions1.yaxis" [stroke]="chartOptions1.stroke"
+                    [legend]="chartOptions1.legend" [plotOptions]="chartOptions1.plotOptions"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

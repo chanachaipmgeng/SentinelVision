@@ -1,0 +1,135 @@
+<!-- list pages -->
+<!-- wallet balance -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-auto">
+        <figure class="avatar avatar-70 rounded-10">
+          <img appShowLoading *ngIf="memberModel.getPicture() ;else personblank"
+            src="{{memberModel.getPicture()}}">
+          <ng-template #personblank>
+            <img src="assets/img/icon/person.png">
+          </ng-template>
+        </figure>
+      </div>
+      <div class="col px-0 align-self-center">
+        <h3 class="mb-0 text-color-theme">{{memberModel.getFullname()}}</h3>
+        <p class="text-muted ">{{memberModel.getRole()}}</p>
+      </div>
+      <!-- <div class="col-auto align-self-center">
+        <a routerLink="/company/company-list" class="btn btn-44 btn-light shadow-sm">
+          <i class="bi bi-building"></i>
+        </a>
+        <a routerLink="/general/profile-info-edit" class="btn btn-44 btn-default shadow-sm ms-1">
+          <i class="bi bi-gear"></i>
+        </a>
+      </div> -->
+    </div>
+    <!-- <div class="row">
+      <div class="col-auto">
+        <figure class="avatar avatar-44 rounded-10">
+          <img src="assets/img/user1.jpg" alt="">
+        </figure>
+      </div>
+      <div class="col px-0 align-self-center">
+        <p class="mb-0 text-color-theme">Maxartkiller</p>
+        <p class="text-muted size-12">New York City, US</p>
+      </div>
+      <div class="col-auto">
+        <a routerLink="/addmoney" class="btn btn-44 btn-light shadow-sm">
+          <i class="bi bi-building"></i>
+        </a>
+        <a routerLink="/component/profile-info-edit" class="btn btn-44 btn-default shadow-sm ms-1">
+          <i class="bi bi-gear"></i>
+        </a>
+      </div>
+    </div> -->
+  </div>
+</div>
+
+<div class="row mb-3">
+  <div class="col">
+    <h6>{{"General" | translate}}</h6>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm mb-4">
+      <ul class="list-group list-group-flush bg-none">
+        <li class="list-group-item">
+          <div class="row">
+            <div class="col align-self-center">
+              <a class="text-normal d-block">
+                <i class="bi bi-translate mx-2"></i>
+                {{'language' | translate}}</a>
+            </div>
+            <div class="col-auto align-self-center text-end">
+              <ul class="nav nav-pills nav-justified tabs" id="assetstabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" [ngClass]="{'active' : selectedLanguage=='th'}" id="home-tab"
+                    data-bs-toggle="tab" data-bs-target="#cards" (click)="changeLanguage('th')" type="button" role="tab"
+                    aria-controls="cards" aria-selected="true" style="line-height: 15px;">ไทย</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" [ngClass]="{'active' : selectedLanguage=='en'}" id="currency-tab"
+                    data-bs-toggle="tab" data-bs-target="#currency" (click)="changeLanguage('en')" type="button"
+                    role="tab" aria-controls="currency" aria-selected="false" style="line-height: 15px;">Eng</button>
+                </li>
+              </ul>
+
+            </div>
+
+          </div>
+        </li>
+
+        <li class="list-group-item">
+          <div class="row p-1">
+            <a  routerLink="/general/enroll-face" class="text-normal d-block">
+              <i class="bi bi-person-bounding-box mx-2"></i>
+              {{"Register face" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+
+        <!-- <li class="list-group-item">
+          <div class="row p-1">
+            <a routerLink="/general/reset-password" class="text-normal d-block">
+              <i class="bi bi-gear mx-2"></i>
+              {{"Change Password" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li> -->
+
+        <li class="list-group-item">
+          <div class="row p-1">
+            <a routerLink="/apps/style" class="text-normal d-block">
+              <i class="bi bi-grid-1x2 mx-2"></i>
+              {{"Style" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li>
+
+        <!-- <li class="list-group-item">
+          <div class="row p-1">
+            <a routerLink="/general/contact-us" class="text-normal d-block">
+              <i class="bi bi-envelope mx-2"></i>
+              {{"Contact us" | translate}}
+              <i class="float-end bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </li> -->
+
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="row h-100 ">
+  <div class="col-12 mb-4">
+    <button type="button" (click)="logout()" class="btn btn-outline-primary btn-lg w-100">ออกจากระบบ</button>
+  </div>
+</div>
+<div class="clearfix"></div>

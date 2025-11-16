@@ -1,0 +1,140 @@
+<app-page-header [title]="'Create NFT'" [activeTitle]="'NFT'" [title1]="'Create NFT'"></app-page-header>
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xxl:col-span-9 xl:col-span-8 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Create NFT</div>
+                            </div>
+                            <div class="box-body">
+                                <div class="grid grid-cols-12 gap-4 justify-between">
+                                    <div class="xxl:col-span-4 xl:col-span-12 col-span-12">
+                                        <div class="create-nft-item">
+                                            
+                                            <label class="form-label">Upload NFT</label>
+                                            <file-pond #myPond [options]="pondOptions" class="single-filepond" name="filepond" id="file-input"  [files]="pondFiles"
+                                            (oninit)="pondHandleInit()" (onaddfile)="pondHandleAddFile($event)"
+                                            (onactivatefile)="pondHandleActivateFile($event)">
+                                        </file-pond>
+                                        
+                                        </div>
+                                    </div>
+                                    <div class="xxl:col-span-8 xl:col-span-12 col-span-12">
+                                        <div class="grid grid-cols-12 sm:gap-x-6 gap-y-6">
+                                            <div class="xl:col-span-12 col-span-12">
+                                                <label for="input-placeholder" class="form-label">NFT Title</label>
+                                                <input type="text" class="form-control" id="input-placeholder" placeholder="eg:Neo-Nebulae">
+                                            </div>
+                                            <div class="xl:col-span-12 col-span-12">
+                                                <label for="nft-description" class="form-label">NFT Description</label>
+                                                <textarea class="form-control" id="nft-description" rows="3" placeholder="Enter Description"></textarea>
+                                            </div>
+                                            <div class="xl:col-span-12 col-span-12">
+                                                <label for="nft-link" class="form-label">External Link</label>
+                                                <input type="text" class="form-control" id="nft-link" placeholder="External Link Here">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <div class="grid grdi-cols-12  sm:gap-x-4 gap-y-4">
+                                            <div class="xl:col-span-6 col-span-12">
+                                                <label for="nft-creator-name" class="form-label">Creator Name</label>
+                                                <input type="text" class="form-control" id="nft-creator-name" placeholder="Enter Name">
+                                            </div>
+                                            <div class="xl:col-span-6 col-span-12">
+                                                <label for="nft-price" class="form-label">NFT Price</label>
+                                                <input type="text" class="form-control" id="nft-price" placeholder="Enter Price">
+                                            </div>
+                                            <div class="xl:col-span-4 col-span-12">
+                                                <label for="nft-size" class="form-label">NFT Size</label>
+                                                <input type="text" class="form-control" id="nft-size" placeholder="Enter Size">
+                                            </div>
+                                            <div class="xl:col-span-4 col-span-12">
+                                                <label for="nft-royality" class="form-label">Royality</label>
+                                                <ng-select data-trigger name="nft-royality" id="nft-royality" placeholder="Choose Royalities">
+                                                    <ng-option value="">Choose Royalities</ng-option>
+                                                    <ng-option value="Choice 1">Flat Royalty</ng-option>
+                                                    <ng-option value="Choice 2">Graduated Royalty</ng-option>
+                                                    <ng-option value="Choice 3">Tiered Royalty</ng-option>
+                                                    <ng-option value="Choice 3">Time-Limited Royalty</ng-option>
+                                                    <ng-option value="Choice 3">Customized Royalty</ng-option>
+                                                </ng-select>
+                                            </div>
+                                            <div class="xl:col-span-4 col-span-12">
+                                                <label for="nft-property" class="form-label">Property</label>
+                                                <input type="text" class="form-control" id="nft-property" placeholder="Enter Property">
+                                            </div>
+                                            <div class="xl:col-span-12 col-span-12">
+                                                <label class="form-label block">Method</label>
+                                                <div class="btn-group inline-flex" role="group" aria-label="Basic radio toggle button group">
+                                                    <input type="radio" class="btn-check" name="strap-material" id="strap1" checked>
+                                                    <label class="!mb-0 ti-btn !block sm:!inline-flex !py-1 !px-2 ti-btn-primary !bg-primary !text-white z-0 !rounded-e-none !border-e-0" for="strap1"><i class="ti ti-tag me-1 align-middle text-[0.9375rem] inline-block"></i>Fixed Price</label>
+                                                    <input type="radio" class="btn-check" name="strap-material" id="strap2">
+                                                    <label class="!mb-0 ti-btn !block sm:!inline-flex !py-1 !px-2 ti-btn-outline-primary text-default !rounded-none !border-e-0 z-0" for="strap2"><i class="ti ti-users text-[0.9375rem] me-1 align-middle inline-block"></i>Open For Bids</label>
+                                                    <input type="radio" class="btn-check" name="strap-material" id="strap3">
+                                                    <label class="!mb-0 ti-btn !block sm:!inline-flex !py-1 !px-2 ti-btn-outline-primary !rounded-s-none text-default z-0" for="strap3"><i class="ti ti-hourglass-low text-[0.9375rem] me-1 align-middle inline-block"></i>Timed Auction</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="box-footer text-end">
+                                <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full btn-wave waves-effect waves-light">Create NFT</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xxl:col-span-3 xl:col-span-4 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    NFT Preview Here
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div class="box custom-box !mb-0 !shadow-none border dark:border-defaultborder/10">
+                                    <img src="./assets/images/nft-images/18.png" class="box-img-top" alt="...">
+                                    <div class="flex items-center justify-between nft-like-section w-full px-3">
+                                        <div class="flex-fill">
+                                            <button aria-label="button" type="button" class="btn btn-sm btn-icon btn-success rounded-pill btn-wave waves-effect waves-light">
+                                                <i class="ri-heart-fill"></i>
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <span class="badge nft-like-badge text-white"><i class="ri-heart-fill me-1 text-danger align-middle inline-block"></i>0.47k</span>
+                                        </div>
+                                    </div>
+                                    <div class="box-body">
+                                        <div class="flex items-center mb-3">
+                                            <div class="me-2 lh-1">
+                                                <span class="avatar avatar-rounded avatar-md">
+                                                    <img src="./assets/images/faces/1.jpg" alt="">
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p class="mb-0 font-semibold">NFTNinja</p>
+                                                <p class="text-[0.75rem] text-muted mb-0">&#64;nftninja</p>
+                                            </div>
+                                        </div>
+                                        <p class="mb-0 text-white nft-auction-time">
+                                            04hrs : 24m : 38s
+                                        </p>
+                                        <p class="text-[0.9375rem] font-semibold mb-2"><a href="javascript:void(0);">Digital Dreamscape</a></p>
+                                        <div class="flex flex-wrap align-itesm-center justify-between">
+                                            <div class="font-semibold">
+                                                Highest Bid -
+                                            </div>
+                                            <div class="flex flex-wrap items-center">
+                                                <span class="avatar avatar-xs me-1">
+                                                    <img src="./assets/images/crypto-currencies/square-color/Ethereum.svg" alt="">
+                                                </span>0.24ETH
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

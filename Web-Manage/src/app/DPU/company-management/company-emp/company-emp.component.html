@@ -1,0 +1,370 @@
+<app-page-header [title]="'พนักงาน'" [activeTitle]="'จัดการบริษัท'" [title1]="'พนักงาน'"></app-page-header>
+<div class="grid grid-cols-12 gap-x-6">
+  <div class="xl:col-span-12 col-span-12">
+    <div class="box mt-6">
+      <div class="box-header justify-between">
+        <div class="box-title">
+          {{ 'All List' | translate}} <span
+            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'เพิ่ม' |
+            translate}}
+          </a>
+          <div>
+            <input [(ngModel)]='searchTerm' class="form-control form-control" type="text"
+              placeholder="{{ 'ค้นหาข้อมูลพนักงาน' | translate}}" aria-label=".form-control-sm example">
+          </div>
+          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
+            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+          </a>
+          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Posted Date</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Status</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Department</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Job Type</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
+          </ul> -->
+        </div>
+      </div>
+    </div>
+  </div>
+  @for(item of filterList;track filterList){
+  <div class="xxl:col-span-4 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+    <div class="box team-member-card">
+      <div class="teammember-cover-image mt-1">
+        <span class="avatar avatar-xl avatar-rounded">
+          <img [src]="item.member.getPicture()" alt="">
+        </span>
+
+      </div>
+      <div class="box-body !p-0">
+        <div
+          class="flex flex-wrap align-item-center sm:mt-0 mt-[3rem] justify-between border-b border-dashed dark:border-defaultborder/10 p-4">
+          <div class="team-member-details flex-grow">
+            <p class="mb-0 font-semibold text-[1rem] text-truncate">
+              <a href="javascript:void(0);">{{item.member.firstName+ ' ' +item.member.lastName}}</a>
+            </p>
+            <p class="mb-0 text-[0.75rem] text-[#8c9097] dark:text-white/50 text-truncate">
+              {{item.member.email}}</p>
+          </div>
+        </div>
+        <div class="team-member-stats sm:flex items-center justify-evenly">
+          <div class="text-center p-4 w-full">
+            <p class="font-semibold mb-0">รหัสพนักงาน</p>
+            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.employeeId}}</span>
+          </div>
+          <div class="text-center p-4 w-full">
+            <p class="font-semibold mb-0">แผนก</p>
+            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.position.thName}}</span>
+          </div>
+          <div class="text-center p-4 w-full">
+            <p class="font-semibold mb-0">ตำแหน่ง</p>
+            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.department.thName}}</span>
+          </div>
+        </div>
+      </div>
+      <div class="box-footer border-block-start-dashed dark:border-defaultborder/10 text-center">
+        <div class="btn-list">
+          <div class="btn-list">
+            <button type="button" aria-label="button" data-hs-overlay="#modal-detail" (click)="view(item)"
+              class="ti-btn ti-btn-sm  ti-btn-primary me-[0.375rem]"><i class="ri-edit-line"></i></button>
+            <button routerLink="/company/timestamp-log/{{item.company_employeeId}}" routerLinkActive="active"
+              type="button" aria-label="button" class="ti-btn ti-btn-sm ti-btn-secondary !me-[0.375rem]">
+              <i class="ri-time-line"></i>
+
+            </button>
+            <button data-hs-overlay="#modal-face" (click)="view(item)" type="button" aria-label="button"
+              class="ti-btn ti-btn-sm ti-btn-warning me-[0.375rem]">
+              <i class="ri-account-circle-line"></i>
+            </button>
+            <button (click)="delete(item)" type="button" aria-label="button"
+              class="ti-btn ti-btn-sm ti-btn-danger me-0"><i class="ri-delete-bin-line"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+<!-- <nav aria-label="Page navigation" class="mb-4">
+  <ul class="ti-pagination !justify-end py-[0.375rem] px-3 text-[1rem] flex flex-row">
+    <li class="page-item disabled"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">Previous</a></li>
+    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">1</a></li>
+    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">2</a></li>
+    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">Next</a></li>
+  </ul>
+</nav> -->
+
+
+<!-- Start:: New Deal -->
+<div id="modal-detail" class="hs-overlay hidden ti-modal">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+          <div class="xl:col-span-12 col-span-12">
+            <div class="mb-0 text-center">
+              <span class="avatar avatar-xxl avatar-rounded">
+                <img [src]="selectModel.getPicture()" alt="" id="profile-img">
+                <span class="badge rounded-full bg-primary avatar-badge">
+                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
+                    class="absolute w-full h-full opacity-[0]" id="profile-change">
+                  <i class="fe fe-camera text-[.625rem]"></i>
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ชื่อ</label>
+            <input type="text" class="form-control" id="deal-name" placeholder="ชื่อ"
+              [(ngModel)]="selectModel.member.firstName">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-lead-score" class="form-label">นามสกุล</label>
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
+              [(ngModel)]="selectModel.member.lastName">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label for="company-name" class="form-label">อีเมล</label>
+            <input type="text" class="form-control" id="company-name" placeholder="อีเมล"
+              [(ngModel)]="selectModel.member.email">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">วันเริ่มงาน</label>
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" class="form-control" id="endDate" placeholder="Choose date with time" mwlFlatpickr
+                  [(ngModel)]="selectModel.startDate" [enableTime]="true" [convertModelValue]="true"
+                  [dateFormat]="'Y-m-d H:i'">
+              </div>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-lead-score" class="form-label">รหัสพนักงาน</label>
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
+              [(ngModel)]="selectModel.employeeId">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">หัวหน้างาน</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.bossId">
+              @for(item of itemsList;track itemsList){
+              <ng-option [value]="item.member.memberId">{{item.member.firstName+"
+                "+item.member.lastName}}</ng-option>
+              }
+            </ng-select>
+          </div>
+
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">แผนก</label>
+            <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.department">
+              @for(item of departmentList;track departmentList){
+              <ng-option [value]="item">{{item.thName}}</ng-option>
+              }
+            </ng-select> -->
+
+            <ng-select #select [items]="departmentList" [searchable]="false" [(ngModel)]="selectModel.department"
+              bindLabel="thName">
+              <ng-template ng-header-tmp>
+                <input style="width: 100%; line-height: 24px" type="text"
+                  (input)="select.filter($any($event.target).value)" />
+              </ng-template>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ตำแหน่ง</label>
+            <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.position.positionId">
+              @for(item of positionList;track positionList){
+              <ng-option [value]="item">{{item.thName}}</ng-option>
+              }
+            </ng-select> -->
+            <ng-select #select2 [items]="positionList" [searchable]="false" [(ngModel)]="selectModel.position"
+              bindLabel="thName">
+              <ng-template ng-header-tmp>
+                <input style="width: 100%; line-height: 24px" type="text"
+                  (input)="select2.filter($any($event.target).value)" />
+              </ng-template>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ประเภท</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.empType">
+              <ng-option [value]="0">รายวัน</ng-option>
+              <ng-option [value]="1">รายเดือน</ng-option>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">เงินเดือน</label>
+            <input type="text" class="form-control" id="company-name" placeholder="เงินเดือน"
+              [(ngModel)]="selectModel.salary">
+          </div>
+
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">สิทธิ์การใช้งาน</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.companyRoleType">
+              <ng-option [value]="0">พนักงาน</ng-option>
+              <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
+            </ng-select>
+          </div>
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button #closeModal type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail">
+          ยกเลิก
+        </button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-face" class="hs-overlay hidden ti-modal">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-face">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body">
+        <div
+          class="flex flex-wrap align-item-center sm:mt-0 mt-[3rem] justify-between border-b border-dashed dark:border-defaultborder/10 p-4">
+          <div class="team-member-details flex-grow">
+            <video #video width="640" height="480" style="width: 100%; object-fit: cover;" autoplay
+              (loadedmetadata)="detectFace()">
+            </video>
+
+            <!-- Canvas element -->
+            <canvas #canvas width="640" height="480" hidden
+              style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
+            </canvas>
+          </div>
+        </div>
+
+
+      </div>
+      <div class="ti-modal-footer">
+        <button #closeModalFace type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-face">
+          ยกเลิก
+        </button>
+        <button *ngIf="checkMatch" type="button" class="ti-btn bg-primary text-white !font-medium"
+          (click)="captureImage()">บันทึกใบหน้า</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- <div id="modal-detail-edit" class="hs-overlay hidden ti-modal" *ngIf="selectModelEdit">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+          <div class="xl:col-span-12 col-span-12">
+            <div class="mb-0 text-center">
+              <span class="avatar avatar-xxl avatar-rounded">
+                <img [src]="'./assets/images/faces/1.jpg'" alt="" id="profile-img">
+                <span class="badge rounded-full bg-primary avatar-badge">
+                  <input type="file" name="photo" class="absolute w-full h-full opacity-[0]" id="profile-change">
+                  <i class="fe fe-camera text-[.625rem]"></i>
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ชื่อ</label>
+            <input type="text" class="form-control" id="deal-name" placeholder="ชื่อ"
+              [(ngModel)]="selectModelEdit.member.firstName">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-lead-score" class="form-label">นามสกุล</label>
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
+              [(ngModel)]="selectModelEdit.member.lastName">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label for="company-name" class="form-label">อีเมล</label>
+            <input type="text" class="form-control" id="company-name" placeholder="อีเมล"
+              [(ngModel)]="selectModelEdit.member.email">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">วันเริ่มงาน</label>
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" class="form-control" id="endDate" placeholder="Choose date with time" mwlFlatpickr [(ngModel)]="selectModelEdit.startDate"
+                  [enableTime]="true" [convertModelValue]="true" [dateFormat]="'Y-m-d H:i'">
+              </div>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">แผนก</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModelEdit.department.departmentId">
+              @for(item of departmentList;track departmentList){
+              <ng-option [value]="item.departmentId">{{item.thName}}</ng-option>
+              }
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ตำแหน่ง</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModelEdit.position.positionId">
+              @for(item of positionList;track positionList){
+              <ng-option [value]="item.positionId">{{item.thName}}</ng-option>
+              }
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ประเภท</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModelEdit.empType">
+              <ng-option [value]="0">รายวัน</ng-option>
+              <ng-option [value]="1">รายเดือน</ng-option>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">เงินเดือน</label>
+            <input type="text" class="form-control" id="company-name" placeholder="เงินเดือน" [(ngModel)]="selectModelEdit.salary">
+          </div>
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail-edit">
+          ยกเลิก
+        </button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="updateEmp()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div> -->

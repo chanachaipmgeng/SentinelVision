@@ -1,0 +1,118 @@
+<app-page-header [title]="'Create Project'" [activeTitle]="'Projects'" [title1]="'Create Project'"></app-page-header>
+
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">
+                                    Create Project
+                                </div>
+                            </div>
+                            <div class="box-body">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="input-label" class="form-label">Project Name :</label>
+                                        <input type="text" class="form-control" id="input-label" placeholder="Enter Project Name">
+                                    </div>
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="input-label1" class="form-label">Project Manager :</label>
+                                        <input type="text" class="form-control" id="input-label1" placeholder="Project Manager Name">
+                                    </div>
+                                    <div class="xl:col-span-4 col-span-12">
+                                        <label for="input-label1" class="form-label">Client / Stakeholder :</label>
+                                        <input type="text" class="form-control" placeholder="Enter Client Name">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12 mb-4">
+                                        <label for="text-area" class="form-label">Project Description :</label>
+                                        <div  id="project-descriptioin-editor">
+                                            <angular-editor [(ngModel)]="htmlContent" [config]="config">
+                             
+                                            </angular-editor>
+                                         
+                                        </div>
+                                    </div>
+
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">Start Date :</label>
+                                        <div class="form-group">
+                                            <div class="input-group w-full">
+                                                <!-- <div class="input-group-text text-muted"> <i class="ri-calendar-line"></i> </div> -->
+                                            
+                                                    <input  type="text" class="form-control" id="startDate" placeholder="Choose date and time"
+                                                    mwlFlatpickr
+                                                    [enableTime]="true"
+                                                    [convertModelValue]="true"
+                                                    [dateFormat]="'Y-m-d H:i'"
+                                                        >
+                                                   
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">End Date :</label>
+                                        <div class="form-group">
+                                            <div class="input-group w-full">
+                                                <!-- <div class="input-group-text text-muted"> <i class="ri-calendar-line"></i> </div> -->
+                                               
+                                                    <input  mwlFlatpickr
+                                                    [enableTime]="true"
+                                                    [convertModelValue]="true"
+                                                    [dateFormat]="'Y-m-d H:i'" type="text" class="form-control" id="endDate" placeholder="Choose date and time"
+                                                        >
+                                                  
+                                                <!-- <input type="text" class="form-control" id="endDate" placeholder="Choose date and time"> -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">Status :</label>
+                                        <ng-select data-trigger name="choices-single-default" id="choices-single-default" placeholder="Inprogress">
+                                            <ng-option value="Inprogress">Inprogress</ng-option>
+                                            <ng-option value="On-hold">On-hold</ng-option>
+                                            <ng-option value="Completed">Completed</ng-option>
+                                        </ng-select>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">Priority :</label>
+                                        <ng-select data-trigger name="choices-single-default2" id="choices-single-default2" placeholder="High">
+                                            <ng-option value="High">High</ng-option>
+                                            <ng-option value="Medium">Medium</ng-option>
+                                            <ng-option value="Low">Low</ng-option>
+                                        </ng-select>
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">Assigned To</label>
+                                        <ng-select  name="assigned-team-members" id="assigned-team-members" [multiple]="true" [(ngModel)]="selectedTags">
+                                            @for(tag of tags;track tag.id){
+                                   
+                                                <ng-option  [value]="tag.id"
+                                                  >{{tag.name}}</ng-option>
+                                              }
+                                           
+                                        </ng-select>
+                                      
+                                    </div>
+                                    <div class="xl:col-span-6 col-span-12">
+                                        <label class="form-label">Tags</label>
+                                        <input class="form-control" id="choices-text-unique-values" type="text"   [ngModel]="tags1.join(', ')" 
+                                        (ngModelChange)="tags1 = $event.split(',')"    placeholder="This is a placeholder">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="text-area" class="form-label">Attachments</label>
+                                        <file-pond #myPond [options]="pondOptions" class="multiple-filepond" name="filepond" id="file-input"  [files]="pondFiles"
+                                        (oninit)="pondHandleInit()" (onaddfile)="pondHandleAddFile($event)"
+                                        (onactivatefile)="pondHandleActivateFile($event)">
+                                    </file-pond>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="box-footer">
+                                <button type="button" class="ti-btn ti-btn-primary btn-wave ms-auto float-right">Create Project</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->

@@ -1,0 +1,175 @@
+<app-page-header [title]="'Select2'" [activeTitle]="'Forms'" [title1]="'Select2'"></app-page-header>
+
+       <!-- Start::row-1 -->
+       <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Basic Select2
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select class="js-example-basic-single w-full" name="state" placeholder="Selection-1">
+                        <ng-option value="s-1">Selection-1</ng-option>
+                        <ng-option value="s-2">Selection-2</ng-option>
+                        <ng-option value="s-3">Selection-3</ng-option>
+                        <ng-option value="s-4">Selection-4</ng-option>
+                        <ng-option value="s-5">Selection-5</ng-option>
+                    </ng-select>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-titlte !text-start">
+                        Multiple Select
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select [multiple]="true" [(ngModel)]="selectedCars">
+                        @for(car of cars;track car.id){
+                            
+                            <ng-option  [value]="car.id"
+                                >{{car.name}}</ng-option>
+                        }
+                    </ng-select>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Single Select With Placeholder
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select #select [items]="genders" [searchable]="false" [(ngModel)]="selectedGender" bindLabel="name" bindValue="name" value="name">
+                        <ng-template ng-header-tmp>
+                            <input style="width: 100%; line-height: 24px" type="text" (input)="select.filter($any($event.target).value)"/>
+                        </ng-template>
+                    </ng-select>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Multiple Select With Placeholder
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select [multiple]="true" placeholder="Select cars" [(ngModel)]="selectedSimpleItem2">
+                        @for(car of cars1;track car.id){
+                            
+                       
+                            <ng-option  [value]="car.id">{{car.name}}</ng-option>
+                            <ng-option [value]="'custom'">Custom</ng-option>
+                        }
+    
+    
+                    </ng-select>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Templating
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select #select1 [items]="templates" [searchable]="false" [(ngModel)]="selectedTemplate" bindLabel="name" bindValue="name" value="name">
+                        <ng-template ng-header-tmp>
+                            <input style="width: 100%; line-height: 24px" type="text" (input)="select1.filter($any($event.target).value)"/>
+                        </ng-template>
+                        <ng-template ng-label-tmp let-item="item">
+                            <option value={{item.value}}> <img height="15" width="15" [src]="item.avatar" class="select2-img" />{{ item.name }}</option>
+                        </ng-template>
+                    </ng-select>
+               
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Templating Selection
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select class="select2-client-search" placeholder="Andrew">
+                        <ng-option value="p-1" selected>   <img height="15" width="15" src="./assets/images/faces/select2/p-1.jpg" class="select2-img" alt="img"/>Andrew</ng-option>
+                        <ng-option value="p-2"> <img height="15" width="15" src="./assets/images/faces/select2/p-2.jpg" class="select2-img" alt="img"/>Maya</ng-option>
+                        <ng-option value="p-3"> <img height="15" width="15" src="./assets/images/faces/select2/p-3.jpg" class="select2-img" alt="img"/>Brodus Axel</ng-option>
+                        <ng-option value="p-4"> <img height="15" width="15" src="./assets/images/faces/select2/p-4.jpg" class="select2-img" alt="img"/>Goldhens</ng-option>
+                        <ng-option value="p-5"> <img height="15" width="15" src="./assets/images/faces/select2/p-5.jpg" class="select2-img" alt="img"/>Angelina</ng-option>
+                    </ng-select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->
+
+    <!-- Start:: row-2 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Max Selections Limiting
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ng-select [multiple]="true" [maxSelectedItems]="3" [(ngModel)]="selectedCars2">
+                        @for(car of cars2;track car.id){
+                            
+                           
+                            <ng-option  [value]="car.id"
+                                >{{car.name}}</ng-option>
+                            <ng-option [value]="'custom'">Custom</ng-option>
+                        }
+                    </ng-select>
+                   
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Disabling a Select2 control
+                    </div>
+                </div>
+                <div class="box-body flex flex-col gap-3">
+                    <ng-select [(ngModel)]="selectedSimpleItem3" >
+                        <ng-option value="s-1">Selection-1</ng-option>
+                        <ng-option value="s-2">Selection-2</ng-option>
+                        <ng-option value="s-3">Selection-3</ng-option>
+                        <ng-option value="s-4">Selection-4</ng-option>
+                        <ng-option value="s-5">Selection-5</ng-option>
+                    </ng-select>
+                    <ng-select [multiple]="true" [(ngModel)]="selectedCars3" [disabled]="isCarsDisabled">
+                        @for(car of cars3;track car.id){
+                            
+                           
+                            <ng-option [value]="car.id">{{car.name}}</ng-option>
+                            <ng-option [value]="'custom'">Custom</ng-option>
+                        }
+                    </ng-select>
+                  
+                    <div>
+                        <button type="button" class="ti-btn ti-btn-primary js-programmatic-enable me-2"  (click)="enable()">Enable</button>
+                        <button type="button" class="ti-btn ti-btn-primary-full js-programmatic-disable" (click)="disable()">Disable</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-2 -->

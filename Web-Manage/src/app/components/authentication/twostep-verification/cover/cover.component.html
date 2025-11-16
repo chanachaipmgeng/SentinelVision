@@ -1,0 +1,100 @@
+<div class="grid grid-cols-12 authentication mx-0 text-defaulttextcolor text-defaultsize">
+
+    <div class="xxl:col-span-7 xl:col-span-7 lg:col-span-12 col-span-12">
+        <div class="grid grid-cols-12  items-center h-full">
+          <div class="xxl:col-span-3 xl:col-span-3 lg:col-span-3 md:col-span-3 sm:col-span-2"></div>
+            <div class="xxl:col-span-6 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-8 col-span-12">
+                <div class="p-[3rem]">
+                    <div class="mb-4">
+                        <a aria-label="anchor" routerLink="/dashboard/crm">
+                            <img src="./assets/images/brand-logos/desktop-logo.png" alt="" class="authentication-brand desktop-logo">
+                            <img src="./assets/images/brand-logos/desktop-dark.png" alt="" class="authentication-brand desktop-dark">
+                        </a>
+                    </div>
+                    <p class="font-semibold mb-2 text-xl">Verify Your Account</p>
+                    <p class="mb-4 text-[#8c9097] dark:text-white/50 opacity-[0.7] font-normal">Enter the 4 digit code sent to the registered email Id.</p>
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="xl:col-span-12 col-span-12 mb-4">
+                            <div class="grid grid-cols-12 gap-4">
+                                <div class="col-span-3 px-1">
+                                    <input
+                                    #oneInput
+                                    type="text"
+                                    class="!px-0 form-control w-full !rounded-md form-control-lg text-center !text-[1rem]"
+                                    required
+                                    id="one"
+                                    maxlength="1"
+                                    (keyup)="onDigitInput($event, twoInput)"
+                                  />
+                                </div>
+                                <div class="col-span-3 px-1">
+                                    <input type="text" class="!px-0 form-control w-full !rounded-md form-control-lg text-center !text-[1rem]"
+                      maxlength="1"  #twoInput required
+                        id="two"
+                        (keyup)="onDigitInput($event, threeInput)"/>
+                                </div>
+                                <div class="col-span-3 px-1">
+                                    <input type="text" class="!px-0 form-control w-full !rounded-md form-control-lg text-center !text-[1rem]"
+                        id="three" maxlength="1"   #threeInput
+                        required
+                        (keyup)="onDigitInput($event, fourInput)"/>
+                                </div>
+                                <div class="col-span-3 px-1">
+                                    <input   #fourInput type="text" class="!px-0 form-control w-full !rounded-md form-control-lg text-center !text-[1rem]"
+                                    id="four" maxlength="1">
+                                                                </div>
+                            </div>
+                            <div class="form-check mt-2 mb-0 !ps-0">
+                                <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
+                                <label class="form-check-label" for="defaultCheck1">
+                                    Did not recieve a code ?<a routerLink="/pages/email/mailapp" class="text-primary ms-2 inline-block">Resend</a>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="xl:col-span-12 col-span-12 grid">
+                            <a routerLink="/dashboard/crm" class="ti-btn ti-btn-lg bg-primary text-white !font-medium dark:border-defaultborder/10">Verify</a>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[0.75rem] text-danger mt-4"><sup><i class="ri-asterisk"></i></sup>Don't share the verification code with anyone !</p>
+                    </div>
+                </div>
+            </div>
+            <div class="xxl:col-span-3 xl:col-span-3 lg:col-span-3 md:col-span-3 sm:col-span-2 "></div>
+        </div>
+    </div>
+    <div class="xxl:col-span-5 xl:col-span-5 lg:col-span-5 col-span-12 xl:block hidden px-0">
+        <div class="authentication-cover">
+            <div class="aunthentication-cover-content rounded">
+                <div class="swiper keyboard-control authentication">
+                    <owl-carousel-o [options]="customOptions" [dir]="customOptions.rtl ? 'rtl' : 'ltr'" >
+                        @for(slide of slidesStore; track $index){
+          
+                          <ng-container>
+                            <ng-template carouselSlide >
+                              <div class="swiper-wrapper">
+                                <div class="swiper-slide">
+                                  <div class="text-white text-center p-[3rem] flex items-center justify-center">
+                                    <div>
+                                      <div class="mb-[3rem]">
+                                        <img [src]="slide.img" alt="" class="authentication-image">
+                                      </div>
+                                      <h6 class="font-semibold text-[1rem]">Verify Your Account</h6>
+                                      <p class="font-normal text-[.875rem] opacity-[0.7]">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ipsa eligendi expedita aliquam quaerat nulla voluptas facilis. Porro rem voluptates possimus, ad, autem quae culpa architecto, quam labore blanditiis at ratione.</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </ng-template>
+                          </ng-container>
+                        }
+                      </owl-carousel-o>
+             
+                 
+                    <div class="swiper-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,79 @@
+<app-page-header [title]="'Apex Time line Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Time line Charts'"></app-page-header>
+
+    <!-- Start::row-1 -->
+    <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Basic TImeline Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="timeline-basic">
+                        <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                        [plotOptions]="chartOptions.plotOptions" [xaxis]="chartOptions.xaxis"[colors]="chartOptions.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Multiple Colored TImeline Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="timeline-colors">
+                        <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"
+                        [fill]="chartOptions1.fill" [grid]="chartOptions1.grid"
+                        [dataLabels]="chartOptions1.dataLabels" [plotOptions]="chartOptions1.plotOptions"
+                        [xaxis]="chartOptions1.xaxis" [yaxis]="chartOptions1.yaxis"[colors]="chartOptions1.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Multi Series Timeline Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="timeline-multi">
+                        <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart"
+                        [dataLabels]="chartOptions2.dataLabels" [plotOptions]="chartOptions2.plotOptions"
+                        [xaxis]="chartOptions2.xaxis" [legend]="chartOptions2.legend"[colors]="chartOptions2.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Advanced Timeline Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="timeline-advanced">
+                        <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                        [fill]="chartOptions3.fill" [legend]="chartOptions3.legend"
+                        [plotOptions]="chartOptions3.plotOptions" [xaxis]="chartOptions3.xaxis"[colors]="chartOptions3.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Timeline-Grouped Rows</div>
+                </div>
+                <div class="box-body">
+                    <div id="timeline-grouped">
+                        <apx-chart [series]="chartOptions4.series" [chart]="chartOptions4.chart"
+                        [stroke]="chartOptions4.stroke" [dataLabels]="chartOptions4.dataLabels"
+                        [plotOptions]="chartOptions4.plotOptions" [xaxis]="chartOptions4.xaxis"
+                        [colors]="chartOptions4.colors" [fill]="chartOptions4.fill" [yaxis]="chartOptions4.yaxis"
+                        [legend]="chartOptions4.legend" [grid]="chartOptions4.grid"
+                        [title]="chartOptions4.title" [colors]="chartOptions4.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->

@@ -1,0 +1,15 @@
+@font-face {
+  font-family: kodchasan;
+  src: url('../fonts/Kodchasan-Bold.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-BoldItalic.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-ExtraLight.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-ExtraLightItalic.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-Italic.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-Light.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-LightItalic.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-Medium.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-MediumItalic.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-Regular.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-SemiBold.ttf') format('truetype');
+  src: url('../fonts/Kodchasan-SemiBoldItalic.ttf') format('truetype');
+}

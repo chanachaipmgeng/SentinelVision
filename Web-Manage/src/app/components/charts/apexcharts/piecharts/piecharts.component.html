@@ -1,0 +1,110 @@
+<app-page-header [title]="'Apex Pie Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Pie Charts'"></app-page-header>
+
+ <!-- Start::row-1 -->
+ <div class="grid grid-cols-12 gap-x-6">
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Basic Pie Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="pie-basic">
+                    <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart" [legend]="chartOptions.legend"
+                            [labels]="chartOptions.labels" [responsive]="chartOptions.responsive" [colors]="chartOptions.colors" [dataLabels]="chartOptions.dataLabels"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Simple Donut Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="donut-simple">
+                    <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart" [legend]="chartOptions1.legend"
+                    [labels]="chartOptions1.labels" [responsive]="chartOptions1.responsive"[colors]="chartOptions1.colors" [dataLabels]="chartOptions1.dataLabels"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Updating Donut Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="donut-update">
+                    <apx-chart [series]="chartOptions2.series" [chart]="chartOptions2.chart" [colors]="chartOptions2.colors"
+                    [labels]="chartOptions2.labels" [fill]="chartOptions2.fill" [legend]="chartOptions2.legend"
+                    [dataLabels]="chartOptions2.dataLabels" [responsive]="chartOptions2.responsive"></apx-chart>
+                </div>
+                <div class="text-center mt-4">
+                    <button type="button" class="btn btn-primary btn-sm" id="randomize">Randomize</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="add">Add</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="remove">Remove</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="reset">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Monochrome Pie Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="pie-monochrome">
+                    <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart" [colors]="chartOptions3.colors"
+                    [labels]="chartOptions3.labels" [title]="chartOptions3.title" [theme]="chartOptions3.theme"
+                    [responsive]="chartOptions3.responsive" [legend]="chartOptions3.legend"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Gradient Donut Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="donut-gradient">
+                    <apx-chart [series]="chartOptions4.series" [chart]="chartOptions4.chart"  [legend]="chartOptions4.legend"
+                    [labels]="chartOptions4.labels" [fill]="chartOptions4.fill"  [colors]="chartOptions4.colors"
+                    [dataLabels]="chartOptions4.dataLabels" [responsive]="chartOptions4.responsive"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Donut Chart With Patterns</div>
+            </div>
+            <div class="box-body">
+                <div id="donut-pattern">
+                    <apx-chart [series]="chartOptions5.series" [chart]="chartOptions5.chart"
+                    [labels]="chartOptions5.labels" [dataLabels]="chartOptions5.dataLabels"
+                    [title]="chartOptions5.title" [fill]="chartOptions5.fill" [states]="chartOptions5.states"
+                    [plotOptions]="chartOptions5.plotOptions" [stroke]="chartOptions5.stroke"
+                    [theme]="chartOptions5.theme" [responsive]="chartOptions5.responsive"></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-6 col-span-12">
+        <div class="box custom-box">
+            <div class="box-header">
+                <div class="box-title">Image Filled Pie Chart</div>
+            </div>
+            <div class="box-body">
+                <div id="pie-image">
+                    <apx-chart [series]="chartOptions6.series" [chart]="chartOptions6.chart"
+                    [labels]="chartOptions6.labels" [grid]="chartOptions6.grid" [legend]="chartOptions6.legend"
+                    [plotOptions]="chartOptions6.plotOptions" [responsive]="chartOptions6.responsive" [fill]="chartOptions6.fill" [dataLabels]="chartOptions6.dataLabels" ></apx-chart>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

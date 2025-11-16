@@ -1,0 +1,38 @@
+<app-page-header [title]="'Draggable Cards'" [activeTitle]="'Advanced Ui'" [title1]="'Draggable Cards'"></app-page-header>
+
+  <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-6" cdkDropListGroup>
+    <div class="xl:col-span-6 col-span-12" id="draggable-left">
+      
+        <div
+        cdkDropList
+        [cdkDropListData]="todo"
+        class="col-xl-6"
+        id="draggable-right"
+        
+        (cdkDropListDropped)="drop($event)"
+        >
+        
+      @for(item of todo;track $index){
+
+        <div  cdkDrag [innerHTML]="item"></div>
+      }
+    </div>
+     
+    </div>
+    <div class="xl:col-span-6 col-span-12" id="draggable-right">
+        <div
+    cdkDropList
+    [cdkDropListData]="done"
+    class="col-xl-6"
+    id="draggable-left"
+    (cdkDropListDropped)="drop($event)"
+  >
+  @for(item of done;track $index){
+
+    <div  cdkDrag [innerHTML]="item"></div>
+  }
+  </div>
+    </div>
+</div>
+<!--End::row-1 -->

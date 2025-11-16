@@ -1,0 +1,174 @@
+<!-- summary blocks -->
+<div class="row">
+  <div class="col-12 px-0">
+    <swiper
+      class="connectionwiper"
+      [slidesPerView]="'auto'"
+      [spaceBetween]="0"
+      [pagination]="false"
+    >
+      <ng-template swiperSlide>
+        <a (click)="clickAds(adsList[0]);goUrl('https://mylearn.myhr.co.th/#/authentication/loginzeeme/${memberId}/${companyId}/token',detail)">
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/logo_mylearn.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">myLearn</h6>
+                <!-- <button class="btn btn-sm btn-default"><i class="bi bi-envelope mx-1"></i> Mail us</button> -->
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+      <ng-template swiperSlide>
+        <a (click)="clickAds(adsList[1]);goUrl('https://myjob.myhr.co.th',detail)" target="_blank">
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/logo_myjob.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">myJob</h6>
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+
+      <ng-template swiperSlide>
+        <a (click)="clickAds(adsList[1]);goUrl('https://mypoint-uat.myhr.co.th/m/?token=${token}&companyId=${companyId}',detail)" target="_blank">
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/mypoint.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">meePoint</h6>
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+
+      <ng-template swiperSlide>
+        <a
+          (click)="
+            goUrl(
+              'https://myhr-static-page-prod.web.app/?memberId=${memberId}&companyId=${companyId}&token=prod_f2d47ad8-f6e9-4cd1-95f8-5a7d7025f5b6&lang=${lang}',detail
+            )
+          "
+        >
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/salaryhero.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">Salary Hero</h6>
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+      <ng-template swiperSlide>
+        <a (click)="goUrl('https://www.ocapital.co.th',detail)" target="_blank">
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/omoney.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">O Capital</h6>
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+      <ng-template swiperSlide>
+        <a (click)="goUrl('https://www.tebb-th.com',detail)" target="_blank">
+          <div class="col-12">
+            <div class="card shadow-sm mb-4">
+              <div class="card-body text-center">
+                <figure class="avatar avatar-100 rounded-10">
+                  <img
+                    src="assets/img/icon/tebb.png"
+                    alt=""
+                    width="100%"
+                    style="object-fit: contain"
+                  />
+                </figure>
+                <h6 class="mb-2">TEBB</h6>
+              </div>
+            </div>
+          </div>
+        </a>
+      </ng-template>
+    </swiper>
+  </div>
+</div>
+
+<!-- offers banner-->
+<div class="row">
+  <div class="col-12 col-md-6" *ngFor="let item of adsList">
+    <a (click)="clickAds(item);goUrl(item.newsUrl,detail)" target="_blank">
+      <div class="card mb-4 overflow-hidden shadow-sm bg-primary text-white">
+        <div class="overlay"></div>
+        <div class="coverimg h-100 w-100 position-absolute">
+          <img
+            [src]="item.newsPicture | useHttpImgSrc"
+            alt=""
+            height="100%"
+            width="100%"
+          />
+        </div>
+        <div class="card-body">
+          <div class="row mb-5"></div>
+          <br />
+          <a class="h4 text-normal d-block text-white mb-2">&nbsp;</a>
+          <p class="text-muted"></p>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<ng-template #detail let-modal>
+  <div class="modal-header">
+    <h6 class="modal-title" ngbAutofocus>{{"Detail"|translate}}</h6>
+    <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
+  </div>
+  <div class="modal-body p-0">
+    <div class="row p-3">
+      <div class="col-12">
+        <div [innerHTML]="returnContent(ads!)"></div>
+      </div>
+    </div>
+  </div>
+</ng-template>

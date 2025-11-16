@@ -1,0 +1,183 @@
+<app-page-header [title]="'Apex Column Charts'" [activeTitle]="'Apex Charts'" [title1]="'Apex Column Charts'"></app-page-header>
+
+     <!-- Start::row-1 -->
+     <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Basic Column Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-basic">
+                        <apx-chart [series]="chartOptions.series" [chart]="chartOptions.chart"
+                        [dataLabels]="chartOptions.dataLabels" [plotOptions]="chartOptions.plotOptions"
+                        [yaxis]="chartOptions.yaxis" [legend]="chartOptions.legend" [fill]="chartOptions.fill"
+                        [stroke]="chartOptions.stroke" [tooltip]="chartOptions.tooltip" [colors]="chartOptions.colors"
+                        [xaxis]="chartOptions.xaxis"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Column Chart With Datalabels</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-datalabels">
+                        <apx-chart [series]="chartOptions1.series" [chart]="chartOptions1.chart"  
+                         [plotOptions]="chartOptions1.plotOptions"
+                        [yaxis]="chartOptions1.yaxis" [xaxis]="chartOptions1.xaxis" [fill]="chartOptions1.fill"
+                        [title]="chartOptions.title" [colors]="chartOptions1.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Stacked Column Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-stacked">
+                        <apx-chart [series]="chartOptions2.series!" [chart]="chartOptions2.chart"
+                        [dataLabels]="chartOptions2.dataLabels" [plotOptions]="chartOptions2.plotOptions"
+                        [responsive]="chartOptions2.responsive" [xaxis]="chartOptions2.xaxis"
+                        [legend]="chartOptions2.legend" [fill]="chartOptions2.fill"[colors]="chartOptions2.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">100% Stacked Column Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-stacked-full">
+                        <apx-chart [series]="chartOptions3.series" [chart]="chartOptions3.chart"
+                        [dataLabels]="chartOptions3.dataLabels" [plotOptions]="chartOptions3.plotOptions"
+                        [responsive]="chartOptions3.responsive" [xaxis]="chartOptions3.xaxis"
+                        [legend]="chartOptions3.legend" [fill]="chartOptions3.fill" [colors]="chartOptions3.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Column Chart With Markers</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-markers">
+                        <apx-chart [series]="chartOptions4.series" [chart]="chartOptions4.chart"
+                        [legend]="chartOptions4.legend" [dataLabels]="chartOptions4.dataLabels"
+                        [colors]="chartOptions4.colors" [plotOptions]="chartOptions4.plotOptions"[colors]="chartOptions4.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Column Chart With Rotated Labels</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-rotated-labels">
+                        <apx-chart [series]="chartOptions5.series" [chart]="chartOptions5.chart"
+                        [dataLabels]="chartOptions5.dataLabels" [plotOptions]="chartOptions5.plotOptions"
+                        [yaxis]="chartOptions5.yaxis" [xaxis]="chartOptions5.xaxis"
+                        [stroke]="chartOptions5.stroke" [grid]="chartOptions5.grid" [fill]="chartOptions5.fill"
+                        [annotations]="chartOptions5.annotations" [colors]="chartOptions5.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Column Chart With Negative Values</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-negative">
+                        <apx-chart [series]="chartOptions6.series" [chart]="chartOptions6.chart"
+                        [dataLabels]="chartOptions6.dataLabels" [plotOptions]="chartOptions6.plotOptions"
+                        [yaxis]="chartOptions6.yaxis" [xaxis]="chartOptions6.xaxis" [colors]="chartOptions6.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Range Column Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="column-range">
+                        <apx-chart [series]="chartOptions7.series" [chart]="chartOptions7.chart"
+                        [dataLabels]="chartOptions7.dataLabels"
+                        [plotOptions]="chartOptions7.plotOptions" [colors]="chartOptions7.colors"></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Dynamic Loaded Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="chart-year">
+                        <apx-chart
+                        [series]="chartOptions8.series"
+                        [chart]="chartOptions8.chart"
+                        [dataLabels]="chartOptions8.dataLabels"
+                        [plotOptions]="chartOptions8.plotOptions"
+                        [yaxis]="chartOptions8.yaxis"
+                        [xaxis]="chartOptions8.xaxis"
+                        [subtitle]="chartOptions8.subtitle"
+                        [colors]="chartOptions8.colors"
+                        [states]="chartOptions8.states"
+                        [title]="chartOptions8.title"
+                        [tooltip]="chartOptions8.tooltip"
+                      ></apx-chart>
+                    </div>
+                    <div id="chart-quarter">
+                        <apx-chart
+                        [series]="chartQuarterOptions8.series"
+                        [chart]="chartQuarterOptions8.chart"
+                        [legend]="chartQuarterOptions8.legend"
+                        [plotOptions]="chartQuarterOptions8.plotOptions"
+                        [yaxis]="chartQuarterOptions8.yaxis"
+                        [xaxis]="chartQuarterOptions8.xaxis"
+                        [grid]="chartQuarterOptions8.grid"
+                        [title]="chartQuarterOptions8.title"
+                      ></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box custom-box">
+                <div class="box-header">
+                    <div class="box-title">Distributed Columns Chart</div>
+                </div>
+                <div class="box-body">
+                    <div id="columns-distributed">
+                        <apx-chart
+                          [series]="chartOptions9.series!"
+                          [chart]="chartOptions9.chart!"
+                          [dataLabels]="chartOptions9.dataLabels!"
+                          [plotOptions]="chartOptions9.plotOptions!"
+                          [yaxis]="chartOptions9.yaxis!"
+                          [xaxis]="chartOptions9.xaxis!"
+                          [legend]="chartOptions9.legend!"
+                          [colors]="chartOptions9.colors!"
+                          [grid]="chartOptions9.grid!"
+                        ></apx-chart>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--End::row-1 -->

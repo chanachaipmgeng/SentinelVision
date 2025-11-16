@@ -1,0 +1,437 @@
+<app-page-header [title]="'Pagination'" [activeTitle]="'Ui Elements'" [title1]="'Pagination'"></app-page-header>
+
+        <!-- Start:: row-1 -->
+        <div class="grid grid-cols-12 gap-x-6">
+            <div class="xxl:col-span-3 xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Basic Pagination
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="togglePagination()">Show Code
+                                <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation">
+                            <ul class="ti-pagination  mb-0">
+                                <li class="page-item disabled"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Previous</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a></li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible1){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xxl:col-span-3 xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination With Icons
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleIcons()">Show Code
+                                <i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation">
+                            <ul class="ti-pagination mb-0">
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);" aria-label="Previous">
+                                        <span aria-hidden="true"><i class="rtl:rotate-180 bx bx-chevron-left"></i></span>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link  px-3 py-[0.375rem]" href="javascript:void(0);" aria-label="Next">
+                                        <span aria-hidden="true"><i class="rtl:rotate-180 bx bx-chevron-right"></i></span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible2){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xxl:col-span-6 xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination Sizing
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleSizing()">Show Code
+                                <i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body flex flex-wrap justify-between gap-2">
+                        <nav aria-label="...">
+                            <ul class="ti-pagination pagination-sm mb-0">
+                                <li class="page-item " aria-current="page">
+                                    <span class="page-link  active px-3 py-[0.375rem]">1</span>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                            </ul>
+                        </nav>
+                        <nav aria-label="...">
+                            <ul class="ti-pagination mb-0">
+                                <li class="page-item " aria-current="page">
+                                    <span class="page-link  active px-3 py-[0.375rem]">1</span>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                            </ul>
+                        </nav>
+                        <nav aria-label="...">
+                            <ul class="ti-pagination pagination-lg mb-0">
+                                <li class="page-item " aria-current="page">
+                                    <span class="page-link active px-3 py-[0.375rem]">1</span>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible3){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End:: row-1 -->
+
+        <!-- Start:: row-2  -->
+        <div class="grid grid-cols-12 gap-x-6">
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Center &amp; Right Aligned Pagination
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleRight()">Show Code
+                                <i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation" class="mb-4">
+                            <ul class="ti-pagination justify-center">
+                                <li class="page-item disabled">
+                                    <a class="page-link px-3 py-[0.375rem]">Previous</a>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                        <nav aria-label="Page navigation">
+                            <ul class="ti-pagination sm:justify-end justify-center mb-0">
+                                <li class="page-item disabled">
+                                    <a class="page-link px-3 py-[0.375rem]">Previous</a>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">2</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible4){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Active and disabled states
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleDisabled()">Show Code
+                                <i class="ri-code-{{toggleClass5}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body flex flex-wrap">
+                        <nav aria-label="..." class="me-4">
+                            <ul class="ti-pagination">
+                                <li class="page-item disabled">
+                                    <a class="page-link px-3 py-[0.375rem]">Previous</a>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item " aria-current="page">
+                                    <a class="page-link active px-3 py-[0.375rem]" href="javascript:void(0);">2</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                        <nav aria-label="...">
+                            <ul class="ti-pagination">
+                                <li class="page-item disabled">
+                                    <span class="page-link px-3 py-[0.375rem]">Previous</span>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">1</a></li>
+                                <li class="page-item " aria-current="page">
+                                    <span class="page-link px-3 active py-[0.375rem]">2</span>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible5){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts5}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End:: row-2  -->
+
+        <!-- Start:: row-3 -->
+        <div class="grid grid-cols-12 gap-x-6">
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination Style-1
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStyle1()">Show Code
+                                <i class="ri-code-{{toggleClass6}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation" class="pagination-style-1">
+                            <ul class="ti-pagination mb-0">
+                                <li class="page-item disabled rtl:rotate-180">
+                                    <a aria-label="anchor" class="page-link" href="javascript:void(0);">
+                                        <i class="ri-arrow-left-s-line align-middle"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">1</a></li>
+                                <li class="page-item "><a class="page-link active" href="javascript:void(0);">2</a></li>
+                                <li class="page-item">
+                                    <a aria-label="anchor" class="page-link" href="javascript:void(0);">
+                                        <i class="bi bi-three-dots"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">21</a></li>
+                                <li class="page-item rtl:rotate-180">
+                                    <a aria-label="anchor" class="page-link" href="javascript:void(0);">
+                                        <i class="ri-arrow-right-s-line align-middle"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible6){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts6}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination Style-2
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStyle2()">Show Code
+                                <i class="ri-code-{{toggleClass7}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation" class="pagination-style-2">
+                            <ul class="ti-pagination mb-0 flex-wrap">
+                                <li class="page-item disabled">
+                                    <a class="page-link px-3 py-[0.375rem] !border-0" href="javascript:void(0);">
+                                        Prev
+                                    </a>
+                                </li>
+                                <li class="page-item active"><a class="page-link px-3 py-[0.375rem] !border-0" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem] !border-0" href="javascript:void(0);">2</a></li>
+                                <li class="page-item">
+                                    <a aria-label="anchor" class="page-link px-3 py-[0.375rem] !border-0" href="javascript:void(0);">
+                                        <i class="bi bi-three-dots"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link px-3 py-[0.375rem] !border-0" href="javascript:void(0);">17</a></li>
+                                <li class="page-item">
+                                    <a class="page-link px-3 py-[0.375rem] !text-primary !border-0" href="javascript:void(0);">
+                                        next
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible7){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts7}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination Style-3
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStyle3()">Show Code
+                                <i class="ri-code-{{toggleClass8}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation" class="pagination-style-3">
+                            <ul class="ti-pagination mb-0 flex-wrap">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="javascript:void(0);">
+                                        Prev
+                                    </a>
+                                </li>
+                                <li class="page-item "><a class="page-link active" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">2</a></li>
+                                <li class="page-item">
+                                    <a aria-label="anchor" class="page-link" href="javascript:void(0);">
+                                        <i class="bi bi-three-dots"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">16</a></li>
+                                <li class="page-item">
+                                    <a class="page-link !text-primary" href="javascript:void(0);">
+                                        next
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible8){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts8}}</code></pre>   
+                           </div>
+                       }
+
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-6 col-span-12">
+                <div class="box">
+                    <div class="box-header justify-between">
+                        <div class="box-title">
+                            Pagination Style-4
+                        </div>
+                        <div class="prism-toggle">
+                            <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleStyle4()">Show Code
+                                <i class="ri-code-{{toggleClass9}} ms-2 inline-block align-middle"></i></button>
+                        </div>
+                    </div>
+                    <div class="box-body">
+                        <nav aria-label="Page navigation" class="pagination-style-4">
+                            <ul class="ti-pagination mb-0 flex-wrap">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="javascript:void(0);">
+                                        Prev
+                                    </a>
+                                </li>
+                                <li class="page-item "><a class="page-link active" href="javascript:void(0);">1</a></li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">2</a></li>
+                                <li class="page-item">
+                                    <a aria-label="anchor" class="page-link" href="javascript:void(0);">
+                                        <i class="bi bi-three-dots"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item"><a class="page-link" href="javascript:void(0);">16</a></li>
+                                <li class="page-item">
+                                    <a class="page-link !text-primary" href="javascript:void(0);">
+                                        next
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                        
+                        
+                    </div>
+                    <div class="box-footer showcode border-t-0">
+                        @if(isContentVisible9){
+                            <div>
+                               <pre class="language-html"><code class="language-html" >{{ts9}}</code></pre>   
+                           </div>
+                       }
+<!-- Prism Code -->
+
+<!-- Prism Code -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End:: row-3 -->

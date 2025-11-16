@@ -1,0 +1,230 @@
+<app-page-header [title]="'Leads'" [activeTitle]="'CRM'" [title1]="'Leads'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-6">
+                    <div class="xl:col-span-12 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header flex items-center justify-between flex-wrap gap-4">
+                                <div class="box-title">
+                                    Leads<span class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">30</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full !py-1 !px-2 !text-[0.75rem]" data-hs-overlay="#todo-compose"><i class="ri-add-line font-semibold align-middle"></i>Create Lead
+                                    </a>
+                                    <button type="button" class="ti-btn ti-btn-success !py-1 !px-2 !text-[0.75rem] !m-0">Export As CSV</button>
+                                    <div class="hs-dropdown ti-dropdown">
+                                        <a href="javascript:void(0);" class="ti-btn ti-btn-light !py-1 !px-2 !text-[0.75rem] !m-0 btn-wave waves-effect waves-light" aria-expanded="false">
+                                            Sort By<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
+                                        </a>
+                                        <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">Date Added</a></li>
+                                            <li><a class="ti-dropdown-item" href="javascript:void(0);">A - Z</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="box-body !p-0">
+                                <div class="table-responsive xxl:overflow-auto">
+                                    <table class="table whitespace-nowrap min-w-full">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">
+                                                    <input class="form-check-input" type="checkbox" id="checkboxNoLabel" value="" aria-label="...">
+                                                </th>
+                                                <th scope="col" class="text-start">Contact Name</th>
+                                                <th scope="col" class="text-start">Email</th>
+                                                <th scope="col" class="text-start">Phone</th>
+                                                <th scope="col" class="text-start">Lead Status</th>
+                                                <th scope="col" class="text-start">Company</th>
+                                                <th scope="col" class="text-start">Lead Source</th>
+                                                <th scope="col" class="text-start">Tags</th>
+                                                <th scope="col" class="text-start">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for(lead of leads;track lead.id){
+                                                <tr class="border border-defaultborder crm-contact min-w-full" >
+                                                    <td>
+                                                        <input class="form-check-input" type="checkbox" id="checkboxNoLabel1" value="" aria-label="...">
+                                                    </td>
+                                                    <td>
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="leading-none">
+                                                                <span class="avatar avatar-rounded avatar-sm">
+                                                                    <img src= {{lead.img}} alt="">
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span class="block font-semibold">{{lead.name}}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <span class="block mb-1"><i class="ri-mail-line me-2 align-middle text-[.875rem] text-[#8c9097] dark:text-white/50 inline-flex"></i>{{lead.mail}}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <span class="block"><i class="ri-phone-line me-2 align-middle text-[.875rem] text-[#8c9097] dark:text-white/50 inline-flex"></i>{{lead.number}}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-light text-default">{{lead.status}}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="flex items-center gap-2">
+                                                            <div class="leading-none">
+                                                                <span class="avatar avatar-sm p-1 bg-light avatar-rounded">
+                                                                    <img src={{lead.img2}} alt="">
+                                                                </span>
+                                                            </div>
+                                                            <div>{{lead.company}}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        {{lead.source}}
+                                                    </td>
+                                                    <td>
+                                                        <div class="flex items-center flex-wrap gap-1">
+                                                            <span class={{lead.bg1}}>{{lead.tag1}}</span>
+                                                            <span class={{lead.bg2}}>{{lead.tag2}}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-list space-x-1 rtl:space-x-reverse">
+                                                             <a  aria-label="anchor" href="javascript:void(0);" class="ti-btn ti-btn-sm ti-btn-warning"><i class="ri-eye-line"></i></a>
+                                                            <button aria-label="button" type="button" class="ti-btn ti-btn-sm ti-btn-info"><i class="ri-pencil-line"></i></button>
+                                                            <button aria-label="button" type="button" class="ti-btn ti-btn-sm ti-btn-danger contact-delete" (click)="click(lead.id)"><i class="ri-delete-bin-line"></i></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                         
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="box-footer border-topacity-0">
+                                <div class="flex items-center">
+                                    <div>
+                                        Showing 10 Entries <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+                                    </div>
+                                    <div class="ms-auto">
+                                        <nav aria-label="Page navigation" class="pagination-style-4">
+                                            <ul class="ti-pagination mb-0">
+                                                <li class="page-item disabled">
+                                                    <a class="page-link" href="javascript:void(0);">
+                                                        Prev
+                                                    </a>
+                                                </li>
+                                                <li class="page-item"><a class="page-link active" href="javascript:void(0);">1</a></li>
+                                                <li class="page-item"><a class="page-link" href="javascript:void(0);">2</a></li>
+                                                <li class="page-item">
+                                                    <a class="page-link text-primary" href="javascript:void(0);">
+                                                        next
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--End::row-1 -->
+
+                <!-- Start:: Create Contact -->
+                <div id="todo-compose" class="hs-overlay hidden ti-modal">
+                    <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+                      <div class="ti-modal-content">
+                        <div class="ti-modal-header">
+                            <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">Create Lead</h6>
+                              <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#todo-compose">
+                                <span class="sr-only">Close</span>
+                                <i class="ri-close-line"></i>
+                              </button>
+                        </div>
+                        <div class="ti-modal-body px-4">
+                            <div class="modal-body px-4">
+                                <div class="grid grid-cols-12 gap-4">
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <div class="mb-0 text-center">
+                                            <span class="avatar avatar-xxl avatar-rounded">
+                                                <img [src]="url1 ? url1 : './assets/images/faces/9.jpg'" alt="" id="profile-img">
+                                                <span class="badge rounded-pill bg-primary avatar-badge">
+                                                    <input type="file" name="photo" class="absolute w-full h-full opacity-0" id="profile-change" (change)="handleFileInput($event)">
+                                                    <i class="fe fe-camera text-[.625rem]"></i>
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="contact-name" class="form-label">Contact Name</label>
+                                        <input type="text" class="form-control" id="contact-name" placeholder="Contact Name">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="contact-mail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="contact-mail" placeholder="Enter Email">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="contact-phone" class="form-label">Phone No</label>
+                                        <input type="tel" class="form-control" id="contact-phone" placeholder="Enter Phone Number">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label for="company-name" class="form-label">Company Name</label>
+                                        <input type="text" class="form-control" id="company-name" placeholder="Company Name">
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label class="form-label">Lead Status</label>
+                                        <select class="form-control" name="choices-multiple-remove-button3" id="choices-multiple-remove-button3">
+                                            <option value="">Select Status</option>
+                                            <option value="Choice 1">New</option>
+                                            <option value="Choice 2">Follow-up</option>
+                                            <option value="Choice 3">Closed</option>
+                                            <option value="Choice 4">Contacted</option>
+                                            <option value="Choice 5">Disqualified</option>
+                                            <option value="Choice 6">Qualified</option>
+                                        </select>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label class="form-label">Lead Source</label>
+                                        <select class="form-control" name="choices-multiple-remove-button1" id="choices-multiple-remove-button1">
+                                            <option value="Choice 1">Social Media</option>
+                                            <option value="Choice 2">Direct mail</option>
+                                            <option value="Choice 3">Blog Articles</option>
+                                            <option value="Choice 4">Affiliates</option>
+                                            <option value="Choice 5">Organic search</option>
+                                        </select>
+                                    </div>
+                                    <div class="xl:col-span-12 col-span-12">
+                                        <label class="form-label">Tags</label>
+                                        <ng-select class="form-control" name="choices-multiple-remove-button2" id="choices-multiple-remove-button2" [multiple]="true" placeholder="New Lead">
+                                            <ng-option value="Choice 1">New Lead</ng-option>
+                                            <ng-option value="Choice 2">Prospect</ng-option>
+                                            <ng-option value="Choice 3">Customer</ng-option>
+                                            <ng-option value="Choice 4">Hot Lead</ng-option>
+                                            <ng-option value="Choice 5">Partner</ng-option>
+                                            <ng-option value="Choice 6">LostCustomer</ng-option>
+                                            <ng-option value="Choice 7">Influencer</ng-option>
+                                            <ng-option value="Choice 8">Subscriber</ng-option>
+                                        </ng-select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ti-modal-footer">
+                            <button type="button"
+                            class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+                            data-hs-overlay="#todo-compose">
+                            Cancel
+                          </button>
+                            <button type="button" class="ti-btn bg-primary text-white !font-medium">Create Contact</button>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                <!-- End:: Create Contact -->

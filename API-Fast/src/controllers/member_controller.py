@@ -1,0 +1,80 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from fastapi import HTTPException, UploadFile
+from ..models.member import Member
+from ..utils.file_handler import save_uploaded_file
+from uuid import UUID
+from ..schemas.member_schema import MemberUpdate
+
+async def get_users(db: AsyncSession):
+    result = await db.execute(select(Member))
+    return result.scalars().all()
+
+async def get_user_by_id(id: UUID, db: AsyncSession):
+    result = await db.execute(select(Member).where(Member.memberId == id))
+    user = result.scalar_one_or_none()
+    return user
+
+async def create_user(user_data: dict, db: AsyncSession):
+    user_dict = user_data.dict()  # แปลง Pydantic model เป็น dict
+    password = user_dict.pop('password')  # ดึง password ออก
+    new_user = Member(**user_dict)  # ใช้ dict ในการสร้าง Member instance
+    new_user.hash_password(password)  # แฮชรหัสผ่าน
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+    return new_user
+
+async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
+    try:
+        # Fetch the user
+        result = await db.execute(select(Member).where(Member.memberId == id))
+        member = result.scalar_one_or_none()
+
+        if not member:
+            raise HTTPException(status_code=404, detail="Member not found")
+
+        # Update member fields
+        if user_data.username:
+            member.username = user_data.username
+        if user_data.password:
+            member.hash_password(user_data.password)
+        if user_data.firstName:
+            member.firstName = user_data.firstName
+        if user_data.lastName:
+            member.lastName = user_data.lastName
+        if user_data.email:
+            member.email = user_data.email
+        if user_data.phoneNumber:
+            member.phoneNumber = user_data.phoneNumber
+        if user_data.role:
+            member.role = user_data.role
+        if user_data.status:
+            member.status = user_data.status
+        if user_data.picture:
+            member.picture = user_data.picture
+
+        # Save changes
+        await db.commit()
+        await db.refresh(member)
+
+        return member
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def delete_user(memberId: UUID, db: AsyncSession):
+    # Retrieve the member by ID
+    member = await db.get(Member, memberId)
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # Delete the member instance
+    await db.delete(member)
+    await db.commit()
+
+    return {
+        "actionStatus": "Success",
+        "message": "User deleted successfully",
+        "statusCode": 200,
+    }
+

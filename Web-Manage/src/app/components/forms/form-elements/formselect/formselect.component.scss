@@ -1,0 +1,14 @@
+::ng-deep{
+    .dark{
+      .list-area {
+              background-color: rgb(var(--dark-bg)) !important;
+          }
+      
+          .ng-dropdown-panel {
+              border-color: (var(--tw-border-opacity));
+          }
+    }
+    .pilled-selcect{
+      border-radius: 50px !important;
+    }
+  }

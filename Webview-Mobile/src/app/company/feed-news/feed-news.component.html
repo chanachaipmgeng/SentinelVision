@@ -1,0 +1,87 @@
+<!-- Blogs -->
+<div class="row mb-3">
+  <div class="col">
+    <h6 class="title">ข่าว</h6>
+  </div>
+  <!-- <div class="col-auto align-self-center">
+    <a routerLink="/blog" class="small">Read more</a>
+  </div> -->
+</div>
+<!-- summary blocks -->
+<!-- <div class="row">
+  <div class="col-12 px-0">
+    <swiper class="connectionwiper" [slidesPerView]="'auto'" [spaceBetween]="0" [pagination]="false">
+      <ng-template swiperSlide *ngFor="let item of news">
+          <a  class="card mb-3">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-auto">
+                  <div class="avatar avatar-100 shadow-sm rounded-10 coverimg"
+                    style="background-image: url('{{item.getPictureUrl()}}');">
+                    <img src="{{item.getPictureUrl()}}" alt="" class="d-none">
+                  </div>
+                </div>
+                <div class="col align-self-center">
+                  <a (click)="openModalDetail(item)" class="text-color-theme text-normal mb-1">{{item.getTopicDesc()}}</a>
+                  <p class="small text-muted">{{item.startDate | date:'dd/MM/yyyy' }} - {{item.endDate | date:'dd/MM/yyyy' }}
+                  </p>
+                  <a (click)="openModalDetail(item)" class="text-normal small">Read More <i class="bi bi-chevron-right"></i></a>
+                </div>
+              </div>
+            </div>
+          </a>
+
+      </ng-template>
+    </swiper>
+  </div>
+</div> -->
+<!-- <div class="row">
+  <div class="col-12 col-md-6 col-lg-4" *ngFor="let item of news">
+    <a routerLink="/company/news-event-detail" class="card mb-3">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-auto">
+            <div class="avatar avatar-100 shadow-sm rounded-10 coverimg"
+              style="background-image: url('{{item.getPictureUrl()}}');">
+              <img src="{{item.getPictureUrl()}}" alt="" class="d-none">
+            </div>
+          </div>
+          <div class="col align-self-center">
+            <a class="h5 d-block text-normal mb-2">{{item.getTopicDesc()}}</a>
+            <p class="small text-muted">{{item.startDate | date:'dd/MM/yyyy' }} - {{item.endDate | date:'dd/MM/yyyy' }}
+            </p>
+            <a class="text-normal small">Read More <i class="bi bi-chevron-right"></i></a>
+          </div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div> -->
+<!-- Blogs -->
+<div class="row mb-3">
+  <div class="col">
+    <h6 class="title">กิจกรรม</h6>
+  </div>
+  <!-- <div class="col-auto align-self-center">
+    <a routerLink="/blog" class="small">Read more</a>
+  </div> -->
+</div>
+<div class="row">
+  <div class="col-12 col-md-6 mb-3" *ngFor="let item of tevent">
+    <div class="row" >
+      <div class="col-5">
+        <figure (click)="openModalEventDetail(item)" class="rounded-15 position-relative h-190 overflow-hidden shadow-sm">
+          <div class="coverimg h-100 w-100 position-absolute start-0 top-0"
+            style="background-image: url('{{item?.getPictureUrl()}}');">
+            <img src="{{item?.getPictureUrl()}}" alt="" class="d-none">
+          </div>
+        </figure>
+      </div>
+      <div class="col align-self-center">
+        <a (click)="openModalEventDetail(item)" class="h5 d-block text-normal mb-2">{{item?.getTopicDesc()}}</a>
+        <p class="small text-muted">{{item?.getPlaceDesc()}}</p>
+        <a (click)="openModalEventDetail(item)" class="text-normal small">Read More <i class="bi bi-chevron-right"></i></a>
+      </div>
+    </div>
+  </div>
+</div>

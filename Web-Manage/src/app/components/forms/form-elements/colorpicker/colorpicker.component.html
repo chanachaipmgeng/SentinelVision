@@ -1,0 +1,70 @@
+<app-page-header [title]="'Color Pickers'" [activeTitle]="'Form Elements'" [title1]="'Color Pickers'"></app-page-header>
+
+  <!-- Start::row-1 -->
+  <div class="grid grid-cols-12 gap-6">
+    <div class="xl:col-span-3 col-span-12">
+        <div class="box">
+            <div class="box-header justify-between">
+                <div class="box-title">
+                     Color Picker
+                </div>
+                <div class="prism-toggle">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !text-[0.75rem] !font-medium" (click)="toggleInput()">Show Code
+                        <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                </div>
+            </div>
+            <div class="box-body">
+                <input type="color" class="form-control form-control-color !border-0"
+                        id="exampleColorInput" value="#136ad0" title="Choose your color">
+                      
+            </div>
+            <div class="box-footer  border-t-0">
+                @if(isContentVisible1){
+
+                    <div>
+                        <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="xl:col-span-9 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Classic
+                </div>
+            </div>
+            <div class="box-body sm:flex justify-between items-center">
+                <div>
+                    <div class="theme-container hidden"></div>
+                    <div class="pickr-container example-picker">
+                        <form class="example-form2" [formGroup]="exampleForm">
+                            <mat-form-field class="example-full-width">
+                                <mat-label>Color</mat-label>
+                                <input matInput formControlName="inputCtrl" />
+                                <ngx-colors class="suffix" matSuffix ngx-colors-trigger
+                                    formControlName="pickerCtrl"></ngx-colors>
+                               
+                            </mat-form-field>
+                        </form>
+                    </div>
+                </div>
+                <div>
+                    <div class="theme-container1 ">
+
+                      
+                    </div>
+                    <div>
+                        <div class="theme-container2 hidden"></div>
+                        <div class="pickr-container2 example-picker">
+                            <ngx-colors ngx-colors-trigger [(ngModel)]="color2" acceptLabel="Select" cancelLabel="Cancel">
+                            </ngx-colors>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!--End::row-1 -->

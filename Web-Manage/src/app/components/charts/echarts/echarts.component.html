@@ -1,0 +1,249 @@
+<app-page-header [title]="'Echarts'" [activeTitle]="'Charts'" [title1]="'Echarts'"></app-page-header>
+
+
+                <!-- Start::row-1 -->
+                <div class="grid grid-cols-12 gap-x-6">
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Line Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-basic-line"  echarts [options]="options1" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Smoothed Line Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-smoothed-line" echarts [options]="options2" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Area Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-basic-area" echarts [options]="options3"  class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Stacked Line Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-stacked-line" echarts [options]="options4"  class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Stacked Area Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-stacked-area" echarts [options]="options5" theme="macarons" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Step Line Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-step-line"  echarts [options]="options6" theme="macarons" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bar-basic"  echarts [options]="options7" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar With Background Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bar-background" echarts [options]="options8" theme="macarons" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Style For a Single Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bar-single" echarts [options]="options9" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Water Fall Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-waterfall" echarts [options]="options10" theme="macarons" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar With Negative Values Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-negative-values"  echarts [options]="options11" theme="macarons" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bar With Labels Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bar-labels" echarts [options]="options12" [merge]="mergeOptions" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Horizontal Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bar-horizontal"  echarts [options]="options14" [merge]="mergeOptions" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Horizontal Stacked Bar Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-stacked-horizontal" echarts [options]="options15" [merge]="mergeOptions" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Pie Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-pie" echarts [options]="options16" [theme]="theme"  class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Doughnut Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-doughnut" echarts [options]="options17" [theme]="theme" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Scatter Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-scatter" echarts [options]="options18" [theme]="theme" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Bubble Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-bubble"echarts [options]="options19" [theme]="theme" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Candlestick Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-candlestick" echarts [options]="options20" [theme]="theme" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+               
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title" >Heatmap Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-heatmap"  echarts [options]="options22" [theme]="theme" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Treemap Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-treemap" echarts [options]="options23" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Funnel Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-funnel" echarts [options]="options24" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Basic Gauge Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-gauge-basic"echarts [options]="options25"  class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <div class="box custom-box">
+                            <div class="box-header">
+                                <div class="box-title">Simple Graph Chart</div>
+                            </div>
+                            <div class="box-body">
+                                <div id="echart-simple-graph" echarts [options]="options" class="echart-charts"></div>
+                            </div>
+                        </div>
+                    </div>
+                 
+                </div>
+                <!--End::row-1 -->

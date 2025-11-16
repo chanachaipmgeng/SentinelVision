@@ -1,0 +1,243 @@
+<app-page-header [title]="'Create Blog'" [activeTitle]="'Blog'" [title1]="'Create Blog'"></app-page-header>
+ <!-- Start::row-1 -->
+ <div class="grid grid-cols-12 gap-x-6">
+    <div class="xxl:col-span-9 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">New Blog</div>
+            </div>
+            <div class="box-body">
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="xl:col-span-12 col-span-12">
+                        <label for="blog-title" class="form-label">Blog Title</label>
+                        <input type="text" class="form-control block w-full text-[0.875rem] !rounded-md" id="blog-title" placeholder="Blog Title">
+                    </div>
+                    <div class="xl:col-span-12 col-span-12">
+                        <label for="blog-category" class="form-label">Blog Category</label>
+                        <ng-select class="form-control block w-full text-[0.875rem] !rounded-md" data-trigger name="blog-category" id="blog-category" [items]="simpleItems" [(ngModel)]="selectedSimpleItem">
+                        </ng-select>
+                     
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="blog-author" class="form-label">Blog Author</label>
+                        <input type="text" class="form-control block w-full text-[0.875rem] !rounded-md" id="blog-author" placeholder="Enter Name">
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="blog-author-email" class="form-label">Email</label>
+                        <input type="text" class="form-control block w-full text-[0.875rem] !rounded-md" id="blog-author-email" placeholder="Enter Email">
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="publish-date" class="form-label">Publish Date</label>
+                        <input type="text" class="form-control block w-full text-[0.875rem] !rounded-md" id="publish-date" placeholder="Choose date" mwlFlatpickr   [altInput]="true"
+                        [convertModelValue]="true"
+                        [enableTime]="true"
+                        dateFormat="Y-m-dTH:i">
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="publish-time" class="form-label">Publish Time</label>
+                        <input class="form-control block w-full text-[0.875rem] !rounded-md" id="publish-time" placeholder="Choose time"   type="text"
+                        mwlFlatpickr
+                        [noCalendar]="true"
+                        [enableTime]="true"
+                        [dateFormat]="'h:i K'">
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="product-status-add" class="form-label">Published Status</label>
+                        <ng-select class="form-control block w-full text-[0.875rem] !rounded-md" data-trigger name="product-status-add" id="product-status-add">
+                            <ng-option value="">Select</ng-option>
+                            <ng-option value="Published">Published</ng-option>
+                            <ng-option value="Scheduled">Hold</ng-option>
+                        </ng-select>
+                    </div>
+                    <div class="xl:col-span-6 col-span-12">
+                        <label for="blog-tags" class="form-label">Blog Tags</label>
+                        <ng-select  class="form-control block w-full text-[0.875rem] !rounded-md" name="blog-tags" id="blog-tags"  [multiple]="true" [(ngModel)]="selectedBlogs">
+                            @for(Blog of Blogs;track Blog.id){
+                                   
+                                <ng-option  [value]="Blog.id"
+                                  >{{Blog.name}}</ng-option>
+                              }
+
+                        </ng-select>
+                     
+                    </div>
+                    <div class="xl:col-span-12 col-span-12">
+                        <label class="form-label">Blog Content</label>
+                        <div id="blog-content">
+                            <angular-editor [(ngModel)]="htmlContent" [config]="config1">
+                             
+                            </angular-editor>
+                        </div>
+                    </div>
+                    <div class="xl:col-span-12 col-span-12 blog-images-container">
+                        <label for="blog-author-email" class="form-label">Blog Images</label>
+                        <!-- <dropzone [config]="config" [message]="'Click or drag images here to upload'" (error)="onUploadError($event)" (success)="onUploadSuccess($event)"></dropzone> -->
+                       @if(type === 'component'){
+
+                           <dropzone  class="dropzone-container" [config]="config" [disabled]="disabled" fxLayout="row" fxLayoutAlign="start strech" fxFlex="auto" [message]="'Click or drag images here to upload'" (init)="onUploadInit($event)" (error)="onUploadError($event)" (success)="onUploadSuccess($event)"></dropzone>
+                       }
+                    </div>
+                    <div class="xl:col-span-12 col-span-12">
+                        <label class="form-label">Blog Type</label>
+                        <div class="flex items-center">
+                            <div class="form-check !ps-0 me-4">
+                                <input class="form-check-input" type="radio" name="blog-type" id="blog-free1" checked>
+                                <label class="form-check-label" for="blog-free1">
+                                    Free
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="blog-type" id="blog-paid1">
+                                <label class="form-check-label" for="blog-paid1">
+                                    Paid
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="box-footer">
+                <div class="text-end">
+                    <button type="button" class="ti-btn !py-1 !px-2 ti-btn-light !text-[0.75rem] !font-medium me-2">Save As Draft</button>
+                    <button type="button" class="ti-btn bg-primary text-white !py-1 !px-2 !text-[0.75rem] !font-medium">Post Blog</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="xxl:col-span-3 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
+        <div class="box">
+            <div class="box-header">
+                <div class="box-title">
+                    Recent Blogs
+                </div>
+            </div>
+            <div class="box-body">
+                <ul class="list-group">
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-39.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Animals</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    There are many variations of passages of Lorem Ipsum available
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">24,Nov 2022 - 18:27</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap  items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-56.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Travel</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    Latin words, combined with a handful of model sentence
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">28,Nov 2022 - 10:45</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-54.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Interior</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    Contrary to popular belief, Lorem Ipsum is not simply random
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">30,Nov 2022 - 08:32</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-52.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Nature</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    It was popularised in the 1960s with the release of Letraset sheets containing
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">3,Dec 2022 - 12:56</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap        items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-74.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Health</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    It was popularised in the 1960s with the release of Letraset sheets containing
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">16,Dec 2022 - 04:56</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="flex gap-2 flex-wrap        items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-49.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Food</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    It was popularised in the 1960s with the release of Letraset sheets containing
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">31,Dec 2022 - 18:06</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item">
+                            <div class="flex gap-2 flex-wrap items-center">
+                            <span class="avatar avatar-xl me-1">
+                                <img src="./assets/images/media/media-76.jpg" class="img-fluid !rounded-md" alt="...">
+                            </span>
+                            <div class="flex-grow">
+                                <a href="javascript:void(0);" class="text-[0.875rem] font-semibold mb-0">Travel</a>
+                                <p class="mb-1 popular-blog-content text-truncate">
+                                    It was popularised in the 1960s with the release of Letraset sheets containing
+                                </p>
+                                <span class="text-[#8c9097] dark:text-white/50 text-[0.6875rem]">15,Dec 2022 - 14:31</span>
+                            </div>
+                            <div>
+                                <button aria-label="button" type="button" class="ti-btn ti-btn-light ti-btn-sm rtl:rotate-180"><i class="ri-arrow-right-s-line"></i></button>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="list-group-item text-center">
+                        <button type="button" class="ti-btn ti-btn-primary !font-medium">Load more</button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<!--End::row-1 -->

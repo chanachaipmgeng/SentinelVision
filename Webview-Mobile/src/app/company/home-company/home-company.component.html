@@ -1,0 +1,74 @@
+<!-- welcome user -->
+
+<div class="row mb-4">
+  <div class="col-3">
+    <div class="avatar shadow rounded-10">
+      <img appShowLoading src="{{companyModel.getPicture()}}">
+    </div>
+  </div>
+  <div class="col align-self-center ps-0">
+    <h4 class="text-color-theme"><span class="fw-normal">Hi</span>, {{employeeModel.getFullname()}}</h4>
+    <p class="text-muted">{{companyModel.companyName}}</p>
+  </div>
+</div>
+
+<!-- Transactions -->
+<div class="row mb-3">
+  <div class="col">
+    <h6 class="title">{{"Timestamp Record2" | translate}}</h6>
+  </div>
+  <div class="col-auto">
+    <a routerLink="/company/timestamp-log/{{employeeModel.member.memberId}}" class="small">{{"ประวัติ" | translate}}</a>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <ul class="list-group list-group-flush bg-none">
+      <li class="list-group-item" *ngFor="let item of timeList">
+        <div class="row">
+          <div class="col-auto">
+            <div class="avatar avatar-50 shadow rounded-10">
+              <img appShowLoading *ngIf="item?.getPicture() != '' ;else personblank" src="{{item?.getPicture()}}">
+              <ng-template #personblank>
+                <img src="assets/img/icon/person.png">
+              </ng-template>
+            </div>
+          </div>
+          <div class="col align-self-center ps-0">
+            <p class="text-color-theme mb-0">{{item.getLocation()}}</p>
+
+          </div>
+          <div class="col-auto align-self-center text-end">
+            <p class="mb-0">{{item.timestamp | date : 'HH:mm'}}</p>
+            <span
+              class="tag text-white py-1 px-2 {{item.timestampType==0?'bg-warning border-warning':'bg-success border-success'}}">{{item.timestampType==0?"Warning":"Complete"}}</span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+
+
+<div class="row mb-3">
+  <div class="col">
+    <h6 class="title">{{"Table of Work" | translate}}</h6>
+  </div>
+</div>
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <full-calendar #fullCalendar [options]="calendarOptions"></full-calendar>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-3" *ngIf="isSubEmp">
+  <div class="col">
+    <h6 class="title">{{"Subordinate Data" | translate}}</h6>
+  </div>
+</div>
+
+<app-subordinate-data *ngIf="isSubEmp"></app-subordinate-data>

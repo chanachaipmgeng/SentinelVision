@@ -1,0 +1,461 @@
+<app-page-header [title]="'Range Slider'" [activeTitle]="'Form Elements'" [title1]="'Range Slider'"></app-page-header>
+      <!-- Start:: row-1 -->
+      <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Default Range
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleDefault()">Show Code
+                            <i class="ri-code-{{toggleClass1}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <input type="range" class="form-range" id="customRange1">
+                
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible1){
+
+                        <div>
+                            <pre class="language-html"><code class="language-html" >{{ts1}}</code></pre>   
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Disabled Range
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleDisabled()">Show Code
+                            <i class="ri-code-{{toggleClass2}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <input type="range" class="form-range" id="disabledRange" disabled>
+                
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible2){
+
+                        <div>
+                            <pre class="language-html"><code class="language-html" >{{ts2}}</code></pre>   
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Range With Min and Max Values
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleRange()">Show Code
+                            <i class="ri-code-{{toggleClass3}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                   
+                </div>
+                <div class="box-body">
+                    <input type="range" class="form-range" min="0" max="5" id="customRange2">
+                  
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible3){
+
+                        <div>
+                            <pre class="language-html"><code class="language-html" >{{ts3}}</code></pre>   
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header justify-between">
+                    <div class="box-title">
+                        Range With Steps
+                    </div>
+                    <div class="prism-toggle">
+                        <button type="button" class="ti-btn !py-1 !px-2 ti-btn-primary !font-medium !text-[0.75rem]" (click)="toggleSteps()">Show Code
+                            <i class="ri-code-{{toggleClass4}} ms-2 inline-block align-middle"></i></button>
+                    </div>
+                </div>
+                <div class="box-body">
+                    <input type="range" class="form-range" min="0" max="5" step="0.5" id="customRange3">
+                  
+                </div>
+                <div class="box-footer showcode border-t-0">
+                    @if(isContentVisible4){
+
+                        <div>
+                            <pre class="language-html"><code class="language-html" >{{ts4}}</code></pre>   
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-1 -->
+
+    <!-- Start:: row-2 -->
+    <h6 class="mb-3">noUiSlider:</h6>
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Default-Styling
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="slider">
+                    <ngx-slider [(value)]="minValue" [(highValue)]="maxValue" [options]="options"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Fit Handles
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="slider-fit">
+                        <form [formGroup]="sliderForm">
+                            <ngx-slider [options]="options1" formControlName="sliderControl"></ngx-slider>
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Rounded Styling
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ngx-slider [(value)]="value" [options]="options2"></ngx-slider>
+                    <div id="slider-round">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Square Styling
+                    </div>
+                </div>
+                <div class="box-body">
+                    <ngx-slider [options]="options3" [formControl]="sliderControl1"></ngx-slider>
+                    <div id="slider-square">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-2 -->
+
+    <!-- Start:: row-3 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-3 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">Color Picker Slider</div>
+                </div>
+                <div class="box-body color-pickr-slider">
+                    <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    [(ngModel)]="red"
+                    (input)="updateColor()"
+                    id="red"
+                  />
+                  <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  [(ngModel)]="green"
+                  (input)="updateColor()"
+                  id="green"
+                />
+                <input
+                type="range"
+                min="0"
+                max="255"
+                [(ngModel)]="blue"
+                (input)="updateColor()"
+                id="blue"
+              />
+              <div class="preview" [style.background-color]="getColor()"></div>
+    
+                        <div>
+                            <a #result 
+                            id="result"
+                            [style.background-color]="getColor()"
+                          ></a>
+                        </div>
+                    <div class="sliders" #slider1 id="color1">
+                    </div>
+                    <div class="sliders" #slider2 id="color2">
+                    </div>
+                    <div class="sliders"  #slider3 id="color3">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header">
+                        <div class="box-title">Locking Sliders</div>
+                    </div>
+                    <div class="box-body">
+                        <ngx-slider
+                        [options]="options"
+                        [formControl]="sliderControl"
+                      ></ngx-slider>
+                      <p>Value: {{ sliderControl.value }}</p>
+                        <div id="slider1"></div>
+                        <div id="slider1-span" class="my-1"></div>
+                        <div id="slider2"></div>
+                        <div id="slider2-span" class="my-1"></div>
+                        <div id="slider3"></div>
+                        <div id="slider3-span" class="my-1"></div>
+                        <button type="button" id="lockbutton" class="ti-btn !py-1 !px-2 !text-[0.75rem] ti-btn-primary-full ltr:float-right rtl:float-left">Lock</button>
+                    </div>
+                </div>
+            </div>
+            <div class="xl:col-span-12 col-span-12">
+                <div class="box">
+                    <div class="box-header">
+                        <div class="box-title">Merging tooltips slider</div>
+                    </div>
+                    <div class="box-body">
+                        <div id="merging-tooltips">
+                            <ngx-slider
+                            [(value)]="minValue2"
+                            [(highValue)]="maxValue2"
+                            [options]="options"
+                          ></ngx-slider>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-3 col-span-12">
+            <div class="grid grid-cols-12">
+                <div class="xl:col-span-12 col-span-12">
+                    <div class="box">
+                        <div class="box-header">
+                            <div class="box-title">Non Linear Slider</div>
+                        </div>
+                        <div class="box-body">
+                            <div id="nonlinear">
+                                <ngx-slider
+                                [(value)]="minValue"
+                                [(highValue)]="maxValue"
+                                [options]="options4"
+                              ></ngx-slider>
+                              <p>Min value: {{ minValue }}</p>
+                              <p>Max value: {{ maxValue }}</p>
+                            </div>
+                            <div id="lower-value" class="mt-5"></div>
+                            <div id="upper-value" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="xl:col-span-12 col-span-12">
+                    <div class="box">
+                        <div class="box-header">
+                            <div class="box-title">Sliding Handles Tooltips</div>
+                        </div>
+                        <div class="box-body">
+                            <div id="slider-hide"></div>
+                            <ngx-slider
+                            [(value)]="value3"
+                            [(highValue)]="value4"
+                            [options]="options"
+                          ></ngx-slider>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-3 -->
+
+    <!-- Start:: row-4 -->
+    <div class="grid grid-cols-12 gap-x-6">
+        <div class="xl:col-span-10 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">Colored Connect Elements</div>
+                </div>
+                <div class="box-body">
+                    <div class="slider" id="color-slider">
+                        <ngx-slider [(value)]="value1" [options]="options5"></ngx-slider>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-2 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">Slider Toggle</div>
+                </div>
+                <div class="box-body">
+                    <ngx-slider [(value)]="value2" [options]="options6"></ngx-slider>
+                    <div id="slider-toggle"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-4 -->
+
+    <!-- Start:: row-5 -->
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">Toggle Movement By Clicking Pips</div>
+                </div>
+                <div class="box-body !pb-[3rem]">
+                    <div id="slider-pips">
+                        <ngx-slider [(value)]="minValue11" [(highValue)]="maxValue11" [options]="options18"></ngx-slider>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-6 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">Soft Limits</div>
+                </div>
+                <div class="box-body !pb-[3rem]">
+                    <div id="soft">
+                        <ngx-slider [(value)]="value5" [options]="options10">
+                            <!-- Use custom template to render tooltips using ng-bootstrap -->
+                            <ng-template #tooltipTemplate let-tooltip="tooltip" let-placement="placement" let-content="content">
+                                <div class="h-100">{{content}}</div>
+                            </ng-template>
+                        </ngx-slider>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-5 -->
+
+    <!-- Start:: row-6 -->
+    <h6 class="mb-3">noUiSlider Colors:</h6>
+    <div class="grid grid-cols-12 gap-6">
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Primary
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="primary-colored-slider">
+                        <ngx-slider [(value)]="minValue5" [options]="options7"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Secondary
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="secondary-colored-slider">
+          <ngx-slider [(value)]="minValue6" [options]="options8"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Warning
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="warning-colored-slider">
+                        <ngx-slider [(value)]="minValue7" [options]="options9"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Info
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="info-colored-slider">
+                        <ngx-slider [(value)]="minValue8" [options]="options12"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Success
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="success-colored-slider">
+                        <ngx-slider [(value)]="minValue9" [options]="options13"></ngx-slider>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="xl:col-span-4 col-span-12">
+            <div class="box">
+                <div class="box-header">
+                    <div class="box-title">
+                        Danger
+                    </div>
+                </div>
+                <div class="box-body">
+                    <div id="danger-colored-slider"></div>
+                    <ngx-slider [(value)]="minValue10" [options]="options14"></ngx-slider>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- End:: row-6 -->

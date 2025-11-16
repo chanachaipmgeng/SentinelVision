@@ -1,0 +1,105 @@
+<app-page-header [title]="'Dashboard'" [activeTitle]="'Company'" [title1]="'Dashboard'"></app-page-header>
+
+<div class="dashboard-container">
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="flex justify-center items-center h-64">
+      <div class="ti-spinner animation-spin !w-8 !h-8" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error) {
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+      <span class="font-medium">Error!</span> {{ error }}
+    </div>
+  }
+
+  <!-- Content -->
+  @if (stats && !isLoading) {
+    <div class="grid grid-cols-12 gap-x-6">
+      
+      <!-- Summary Cards -->
+      <div class="xl:col-span-4 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
+        <div class="box">
+          <div class="box-body">
+            <div class="flex items-start">
+              <div class="flex-grow">
+                <p class="mb-0 text-gray-500">Check-ins Today</p>
+                <div class="text-2xl font-semibold">{{ stats.summary.checkInsToday }}</div>
+              </div>
+              <div class="avatar bg-primary/10 !text-primary">
+                <i class="ri-calendar-check-line text-xl"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Add more summary cards here if needed -->
+
+      <!-- Chart -->
+      <div class="col-span-12">
+        <div class="box">
+          <div class="box-header">
+            <h5 class="box-title">Check-in Trend (Last 7 Days)</h5>
+          </div>
+          <div class="box-body">
+            @if (chartOption) {
+              <div echarts [options]="chartOption" class="h-80"></div>
+            } @else {
+              <p>Chart data is not available.</p>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="col-span-12">
+        <div class="box">
+          <div class="box-header">
+            <h5 class="box-title">Recent Activity</h5>
+          </div>
+          <div class="box-body">
+            <div class="table-responsive">
+              <table class="table whitespace-nowrap min-w-full">
+                <thead>
+                  <tr>
+                    <th scope="col" class="text-start">Employee</th>
+                    <th scope="col" class="text-start">Time</th>
+                    <th scope="col" class="text-start">Location</th>
+                    <th scope="col" class="text-start">Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (activity of stats.recentActivity; track $index) {
+                    <tr class="border-b border-gray-200">
+                      <td>{{ activity.employeeName }}</td>
+                      <td>{{ activity.timestamp | date:'medium' }}</td>
+                      <td>{{ activity.locationName }}</td>
+                      <td>
+                        @if (activity.timestampType === 1) {
+                          <span class="badge bg-primary/10 text-primary">In Area</span>
+                        } @else {
+                          <span class="badge bg-danger/10 text-danger">Outside Area</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                  @if (stats.recentActivity.length === 0) {
+                    <tr>
+                      <td colspan="4" class="text-center text-gray-500 py-4">No recent activity.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  }
+</div>

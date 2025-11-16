@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from .config.database import engine
 from .models.member import Base
+from .models.face_encoding import Base as FaceEncodingBase # <<< IMPORT NEW MODEL
 import os
 from fastapi.staticfiles import StaticFiles
 import logging
-from .routes import member_routes,company_routes,department_routes,position_routes,employee_routes,employee_timestamp_routes,company_location_routes,auth_routes,face_routes,file_upload_router
+from .routes import member_routes,company_routes,department_routes,position_routes,employee_routes,employee_timestamp_routes,company_location_routes,auth_routes,face_routes,file_upload_router,system_routes,dashboard_routes
 from fastapi.middleware.cors import CORSMiddleware
 logging.basicConfig(level=logging.DEBUG)
 app = FastAPI()
@@ -23,13 +24,17 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
 # โฟลเดอร์สำหรับเก็บไฟล์รูปภาพ
 UPLOAD_DIR = "./uploaded_images"
+ENROLLED_DIR = "./enrolled_images"
 
 # ตรวจสอบว่ามีโฟลเดอร์หรือไม่ ถ้าไม่มีให้สร้าง
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
+if not os.path.exists(ENROLLED_DIR):
+    os.makedirs(ENROLLED_DIR)
 
 # เส้นทางสำหรับให้บริการไฟล์แบบ static (เช่น รูปภาพ)
 app.mount("/images", StaticFiles(directory=UPLOAD_DIR), name="images")
+app.mount("/enrolled_images", StaticFiles(directory=ENROLLED_DIR), name="enrolled_images")
 # รวม routes
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(member_routes.router, prefix="/members", tags=["Members"])
@@ -41,6 +46,8 @@ app.include_router(employee_routes.router, prefix="/employees", tags=["Employees
 app.include_router(employee_timestamp_routes.router, prefix="/timestamp", tags=["Timestamps"])
 app.include_router(face_routes.router, prefix="/face", tags=["Face Recognition"])
 app.include_router(file_upload_router.router, prefix="/api", tags=["File Upload"])
+app.include_router(system_routes.router, prefix="/system")
+app.include_router(dashboard_routes.router, prefix="/dashboard")
 @app.get("/")
 async def root():
     logging.debug("This is a debug message")

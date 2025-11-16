@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef } from '@angular/core';
+import { Component, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import * as faceapi from 'face-api.js';
@@ -11,6 +11,7 @@ import { EmployeeModel } from 'src/app/shared/models/employee.model';
 import swal from 'sweetalert';
 import { CompanyLocationModel } from 'src/app/shared/models/company-location.model';
 import { CompanyLocationService } from 'src/app/shared/services/company-location.service';
+
 @Component({
   selector: 'app-face-scan',
   standalone: true,
@@ -20,220 +21,199 @@ import { CompanyLocationService } from 'src/app/shared/services/company-location
   templateUrl: './face-scan.component.html',
   styleUrls: ['./face-scan.component.css'],
 })
-export class FaceScanComponent {
+export class FaceScanComponent implements OnDestroy {
   @ViewChild('video') video: ElementRef;
   @ViewChild('canvas') canvas: ElementRef;
-  locationList: CompanyLocationModel[] = []
-  locationArea: CompanyLocationModel[] = []
-  capturedImage: string | null = null;
-  uploadStatus: string = '';
-  checkMatch = false;
-  companyId = ""
-  memberId = ""
-  timestampModel: TimestampModel = new TimestampModel()
-  employeeModel: EmployeeModel = new EmployeeModel()
+
+  locationList: CompanyLocationModel[] = [];
+  locationArea: CompanyLocationModel[] = [];
+  
+  companyId = "";
+  memberId = ""; // We get this from the backend now
+  timestampModel: TimestampModel = new TimestampModel();
+  employeeModel: EmployeeModel = new EmployeeModel();
   location: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
   errorMessage: string | null = null;
-  detectMS = 300;
-  blinkCount = 0;
-  lastBlinkTime = 0;
-  depthThreshold = -0.1; // ค่าความลึกขั้นต่ำของใบหน้า (ป้องกันภาพนิ่ง)
-  constructor(private http: HttpClient, private timestampService: TimestampService, private tokenService: TokenService, private employeeService: EmployeeService, private comLocationService: CompanyLocationService) {
+
+  // --- New state variables ---
+  isCapturing = false;
+  captureProgress = 0;
+  captureMessage = 'Please look at the camera.';
+  faceDetectionInterval: any;
+  videoStream: MediaStream | null = null;
+
+  constructor(
+    private http: HttpClient, 
+    private timestampService: TimestampService, 
+    private tokenService: TokenService, 
+    private employeeService: EmployeeService, 
+    private comLocationService: CompanyLocationService
+  ) {
     this.companyId = this.tokenService.getSelectCompany().companyId;
-    this.memberId = this.tokenService.getUser().member.memberId;
-    this.employeeService.getMemberById(this.tokenService.getSelectCompany().companyId, this.memberId).subscribe(result => {
-      this.employeeModel = result
-      this.timestampModel = new TimestampModel({
-        "company_employeeId": this.employeeModel.company_employeeId,
-        "timestampType": 1,
-        "latitude": 0,
-        "longitude": 0,
-      })
-    })
+    // We don't need to get memberId beforehand anymore for the 1:N check
   }
 
   ngOnInit() {
-    // this.getCurrentLocation()
-    // โหลดโมเดล Face Detection ของ face-api.js
-    faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
-    faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models/face_landmark_68');
-    faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models/face_recognition');
-    faceapi.nets.faceExpressionNet.loadFromUri('/assets/models/face_expression');
-    // เปิดกล้อง
+    this.loadModelsAndStartVideo();
+    this.getCompanyLocation();
+  }
+
+  ngOnDestroy() {
+    // Clean up resources
+    clearInterval(this.faceDetectionInterval);
+    if (this.videoStream) {
+      this.videoStream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  async loadModelsAndStartVideo() {
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector'),
+      faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models/face_landmark_68'),
+      faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models/face_recognition'),
+    ]);
     this.startVideo();
-    this.getCompanyLocation()
   }
-
-  getCompanyLocation() {
-    this.comLocationService.getLists(this.companyId).subscribe(result => {
-      this.locationList = result
-      this.getCurrentLocation()
-    })
-  }
-
-
 
   startVideo(): void {
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
+        this.videoStream = stream;
         this.video.nativeElement.srcObject = stream;
+        this.startFaceDetection();
       })
       .catch(err => {
         console.error('Error accessing camera: ', err);
+        this.captureMessage = 'Could not access the camera.';
       });
   }
 
-  // ตรวจจับใบหน้าและวาดกรอบครอบใบหน้า
-  async detectFace() {
+  startFaceDetection(): void {
     const videoEl = this.video.nativeElement;
     const displaySize = { width: videoEl.width, height: videoEl.height };
     faceapi.matchDimensions(this.canvas.nativeElement, displaySize);
 
-    setInterval(async () => {
-      const detections = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
+    this.faceDetectionInterval = setInterval(async () => {
+      if (this.isCapturing) return; // Don't detect while capturing
+
+      const detections = await faceapi.detectSingleFace(videoEl, new faceapi.TinyFaceDetectorOptions());
+      const context = this.canvas.nativeElement.getContext('2d');
+      context.clearRect(0, 0, displaySize.width, displaySize.height);
+
       if (detections) {
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
-
-        // ล้าง canvas ก่อนวาดใหม่
-        this.canvas.nativeElement.getContext('2d').clearRect(0, 0, displaySize.width, displaySize.height);
-
-        // วาดกรอบครอบใบหน้าลงบน canvas
         faceapi.draw.drawDetections(this.canvas.nativeElement, resizedDetections!);
-        faceapi.draw.drawFaceExpressions(this.canvas.nativeElement, resizedDetections!);
-        faceapi.draw.drawFaceLandmarks(this.canvas.nativeElement, resizedDetections!);
-
-        this.checkMatch = true
-        this.detectBlink(detections)
+        this.captureMessage = 'Face detected. Ready to check in.';
       } else {
-        this.checkMatch = false
-        this.blinkCount = 1;
+        this.captureMessage = 'Please position your face in the center.';
+      }
+    }, 500); // Detect every 500ms
+  }
+
+  // --- Main function to be called by a button click ---
+  async onCheckInClick() {
+    if (this.isCapturing) return;
+
+    this.isCapturing = true;
+    this.captureMessage = 'Starting liveness check... Please hold still.';
+    this.captureProgress = 0;
+
+    const capturedFrames: string[] = [];
+    const frameCount = 10; // Capture 10 frames
+    const captureInterval = 150; // every 150ms
+
+    const captureProcess = setInterval(() => {
+      if (capturedFrames.length >= frameCount) {
+        clearInterval(captureProcess);
+        this.sendFramesForVerification(capturedFrames);
+        return;
       }
 
-    }, 100);  // ตรวจจับทุกๆ 100ms
+      const frame = this.captureFrame();
+      capturedFrames.push(frame);
+      this.captureProgress = (capturedFrames.length / frameCount) * 100;
+    }, captureInterval);
   }
 
-  /** คำนวณ Eye Aspect Ratio (EAR) */
-  calculateEAR(eye: any) {
-    const A = this.getDistanceBetween(eye[1], eye[5]);
-    const B = this.getDistanceBetween(eye[2], eye[4]);
-    const C = this.getDistanceBetween(eye[0], eye[3]);
-
-    return (A + B) / (2.0 * C);
-  }
-
-  /** คำนวณระยะห่างระหว่างจุด */
-  getDistanceBetween(p1: any, p2: any) {
-    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-  }
-
-  detectBlink(detection: any) {
-    const landmarks = detection.landmarks;
-    const leftEye = landmarks.getLeftEye();
-    const rightEye = landmarks.getRightEye();
-
-    const leftEAR = this.calculateEAR(leftEye);
-    const rightEAR = this.calculateEAR(rightEye);
-    const avgEAR = (leftEAR + rightEAR) / 2.0;
-
-    console.log("EAR:", avgEAR.toFixed(2)); // Debugging
-
-    if (avgEAR <= 0.25) {
-      if (Date.now() - this.lastBlinkTime > 1000) {  // ป้องกันการตรวจซ้ำบ่อยเกินไป
-        this.blinkCount++;
-        this.lastBlinkTime = Date.now();
-        console.log("Blink Detected:", this.blinkCount);
-
-        // ✅ กะพริบตา 2 ครั้งเพื่อ Capture รูป
-        if (this.blinkCount >= 2) {
-          this.captureImage();
-          this.blinkCount = 0;  // Reset นับใหม่
-        }
-      }
-    }
-
-    // if (this.blinkCount == 3) {
-    //   console.log("✅ Blink Detected - Capturing Image...");
-    //   // Reset Blink Count
-    //   this.captureImage();
-    //   // this.blinkCount++;
-    // }
-  }
-  // // แคปเจอร์ภาพจากกล้อง
-  captureImage(): void {
-    // this.detectMS = 2000;
+  captureFrame(): string {
     const video = this.video.nativeElement;
-    const canvas = this.canvas.nativeElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const context = canvas.getContext('2d');
-
-    // วาดภาพจาก video ลงใน canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    // แปลงภาพใน canvas เป็น base64
-    this.capturedImage = canvas.toDataURL('image/jpeg');
-    // console.log(this.capturedImage)
-    // this.uploadImage() checkface
-    this.uploadImage()
+    context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg');
   }
 
-  // // อัปโหลดภาพที่แคปเจอร์แล้ว
-  uploadImage(): void {
-    if (this.capturedImage) {
-      const file = this.dataURLtoFile(this.capturedImage, 'face.jpg');
-      const formData = new FormData();
-      formData.append('file', file);
-
-      this.http.post(environment.baseUrl + `/face/members/${this.memberId}/check-face`, formData).subscribe({
-        next: (response: any) => {
-          this.uploadPhototimestamp();
-        },
-        error: (error) => {
-          swal("Face Check Failed", this.uploadStatus, "error");
-        }
-      });
-    }
-  }
-
-  uploadPhototimestamp() {
-    const base64ImagePayload = {
-      base64_image: this.capturedImage // Ensure `capturedImage` includes the full base64 string (e.g., "data:image/png;base64,...")
-    };
-    const file = this.dataURLtoFile(this.capturedImage!, 'face.jpg');
+  async sendFramesForVerification(frames: string[]) {
+    this.captureMessage = 'Verifying...';
     const formData = new FormData();
-    formData.append('file', file);
-    this.http.post(environment.baseUrl + `/api/upload-image/`, formData).subscribe({
+    frames.forEach((dataUrl, index) => {
+      const file = this.dataURLtoFile(dataUrl, `frame_${index}.jpg`);
+      formData.append('files', file);
+    });
+
+    // *** IMPORTANT: Using the new endpoint for 1:N check with liveness ***
+    this.http.post(environment.baseUrl + `/face/members/check-face-emp`, formData).subscribe({
       next: (response: any) => {
-        console.log('Upload successful:', response);
-        this.timestampModel.photoTimestamp = response.filename
-        this.saveTimestamp()
+        this.memberId = response.memberId; // Get the memberId from the successful response
+        this.captureMessage = 'Liveness check passed! Saving timestamp.';
+        this.uploadPhotoAndSaveTimestamp(frames[Math.floor(frames.length / 2)]); // Use middle frame for thumbnail
       },
       error: (error) => {
-        console.error('Error uploading image:', error);
-        alert('Error: ' + error.error.detail || 'Upload failed.');
+        const detail = error.error?.detail || 'Liveness check failed. Please try again.';
+        swal("Verification Failed", detail, "error");
+        this.resetCaptureState();
+      }
+    });
+  }
+
+  uploadPhotoAndSaveTimestamp(thumbnailFrame: string) {
+    const file = this.dataURLtoFile(thumbnailFrame, 'timestamp_photo.jpg');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    this.http.post(environment.baseUrl + `/api/upload-image/`, formData).subscribe({
+      next: (response: any) => {
+        this.timestampModel.photoTimestamp = response.filename;
+        this.saveTimestamp();
+      },
+      error: (error) => {
+        swal("Photo Upload Failed", error.error?.detail || 'Could not save photo.', "error");
+        this.resetCaptureState();
       }
     });
   }
 
   saveTimestamp() {
-    if (this.locationArea.length > 0) {
-      this.timestampModel.timestampType = 1
-      this.timestampModel.locationName = this.locationArea[0].locationName
-    } else {
-      this.timestampModel.timestampType = 0
-    }
-    this.timestampModel.latitude = this.location?.latitude
-    this.timestampModel.longitude = this.location?.longitude
-    this.timestampService.save(this.companyId, this.timestampModel).subscribe(result => {
-      swal(result.timestampType == 0 ? "Warning Location !!" : "Complete !!", "ลงเวลาการทำงาน " + this.employeeModel.getFullname() + " เวลา " + new Date(result.timestamp).toLocaleTimeString("th", { hour: '2-digit', minute: '2-digit' }), result.timestampType == 0 ? "info" : "success").then((isOk: any) => {
-        console.log(isOk)
-        if (isOk) {
-          this.blinkCount = 0;
-        }
+    // First, get the latest employee info using the verified memberId
+    this.employeeService.getMemberById(this.companyId, this.memberId).subscribe(employeeResult => {
+      this.employeeModel = employeeResult;
+      this.timestampModel.company_employeeId = this.employeeModel.company_employeeId;
+
+      if (this.locationArea.length > 0) {
+        this.timestampModel.timestampType = 1;
+        this.timestampModel.locationName = this.locationArea[0].locationName;
+      } else {
+        this.timestampModel.timestampType = 0;
+      }
+      this.timestampModel.latitude = this.location?.latitude;
+      this.timestampModel.longitude = this.location?.longitude;
+
+      this.timestampService.save(this.companyId, this.timestampModel).subscribe(result => {
+        swal(result.timestampType == 0 ? "Warning Location !!" : "Complete !!", `ลงเวลาการทำงาน ${this.employeeModel.getFullname()} เวลา ${new Date(result.timestamp).toLocaleTimeString("th", { hour: '2-digit', minute: '2-digit' })}`, result.timestampType == 0 ? "info" : "success").then(() => {
+          this.resetCaptureState();
+        });
       });
-    })
+    });
   }
 
+  resetCaptureState() {
+    this.isCapturing = false;
+    this.captureProgress = 0;
+    this.captureMessage = 'Please position your face in the center.';
+  }
 
-  // // แปลง Base64 เป็นไฟล์ (Blob)
   dataURLtoFile(dataurl: string, filename: string): File {
     const arr: any = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -246,6 +226,14 @@ export class FaceScanComponent {
     return new File([u8arr], filename, { type: mime });
   }
 
+  // --- Location methods remain the same ---
+  getCompanyLocation() {
+    this.comLocationService.getLists(this.companyId).subscribe(result => {
+      this.locationList = result;
+      this.getCurrentLocation();
+    });
+  }
+
   getCurrentLocation() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -254,28 +242,13 @@ export class FaceScanComponent {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           };
-          this.searchCompanyLocation()
-          this.errorMessage = null; // Clear any previous errors
-          console.log('Location fetched successfully:', this.location);
+          this.searchCompanyLocation();
+          this.errorMessage = null;
         },
         (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              this.errorMessage = 'Permission denied by the user.';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              this.errorMessage = 'Location information is unavailable.';
-              break;
-            case error.TIMEOUT:
-              this.errorMessage = 'The request to get user location timed out.';
-              break;
-            default:
-              this.errorMessage = 'An unknown error occurred.';
-          }
-          console.error('Error fetching location:', this.errorMessage);
+          this.errorMessage = 'Could not get location. Please enable GPS.';
         }
       );
-
     } else {
       this.errorMessage = 'Geolocation is not supported by this browser.';
     }
@@ -286,7 +259,7 @@ export class FaceScanComponent {
   }
 
   getDistance(lat1: string, lon1: string, lat2: string, lon2: string): number {
-    const R = 6371; // รัศมีของโลกในหน่วยกิโลเมตร
+    const R = 6371;
     const dLat = this.toRad(parseFloat(lat2) - parseFloat(lat1));
     const dLon = this.toRad(parseFloat(lon2) - parseFloat(lon1));
     const a =
@@ -302,9 +275,7 @@ export class FaceScanComponent {
 
   searchCompanyLocation() {
     this.locationArea = this.getFilteredLocations();
-    console.log("locationArea", this.locationArea)
   }
-
 
   getFilteredLocations(): CompanyLocationModel[] {
     return this.locationList.filter(location => {

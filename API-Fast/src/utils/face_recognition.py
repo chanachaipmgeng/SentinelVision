@@ -1,151 +1,104 @@
-import cv2
 import numpy as np
-import os
 import face_recognition
-import pickle
-from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional, Dict
+from .liveness_detection import check_blink
+from .image_quality import check_image_quality
 
-# Paths
-dataset_path = "dataset"
-model_path = "face_encodings.pkl"
+def generate_face_encoding(image_path: str) -> Optional[List[float]]:
+    """
+    ตรวจสอบคุณภาพของภาพ อ่านภาพ และสร้าง Face Embedding
+    """
+    try:
+        # 1. ตรวจสอบคุณภาพของภาพก่อน
+        is_good, message = check_image_quality(image_path)
+        if not is_good:
+            raise ValueError(message)
 
-def load_model():
-    """ โหลด embeddings จากไฟล์ pickle """
-    if os.path.exists(model_path):
-        with open(model_path, "rb") as f:
-            return pickle.load(f)
-    return {"encodings": [], "labels": {}}
+        # 2. ถ้าคุณภาพดีแล้ว ค่อยโหลดภาพเพื่อทำ Face Recognition
+        image = face_recognition.load_image_file(image_path)
+        face_locations = face_recognition.face_locations(image)
+        
+        if not face_locations:
+            return None
+        
+        # ใช้เฉพาะใบหน้าแรกที่เจอ
+        face_encodings = face_recognition.face_encodings(image, face_locations)
+        return face_encodings[0].tolist() # แปลงเป็น list ของ float
 
-def save_model(encodings, labels):
-    """ บันทึก embeddings ลงไฟล์ pickle """
-    with open(model_path, "wb") as f:
-        pickle.dump({"encodings": encodings, "labels": labels}, f)
-
-def get_face_embeddings(image_path):
-    """ อ่านภาพและสร้าง Face Embedding """
-    image = face_recognition.load_image_file(image_path)
-    face_locations = face_recognition.face_locations(image)
-    
-    if len(face_locations) == 0:
+    except ValueError as ve:
+        # Re-raise the specific quality error
+        raise ve
+    except Exception as e:
+        print(f"Error generating face encoding: {e}")
         return None
+
+def verify_liveness_and_get_encoding(image_paths: List[str]) -> Optional[List[float]]:
+    """
+    ตรวจสอบ Liveness และคืนค่า Encoding ของเฟรมที่เหมาะสมหาก Liveness ผ่าน
+    """
+    # --- Liveness Detection Step ---
+    def get_landmarks(path):
+        try:
+            img = face_recognition.load_image_file(path)
+            # ใช้ model='small' เพื่อความเร็วในการหา landmarks สำหรับ liveness
+            locations = face_recognition.face_locations(img, model="cnn") 
+            if not locations or len(locations) > 1:
+                return None
+            return face_recognition.face_landmarks(img, locations)[0]
+        except Exception:
+            return None
+
+    face_landmarks_list = [get_landmarks(p) for p in image_paths]
     
-    face_encodings = face_recognition.face_encodings(image, face_locations)
-    return face_encodings[0]  # คืนค่า embedding แรกที่เจอ
+    valid_landmarks = [lm for lm in face_landmarks_list if lm is not None]
+    if len(valid_landmarks) < len(image_paths) / 2:
+        raise ValueError("Face not consistently detected in frames.")
 
-def process_image(args):
-    """ ใช้สำหรับ multi-threading """
-    image_path, employeeId = args
-    encoding = get_face_embeddings(image_path)
-    return encoding, employeeId
+    is_live, reason = check_blink(valid_landmarks)
+    if not is_live:
+        raise ValueError(f"Liveness check failed: {reason}")
+    
+    # --- Face Encoding Step (after liveness is confirmed) ---
+    # ใช้ภาพเฟรมกลางๆ ในการสร้าง Encoding เพื่อลดโอกาสที่จะได้ภาพตอนหลับตา
+    image_to_recognize = image_paths[len(image_paths) // 2]
+    
+    encoding = generate_face_encoding(image_to_recognize)
+    if encoding is None:
+        raise ValueError("Could not generate face encoding from validation frame.")
+        
+    return encoding
 
-def train_model():
-    """ Train ใหม่ทั้งระบบ """
-    print("Training model from scratch...")
+def find_best_match(target_encoding: List[float], known_data: Dict[str, List[List[float]]], threshold: float) -> Optional[str]:
+    """
+    เปรียบเทียบ target_encoding กับ encodings ทั้งหมดของแต่ละบุคคล
+    """
+    if not known_data:
+        return None
 
-    model_data = {"encodings": [], "labels": {}}
-    image_paths = []
-    labels = []
+    np_target_encoding = np.array(target_encoding)
+    overall_best_distance = float('inf')
+    overall_best_label = None
 
-    for employeeId in os.listdir(dataset_path):
-        employee_folder = os.path.join(dataset_path, employeeId)
-        if not os.path.isdir(employee_folder):
+    # วนลูปเพื่อหา memberId ที่มีระยะห่างน้อยที่สุด
+    for member_id, encodings_for_member in known_data.items():
+        if not encodings_for_member:
             continue
-        for image_name in os.listdir(employee_folder):
-            image_paths.append(os.path.join(employee_folder, image_name))
-            labels.append(employeeId)
 
-    # ใช้ Multi-threading เพื่อเร่งการประมวลผล
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        results = executor.map(process_image, zip(image_paths, labels))
+        # คำนวณระยะห่างของใบหน้าใหม่กับทุกๆ encoding ของ member คนนี้
+        distances = np.linalg.norm(np.array(encodings_for_member) - np_target_encoding, axis=1)
+        
+        # เอาระยะห่างที่น้อยที่สุดของ member คนนี้
+        best_distance_for_member = np.min(distances)
 
-    for encoding, label in results:
-        if encoding is not None:
-            model_data["encodings"].append(encoding)
-            model_data["labels"][len(model_data["encodings"]) - 1] = label
+        # ถ้า member คนนี้มีระยะห่างน้อยกว่าคนที่เจอก่อนหน้า ให้เก็บค่าไว้
+        if best_distance_for_member < overall_best_distance:
+            overall_best_distance = best_distance_for_member
+            overall_best_label = member_id
 
-    save_model(model_data["encodings"], model_data["labels"])
-    print("Model trained and saved.")
+    print(f"Overall best match: {overall_best_label} with distance: {overall_best_distance:.4f}")
 
-def update_model(image_path, employeeId):
-    """ เพิ่มภาพใหม่ และอัปเดต Model โดยไม่ต้อง Train ใหม่ทั้งหมด """
-    model_data = load_model()
-
-    encoding = get_face_embeddings(image_path)
-    if encoding is None:
-        raise ValueError("No face detected")
-
-    model_data["encodings"].append(encoding)
-    model_data["labels"][len(model_data["encodings"]) - 1] = employeeId
-
-    save_model(model_data["encodings"], model_data["labels"])
-    print(f"Added new face for {employeeId} and updated model.")
-
-def add_face_regonite(image_path, employeeId):
-    """ เพิ่มใบหน้าเข้า dataset และอัปเดต model แบบ incremental """
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError("Error: Cannot load image")
-
-    # บันทึกภาพ
-    employee_folder = os.path.join(dataset_path, employeeId)
-    os.makedirs(employee_folder, exist_ok=True)
-    face_count = len(os.listdir(employee_folder))
-    face_filename = os.path.join(employee_folder, f"{face_count+1}.jpg")
-    cv2.imwrite(face_filename, image)
-
-    # อัปเดต Model โดยไม่ต้อง Train ใหม่ทั้งหมด
-    update_model(face_filename, employeeId)
-    return face_filename
-
-def check_face_regonite(image_path , employeeId, threshold=0.5):
-    """ ตรวจสอบใบหน้าว่าตรงกับพนักงานคนไหน """
-    if not os.path.exists(model_path):
-        raise ValueError("Model not found. Please train the model first.")
-
-    with open(model_path, "rb") as f:
-        data = pickle.load(f)
-
-    known_encodings = data["encodings"]
-    labels = data["labels"]
-
-    encoding = get_face_embeddings(image_path)
-    if encoding is None:
-        return "No face detected"
-
-    # คำนวณ Euclidean Distance
-    distances = np.linalg.norm(np.array(known_encodings) - encoding, axis=1)
-    min_index = np.argmin(distances)
-
-    # ตรวจสอบว่าใบหน้าใกล้เคียงกับฐานข้อมูลแค่ไหน
-    if distances[min_index] < threshold:
-        if employeeId == labels[min_index]:
-            return f"Face match found! : {labels[min_index]} (Confidence: {distances[min_index]:.2f})"
-        else:
-            return f"Face not match! : {employeeId} : Match MemberId : {labels[min_index]} (confidence: {distances[min_index]:.2f})"
+    # ตรวจสอบว่าระยะห่างที่น้อยที่สุดยังคงผ่านเกณฑ์ threshold หรือไม่
+    if overall_best_distance < threshold:
+        return overall_best_label
     else:
-        return "Face does not match"
-    
-def check_face_regonite_emp(image_path, threshold=0.5):
-    """ ตรวจสอบใบหน้าว่าตรงกับพนักงานคนไหน """
-    if not os.path.exists(model_path):
-        raise ValueError("Model not found. Please train the model first.")
-
-    with open(model_path, "rb") as f:
-        data = pickle.load(f)
-
-    known_encodings = data["encodings"]
-    labels = data["labels"]
-
-    encoding = get_face_embeddings(image_path)
-    if encoding is None:
-        return "No face detected"
-
-    # คำนวณ Euclidean Distance
-    distances = np.linalg.norm(np.array(known_encodings) - encoding, axis=1)
-    min_index = np.argmin(distances)
-
-    # ตรวจสอบว่าใบหน้าใกล้เคียงกับฐานข้อมูลแค่ไหน
-    if distances[min_index] < threshold:
-        return labels[min_index]
-    else:
-        return "Face does not match"
+        return None

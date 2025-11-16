@@ -1,21 +1,43 @@
-<!-- add-face-camera.component.html -->
-<div class="row" style="height: 85vh;max-height: 80vh;">
+<!-- face-scan.component.html -->
+<div class="row" style="height: 85vh; max-height: 80vh;">
   <div class="col-12 p-0" style="position: relative; height: 100%;">
-    <div class="card shadow-sm h-100" style="border: none;">
-      <div class="card-body p-0 justify-content-center" style="position: relative; height: 100%;">
+    <div class="card shadow-sm h-100" style="border: none; background-color: #000;">
+      <div class="card-body p-0 d-flex justify-content-center align-items-center" style="position: relative; height: 100%;">
 
         <!-- Video element -->
         <video #video width="640" height="480"
                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
-               autoplay
-               (loadedmetadata)="detectFace()">
+               autoplay muted playsinline>
         </video>
 
-        <!-- Canvas element -->
+        <!-- Canvas for drawing face detection box -->
         <canvas #canvas width="640" height="480"
                 style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
         </canvas>
-        <!-- <button *ngIf="checkMatch" class="btn btn-primary" style="position: absolute;  left: 0;bottom: 0;margin-bottom: 3rem;width: 100%;">กรุณากระพริบตา</button> -->
+
+        <!-- UI Overlay -->
+        <div class="ui-overlay">
+          <!-- Message Display -->
+          <div class="message-container">
+            <p class="capture-message">{{ captureMessage }}</p>
+          </div>
+
+          <!-- Progress Bar -->
+          <div *ngIf="isCapturing" class="progress-container">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" [style.width.%]="captureProgress" aria-valuenow="captureProgress" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+
+          <!-- Check-In Button -->
+          <div *ngIf="!isCapturing" class="button-container">
+            <button (click)="onCheckInClick()" [disabled]="isCapturing" class="btn btn-primary btn-lg check-in-button">
+              Check-In
+            </button>
+          </div>
+
+        </div>
+
       </div>
     </div>
   </div>

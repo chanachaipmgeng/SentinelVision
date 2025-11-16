@@ -9,6 +9,8 @@ from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate
 from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
 from uuid import UUID
 from ..models.company_employee import CompanyEmployee
+from ..models.company_location import CompanyLocation # Import CompanyLocation
+from ..utils.geolocation import get_distance_in_km # Import distance utility
 
 # ดึงข้อมูลการลงเวลาทั้งหมดของพนักงานในบริษัท
 async def get_all_timestamps(companyId: str, db: AsyncSession):
@@ -56,6 +58,34 @@ async def get_timestamp_by_id(timestampId: UUID, companyId: UUID, db: AsyncSessi
 
 # สร้างข้อมูลการลงเวลาของพนักงานใหม่
 async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
+    # --- Start Geolocation Validation ---
+    user_lat = data.get('latitude')
+    user_lon = data.get('longitude')
+
+    if user_lat is None or user_lon is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Latitude and Longitude are required.")
+
+    # Query for company locations
+    stmt = select(CompanyLocation).where(CompanyLocation.companyId == companyId)
+    result = await db.execute(stmt)
+    locations = result.scalars().all()
+
+    is_in_area = False
+    found_location_name = "Outside Registered Area"  # Default value
+
+    if locations:
+        for loc in locations:
+            distance = get_distance_in_km(user_lat, user_lon, loc.latitude, loc.longitude)
+            if distance <= loc.radius:
+                is_in_area = True
+                found_location_name = loc.locationName
+                break  # Found a valid location, no need to check further
+
+    # Overwrite client-sent data with server-validated data
+    data['timestampType'] = 1 if is_in_area else 0
+    data['locationName'] = found_location_name
+    # --- End Geolocation Validation ---
+
     data["companyId"] = companyId
     new_timestamp = EmployeeTimestamp(**data)
     db.add(new_timestamp)

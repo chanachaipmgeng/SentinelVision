@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+passlib
+bcrypt
+face-recognition
+opencv-python-headless
+python-multipart
+scipy
+pydantic-settings
+faiss-cpu

@@ -30,11 +30,11 @@ class Member(Base):
     role = Column(Enum(RoleType), nullable=False, default=RoleType.MEMBER)  # Default as Enum instance
     status = Column(Enum(StatusType), nullable=False, default=StatusType.ENABLE)  # Default as Enum instance
     picture = Column(String)
-    faceEmbedding = Column(Text, nullable=True)  # เก็บข้อมูล Face Embedding
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     companyEmployees = relationship("CompanyEmployee", back_populates="member")
+    face_encodings = relationship("FaceEncoding", back_populates="member", cascade="all, delete-orphan")
 
     # ฟังก์ชันเพื่อแฮชรหัสผ่านก่อนบันทึก
     def hash_password(self, password):

@@ -21,10 +21,11 @@ import { FileItem, FileUploader, ParsedResponseHeaders } from "ng2-file-upload";
 import { environment } from "../../../../environments/environment";
 import { HttpClient } from "@angular/common/http";
 import * as faceapi from 'face-api.js';
+import { FaceManagementComponent } from './dialogs/face-management/face-management.component';
 @Component({
   selector: 'app-company-emp',
   standalone: true,
-  imports: [SharedModule, NgSelectModule, RouterModule, MaterialModuleModule, TranslateModule, FlatpickrModule, MatDatepickerModule, FormsModule, CommonModule, FileUploadModule],
+  imports: [SharedModule, NgSelectModule, RouterModule, MaterialModuleModule, TranslateModule, FlatpickrModule, MatDatepickerModule, FormsModule, CommonModule, FileUploadModule, FaceManagementComponent],
   providers: [FlatpickrDefaults],
   templateUrl: './company-emp.component.html',
   styleUrl: './company-emp.component.css',
@@ -44,6 +45,7 @@ export class CompanyEmpComponent {
   departmentList: DepartmentModel[] = []
   positionList: PositionModel[] = []
   pageIndex = 0;
+  public selectedMemberId: string | null = null;
   get searchTerm(): string {
     return this._searchTerm;
   }
@@ -308,6 +310,14 @@ export class CompanyEmpComponent {
     console.log(item)
     this.isEdit = true;
     this.selectModel = item
+  }
+
+  openFaceManagementModal(item: any): void {
+    if (item && item.member && item.member.memberId) {
+      this.selectedMemberId = item.member.memberId;
+    } else {
+      console.error("Could not get memberId from the selected item.");
+    }
   }
 
   save() {

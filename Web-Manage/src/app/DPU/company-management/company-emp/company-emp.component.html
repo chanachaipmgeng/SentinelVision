@@ -80,6 +80,11 @@
               class="ti-btn ti-btn-sm ti-btn-warning me-[0.375rem]">
               <i class="ri-account-circle-line"></i>
             </button>
+            <!-- New Button for Face Management -->
+            <button data-hs-overlay="#modal-face-management" (click)="openFaceManagementModal(item)" type="button" aria-label="button"
+              class="ti-btn ti-btn-sm ti-btn-info me-[0.375rem]">
+              <i class="ri-gallery-line"></i>
+            </button>
             <button (click)="delete(item)" type="button" aria-label="button"
               class="ti-btn ti-btn-sm ti-btn-danger me-0"><i class="ri-delete-bin-line"></i></button>
           </div>
@@ -368,3 +373,28 @@
     </div>
   </div>
 </div> -->
+
+<!-- Start:: Face Management Modal -->
+<div id="modal-face-management" class="hs-overlay hidden ti-modal">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-4xl">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor">Manage Enrolled Faces</h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <!-- The new component will be rendered here, only if a member is selected -->
+        <app-face-management *ngIf="selectedMemberId" [memberId]="selectedMemberId"></app-face-management>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- End:: Face Management Modal -->

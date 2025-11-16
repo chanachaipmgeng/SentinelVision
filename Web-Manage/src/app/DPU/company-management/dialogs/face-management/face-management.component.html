@@ -1,0 +1,46 @@
+<div class="face-management-container p-4">
+
+  <!-- Loading Indicator -->
+  @if (isLoading) {
+    <div class="flex justify-center items-center h-48">
+      <div class="ti-spinner" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div>
+  }
+
+  <!-- Error Message -->
+  @if (error) {
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+      <span class="font-medium">Error!</span> {{ error }}
+    </div>
+  }
+
+  <!-- No Encodings Found -->
+  @if (!isLoading && !error && encodings.length === 0) {
+    <div class="text-center text-gray-500">
+      <p>No enrolled faces found for this user.</p>
+    </div>
+  }
+
+  <!-- Encodings Grid -->
+  @if (!isLoading && !error && encodings.length > 0) {
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      @for (encoding of encodings; track encoding.faceEncodingId) {
+        <div class="box relative group">
+          <img class="w-full h-auto rounded-md" [src]="getFullImageUrl(encoding.imageUrl)" alt="Enrolled face">
+          <div class="absolute top-2 right-2">
+            <button (click)="deleteEncoding(encoding.faceEncodingId)" class="ti-btn ti-btn-sm ti-btn-danger opacity-0 group-hover:opacity-100 transition-opacity">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-md">
+            <p class="truncate">ID: {{ encoding.faceEncodingId }}</p>
+            <p>{{ encoding.createdAt | date:'short' }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+</div>

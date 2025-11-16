@@ -53,7 +53,7 @@ export class SigninComponent implements OnInit {
         this.tokenService.saveToken(result.access_token);
         // this.tokenService.saveRefreshToken(result.refreshToken);
         this.tokenService.saveUser(result);
-        if (result.member.status == 1) {
+        if (result.member.status == 1 || result.member.status == 99) {
           this.getCompanyList(result.member.memberId)
         } else {
           this.msg = 'ไม่สามารถใช้งานได้กรุณาติดต่อผู้ให้บริการ'

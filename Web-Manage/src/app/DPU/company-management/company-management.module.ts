@@ -11,6 +11,11 @@ export const companyRoutes: Routes = [
         import('./home-installer/home-installer.component').then((m) => m.HomeInstallerComponent),
     },
     {
+      path: 'company/dashboard',
+      loadComponent: () =>
+        import('./dashboard/dashboard.component').then((m) => m.DashboardComponent),
+    },
+    {
       path: 'company/company-info',
       loadComponent: () =>
         import('./company-info/company-info.component').then((m) => m.CompanyInfoComponent),

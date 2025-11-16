@@ -181,9 +181,11 @@
                 <div class="flex-grow">
                   <div class="sm:flex items-center">
                     <div class="sm:mt-0 mt-2 mx-2">
-                      <p class="font-semibold mb-0 flex items-center text-primary">{{selectModel.employee.member.firstName+ "
+                      <p class="font-semibold mb-0 flex items-center text-primary">
+                        {{selectModel.employee.member.firstName+ "
                         "+selectModel.employee.member.lastName}}</p>
-                      <p class="mb-0 text-secondary dark:text-white/50">{{selectModel.latitude}} , {{selectModel.longitude}}
+                      <p class="mb-0 text-secondary dark:text-white/50">{{selectModel.latitude}} ,
+                        {{selectModel.longitude}}
                       </p>
                       <p class="mb-0 text-[#8c9097] dark:text-white/50"><span
                           class="badge {{selectModel.timestampType==0?'bg-warning':''}} {{selectModel.timestampType==1||selectModel.timestampType==2?'bg-success':''}} {{selectModel.timestampType==3?'bg-danger':''}} text-white">{{selectModel.getStatus()}}</span>
@@ -200,16 +202,16 @@
                 <input type="text" class="form-control !rounded-e-none border-e-0 mt-5"
                   aria-label="Text input with segmented dropdown button" placeholder="ชื่อสถานที่"
                   [(ngModel)]="selectModel.locationName" [disabled]="selectModel.timestampType!=0">
-                <a *ngIf="selectModel.timestampType==0" (click)="approveTime(selectModel)" routerLink="/pages/ecommerce/cart"
+                <a *ngIf="selectModel.timestampType==0" (click)="approveTime(selectModel)"
                   class="ti-btn ti-btn-primary m-1 !me-2 !font-medium"><i
                     class="ri-check-line me-1 align-middle"></i>อนุมัติ</a>
-                <a *ngIf="selectModel.timestampType==0"  (click)="disapproveTime(selectModel)" routerLink="/pages/ecommerce/product-details"
+                <a *ngIf="selectModel.timestampType==0" (click)="disapproveTime(selectModel)"
                   class="ti-btn ti-btn-success m-1 !font-medium"><i
                     class="ri-close-line me-1 align-middle"></i>ไม่อนุมัติ</a>
               </div>
               <div class="xxl:col-span-12 xl:col-span-12 col-span-12">
-                <google-map height="400px"
-                  [center]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }" [zoom]="12">
+                <google-map height="400px" [center]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }"
+                  [zoom]="12">
 
                   <map-marker #mapMarker="mapMarker"
                     [position]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }"

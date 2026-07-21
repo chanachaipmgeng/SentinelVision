@@ -16,6 +16,12 @@ class MemberInput(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
     picture: Optional[str] = None
+    phoneNumber: Optional[str] = None
+    birthDate: Optional[date] = None
+    address: Optional[str] = None
+    emergencyContactName: Optional[str] = None
+    emergencyContactPhone: Optional[str] = None
+    attachmentUrls: Optional[str] = None
 
 
 class PositionInput(BaseModel):
@@ -50,7 +56,7 @@ class CompanyEmployeeUpdate(BaseModel):
     department: Optional[DepartmentInput] = None
     employeeId: Optional[str] = None
     salary: Optional[float] = None
-    bossId: Optional[str] = None,
+    bossId: Optional[str] = None
     company_employeeId: UUID
     companyRoleType: CompanyRoleType
     empType: EmpType
@@ -62,6 +68,12 @@ class MemberResponse(BaseModel):
     firstName: Optional[str]
     lastName: Optional[str]
     picture: Optional[str]
+    phoneNumber: Optional[str] = None
+    birthDate: Optional[date] = None
+    address: Optional[str] = None
+    emergencyContactName: Optional[str] = None
+    emergencyContactPhone: Optional[str] = None
+    attachmentUrls: Optional[str] = None
 
 
 class PositionResponse(BaseModel):

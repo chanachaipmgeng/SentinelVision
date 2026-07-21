@@ -1,0 +1,25 @@
+<div class="dpu-auth">
+  <div class="dpu-auth__panel">
+    <div class="dpu-auth__brand">
+      <img src="./assets/images/brand-logos/logo.png" alt="DPU">
+      <h1 class="dpu-auth__title">รีเซ็ตรหัสผ่าน</h1>
+      <p class="dpu-auth__subtitle">กรอกอีเมลเพื่อรับลิงก์รีเซ็ตรหัสผ่าน</p>
+    </div>
+    <div class="grid grid-cols-12 gap-y-4">
+      <div class="col-span-12">
+        <label for="reset-email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="reset-email" placeholder="email@example.com" [(ngModel)]="email">
+      </div>
+      <div class="col-span-12">
+        <button type="button" (click)="resetPass()" class="ti-btn ti-btn-primary-full dpu-auth__submit">
+          ส่งคำขอรีเซ็ต
+        </button>
+      </div>
+      <div class="col-span-12 text-center">
+        <p class="text-dpu-muted text-[0.85rem] mt-2">
+          มีบัญชีอยู่แล้ว? <a routerLink="/auth/login" class="text-primary font-semibold">เข้าสู่ระบบ</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

@@ -3,11 +3,10 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
 import { CompanyListComponent } from './company-list/company-list.component';
 import { PersonalInfoComponent } from './personal-info/personal-info.component';
-import { WorkingPlanComponent } from './working-plan/working-plan.component';
-import { DocReferComponent } from './doc-refer/doc-refer.component';
 import { CompanyProfileComponent } from './company-profile/company-profile.component';
 import { SubordinateDataComponent } from './subordinate-data/subordinate-data.component';
 import { HomeCompanyComponent } from './home-company/home-company.component';
+import { DashboardCompanyComponent } from './dashboard-company/dashboard-company.component';
 import { EmployeeListComponent } from './employee-list/employee-list.component';
 import { PositionComponent } from './position/position.component';
 import { ApprovalComponent } from './approval/approval.component';
@@ -56,6 +55,13 @@ const routes: Routes = [
         },
       },
       {
+        path: 'dashboard-company',
+        component: DashboardCompanyComponent,
+        data: {
+          title: 'Dashboard'
+        },
+      },
+      {
         path: 'feed-news',
         component: FeedNewsComponent,
         data: {
@@ -90,20 +96,6 @@ const routes: Routes = [
         component: EDocumentComponent,
         data: {
           title: 'E-Document',
-        },
-      },
-      { //ยังไม่ใช้
-        path: 'working-plan',
-        component: WorkingPlanComponent,
-        data: {
-          title: 'Working Plan'
-        },
-      },
-      { //ยังไม่ใช้
-        path: 'doc-refer',
-        component: DocReferComponent,
-        data: {
-          title: 'Doc Refer'
         },
       },
       {

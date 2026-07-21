@@ -52,28 +52,28 @@ export class SidebarComponent implements OnInit {
 
       this.listMenu = [
         {
-          link: "/company/personal-info/" + this.employeeModel.member.memberId,
-          icon: "../assets/img/icon-menu/personal-info.png",
-          name: "Personal Info"
+          link: '/company/personal-info/' + this.employeeModel.member.memberId,
+          icon: 'bi bi-person-vcard',
+          name: 'Personal Info',
         },
         {
-          link: "/company/timestamp-log/" + this.employeeModel.member.memberId,
-          icon: "../assets/img/icon-menu/timestamp-log.png",
-          name: "Timestamp"
+          link: '/company/timestamp-log/' + this.employeeModel.member.memberId,
+          icon: 'bi bi-clock-history',
+          name: 'Timestamp',
         },
         {
-          link: "/company/company-menu",
-          icon: "../assets/img/icon-menu/company-menu.png",
-          name: "Company Info"
-        }
-      ]
-      this.getSub()
-      if (this.employeeModel.companyRoleType==1) {
+          link: '/company/company-menu',
+          icon: 'bi bi-building',
+          name: 'Company Info',
+        },
+      ];
+      this.getSub();
+      if (this.employeeModel.companyRoleType == 1) {
         this.listMenu.push({
-          link: "/company/human-resources-menu",
-          icon: "../assets/img/icon-menu/ฝ่ายบุคคล.png",
-          name: "HR"
-        })
+          link: '/company/human-resources-menu',
+          icon: 'bi bi-people',
+          name: 'HR',
+        });
       }
     })
   }
@@ -82,10 +82,10 @@ export class SidebarComponent implements OnInit {
     this.employeeService.getSubordinateList(this.tokenService.getSelectCompany().companyId, this.tokenService.getUser().member.memberId).subscribe(result => {
       if (result.length > 0) {
         this.listMenu.push({
-          link: "/company/subordinate-menu",
-          icon: "../assets/img/icon-menu/subordinate-menu.png",
-          name: "Subordinate Data"
-        })
+          link: '/company/subordinate-menu',
+          icon: 'bi bi-diagram-3',
+          name: 'Subordinate Data',
+        });
       }
     })
   }

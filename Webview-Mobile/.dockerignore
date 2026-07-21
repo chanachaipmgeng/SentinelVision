@@ -1,4 +1,3 @@
-# Skip huge face-api / tf model blobs not needed for production static shell
-src/assets/models
+# Skip huge optional blobs — keep face-api models for scan/enroll
 *.rar
 *.pkl

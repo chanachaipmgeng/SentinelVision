@@ -38,6 +38,8 @@
               "node_modules/swiper/swiper.scss",
               "node_modules/ng2-daterangepicker/assets/daterangepicker.css",
               "src/assets/css/style.css",
+              "src/assets/css/dpu-tokens.css",
+              "src/assets/css/dpu-mobile-shell.css",
               "src/styles.scss"
             ],
             "scripts": [

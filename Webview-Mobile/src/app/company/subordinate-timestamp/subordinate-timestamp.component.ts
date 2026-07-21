@@ -54,6 +54,7 @@ export class SubordinateTimestampComponent {
   latitude: number = 13.8051584
   longitude: number = 100.5018
   timestampModel: TimestampModel = new TimestampModel()
+  mapActive = false
   memberId = this.tokenService.getUser().member.memberId
   employeeModel: EmployeeModel = new EmployeeModel()
   constructor(private timestampService: TimestampService, private tokenService: TokenService, public datepipe: DatePipe, public translate: TranslateService,
@@ -87,7 +88,10 @@ export class SubordinateTimestampComponent {
 
   openMap(content: any, timestamp: TimestampModel) {
     this.timestampModel = timestamp
-    this.modalService.open(content, { centered: true, size: 'lg' });
+    this.mapActive = false
+    const modalRef = this.modalService.open(content, { centered: true, size: 'lg' })
+    modalRef.shown.subscribe(() => { this.mapActive = true })
+    modalRef.closed.subscribe(() => { this.mapActive = false })
   }
 
 }

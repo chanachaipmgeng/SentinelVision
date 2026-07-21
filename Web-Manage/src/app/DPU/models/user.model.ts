@@ -13,6 +13,11 @@ export class UserProfileModel extends BaseModel {
   role: number;
   status: number;
   picture: any;
+  birthDate?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  attachmentUrls?: string;
   createdAt: string;
   updatedAt: string;
   constructor(
@@ -29,6 +34,11 @@ export class UserProfileModel extends BaseModel {
     this.status = data?.status!
     this.email = data?.email!
     this.role = data?.role!
+    this.birthDate = data?.birthDate || ""
+    this.address = data?.address || ""
+    this.emergencyContactName = data?.emergencyContactName || ""
+    this.emergencyContactPhone = data?.emergencyContactPhone || ""
+    this.attachmentUrls = data?.attachmentUrls || ""
     this.createdAt = data?.createdAt!
     this.updatedAt = data?.updatedAt!
   }

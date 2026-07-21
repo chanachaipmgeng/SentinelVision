@@ -12,6 +12,23 @@ from fastapi import Depends, HTTPException, status
 from ..config.database import get_db
 from ..schemas.member_schema import MemberCreate, MemberResponse
 from uuid import UUID, uuid4
+
+def _member_dict(member: Member) -> dict:
+    return {
+        "memberId": member.memberId,
+        "username": member.username,
+        "email": member.email,
+        "firstName": member.firstName,
+        "lastName": member.lastName,
+        "picture": member.picture,
+        "phoneNumber": member.phoneNumber,
+        "birthDate": member.birthDate,
+        "address": member.address,
+        "emergencyContactName": member.emergencyContactName,
+        "emergencyContactPhone": member.emergencyContactPhone,
+        "attachmentUrls": member.attachmentUrls,
+    }
+
 # ดึงข้อมูล CompanyEmployee ทั้งหมดตาม companyId
 async def get_all_companyEmployees(companyId: str, db: AsyncSession):
     result = await db.execute(
@@ -29,14 +46,7 @@ async def get_all_companyEmployees(companyId: str, db: AsyncSession):
     response = []
     for employee in employees:
         response.append({
-            "member": {
-                "memberId": employee.member.memberId,
-                "username": employee.member.username,
-                "email": employee.member.email,
-                "firstName": employee.member.firstName,
-                "lastName": employee.member.lastName,
-                "picture": employee.member.picture
-            },
+            "member": _member_dict(employee.member),
             "companyId": employee.companyId,
             "employeeId": employee.employeeId,
             "position": {
@@ -259,16 +269,29 @@ async def update_company_employee(
     # อัปเดตข้อมูล Member
     if member_info:
         member = await db.get(Member, company_employee.memberId)
-        if member.firstName:
-            member.firstName = company_employee_data.member.firstName
-        if member.lastName:
-            member.lastName = company_employee_data.member.lastName
-        if member.email:
-            member.email = company_employee_data.member.email
-        if member.picture:
-            member.picture = company_employee_data.member.picture
-        await db.commit()  # บันทึกการเปลี่ยนแปลงของ Member
-        await db.refresh(member)  # โหลดข้อมูล Member ที่อัปเดต
+        if member:
+            if member_info.firstName is not None:
+                member.firstName = member_info.firstName
+            if member_info.lastName is not None:
+                member.lastName = member_info.lastName
+            if member_info.email is not None:
+                member.email = member_info.email
+            if member_info.picture is not None:
+                member.picture = member_info.picture
+            if member_info.phoneNumber is not None:
+                member.phoneNumber = member_info.phoneNumber
+            if member_info.birthDate is not None:
+                member.birthDate = member_info.birthDate
+            if member_info.address is not None:
+                member.address = member_info.address
+            if member_info.emergencyContactName is not None:
+                member.emergencyContactName = member_info.emergencyContactName
+            if member_info.emergencyContactPhone is not None:
+                member.emergencyContactPhone = member_info.emergencyContactPhone
+            if member_info.attachmentUrls is not None:
+                member.attachmentUrls = member_info.attachmentUrls
+            await db.commit()
+            await db.refresh(member)
 
     # อัปเดตข้อมูล Position
     if position_info:
@@ -283,14 +306,7 @@ async def update_company_employee(
 
     # จัดรูปแบบ Response
     return {
-        "member": {
-            "memberId": company_employee.member.memberId,
-            "username": company_employee.member.username,
-            "email": company_employee.member.email,
-            "firstName": company_employee.member.firstName,
-            "lastName": company_employee.member.lastName,
-            "picture": company_employee.member.picture,
-        },
+        "member": _member_dict(company_employee.member),
         "companyId": company_employee.companyId,
         "position": position_info,
         "department": department_info,

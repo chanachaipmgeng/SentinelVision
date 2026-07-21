@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { SharedModule } from '../../../shared/shared.module';
 import { TranslateModule } from '@ngx-translate/core';
-import { ActivatedRoute, Router } from '@angular/router';
 import { CompanyService } from '../../services/company.service';
 import { TokenService } from '../../../shared/services/token.service';
 
@@ -11,7 +11,7 @@ import { TokenService } from '../../../shared/services/token.service';
   selector: 'app-home-installer',
   templateUrl: './home-installer.component.html',
   standalone: true,
-  imports: [CommonModule, SharedModule, NgApexchartsModule, TranslateModule],
+  imports: [CommonModule, SharedModule, NgApexchartsModule, TranslateModule, RouterModule],
   styleUrls: ['./home-installer.component.css']
 })
 export class HomeInstallerComponent implements OnInit {

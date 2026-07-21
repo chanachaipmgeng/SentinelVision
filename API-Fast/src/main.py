@@ -18,6 +18,7 @@ from .models import (  # noqa: F401
     face_encoding,
 )
 from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
+from .utils.schema_migrate import ensure_profile_and_approval_columns
 from .routes import (
     member_routes,
     company_routes,
@@ -60,6 +61,7 @@ async def startup():
         await prepare_pgvector(conn)
         await conn.run_sync(Base.metadata.create_all)
         await ensure_face_embedding_index(conn)
+        await ensure_profile_and_approval_columns(conn)
 
 
 UPLOAD_DIR = "./uploaded_images"

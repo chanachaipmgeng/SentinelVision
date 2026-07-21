@@ -2,18 +2,23 @@ from pydantic import BaseModel
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from ..models.employee_timestamp import TimestampType
+from ..models.employee_timestamp import TimestampType, ApprovalStatus
+
 
 class EmployeeTimestampBase(BaseModel):
     company_employeeId: UUID
-    timestampType: TimestampType
+    timestampType: Optional[TimestampType] = TimestampType.CHECK_IN
     locationName: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     photoTimestamp: Optional[str] = None
+    note: Optional[str] = None
+    approvalStatus: Optional[ApprovalStatus] = ApprovalStatus.NONE
+
 
 class EmployeeTimestampCreate(EmployeeTimestampBase):
     pass
+
 
 class EmployeeTimestampUpdate(BaseModel):
     timestampType: Optional[TimestampType] = None
@@ -21,23 +26,42 @@ class EmployeeTimestampUpdate(BaseModel):
     longitude: Optional[float] = None
     locationName: Optional[str] = None
     photoTimestamp: Optional[str] = None
-    
+    note: Optional[str] = None
+    approvalStatus: Optional[ApprovalStatus] = None
+    rejectReason: Optional[str] = None
+
+
+class TimestampApprovalAction(BaseModel):
+    approve: bool
+    rejectReason: Optional[str] = None
+    approvedBy: Optional[UUID] = None
+
+
 class MemberResponse(BaseModel):
     memberId: UUID
     username: str
     email: str
     firstName: Optional[str]
     lastName: Optional[str]
+    phoneNumber: Optional[str] = None
+    birthDate: Optional[datetime] = None
+    address: Optional[str] = None
+    emergencyContactName: Optional[str] = None
+    emergencyContactPhone: Optional[str] = None
+    attachmentUrls: Optional[str] = None
+
 
 class PositionResponse(BaseModel):
     positionId: UUID
     thName: str
     engName: str
 
+
 class DepartmentResponse(BaseModel):
     departmentId: UUID
     thName: str
     engName: str
+
 
 class EmployeeModel(BaseModel):
     member: MemberResponse
@@ -55,6 +79,9 @@ class EmployeeTimestampResponse(EmployeeTimestampBase):
     timestamp: datetime
     createdAt: datetime
     updatedAt: Optional[datetime] = None
+    approvedBy: Optional[UUID] = None
+    approvedAt: Optional[datetime] = None
+    rejectReason: Optional[str] = None
 
     class Config:
         from_attributes = True

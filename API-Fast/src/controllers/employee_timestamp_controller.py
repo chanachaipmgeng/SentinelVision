@@ -2,76 +2,88 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
-from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate
-from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
+from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate, TimestampApprovalAction
+from ..models.employee_timestamp import EmployeeTimestamp, TimestampType, ApprovalStatus
 from uuid import UUID
 from ..models.company_employee import CompanyEmployee
-from ..models.company_location import CompanyLocation # Import CompanyLocation
-from ..utils.geolocation import get_distance_in_km # Import distance utility
+from ..models.company_location import CompanyLocation
+from ..utils.geolocation import get_distance_in_km
 
-# ดึงข้อมูลการลงเวลาทั้งหมดของพนักงานในบริษัท
+
+def _timestamp_payload(time: EmployeeTimestamp) -> dict:
+    return {
+        "employee": time.company_employee,
+        "company_employeeId": time.company_employeeId,
+        "timestampType": time.timestampType,
+        "locationName": time.locationName,
+        "latitude": time.latitude,
+        "longitude": time.longitude,
+        "photoTimestamp": time.photoTimestamp,
+        "timestampId": time.timestampId,
+        "companyId": time.companyId,
+        "timestamp": time.timestamp,
+        "createdAt": time.createdAt,
+        "updatedAt": time.updatedAt,
+        "note": time.note,
+        "approvalStatus": time.approvalStatus,
+        "approvedBy": time.approvedBy,
+        "approvedAt": time.approvedAt,
+        "rejectReason": time.rejectReason,
+    }
+
+
 async def get_all_timestamps(companyId: str, db: AsyncSession):
     result = await db.execute(
-        select(EmployeeTimestamp).where(EmployeeTimestamp.companyId == companyId).options(
+        select(EmployeeTimestamp)
+        .where(EmployeeTimestamp.companyId == companyId)
+        .options(
             selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
             selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
-            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department)
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
         )
     )
-    timestamps = result.scalars().all()
+    return [_timestamp_payload(time) for time in result.scalars().all()]
 
-    # จัดรูปแบบ response
-    response = []
-    for time in timestamps:
-        response.append({
-            "employee" : time.company_employee,
-            "company_employeeId": time.company_employeeId,
-            "timestampType": time.timestampType,
-            "locationName" : time.locationName,
-            "latitude": time.latitude,
-            "longitude": time.longitude,
-            "photoTimestamp": time.photoTimestamp,
-            "timestampId": time.timestampId,
-            "companyId": time.companyId,
-            "timestamp": time.timestamp,
-            "createdAt": time.createdAt,
-            "updatedAt": time.updatedAt
-        })
 
-    return response
-
-# ดึงข้อมูลการลงเวลาของพนักงานจาก timestampId
 async def get_timestamp_by_id(timestampId: UUID, companyId: UUID, db: AsyncSession):
     result = await db.execute(
-        select(EmployeeTimestamp).where(
+        select(EmployeeTimestamp)
+        .where(
             EmployeeTimestamp.timestampId == timestampId,
-            EmployeeTimestamp.companyId == companyId
+            EmployeeTimestamp.companyId == companyId,
+        )
+        .options(
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
         )
     )
     timestamp = result.scalar_one_or_none()
     if not timestamp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timestamp not found")
-    return timestamp
+    return _timestamp_payload(timestamp)
 
-# สร้างข้อมูลการลงเวลาของพนักงานใหม่
+
 async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
-    # --- Start Geolocation Validation ---
-    user_lat = data.get('latitude')
-    user_lon = data.get('longitude')
+    user_lat = data.get("latitude")
+    user_lon = data.get("longitude")
+    note = (data.get("note") or "").strip() if data.get("note") else ""
 
     if user_lat is None or user_lon is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Latitude and Longitude are required.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Latitude and Longitude are required.",
+        )
 
-    # Query for company locations
     stmt = select(CompanyLocation).where(CompanyLocation.companyId == companyId)
     result = await db.execute(stmt)
     locations = result.scalars().all()
 
     is_in_area = False
-    found_location_name = "Outside Registered Area"  # Default value
+    found_location_name = "Outside Registered Area"
 
     if locations:
         for loc in locations:
@@ -79,74 +91,155 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
             if distance <= loc.radius:
                 is_in_area = True
                 found_location_name = loc.locationName
-                break  # Found a valid location, no need to check further
+                break
 
-    # Overwrite client-sent data with server-validated data
-    data['timestampType'] = 1 if is_in_area else 0
-    data['locationName'] = found_location_name
-    # --- End Geolocation Validation ---
-
+    data["timestampType"] = TimestampType.CHECK_IN if is_in_area else TimestampType.WARNING
+    data["locationName"] = found_location_name
     data["companyId"] = companyId
-    new_timestamp = EmployeeTimestamp(**data)
+    data["note"] = note or None
+
+    if is_in_area:
+        data["approvalStatus"] = ApprovalStatus.NONE.value
+    else:
+        if not note:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Note is required when checking in outside registered area.",
+            )
+        data["approvalStatus"] = ApprovalStatus.PENDING.value
+
+    # Drop unknown keys that ORM does not accept
+    allowed = {
+        "company_employeeId",
+        "companyId",
+        "timestampType",
+        "locationName",
+        "latitude",
+        "longitude",
+        "photoTimestamp",
+        "note",
+        "approvalStatus",
+    }
+    clean = {k: v for k, v in data.items() if k in allowed}
+
+    new_timestamp = EmployeeTimestamp(**clean)
     db.add(new_timestamp)
     await db.commit()
     await db.refresh(new_timestamp)
+
     result = await db.execute(
         select(CompanyEmployee)
         .where(
             CompanyEmployee.company_employeeId == new_timestamp.company_employeeId,
-            CompanyEmployee.companyId == companyId
+            CompanyEmployee.companyId == companyId,
         )
         .options(
             selectinload(CompanyEmployee.member),
             selectinload(CompanyEmployee.company),
             selectinload(CompanyEmployee.position),
-            selectinload(CompanyEmployee.department)
+            selectinload(CompanyEmployee.department),
         )
     )
     company_employee = result.scalar_one_or_none()
     if not company_employee:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company Employee not found")
-    return {
-                "employee": company_employee,
-                "company_employeeId": new_timestamp.company_employeeId,
-                "timestampType": new_timestamp.timestampType,
-                "locationName" : new_timestamp.locationName,
-                "latitude": new_timestamp.latitude,
-                "longitude": new_timestamp.longitude,
-                "photoTimestamp": new_timestamp.photoTimestamp,
-                "timestampId": new_timestamp.timestampId,
-                "companyId": new_timestamp.companyId,
-                "timestamp": new_timestamp.timestamp,
-                "createdAt": new_timestamp.createdAt,
-                "updatedAt": new_timestamp.updatedAt
-            }
 
-# อัปเดตข้อมูลการลงเวลาของพนักงาน
-async def update_timestamp(timestampId: UUID, companyId: UUID, data: EmployeeTimestampUpdate, db: AsyncSession):
-    timestamp = await get_timestamp_by_id(timestampId, companyId, db)
-    if data.timestampType:
-        timestamp.timestampType = data.timestampType
-    if data.locationName:
-        timestamp.locationName = data.locationName
+    new_timestamp.company_employee = company_employee
+    return _timestamp_payload(new_timestamp)
+
+
+async def update_timestamp(
+    timestampId: UUID, companyId: UUID, data: EmployeeTimestampUpdate, db: AsyncSession
+):
+    result = await db.execute(
+        select(EmployeeTimestamp).where(
+            EmployeeTimestamp.timestampId == timestampId,
+            EmployeeTimestamp.companyId == companyId,
+        )
+    )
+    timestamp = result.scalar_one_or_none()
+    if not timestamp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timestamp not found")
+
+    payload = data.dict(exclude_unset=True)
+    for key, value in payload.items():
+        setattr(timestamp, key, value)
     await db.commit()
     await db.refresh(timestamp)
     return timestamp
 
-# ลบข้อมูลการลงเวลาของพนักงาน
+
+async def approve_or_reject_timestamp(
+    timestampId: UUID,
+    companyId: UUID,
+    action: TimestampApprovalAction,
+    db: AsyncSession,
+):
+    result = await db.execute(
+        select(EmployeeTimestamp)
+        .where(
+            EmployeeTimestamp.timestampId == timestampId,
+            EmployeeTimestamp.companyId == companyId,
+        )
+        .options(
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
+        )
+    )
+    timestamp = result.scalar_one_or_none()
+    if not timestamp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timestamp not found")
+
+    if timestamp.approvalStatus != ApprovalStatus.PENDING.value and timestamp.approvalStatus != ApprovalStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PENDING timestamps can be approved or rejected.",
+        )
+
+    if action.approve:
+        timestamp.approvalStatus = ApprovalStatus.APPROVED.value
+        timestamp.timestampType = TimestampType.CHECK_IN
+        timestamp.rejectReason = None
+    else:
+        if not (action.rejectReason or "").strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="rejectReason is required when rejecting.",
+            )
+        timestamp.approvalStatus = ApprovalStatus.REJECTED.value
+        timestamp.rejectReason = action.rejectReason.strip()
+        timestamp.timestampType = TimestampType.DISAPPROVE
+
+    timestamp.approvedBy = action.approvedBy
+    timestamp.approvedAt = datetime.utcnow()
+    await db.commit()
+    await db.refresh(timestamp)
+    return _timestamp_payload(timestamp)
+
+
 async def delete_timestamp(timestampId: UUID, companyId: UUID, db: AsyncSession):
-    timestamp = await get_timestamp_by_id(timestampId, companyId, db)
+    result = await db.execute(
+        select(EmployeeTimestamp).where(
+            EmployeeTimestamp.timestampId == timestampId,
+            EmployeeTimestamp.companyId == companyId,
+        )
+    )
+    timestamp = result.scalar_one_or_none()
+    if not timestamp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timestamp not found")
     await db.delete(timestamp)
     await db.commit()
 
-# ค้นหาการลงเวลาตามเงื่อนไข
+
 async def search_timestamps(
     companyId: str,
     company_employeeId: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     timestampType: Optional[int] = None,
-    db: AsyncSession = None
+    approvalStatus: Optional[str] = None,
+    db: AsyncSession = None,
 ):
     query = select(EmployeeTimestamp).where(EmployeeTimestamp.companyId == companyId)
 
@@ -156,33 +249,16 @@ async def search_timestamps(
         query = query.where(EmployeeTimestamp.timestamp <= end_date)
     if company_employeeId:
         query = query.where(EmployeeTimestamp.company_employeeId == company_employeeId)
-    if timestampType:
+    if timestampType is not None:
         query = query.where(EmployeeTimestamp.timestampType == timestampType)
+    if approvalStatus:
+        query = query.where(EmployeeTimestamp.approvalStatus == approvalStatus)
 
-    result = await db.execute(query.options(
-        selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
-        selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
-        selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department)
-    ))
-
-    timestamps = result.scalars().all()
-
-    # จัดรูปแบบ response
-    response = []
-    for time in timestamps:
-        response.append({
-            "employee": time.company_employee,
-            "company_employeeId": time.company_employeeId,
-            "timestampType": time.timestampType,
-            "locationName" : time.locationName,
-            "latitude": time.latitude,
-            "longitude": time.longitude,
-            "photoTimestamp": time.photoTimestamp,
-            "timestampId": time.timestampId,
-            "companyId": time.companyId,
-            "timestamp": time.timestamp,
-            "createdAt": time.createdAt,
-            "updatedAt": time.updatedAt
-        })
-
-    return response
+    result = await db.execute(
+        query.options(
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
+            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
+        )
+    )
+    return [_timestamp_payload(time) for time in result.scalars().all()]

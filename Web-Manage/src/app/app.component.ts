@@ -23,7 +23,24 @@ export class AppComponent {
   public isSpinner = true;
 
   ngOnInit() {
-    // this.isSpinner = false
-    // fromEvent(window, 'load').subscribe(() => {document.querySelector('#loader')?.classList.remove('');});
+    this.applyDpuThemeDefaults();
+  }
+
+  /** Lock product palette to teal so Ynex switcher/localStorage cannot restore purple. */
+  private applyDpuThemeDefaults(): void {
+    const html = document.documentElement;
+    const primary = '15, 118, 110';
+    const primarySpace = '15 118 110';
+    html.style.setProperty('--primary-rgb', primary);
+    html.style.setProperty('--primary', primarySpace);
+    html.setAttribute('data-menu-styles', 'dark');
+    html.setAttribute('data-header-styles', 'light');
+    html.setAttribute('data-theme-mode', 'light');
+    localStorage.setItem('ynex-primary-mode', primary);
+    localStorage.setItem('ynex-menu-mode', 'dark');
+    localStorage.setItem('ynex-header-mode', 'light');
+    localStorage.setItem('ynex-theme-mode', 'light');
+    localStorage.removeItem('ynexlight-primary-color');
+    localStorage.removeItem('ynexlight-primary-color1');
   }
 }

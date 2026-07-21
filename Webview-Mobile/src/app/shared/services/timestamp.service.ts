@@ -30,9 +30,17 @@ export class TimestampService {
       );
   }
 
-  getListsSearch(companyId: string, company_employeeId?: string, startDate?: string, endDate?: string, timestampType?: string) {
+  getListsSearch(companyId: string, company_employeeId?: string, startDate?: string, endDate?: string, timestampType?: string, approvalStatus?: string) {
+    const params = new URLSearchParams();
+    if (company_employeeId) params.set('company_employeeId', company_employeeId);
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (timestampType) params.set('timestampType', timestampType);
+    if (approvalStatus) params.set('approvalStatus', approvalStatus);
+    const qs = params.toString();
+    const url = "/timestamp/search/company/" + companyId + (qs ? "?" + qs : "");
     return this.http
-      .get<TimestampModel[]>("/timestamp/search/company/" + companyId + "?company_employeeId=" + company_employeeId + "&startDate=" + startDate + "&endDate=" + endDate + (timestampType ? "&timestampType=" + timestampType : ""))
+      .get<TimestampModel[]>(url)
       .pipe(
         map((e) => e.map((e) => new TimestampModel(e, this.translateService)))
       );

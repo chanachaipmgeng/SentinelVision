@@ -1,9 +1,123 @@
 /* You can add global styles to this file, and also import other style files or in angular json file*/
-//@import "~swiper/swiper-bundle";
-//@import "~ng2-daterangepicker/assets/daterangepicker.css";
-body{
-  font-family : "Noto Sans Thai" !important
+@import "./assets/css/dpu-tokens.css";
+
+:root {
+  --dpu-brand: #0f766e;
+  --dpu-brand-hover: #0d9488;
+  --dpu-ink: #0f172a;
+  --dpu-muted: #64748b;
+  --dpu-surface: #f8fafc;
+  --dpu-border: #e2e8f0;
+  --dpu-radius: 12px;
+  --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
+
+  /* FiMobile legacy bridge */
+  --fimobile-theme-color: var(--dpu-brand);
+  --fimobile-page-bg-1: var(--dpu-surface);
+  --fimobile-page-bg-2: #e8f0ef;
+  --fimobile-card-color: rgba(255, 255, 255, 0.92);
 }
+
+body{
+  font-family : var(--dpu-font) !important;
+  color: var(--dpu-ink);
+  background:
+    linear-gradient(180deg, rgba(15, 118, 110, 0.06), transparent 220px),
+    var(--dpu-surface);
+}
+
+h1, h2, h3, h4, h5, h6,
+.title, .card-header h3 {
+  font-family: var(--dpu-font) !important;
+  letter-spacing: -0.01em;
+}
+
+.text-color-theme {
+  color: var(--dpu-brand) !important;
+}
+
+.text-muted {
+  color: var(--dpu-muted) !important;
+}
+
+.btn-primary,
+.btn-default {
+  background-color: var(--dpu-brand) !important;
+  border-color: var(--dpu-brand) !important;
+  border-radius: 12px !important;
+  font-weight: 650 !important;
+}
+
+.btn-primary:hover,
+.btn-default:hover {
+  background-color: var(--dpu-brand-hover) !important;
+  border-color: var(--dpu-brand-hover) !important;
+}
+
+.btn-outline-primary {
+  border-color: var(--dpu-brand) !important;
+  color: var(--dpu-brand) !important;
+  border-radius: 12px !important;
+}
+
+.btn-light {
+  border-radius: 12px !important;
+  border: 1px solid var(--dpu-border) !important;
+}
+
+.form-control,
+.form-select {
+  border-radius: 12px !important;
+  border-color: var(--dpu-border) !important;
+  font-family: var(--dpu-font) !important;
+}
+
+.form-control:focus {
+  border-color: var(--dpu-brand) !important;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12) !important;
+}
+
+.form-control:disabled {
+  background: #f8fafc !important;
+  color: var(--dpu-ink) !important;
+  opacity: 1 !important;
+}
+
+.list-group-item {
+  border-color: var(--dpu-border) !important;
+}
+
+.modal-content {
+  border-radius: 16px !important;
+  border: 1px solid var(--dpu-border) !important;
+}
+
+/* Lock light mode */
+html.dark-mode,
+html.dark-mode body {
+  color-scheme: light;
+}
+
+html.dark-mode body {
+  background: var(--dpu-surface) !important;
+  color: var(--dpu-ink) !important;
+}
+.app-header .header,
+.header.position-fixed {
+  backdrop-filter: blur(8px);
+  background: rgba(248, 250, 252, 0.92) !important;
+  border-bottom: 1px solid var(--dpu-border);
+}
+
+.sidebar.dark-bg {
+  background: linear-gradient(165deg, #0f172a 0%, #134e4a 100%) !important;
+}
+
+.card {
+  border-radius: var(--dpu-radius);
+  border-color: var(--dpu-border);
+}
+
 .bg-1 .sidebar-wrap .sidebar {
     background-image: url("assets/img/backgorund-image.svg");
 }

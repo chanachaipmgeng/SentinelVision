@@ -1,6 +1,7 @@
 import { Component, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import * as faceapi from 'face-api.js';
 import { environment } from 'src/environments/environment';
 import { TimestampService } from 'src/app/shared/services/timestamp.service';
@@ -11,12 +12,14 @@ import { EmployeeModel } from 'src/app/shared/models/employee.model';
 import swal from 'sweetalert';
 import { CompanyLocationModel } from 'src/app/shared/models/company-location.model';
 import { CompanyLocationService } from 'src/app/shared/services/company-location.service';
+import { assetUrl } from 'src/app/shared/utils/asset-url';
 
 @Component({
   selector: 'app-face-scan',
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
   ],
   templateUrl: './face-scan.component.html',
   styleUrls: ['./face-scan.component.css'],
@@ -34,6 +37,7 @@ export class FaceScanComponent implements OnDestroy {
   employeeModel: EmployeeModel = new EmployeeModel();
   location: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
   errorMessage: string | null = null;
+  outOfAreaNote = '';
 
   // --- New state variables ---
   isCapturing = false;
@@ -67,10 +71,11 @@ export class FaceScanComponent implements OnDestroy {
   }
 
   async loadModelsAndStartVideo() {
+    const modelsBase = assetUrl('assets/models');
     await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector'),
-      faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models/face_landmark_68'),
-      faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models/face_recognition'),
+      faceapi.nets.tinyFaceDetector.loadFromUri(`${modelsBase}/tiny_face_detector`),
+      faceapi.nets.faceLandmark68Net.loadFromUri(`${modelsBase}/face_landmark_68`),
+      faceapi.nets.faceRecognitionNet.loadFromUri(`${modelsBase}/face_recognition`),
     ]);
     this.startVideo();
   }
@@ -191,19 +196,40 @@ export class FaceScanComponent implements OnDestroy {
       this.employeeModel = employeeResult;
       this.timestampModel.company_employeeId = this.employeeModel.company_employeeId;
 
-      if (this.locationArea.length > 0) {
+      const outside = this.locationArea.length === 0;
+      if (outside) {
+        const note = (this.outOfAreaNote || '').trim();
+        if (!note) {
+          swal("ต้องระบุเหตุผล", "อยู่นอกพื้นที่ลงเวลา กรุณากรอกหมายเหตุก่อน Check-In", "info");
+          this.resetCaptureState();
+          return;
+        }
+        this.timestampModel.timestampType = 0;
+        this.timestampModel.note = note;
+      } else {
         this.timestampModel.timestampType = 1;
         this.timestampModel.locationName = this.locationArea[0].locationName;
-      } else {
-        this.timestampModel.timestampType = 0;
+        this.timestampModel.note = '';
       }
       this.timestampModel.latitude = this.location?.latitude;
       this.timestampModel.longitude = this.location?.longitude;
 
-      this.timestampService.save(this.companyId, this.timestampModel).subscribe(result => {
-        swal(result.timestampType == 0 ? "Warning Location !!" : "Complete !!", `ลงเวลาการทำงาน ${this.employeeModel.getFullname()} เวลา ${new Date(result.timestamp).toLocaleTimeString("th", { hour: '2-digit', minute: '2-digit' })}`, result.timestampType == 0 ? "info" : "success").then(() => {
+      this.timestampService.save(this.companyId, this.timestampModel).subscribe({
+        next: (result) => {
+          const pending = result.approvalStatus === 'PENDING' || result.timestampType == 0;
+          swal(
+            pending ? "รออนุมัติ !!" : "Complete !!",
+            `ลงเวลาการทำงาน ${this.employeeModel.getFullname()} เวลา ${new Date(result.timestamp).toLocaleTimeString("th", { hour: '2-digit', minute: '2-digit' })}`,
+            pending ? "info" : "success"
+          ).then(() => {
+            this.outOfAreaNote = '';
+            this.resetCaptureState();
+          });
+        },
+        error: (err) => {
+          swal("บันทึกไม่สำเร็จ", err.error?.detail || 'กรุณาลองใหม่', "error");
           this.resetCaptureState();
-        });
+        }
       });
     });
   }

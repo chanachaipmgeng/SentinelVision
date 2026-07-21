@@ -4,6 +4,7 @@ import * as faceapi from 'face-api.js';
 import { TokenService } from 'src/app/shared/services/token.service';
 import { environment } from 'src/environments/environment';
 import swal from 'sweetalert';
+import { assetUrl } from 'src/app/shared/utils/asset-url';
 
 @Component({
   selector: 'app-enrollment-face-setting',
@@ -23,12 +24,11 @@ export class EnrollmentFaceSettingComponent {
   }
 
   ngOnInit() {
-    // โหลดโมเดล Face Detection ของ face-api.js
-    faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
-    faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models/face_landmark_68');
-    faceapi.nets.faceRecognitionNet.loadFromUri('/assets/models/face_recognition');
-    faceapi.nets.faceExpressionNet.loadFromUri('/assets/models/face_expression');
-    // เปิดกล้อง
+    const modelsBase = assetUrl('assets/models');
+    faceapi.nets.tinyFaceDetector.loadFromUri(`${modelsBase}/tiny_face_detector`);
+    faceapi.nets.faceLandmark68Net.loadFromUri(`${modelsBase}/face_landmark_68`);
+    faceapi.nets.faceRecognitionNet.loadFromUri(`${modelsBase}/face_recognition`);
+    faceapi.nets.faceExpressionNet.loadFromUri(`${modelsBase}/face_expression`);
     this.startVideo();
   }
 

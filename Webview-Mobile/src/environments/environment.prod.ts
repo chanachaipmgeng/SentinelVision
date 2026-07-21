@@ -7,4 +7,5 @@ export const environment = {
   webviewUrl: '',
   authADUrl: '',
   postLink: '',
+  googleMapsApiKey: '***REMOVED***',
 };

@@ -55,6 +55,7 @@ export class TimestampLogComponent implements OnInit {
   latitude: number
   longitude: number
   timestampModel: TimestampModel = new TimestampModel()
+  mapActive = false
   memberId = this.tokenService.getUser().member.memberId
   employeeModel: EmployeeModel = new EmployeeModel()
   constructor(private timestampService: TimestampService, private tokenService: TokenService, public datepipe: DatePipe, public translate: TranslateService,
@@ -102,8 +103,14 @@ export class TimestampLogComponent implements OnInit {
 
   openMap(content: any, item: TimestampModel) {
     this.timestampModel = item
-    console.log(this.timestampModel)
-    this.modalService.open(content, { centered: true, size: 'lg' });
+    this.mapActive = false
+    const modalRef = this.modalService.open(content, { centered: true, size: 'lg' })
+    modalRef.shown.subscribe(() => {
+      this.mapActive = true
+    })
+    modalRef.closed.subscribe(() => {
+      this.mapActive = false
+    })
   }
 
 

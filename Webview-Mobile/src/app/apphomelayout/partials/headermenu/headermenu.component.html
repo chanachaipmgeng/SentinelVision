@@ -1,21 +1,11 @@
-<div class="row">
-  <div class="col-1">
-    <a *ngIf="!isBack" href="javascript:void(0)" target="_self" class="btn btn-light btn-44 menu-btn"
-      (click)="menuopen()">
-      <i class="bi bi-list"></i>
-    </a>
-    <button *ngIf="isBack" class="btn btn-light btn-44 back-btn" (click)="backnav()">
-      <i class="bi bi-arrow-left"></i>
-    </button>
-  </div>
-  <div class="col align-self-center text-center">
-    <h5>{{pageInfo?.title | translate}}</h5>
+<header class="dpu-topbar">
+  <button type="button" class="dpu-topbar__btn" (click)="isBack ? backnav() : menuopen()" aria-label="Menu">
+    <i class="bi" [ngClass]="isBack ? 'bi-arrow-left' : 'bi-list'"></i>
+  </button>
+
+  <div class="dpu-topbar__title">
+    <h1>{{ pageInfo?.title | translate }}</h1>
   </div>
 
-  <div class="col-1" *ngIf="checkRole">
-    <!-- <a routerLink="/component/messages" routerLinkActive="active" target="_self" class="btn btn-light btn-44">
-      <i class="bi bi-messenger"></i>
-      <span class="count-indicator"></span>
-    </a> -->
-  </div>
-</div>
+  <div class="dpu-topbar__spacer"></div>
+</header>

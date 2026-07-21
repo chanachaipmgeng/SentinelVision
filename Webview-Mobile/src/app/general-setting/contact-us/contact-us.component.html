@@ -46,11 +46,7 @@
   <div class="col-12 col-md-6  mb-3">
     <div class="card shadow-sm">
       <div class="card-body">
-        <agm-map [latitude]="latitude" [longitude]="longitude" style="height: 300px" [zoom]="15">
-          <agm-marker *ngFor="let marker of markers" [latitude]="marker.latitude" [longitude]="marker.longitude"
-            (markerClick)="openDetail(content,marker.data)">
-          </agm-marker>
-        </agm-map>
+        <app-dpu-location-map [latitude]="latitude" [longitude]="longitude" [height]="300"></app-dpu-location-map>
       </div>
     </div>
   </div>

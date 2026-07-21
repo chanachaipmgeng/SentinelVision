@@ -12,13 +12,15 @@ from ..controllers.employee_timestamp_controller import (
     create_timestamp,
     update_timestamp,
     delete_timestamp,
-    search_timestamps
+    search_timestamps,
+    approve_or_reject_timestamp,
 )
 from ..schemas.employee_timestamp_schema import (
     EmployeeTimestampCreate,
     EmployeeTimestampUpdate,
     EmployeeTimestampResponse,
     EmployeeTimestampBase,
+    TimestampApprovalAction,
 )
 
 router = APIRouter()
@@ -54,9 +56,63 @@ async def delete_timestamp_route(companyId: UUID, timestampId: UUID, db: AsyncSe
 async def search_timestamps_route(
     companyId: str,
     company_employeeId: Optional[str] = Query(None),
-    startDate: Optional[datetime] = Query(None),
-    endDate: Optional[datetime] = Query(None),
+    startDate: Optional[str] = Query(None),
+    endDate: Optional[str] = Query(None),
     timestampType: Optional[str] = Query(None),
-    db: AsyncSession = Depends(get_db)
+    approvalStatus: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
 ):
-    return await search_timestamps(companyId, company_employeeId, startDate, endDate, timestampType, db)
+    """Empty query strings (from Angular) are treated as omitted filters."""
+
+    def _blank(v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
+
+    def _parse_dt(v: Optional[str]) -> Optional[datetime]:
+        v = _blank(v)
+        if not v:
+            return None
+        # Accept date-only or ISO datetime
+        try:
+            if len(v) == 10 and v[4] == "-" and v[7] == "-":
+                return datetime.fromisoformat(v)
+            return datetime.fromisoformat(v.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid datetime: {v}",
+            ) from exc
+
+    def _parse_int(v: Optional[str]) -> Optional[int]:
+        v = _blank(v)
+        if v is None:
+            return None
+        try:
+            return int(v)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid timestampType: {v}",
+            ) from exc
+
+    return await search_timestamps(
+        companyId,
+        _blank(company_employeeId),
+        _parse_dt(startDate),
+        _parse_dt(endDate),
+        _parse_int(timestampType),
+        _blank(approvalStatus),
+        db,
+    )
+
+
+@router.post("/company/{companyId}/{timestampId}/approval", response_model=EmployeeTimestampResponse)
+async def approve_timestamp_route(
+    companyId: UUID,
+    timestampId: UUID,
+    action: TimestampApprovalAction,
+    db: AsyncSession = Depends(get_db),
+):
+    return await approve_or_reject_timestamp(timestampId, companyId, action, db)

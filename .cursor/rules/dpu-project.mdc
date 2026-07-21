@@ -1,0 +1,38 @@
+---
+description: DPU Attendance project overview — stack, layout, and agent defaults
+alwaysApply: true
+---
+
+# DPU Attendance — project defaults
+
+Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack behind nginx.
+
+## Layout
+
+| Path | Role |
+|------|------|
+| `API-Fast/` | FastAPI + InsightFace + GPU queue |
+| `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`) |
+| `Webview-Mobile/` | Angular 15 employee app |
+| `docker/` | nginx gateway + DB init |
+| `docs/` | SETUP, ARCHITECTURE, API, agent guide |
+
+## Runtime
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+- Admin: `http://localhost/`
+- Mobile: `http://localhost/mobile/`
+- API docs: `http://localhost/docs`
+- Kiosk: `http://localhost/company/timestamp-face`
+
+Code is **baked into images** — rebuild the service after source changes (`api`, `admin`, `nginx` as needed).
+
+## Agent defaults
+
+- Prefer existing patterns; do not invent a second face stack
+- Do not commit unless asked; do not put secrets in rules/docs
+- After API/UI/nginx changes: rebuild and verify health / queue-stats
+- Thai UI copy is OK for kiosk; keep code/comments in English unless the file already uses Thai

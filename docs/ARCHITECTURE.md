@@ -38,16 +38,23 @@ Start everything with `docker compose up --build`.
 ## Face pipeline
 
 1. **Enroll** `POST /face/members/{id}/add-face` → InsightFace `buffalo_l` → store `embedding vector(512)` + image under `enrolled_images/`
-2. **Check-in** `POST /face/members/check-face-emp` (N frames) → multi-frame liveness → cosine nearest-neighbor in pgvector → `{ memberId }`
-3. Mobile then uploads a photo and `POST /timestamp/company/{id}` with GPS; server overwrites in/out-of-area status via Haversine
+2. **Match** (mobile / tools) `POST /face/members/check-face-emp` → multi-frame liveness → pgvector NN → member payload
+3. **Admin kiosk** (`/company/timestamp-face`):
+   - Multi-person track + face crops
+   - Prefer `WS /face/ws/kiosk` (identify + walk-by check-in via GPU queue)
+   - Fallback `POST /face/members/check-in-walkby` (or secure `/check-in`)
+   - Server dedupe (`CHECK_IN_DEDUPE_SECONDS`) + geofenced timestamp
+4. Mobile may still upload a photo and `POST /timestamp/company/{id}` with GPS; server validates area via Haversine
 
 Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, FAISS / OpenCV pickle artifacts.
 
 ## Key source paths
 
 - API entry: `API-Fast/src/main.py`
-- Face engine: `API-Fast/src/utils/face_engine.py`
+- Face engine / GPU queue: `API-Fast/src/utils/face_engine.py`, `face_gpu_queue.py`
+- Face HTTP / WS: `API-Fast/src/controllers/face_controller.py`, `face_ws_controller.py`
 - Embeddings model: `API-Fast/src/models/face_encoding.py`
 - Timestamp + geo: `API-Fast/src/controllers/employee_timestamp_controller.py`
-- Admin DPU UI: `Web-Manage/src/app/DPU/`
+- Admin kiosk: `Web-Manage/src/app/DPU/company-management/enroll-face/`
 - Mobile check-in: `Webview-Mobile/src/app/company/face-scan/`
+- Agent rules/skills: [CURSOR-AGENT.md](CURSOR-AGENT.md)

@@ -1,0 +1,27 @@
+---
+description: Admin Angular kiosk and Web-Manage UI patterns
+globs: Web-Manage/**/*.{ts,html,scss}
+alwaysApply: false
+---
+
+# Web-Manage / face kiosk
+
+## Kiosk
+
+- Route: `/company/timestamp-face` → `enroll-face` standalone component
+- Multi-person: IoU tracks, smooth boxes, per-`memberId` cooldown
+- Prefer **WebSocket** `/face/ws/kiosk` for identify + walk-by check-in; HTTP fallback if WS down
+- Crop faces before send; do not upload full frames for multi-person
+- Cap concurrent check-ins / identifies; never global-lock the whole camera for one person
+
+## Angular habits
+
+- Standalone components where the feature already is standalone
+- Use `NgZone` + `ChangeDetectorRef` when updating UI from `setInterval` / WS / face-api
+- Production `environment.prod.ts` uses `baseUrl: ''` (same-origin via nginx)
+- Rebuild `admin` image after UI changes: `docker compose ... up -d --build admin`
+
+## UI
+
+- Keep kiosk overlay readable (name + confidence on box); avoid cluttering the first camera viewport
+- Toast + feed panel for results; soft-fail walk-by misses (toast, retry track) instead of spamming error feed

@@ -1,0 +1,35 @@
+---
+description: Face recognition API — InsightFace, check-in modes, GPU queue, WebSocket
+globs: API-Fast/**/*.{py,txt,yml}
+alwaysApply: false
+---
+
+# Face API conventions
+
+## Stack
+
+- Embeddings: InsightFace `buffalo_l`, `vector(512)` in `face_encoding`
+- Device: `FACE_DEVICE=cuda:0` (fallback CPU). Blocking inference goes through `run_on_face_gpu`
+- Threshold: `FACE_RECOGNITION_THRESHOLD` (cosine distance; match if `< threshold`)
+
+## Endpoints (do not regress)
+
+| Path | Mode |
+|------|------|
+| `POST /face/members/{id}/add-face` | enroll |
+| `POST /face/members/check-face-emp` | multi-frame + liveness match |
+| `POST /face/members/identify` | 1 frame, label only |
+| `POST /face/members/check-in` | secure: liveness + timestamp |
+| `POST /face/members/check-in-walkby` | 1–2 frames, no motion liveness |
+| `WS /face/ws/kiosk` | stream identify/checkin via GPU queue |
+| `GET /face/queue-stats` | queue health |
+
+Shared finalize: `_finalize_check_in` (match → company employee → dedupe → photo → timestamp).
+
+## Rules
+
+- Prefer extending `face_controller` / `face_engine` / `face_gpu_queue` over new parallel pipelines
+- Walk-by / WS: no head-motion liveness; still require a detectable face (+ same-person if 2+ frames)
+- Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true`, do not double-insert
+- Outside geofence: `create_timestamp` needs a `note` — kiosk sends a default note
+- Nginx: WebSocket needs `^~ /face/ws/` with `Upgrade` headers (see `docker/nginx/default.conf`)

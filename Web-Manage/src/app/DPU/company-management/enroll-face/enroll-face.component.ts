@@ -16,7 +16,7 @@ export interface CheckInFeedItem {
   department: string;
   position: string;
   statusLabel: string;
-  statusKind: 'success' | 'warning' | 'error';
+  statusKind: 'success' | 'warning' | 'error' | 'info';
   locationName: string;
   timestamp: Date;
   photoUrl: string | null;
@@ -26,14 +26,14 @@ export interface CheckInFeedItem {
   distance?: number | null;
 }
 
+type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
+
 interface SmoothBox {
   x: number;
   y: number;
   width: number;
   height: number;
 }
-
-type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
 
 interface FaceTrack {
   id: number;
@@ -68,12 +68,16 @@ export class EnrollFaceComponent implements OnDestroy {
   location: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
   errorMessage: string | null = null;
 
-  captureMessage = 'โหมด walk-by — หลายคนเดินผ่านได้ ลงเวลาเร็วโดยไม่ต้องขยับหน้า';
+  captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
   checkingInCount = 0;
+  wsConnected = false;
+  queuePending = 0;
   toastMessage = '';
   toastKind: 'success' | 'warning' | 'error' | 'info' = 'info';
   showToast = false;
+  companyName = '';
+  clockNow = new Date();
 
   feed: CheckInFeedItem[] = [];
   latestResult: CheckInFeedItem | null = null;
@@ -81,7 +85,12 @@ export class EnrollFaceComponent implements OnDestroy {
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
   private videoStream: MediaStream | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
   private detectBusy = false;
+  private kioskWs: WebSocket | null = null;
+  private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private wsReqSeq = 0;
+  private destroyWs = false;
 
   private tracks: FaceTrack[] = [];
   private nextTrackId = 1;
@@ -95,7 +104,7 @@ export class EnrollFaceComponent implements OnDestroy {
   private readonly autoStartHoldMs = 320;
   private readonly memberCooldownMs = 5 * 60 * 1000;
   private readonly identifyEveryMs = 1200;
-  /** Walk-by: 1–2 quality crops, no multi-frame motion liveness. */
+  /** Walk-by / stream: 1–2 quality crops. */
   private readonly frameCount = 2;
   private readonly captureIntervalMs = 90;
   private readonly maxConcurrentCheckIn = 3;
@@ -112,7 +121,36 @@ export class EnrollFaceComponent implements OnDestroy {
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
   ) {
-    this.companyId = this.tokenService.getSelectCompany().companyId;
+    const company = this.tokenService.getSelectCompany();
+    this.companyId = company.companyId;
+    this.companyName = company.companyName || 'บริษัท';
+  }
+
+  get inArea(): boolean {
+    return this.locationArea.length > 0;
+  }
+
+  get areaLabel(): string {
+    if (this.inArea) {
+      return this.locationArea[0].locationName || 'ในพื้นที่';
+    }
+    return 'นอกพื้นที่';
+  }
+
+  get successCount(): number {
+    return this.feed.filter((f) => f.statusKind === 'success').length;
+  }
+
+  get warningCount(): number {
+    return this.feed.filter((f) => f.statusKind === 'warning').length;
+  }
+
+  get errorCount(): number {
+    return this.feed.filter((f) => f.statusKind === 'error').length;
+  }
+
+  get sessionTotal(): number {
+    return this.feed.filter((f) => f.statusKind !== 'error').length;
   }
 
   ngOnInit() {
@@ -120,19 +158,39 @@ export class EnrollFaceComponent implements OnDestroy {
     faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
     this.startVideo();
     this.getCompanyLocation();
+    this.connectKioskWs();
+    this.clockTimer = setInterval(() => {
+      this.clockNow = new Date();
+      this.cdr.detectChanges();
+    }, 1000);
   }
 
   ngOnDestroy() {
+    this.destroyWs = true;
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
     }
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
     }
+    if (this.clockTimer) {
+      clearInterval(this.clockTimer);
+    }
+    if (this.wsReconnectTimer) {
+      clearTimeout(this.wsReconnectTimer);
+    }
     for (const track of this.tracks) {
       if (track.captureTimer) {
         clearInterval(track.captureTimer);
       }
+    }
+    if (this.kioskWs) {
+      try {
+        this.kioskWs.close();
+      } catch {
+        /* ignore */
+      }
+      this.kioskWs = null;
     }
     if (this.videoStream) {
       this.videoStream.getTracks().forEach((track) => track.stop());
@@ -226,7 +284,8 @@ export class EnrollFaceComponent implements OnDestroy {
 
   private buildStatusMessage(): string {
     if (this.tracks.length === 0) {
-      return 'โหมด walk-by — เดินผ่านกล้องได้หลายคนพร้อมกัน';
+      const link = this.wsConnected ? 'stream เชื่อมแล้ว' : 'stream กำลังเชื่อม...';
+      return `โหมด stream (${link}) — เดินผ่านกล้องได้หลายคน`;
     }
     const names = this.tracks
       .map((t) => t.label)
@@ -240,7 +299,159 @@ export class EnrollFaceComponent implements OnDestroy {
     if (busy > 0) {
       parts.push(`กำลังลงเวลา ${busy} คน`);
     }
+    if (this.queuePending > 0) {
+      parts.push(`คิว GPU ${this.queuePending}`);
+    }
     return parts.join(' · ');
+  }
+
+  private kioskWsUrl(): string {
+    const base = environment.baseUrl || `${window.location.protocol}//${window.location.host}`;
+    const url = new URL(base, window.location.origin);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    url.pathname = '/face/ws/kiosk';
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  }
+
+  private connectKioskWs() {
+    if (this.destroyWs) {
+      return;
+    }
+    if (
+      this.kioskWs &&
+      (this.kioskWs.readyState === WebSocket.OPEN ||
+        this.kioskWs.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
+    }
+
+    try {
+      const ws = new WebSocket(this.kioskWsUrl());
+      this.kioskWs = ws;
+
+      ws.onopen = () => {
+        this.ngZone.run(() => {
+          this.wsConnected = true;
+          this.cdr.detectChanges();
+        });
+        this.wsSend({
+          type: 'session',
+          companyId: this.companyId,
+          latitude: this.location?.latitude ?? 0,
+          longitude: this.location?.longitude ?? 0,
+        });
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          this.ngZone.run(() => this.onKioskWsMessage(msg));
+        } catch (e) {
+          console.error('WS parse error', e);
+        }
+      };
+
+      ws.onclose = () => {
+        this.ngZone.run(() => {
+          this.wsConnected = false;
+          this.cdr.detectChanges();
+        });
+        this.kioskWs = null;
+        if (!this.destroyWs) {
+          this.wsReconnectTimer = setTimeout(() => this.connectKioskWs(), 2000);
+        }
+      };
+
+      ws.onerror = () => {
+        // onclose will reconnect
+      };
+    } catch (e) {
+      console.error('WS connect failed', e);
+      if (!this.destroyWs) {
+        this.wsReconnectTimer = setTimeout(() => this.connectKioskWs(), 3000);
+      }
+    }
+  }
+
+  private wsSend(payload: Record<string, unknown>): boolean {
+    if (!this.kioskWs || this.kioskWs.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    this.kioskWs.send(JSON.stringify(payload));
+    return true;
+  }
+
+  private nextWsRequestId(trackId: number): string {
+    this.wsReqSeq += 1;
+    return `${trackId}-${Date.now()}-${this.wsReqSeq}`;
+  }
+
+  private onKioskWsMessage(msg: any) {
+    if (msg?.queue?.pending != null) {
+      this.queuePending = Number(msg.queue.pending) || 0;
+    }
+
+    if (msg.type === 'identified') {
+      const trackId = Number(msg.trackId);
+      const t = this.tracks.find((x) => x.id === trackId);
+      if (!t) {
+        return;
+      }
+      t.identifyInFlight = false;
+      t.memberId = msg.memberId || msg.member?.memberId || null;
+      t.label = msg.member?.fullName || msg.member?.firstName || t.label;
+      const confidence = Number(msg.confidencePercent ?? NaN);
+      t.confidence = Number.isFinite(confidence) ? confidence : null;
+      if (t.memberId && this.isMemberOnCooldown(t.memberId)) {
+        t.phase = 'cooldown';
+      }
+      this.cdr.detectChanges();
+      return;
+    }
+
+    if (msg.type === 'checked_in') {
+      this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+      const trackId = Number(msg.trackId);
+      const t = this.tracks.find((x) => x.id === trackId);
+      const memberId = msg.memberId || msg.member?.memberId || t?.memberId;
+      if (memberId) {
+        const dedupeMs = msg.dedupeSeconds
+          ? Number(msg.dedupeSeconds) * 1000
+          : this.memberCooldownMs;
+        this.setMemberCooldown(memberId, dedupeMs);
+      }
+
+      if (t) {
+        t.phase = 'cooldown';
+        t.memberId = memberId || t.memberId;
+        t.label = msg.employee?.fullName || msg.member?.fullName || t.label;
+      }
+
+      this.handleCheckInSuccess(msg, [], t, !!msg.duplicate);
+      return;
+    }
+
+    if (msg.type === 'error') {
+      const trackId = Number(msg.trackId);
+      const t = trackId ? this.tracks.find((x) => x.id === trackId) : null;
+      if (msg.intent === 'identify' && t) {
+        t.identifyInFlight = false;
+      }
+      if (msg.intent === 'checkin') {
+        this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+        if (t) {
+          t.phase = 'watching';
+          t.retryAfter = Date.now() + this.retryFailMs;
+          t.captureFrames = [];
+        }
+        if (msg.detail) {
+          this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${msg.detail}`, 'warning');
+        }
+      }
+      this.cdr.detectChanges();
+    }
   }
 
   private updateTracks(detections: SmoothBox[], now: number) {
@@ -507,9 +718,22 @@ export class EnrollFaceComponent implements OnDestroy {
       track.identifyInFlight = false;
       return;
     }
+
+    const requestId = this.nextWsRequestId(trackId);
+    if (
+      this.wsSend({
+        type: 'identify',
+        trackId,
+        requestId,
+        image: dataUrl,
+      })
+    ) {
+      return;
+    }
+
+    // HTTP fallback
     const formData = new FormData();
     formData.append('file', this.dataURLtoFile(dataUrl, `live_${trackId}.jpg`));
-
     this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
       next: (response: any) => {
         const t = this.tracks.find((x) => x.id === trackId);
@@ -582,7 +806,23 @@ export class EnrollFaceComponent implements OnDestroy {
     track.phase = 'checking_in';
     this.checkInInFlight += 1;
     const trackId = track.id;
+    const requestId = this.nextWsRequestId(trackId);
 
+    if (
+      this.wsSend({
+        type: 'checkin',
+        trackId,
+        requestId,
+        images: frames,
+        latitude: this.location?.latitude ?? 0,
+        longitude: this.location?.longitude ?? 0,
+        note: 'Face kiosk websocket walk-by',
+      })
+    ) {
+      return;
+    }
+
+    // HTTP fallback
     const formData = new FormData();
     frames.forEach((dataUrl, index) => {
       formData.append('files', this.dataURLtoFile(dataUrl, `t${trackId}_${index}.jpg`));
@@ -604,20 +844,13 @@ export class EnrollFaceComponent implements OnDestroy {
           this.setMemberCooldown(memberId, dedupeMs);
         }
 
-        if (response.duplicate) {
-          if (t) {
-            t.phase = 'cooldown';
-            t.memberId = memberId || t.memberId;
-            t.label = response.employee?.fullName || response.member?.fullName || t.label;
-            t.statusText = 'duplicate';
-          }
-          const name = response.employee?.fullName || response.member?.fullName || 'พนักงาน';
-          this.notify(`${name} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`, 'info');
-          this.cdr.detectChanges();
-          return;
+        if (t) {
+          t.phase = response.duplicate ? 'cooldown' : 'done';
+          t.memberId = memberId || t.memberId;
+          t.label = response.employee?.fullName || response.member?.fullName || t.label;
         }
 
-        this.handleCheckInSuccess(response, frames, t);
+        this.handleCheckInSuccess(response, frames, t, !!response.duplicate);
       },
       error: (error) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
@@ -634,15 +867,30 @@ export class EnrollFaceComponent implements OnDestroy {
     });
   }
 
-  private handleCheckInSuccess(response: any, frames: string[], track: FaceTrack | undefined) {
+  private handleCheckInSuccess(
+    response: any,
+    frames: string[],
+    track: FaceTrack | undefined,
+    isDuplicate = false,
+  ) {
     const employee = response.employee || {};
     const member = response.member || employee.member || {};
     const ts = response.timestamp || {};
-    const isWarning = !!response.isWarning || Number(ts.timestampType) === 0;
+    const tsTypeRaw = ts.timestampType;
+    const tsTypeNum =
+      typeof tsTypeRaw === 'number'
+        ? tsTypeRaw
+        : typeof tsTypeRaw === 'string' && /^\d+$/.test(tsTypeRaw)
+          ? Number(tsTypeRaw)
+          : tsTypeRaw === 'WARNING' || tsTypeRaw === 'Warning'
+            ? 0
+            : 1;
+    const isWarning = !!response.isWarning || tsTypeNum === 0;
     const employeeName =
       employee.fullName ||
       member.fullName ||
       `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
+      track?.label ||
       'พนักงาน';
     const confidencePercent = Number(
       response.confidencePercent ?? ((1 - Number(response.distance || 0)) * 100),
@@ -653,25 +901,37 @@ export class EnrollFaceComponent implements OnDestroy {
       minute: '2-digit',
       second: '2-digit',
     });
-    const photoUrl = ts.photoTimestamp
-      ? `${environment.baseUrl}/images/${ts.photoTimestamp}`
-      : frames[Math.floor(frames.length / 2)];
+    const photoFile = ts.photoTimestamp || null;
+    const photoUrl = photoFile
+      ? `${environment.baseUrl || ''}/images/${photoFile}`.replace(/([^:]\/)\/+/g, '$1')
+      : frames.length
+        ? frames[Math.floor(frames.length / 2)]
+        : ts.photoUrl
+          ? `${environment.baseUrl || ''}${ts.photoUrl}`.replace(/([^:]\/)\/+/g, '$1')
+          : null;
 
     if (track) {
-      track.phase = 'done';
+      track.phase = isDuplicate ? 'cooldown' : 'done';
       track.label = employeeName;
       track.memberId = response.memberId || member.memberId || track.memberId;
       track.confidence = Number.isFinite(confidencePercent) ? confidencePercent : track.confidence;
     }
 
+    let statusLabel = isWarning ? 'Warning — นอกพื้นที่' : 'ลงเวลาปกติ';
+    let statusKind: CheckInFeedItem['statusKind'] = isWarning ? 'warning' : 'success';
+    if (isDuplicate) {
+      statusLabel = isWarning ? 'บันทึกแล้ว (Warning)' : 'ลงเวลาไปแล้ว';
+      statusKind = 'info';
+    }
+
     const item: CheckInFeedItem = {
       id: ts.timestampId || `${Date.now()}`,
       employeeName,
-      employeeId: employee.employeeId || '-',
+      employeeId: employee.employeeId || member.username || '-',
       department: employee.department || '-',
       position: employee.position || '-',
-      statusLabel: isWarning ? 'Warning — นอกพื้นที่' : 'ลงเวลาปกติ',
-      statusKind: isWarning ? 'warning' : 'success',
+      statusLabel,
+      statusKind,
       locationName: ts.locationName || (isWarning ? 'นอกพื้นที่ลงเวลา' : '-'),
       timestamp: time,
       photoUrl,
@@ -683,10 +943,12 @@ export class EnrollFaceComponent implements OnDestroy {
 
     this.prependFeed(item);
     this.notify(
-      isWarning
-        ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
-        : `ลงเวลาสำเร็จ: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
-      isWarning ? 'warning' : 'success',
+      isDuplicate
+        ? `${employeeName} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`
+        : isWarning
+          ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
+          : `ลงเวลาสำเร็จ: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
+      isDuplicate ? 'info' : isWarning ? 'warning' : 'success',
     );
   }
 
@@ -723,9 +985,16 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   private prependFeed(item: CheckInFeedItem) {
-    this.latestResult = item;
-    this.feed = [item, ...this.feed].slice(0, 30);
-    this.cdr.detectChanges();
+    this.ngZone.run(() => {
+      this.latestResult = { ...item };
+      this.feed = [item, ...this.feed.filter((f) => f.id !== item.id)].slice(0, 30);
+      this.cdr.detectChanges();
+      // Mobile: bring result into view under the camera
+      setTimeout(() => {
+        const el = document.getElementById('dpu-kiosk-latest');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    });
   }
 
   private notify(message: string, kind: 'success' | 'warning' | 'error' | 'info') {
@@ -764,6 +1033,14 @@ export class EnrollFaceComponent implements OnDestroy {
           };
           this.searchCompanyLocation();
           this.errorMessage = null;
+          if (this.wsConnected) {
+            this.wsSend({
+              type: 'session',
+              companyId: this.companyId,
+              latitude: this.location.latitude,
+              longitude: this.location.longitude,
+            });
+          }
         },
         (error) => {
           switch (error.code) {

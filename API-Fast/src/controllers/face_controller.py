@@ -1,16 +1,25 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status, UploadFile
 from pathlib import Path
 from uuid import UUID
 import uuid
 import shutil
-from typing import List
+from typing import List, Optional
 
 from ..models.member import Member
 from ..models.face_encoding import FaceEncoding
-from ..utils.face_engine import generate_face_encoding, verify_liveness_and_get_encoding
+from ..models.company_employee import CompanyEmployee
+from ..utils.face_engine import (
+    generate_face_encoding,
+    verify_liveness_and_get_encoding,
+    extract_face_features,
+)
 from ..config.settings import settings
+from ..controllers.employee_timestamp_controller import create_timestamp
+
+UPLOAD_DIR = Path("./uploaded_images")
 
 
 async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
@@ -95,6 +104,128 @@ async def _search_face_pgvector(
     return face_encoding_id, member_id, float(distance)
 
 
+def _match_quality(distance: float, threshold: float) -> str:
+    if float(distance) < threshold * 0.5:
+        return "high"
+    if float(distance) < threshold * 0.75:
+        return "medium"
+    return "low"
+
+
+def _member_payload(member: Member) -> dict:
+    first_name = member.firstName or ""
+    last_name = member.lastName or ""
+    full_name = f"{first_name} {last_name}".strip() or member.username
+    picture_url = None
+    if member.picture:
+        picture_url = (
+            member.picture
+            if str(member.picture).startswith(("http://", "https://", "/"))
+            else f"/images/{member.picture}"
+        )
+    return {
+        "memberId": str(member.memberId),
+        "username": member.username,
+        "email": member.email,
+        "firstName": member.firstName,
+        "lastName": member.lastName,
+        "fullName": full_name,
+        "phoneNumber": member.phoneNumber,
+        "picture": member.picture,
+        "pictureUrl": picture_url,
+    }
+
+
+def _score_payload(
+    face_encoding_id,
+    matched_member_id,
+    distance: float,
+    threshold: float,
+    *,
+    liveness_passed: bool,
+) -> dict:
+    similarity = max(0.0, min(1.0, 1.0 - float(distance)))
+    confidence_percent = round(similarity * 100.0, 2)
+    margin = (
+        max(0.0, (threshold - float(distance)) / threshold) if threshold > 0 else 0.0
+    )
+    return {
+        "memberId": str(matched_member_id),
+        "faceEncodingId": str(face_encoding_id),
+        "distance": round(float(distance), 6),
+        "threshold": threshold,
+        "confidence": round(similarity, 6),
+        "confidencePercent": confidence_percent,
+        "matchMargin": round(margin, 4),
+        "matchQuality": _match_quality(float(distance), threshold),
+        "livenessPassed": liveness_passed,
+        "enrolledImageUrl": f"/enrolled_images/{face_encoding_id}.jpg",
+    }
+
+
+async def _resolve_match_response(
+    db: AsyncSession,
+    target_encoding: List[float],
+    *,
+    liveness_passed: bool,
+) -> dict:
+    threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+    match = await _search_face_pgvector(db, target_encoding, threshold=threshold)
+    if not match:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Face does not match any record.",
+        )
+
+    face_encoding_id, matched_member_id, distance = match
+    print(
+        f"pgvector match faceEncodingId={face_encoding_id} "
+        f"memberId={matched_member_id} distance={distance:.4f}"
+    )
+
+    member = await db.get(Member, matched_member_id)
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Matched member not found",
+        )
+
+    payload = _score_payload(
+        face_encoding_id,
+        matched_member_id,
+        distance,
+        threshold,
+        liveness_passed=liveness_passed,
+    )
+    payload.update(
+        {
+            "message": "Face match found!",
+            "matched": True,
+            "member": _member_payload(member),
+        }
+    )
+    return payload
+
+
+async def _save_temp_frames(image_files: List[UploadFile]) -> List[str]:
+    temp_dir = Path("temp_images")
+    temp_dir.mkdir(exist_ok=True)
+    paths: List[str] = []
+    for image_file in image_files:
+        image_path = temp_dir / f"{uuid.uuid4()}.jpg"
+        with image_path.open("wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        paths.append(str(image_path))
+    return paths
+
+
+def _cleanup_paths(paths: List[str]) -> None:
+    for path in paths:
+        p = Path(path)
+        if p.exists():
+            p.unlink()
+
+
 async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
     """Liveness check + 1:N match via pgvector cosine distance."""
     if not image_files:
@@ -103,40 +234,165 @@ async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
             detail="No image files provided for liveness check",
         )
 
-    temp_dir = Path("temp_images")
-    temp_dir.mkdir(exist_ok=True)
-    temp_image_paths = []
-
+    temp_image_paths: List[str] = []
     try:
-        for image_file in image_files:
-            image_path = temp_dir / f"{uuid.uuid4()}.jpg"
-            with image_path.open("wb") as buffer:
-                shutil.copyfileobj(image_file.file, buffer)
-            temp_image_paths.append(str(image_path))
-
+        temp_image_paths = await _save_temp_frames(image_files)
         target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
-
-        match = await _search_face_pgvector(
-            db,
-            target_encoding,
-            threshold=settings.FACE_RECOGNITION_THRESHOLD,
+        return await _resolve_match_response(
+            db, target_encoding, liveness_passed=True
         )
-
-        if match:
-            face_encoding_id, matched_member_id, distance = match
-            print(
-                f"pgvector match faceEncodingId={face_encoding_id} "
-                f"memberId={matched_member_id} distance={distance:.4f}"
-            )
-            return {
-                "message": "Face match found!",
-                "memberId": str(matched_member_id),
-            }
-
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Face does not match any record.",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
+    finally:
+        _cleanup_paths(temp_image_paths)
+
+
+async def identify_face(image_file: UploadFile, db: AsyncSession):
+    """Fast 1:N identify from a single frame (no liveness) for live overlay labels."""
+    temp_image_paths: List[str] = []
+    try:
+        temp_image_paths = await _save_temp_frames([image_file])
+        features = extract_face_features(temp_image_paths[0], require_quality=False)
+        if features is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No face detected in the image.",
+            )
+        target_encoding, _bbox = features
+        return await _resolve_match_response(
+            db, target_encoding, liveness_passed=False
+        )
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    finally:
+        _cleanup_paths(temp_image_paths)
+
+
+def _persist_photo_from_path(source_path: str) -> str:
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    filename = f"{uuid.uuid4()}.jpg"
+    dest = UPLOAD_DIR / filename
+    shutil.copyfile(source_path, dest)
+    return filename
+
+
+def _employee_brief(company_employee: CompanyEmployee) -> dict:
+    member = company_employee.member
+    first_name = (member.firstName if member else "") or ""
+    last_name = (member.lastName if member else "") or ""
+    full_name = f"{first_name} {last_name}".strip() or (
+        member.username if member else "-"
+    )
+    dept = company_employee.department
+    pos = company_employee.position
+    return {
+        "company_employeeId": str(company_employee.company_employeeId),
+        "employeeId": company_employee.employeeId,
+        "fullName": full_name,
+        "department": (dept.thName if dept else None) or (dept.engName if dept else None),
+        "position": (pos.thName if pos else None) or (pos.engName if pos else None),
+        "member": _member_payload(member) if member else None,
+    }
+
+
+async def check_in_face(
+    image_files: List[UploadFile],
+    companyId: UUID,
+    latitude: float,
+    longitude: float,
+    db: AsyncSession,
+    note: Optional[str] = None,
+):
+    """
+    One-shot kiosk check-in: multi-frame liveness + match + save photo + timestamp.
+    """
+    if not image_files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No image files provided for check-in",
+        )
+
+    temp_image_paths: List[str] = []
+    try:
+        temp_image_paths = await _save_temp_frames(image_files)
+        target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
+        match_payload = await _resolve_match_response(
+            db, target_encoding, liveness_passed=True
+        )
+
+        member_id = UUID(match_payload["memberId"])
+        result = await db.execute(
+            select(CompanyEmployee)
+            .where(
+                CompanyEmployee.memberId == member_id,
+                CompanyEmployee.companyId == companyId,
+            )
+            .options(
+                selectinload(CompanyEmployee.member),
+                selectinload(CompanyEmployee.position),
+                selectinload(CompanyEmployee.department),
+            )
+        )
+        company_employee = result.scalar_one_or_none()
+        if not company_employee:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Matched face is not an employee of this company.",
+            )
+
+        mid_path = temp_image_paths[len(temp_image_paths) // 2]
+        photo_filename = _persist_photo_from_path(mid_path)
+
+        check_in_note = (note or "").strip() or "Face kiosk auto check-in"
+        timestamp = await create_timestamp(
+            {
+                "company_employeeId": company_employee.company_employeeId,
+                "latitude": latitude,
+                "longitude": longitude,
+                "photoTimestamp": photo_filename,
+                "note": check_in_note,
+            },
+            companyId,
+            db,
+        )
+
+        ts_type = timestamp.get("timestampType")
+        ts_type_value = getattr(ts_type, "value", ts_type)
+        is_warning = int(ts_type_value) == 0
+
+        return {
+            **match_payload,
+            "message": "Check-in saved"
+            if not is_warning
+            else "Check-in saved (outside area)",
+            "checkedIn": True,
+            "isWarning": is_warning,
+            "employee": _employee_brief(company_employee),
+            "timestamp": {
+                "timestampId": str(timestamp["timestampId"]),
+                "timestamp": timestamp["timestamp"],
+                "timestampType": ts_type_value,
+                "locationName": timestamp.get("locationName"),
+                "latitude": timestamp.get("latitude"),
+                "longitude": timestamp.get("longitude"),
+                "photoTimestamp": timestamp.get("photoTimestamp"),
+                "photoUrl": f"/images/{photo_filename}",
+                "approvalStatus": timestamp.get("approvalStatus"),
+                "note": timestamp.get("note"),
+            },
+        }
 
     except HTTPException:
         raise
@@ -147,10 +403,7 @@ async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
         )
     finally:
-        for path in temp_image_paths:
-            p = Path(path)
-            if p.exists():
-                p.unlink()
+        _cleanup_paths(temp_image_paths)
 
 
 async def get_encodings_for_member(memberId: UUID, db: AsyncSession):

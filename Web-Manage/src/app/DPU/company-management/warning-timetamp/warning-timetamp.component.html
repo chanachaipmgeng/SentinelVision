@@ -1,3 +1,42 @@
-<p>
-  warning-timetamp works!
-</p>
+<div class="box">
+  <div class="box-header flex items-center justify-between">
+    <div>
+      <h5 class="box-title mb-0">คิวอนุมัติลงเวลานอกพื้นที่</h5>
+      <p class="text-dpu-muted text-[0.8rem] mb-0 mt-1">รายการสถานะ PENDING ที่รออนุมัติ</p>
+    </div>
+    <button type="button" class="ti-btn ti-btn-primary-full !py-1" (click)="loadPending()">รีเฟรช</button>
+  </div>
+  <div class="box-body">
+    <div *ngIf="loading" class="text-center py-8 text-dpu-muted">กำลังโหลด...</div>
+    <div *ngIf="!loading && items.length === 0" class="text-center py-8 text-dpu-muted">ไม่มีรายการรออนุมัติ</div>
+
+    <div class="table-responsive" *ngIf="!loading && items.length">
+      <table class="table whitespace-nowrap table-hover min-w-full">
+        <thead>
+          <tr>
+            <th>พนักงาน</th>
+            <th>เวลา</th>
+            <th>สถานที่</th>
+            <th>หมายเหตุ</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of items">
+            <td>
+              <div class="font-medium">{{ item.employee?.getFullname() }}</div>
+              <div class="text-[0.75rem] text-dpu-muted">{{ item.employee?.employeeId }}</div>
+            </td>
+            <td>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ item.getLocation() }}</td>
+            <td class="max-w-[240px] whitespace-normal">{{ item.note || '-' }}</td>
+            <td class="text-end">
+              <button type="button" class="ti-btn ti-btn-success-full !py-1 !px-2 me-1" (click)="approve(item)">อนุมัติ</button>
+              <button type="button" class="ti-btn ti-btn-danger-full !py-1 !px-2" (click)="reject(item)">ปฏิเสธ</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

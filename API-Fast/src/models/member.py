@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Text , Enum
+from sqlalchemy import Column, String, Integer, DateTime, Date, Text, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from ..config.database import Base
@@ -30,6 +30,11 @@ class Member(Base):
     role = Column(Enum(RoleType), nullable=False, default=RoleType.MEMBER)  # Default as Enum instance
     status = Column(Enum(StatusType), nullable=False, default=StatusType.ENABLE)  # Default as Enum instance
     picture = Column(String)
+    birthDate = Column("birth_date", Date, nullable=True)
+    address = Column(Text, nullable=True)
+    emergencyContactName = Column("emergency_contact_name", String, nullable=True)
+    emergencyContactPhone = Column("emergency_contact_phone", String, nullable=True)
+    attachmentUrls = Column("attachment_urls", Text, nullable=True)  # comma-separated filenames
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     

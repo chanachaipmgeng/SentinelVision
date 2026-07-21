@@ -1,11 +1,10 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, date
 from ..models.member import RoleType, StatusType
 
 
-# Base schema (shared properties)
 class MemberBase(BaseModel):
     memberId: Optional[UUID] = None
     username: str
@@ -16,14 +15,17 @@ class MemberBase(BaseModel):
     phoneNumber: Optional[str] = None
     role: RoleType
     status: StatusType
+    birthDate: Optional[date] = None
+    address: Optional[str] = None
+    emergencyContactName: Optional[str] = None
+    emergencyContactPhone: Optional[str] = None
+    attachmentUrls: Optional[str] = None
 
 
-# Schema for creating a new member
 class MemberCreate(MemberBase):
-    password: str  # Password is required during creation
+    password: str
 
 
-# Schema for updating an existing member
 class MemberUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -33,14 +35,18 @@ class MemberUpdate(BaseModel):
     phoneNumber: Optional[str] = None
     role: Optional[RoleType] = None
     status: Optional[StatusType] = None
-    password: Optional[str] = None  # Optional password for updates
+    password: Optional[str] = None
+    birthDate: Optional[date] = None
+    address: Optional[str] = None
+    emergencyContactName: Optional[str] = None
+    emergencyContactPhone: Optional[str] = None
+    attachmentUrls: Optional[str] = None
 
 
-# Schema for returning member data (response)
 class MemberResponse(MemberBase):
     memberId: UUID
     createdAt: datetime
     updatedAt: datetime
 
     class Config:
-        from_attributes = True  # Enable ORM mode to work seamlessly with SQLAlchemy models
+        from_attributes = True

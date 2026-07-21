@@ -15,6 +15,11 @@ export class TimestampModel extends BaseModel {
   timestamp: string
   createdAt: string
   updatedAt: string
+  note?: string
+  approvalStatus?: string
+  approvedBy?: string
+  approvedAt?: string
+  rejectReason?: string
   employee: EmployeeModel
   constructor(
     data?: Partial<TimestampModel>,
@@ -32,11 +37,22 @@ export class TimestampModel extends BaseModel {
     this.photoTimestamp = data?.photoTimestamp!
     this.createdAt = data?.createdAt!;
     this.updatedAt = data?.updatedAt!
+    this.note = data?.note || ""
+    this.approvalStatus = data?.approvalStatus || "NONE"
+    this.approvedBy = data?.approvedBy
+    this.approvedAt = data?.approvedAt
+    this.rejectReason = data?.rejectReason || ""
     this.employee = new EmployeeModel(data?.employee, this.translateService)
   }
 
   getStatus(): string {
-    if (this.timestampType == 1) {
+    if (this.approvalStatus === 'PENDING') {
+      return this.translateService.instant('Pending Approval')
+    } else if (this.approvalStatus === 'APPROVED') {
+      return this.translateService.instant('Approved')
+    } else if (this.approvalStatus === 'REJECTED') {
+      return this.translateService.instant('Rejected')
+    } else if (this.timestampType == 1) {
       return this.translateService.instant('Complete')
     } else if (this.timestampType == 2) {
       return this.translateService.instant('Complete')

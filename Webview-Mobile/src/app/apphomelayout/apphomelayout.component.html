@@ -1,26 +1,12 @@
 <!-- Sidebar main menu -->
-<app-sidebar  class="sidebar-wrap  sidebar-fullmenu"></app-sidebar>
-<!-- Add overlay or fullmenu instead overlay , keep 'sidebar-[choice here]' -->
-<!-- Sidebar main menu ends-->
+<app-sidebar class="sidebar-wrap sidebar-fullmenu dpu-sidebar"></app-sidebar>
 
-<!-- Begin page -->
-<main #mainPage>
+<main #mainPage class="dpu-shell">
+  <app-headermenu class="header position-fixed dpu-header" #HeaderEl></app-headermenu>
 
-    <!-- Header -->
-    <app-headermenu class="header position-fixed" #HeaderEl></app-headermenu>
-    <!-- Header ends -->
-
-    <!-- main page content -->
-    <div class="main-container container" [@routeAnimations]="o.isActivated && o.activatedRoute.routeConfig?.path">
-        <div class="clearfix"></div>
-        <router-outlet #o="outlet"></router-outlet>
-        <div class="clearfix"></div>
-    </div>
-    <!-- main page content ends -->
-
+  <div class="main-container container dpu-main dpu-page" [@routeAnimations]="o.isActivated && o.activatedRoute.routeConfig?.path">
+    <router-outlet #o="outlet"></router-outlet>
+  </div>
 </main>
-<!-- Page ends-->
 
- <!-- Footer -->
-<app-staticfooter class="footer" #FooterEl></app-staticfooter>
- <!-- Footer Ends -->
+<app-staticfooter class="footer dpu-footer" #FooterEl></app-staticfooter>

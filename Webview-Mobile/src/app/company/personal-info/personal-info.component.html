@@ -51,9 +51,9 @@
 <div class="row h-100 mb-4" *ngIf="personalModel">
   <!-- <div class="col-12 col-md-6 col-lg-4">
         <div class="form-group form-floating  mb-3">
-            <input type="text" class="form-control" style="background-color: white; color: black" value='{{personalModel.idPeople ? personalModel.idPeople : "-"}}'
+            <input type="text" class="form-control" value='{{personalModel.idPeople ? personalModel.idPeople : "-"}}'
                 id="empid" disabled>
-            <label for="empid" style="color: black;">{{"Employee ID" | translate}}</label>
+            <label for="empid">{{"Employee ID" | translate}}</label>
         </div>
     </div> -->
   <!-- <div class="col-12 col-md-6 col-lg-4">
@@ -122,17 +122,52 @@
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="date" class="form-control"
+        [(ngModel)]="personalModel.member.birthDate" id="birthDate">
+      <label for="birthDate">วันเกิด</label>
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="form-group form-floating mb-3">
+      <textarea class="form-control"
+        [(ngModel)]="personalModel.member.address" id="address" rows="2"></textarea>
+      <label for="address">ที่อยู่</label>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="form-group form-floating mb-3">
+      <input type="text" class="form-control"
+        [(ngModel)]="personalModel.member.emergencyContactName" id="emName">
+      <label for="emName">ผู้ติดต่อฉุกเฉิน</label>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="form-group form-floating mb-3">
+      <input type="text" class="form-control"
+        [(ngModel)]="personalModel.member.emergencyContactPhone" id="emPhone">
+      <label for="emPhone">เบอร์ติดต่อฉุกเฉิน</label>
+    </div>
+  </div>
+
+  <div class="col-12 mb-3">
+    <button class="btn btn-default btn-lg w-100" (click)="saveProfileDetails()">
+      บันทึกข้อมูลโปรไฟล์
+    </button>
+  </div>
+
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="form-group form-floating mb-3">
+      <input type="text" class="form-control"
         value='{{personalModel.employeeId?personalModel.employeeId:"-"}}' id="email" disabled>
-      <label for="email" style="color: black;">{{'รหัสพนักงาน' | translate}}</label>
+      <label for="email">{{'รหัสพนักงาน' | translate}}</label>
     </div>
   </div>
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.member.email?personalModel.member.email:"-"}}' id="email" disabled>
-      <label for="email" style="color: black;">{{'E-mail' | translate}}</label>
+      <label for="email">{{'E-mail' | translate}}</label>
     </div>
   </div>
   <!-- <div class="col-12 col-md-6 col-lg-4">
@@ -143,67 +178,67 @@
   </div> -->
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.member.phoneNumber ? personalModel.member.phoneNumber : "-"}}' id="profile7" disabled>
-      <label for="profile7" style="color: black;">{{'Mobile Number' | translate}}</label>
+      <label for="profile7">{{'Mobile Number' | translate}}</label>
     </div>
   </div>
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black;"
+      <input type="text" class="form-control"
         value="{{translate.currentLang=='th' ? (personalModel.startDate| thaidate : 'fullSpace'):(personalModel.startDate|
       date: 'fullDate': 'en')}}" id="profile7" disabled>
-      <label for="profile7" style="color: black;">{{"วันที่เริ่มงาน"|translate}}</label>
+      <label for="profile7">{{"วันที่เริ่มงาน"|translate}}</label>
     </div>
   </div>
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.member.phoneNumber ? personalModel.member.phoneNumber : "-"}}' id="profile7" disabled>
-      <label for="profile7" style="color: black;">{{'Mobile Number' | translate}}</label>
+      <label for="profile7">{{'Mobile Number' | translate}}</label>
     </div>
   </div>
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.department.getName() ? personalModel.department.getName() : "-"}}' id="profile7"
         disabled>
-      <label for="profile7" style="color: black;">{{'แผนก' | translate}}</label>
+      <label for="profile7">{{'แผนก' | translate}}</label>
     </div>
   </div>
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.position.getName() ? personalModel.position.getName() : "-"}}' id="profile7"
         disabled>
-      <label for="profile7" style="color: black;">{{'ตำแหน่ง' | translate}}</label>
+      <label for="profile7">{{'ตำแหน่ง' | translate}}</label>
     </div>
   </div>
 
   <div *ngIf="bossModel" class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{bossModel.member.getFullname()}}' id="profile7" disabled>
-      <label for="profile7" style="color: black;">{{'หัวหน้างาน' | translate}}</label>
+      <label for="profile7">{{'หัวหน้างาน' | translate}}</label>
     </div>
   </div>
 
   <div class="col-12 col-md-6 col-lg-4">
     <div class="form-group form-floating  mb-3">
-      <input type="text" class="form-control" style="background-color: white; color: black"
+      <input type="text" class="form-control"
         value='{{personalModel.getType()}}' id="profile7" disabled>
-      <label for="profile7" style="color: black;">{{'ประเภทงาน' | translate}}</label>
+      <label for="profile7">{{'ประเภทงาน' | translate}}</label>
     </div>
   </div>
   <!-- <div class="col-12 col-md-6 col-lg-4">
         <div class="form-group form-floating  mb-3">
-            <input type="text" class="form-control" style="background-color: white; color: black"
+            <input type="text" class="form-control"
                 value='{{personalModel.bossModel?(personalModel.bossModel.fullName?personalModel.bossModel.fullName:"-"):"-"}}'
                 id="profile7" disabled>
-            <label for="profile7" style="color: black;">{{"Boss"|translate}}</label>
+            <label for="profile7">{{"Boss"|translate}}</label>
         </div>
     </div> -->
   <!-- <div class="col-12 col-md-12 col-lg-12">

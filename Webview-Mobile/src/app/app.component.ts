@@ -25,8 +25,9 @@ export class AppComponent {
       localStorage.setItem("data-color", localStorage.getItem('data-color')!)
     }else {
       let bodyEl = document.getElementsByTagName('body')[0];
-      bodyEl.setAttribute('data-color', 'theme-myhr');
-      localStorage.setItem("data-color", 'theme-myhr')
+      bodyEl.setAttribute('data-color', 'theme-teal');
+      bodyEl.classList.add('theme-teal');
+      localStorage.setItem("data-color", 'theme-teal')
     }
 
     if (localStorage.getItem('data-bg')) {
@@ -52,8 +53,7 @@ export class AppComponent {
     }
 
     if (localStorage.getItem('isdarkmode') == "true") {
-      const html = document.getElementsByTagName('html')[0];
-      html.classList.add('dark-mode');
+      localStorage.setItem('isdarkmode', 'false');
     }
 
     window.addEventListener('message', (event) => {

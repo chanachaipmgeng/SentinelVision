@@ -44,8 +44,12 @@
             <div class="record-info">
 
               <div class="app-info">
-                <img src="../assets/img/icon-menu/time/vector.png" alt="" class="app-icon" />
+                <img src="assets/img/icon-menu/time/vector.png" alt="" class="app-icon" />
                 <span class="font-12 text-location text-truncate">{{data.getLocation()}}</span>
+              </div>
+              <div class="font-12 text-muted" *ngIf="data.note">หมายเหตุ: {{data.note}}</div>
+              <div class="font-12 text-danger" *ngIf="data.approvalStatus==='REJECTED' && data.rejectReason">
+                ปฏิเสธ: {{data.rejectReason}}
               </div>
             </div>
             <span
@@ -55,7 +59,7 @@
           </div>
         </div>
         <div class="avatar avatar-50 rounded icon rounded-circle bg-white shadow-md action-icon">
-          <img style="width: 24px;height: 24px;" src="../assets/img/icon-menu/time/location.png" class="img-location"
+          <img style="width: 24px;height: 24px;" src="assets/img/icon-menu/time/location.png" class="img-location"
             (click)="openMap(content,data)" />
         </div>
       </div>
@@ -113,11 +117,12 @@
     <button type="button" class="btn-close" aria-label="Close" (click)="modal.dismiss('Cross click')"></button>
   </div>
   <div class="modal-body p-0 px-3">
-    <agm-map [latitude]="timestampModel.latitude" [longitude]="timestampModel.longitude" style="height: 350px"
-      [zoom]="15">
-      <agm-marker [latitude]="timestampModel.latitude" [longitude]="timestampModel.longitude" class="rounded-10">
-      </agm-marker>
-    </agm-map>
+    <app-dpu-location-map
+      [latitude]="timestampModel.latitude"
+      [longitude]="timestampModel.longitude"
+      [active]="mapActive"
+      [height]="320">
+    </app-dpu-location-map>
     <div class="row p-3" *ngIf="timestampModel">
       <div class="col px-0">
         <h5 class="color-text-menu mb-1">{{timestampModel.getLocation()}}</h5>
@@ -126,7 +131,7 @@
             (timestampModel.timestamp | thaidate :
             "fullSpace"):(timestampModel.timestamp | date: "fullDate": 'en')}}</span></p>
         <p class="text-muted ">
-          <img src="../assets/img/icon-menu/time/vector.png" class="img-mark" /> {{timestampModel.latitude| number:
+          <img src="assets/img/icon-menu/time/vector.png" class="img-mark" /> {{timestampModel.latitude| number:
           '1.6-6'}},{{timestampModel.longitude| number: '1.6-6'}}
         </p>
       </div>

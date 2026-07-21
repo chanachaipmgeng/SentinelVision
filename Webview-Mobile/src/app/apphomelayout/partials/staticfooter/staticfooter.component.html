@@ -1,56 +1,28 @@
-<div class="container">
-  <ul class="nav nav-pills nav-justified">
-    <li class="nav-item">
-      <a class="nav-link" routerLink="/company/home-company" routerLinkActive="active">
-        <span>
-          <i class="nav-icon bi bi-house"></i>
-          <span class="nav-text">{{"Home" | translate}}</span>
-        </span>
-      </a>
-    </li>
-    <!-- <li class="nav-item">
-      <a class="nav-link" routerLink="/company/feed-news" routerLinkActive="active">
-        <span>
-          <i class="nav-icon bi bi-newspaper"></i>
-          <span class="nav-text">{{"สถิติ" | translate}}</span>
-        </span>
-      </a>
-    </li> -->
-    <!-- <li class="nav-item">
-            <a class="nav-link" routerLink="/company/dashboard-company" routerLinkActive="active">
-                <span>
-                    <i class="nav-icon bi bi-laptop"></i>
-                    <span class="nav-text">Dashboard</span>
-                </span>
-            </a>
-        </li> -->
-    <li class="nav-item centerbutton">
-      <div class="nav-link" [class.active]="isVisited == true" routerLink="/company/face-scan">
-        <span class="theme-radial-gradient">
-          <i class="bi bi-camera-fill" style="font-size: 25px;"></i>
-          <!-- <img src="assets/img/infographic-camera.png" class="nav-icon" alt="" style="width: 40px;" /> -->
-        </span>
+<div class="dpu-bottom-nav">
+  <a class="dpu-nav-item" routerLink="/company/home-company" routerLinkActive="active">
+    <i class="bi bi-house-door-fill"></i>
+    <span>{{ 'Home' | translate }}</span>
+  </a>
 
-      </div>
-    </li>
+  <a class="dpu-nav-item" [routerLink]="historyLink" routerLinkActive="active">
+    <i class="bi bi-clock-history"></i>
+    <span>{{ 'ประวัติ' | translate }}</span>
+  </a>
 
-    <!-- <li class="nav-item">
-      <a class="nav-link" routerLink="/services" routerLinkActive="active">
-        <span>
-          <i class="nav-icon bi bi-grid"></i>
-          <span class="nav-text">{{"ประวัติ" | translate}}</span>
-        </span>
-      </a>
-    </li> -->
+  <a class="dpu-nav-scan" routerLink="/company/face-scan" routerLinkActive="active">
+    <span class="dpu-nav-scan__btn">
+      <i class="bi bi-camera-fill"></i>
+    </span>
+    <span class="dpu-nav-scan__label">{{ 'Scan' | translate }}</span>
+  </a>
 
-    <li class="nav-item">
-      <a class="nav-link" routerLink="/general" routerLinkActive="active">
-        <span>
-          <i class="nav-icon bi bi-person"></i>
-          <span class="nav-text">{{"Profile" | translate}}</span>
-        </span>
-      </a>
-    </li>
+  <a class="dpu-nav-item" routerLink="/company/dashboard-company" routerLinkActive="active">
+    <i class="bi bi-bar-chart-fill"></i>
+    <span>{{ 'สถิติ' | translate }}</span>
+  </a>
 
-  </ul>
+  <a class="dpu-nav-item" routerLink="/general" routerLinkActive="active">
+    <i class="bi bi-person-fill"></i>
+    <span>{{ 'Profile' | translate }}</span>
+  </a>
 </div>

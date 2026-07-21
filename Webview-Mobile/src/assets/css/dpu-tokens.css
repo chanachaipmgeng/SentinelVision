@@ -1,0 +1,40 @@
+/**
+ * DPU Design Tokens — shared reference (Admin + Mobile)
+ * Keep values in sync with Web-Manage/src/assets/css/dpu-tokens.css
+ */
+:root {
+  --dpu-brand: #0f766e;
+  --dpu-brand-hover: #0d9488;
+  --dpu-brand-deep: #0b4f4a;
+  --dpu-brand-soft: rgba(15, 118, 110, 0.12);
+  --dpu-ink: #0f172a;
+  --dpu-muted: #64748b;
+  --dpu-surface: #f1f5f9;
+  --dpu-surface-elevated: #ffffff;
+  --dpu-card: #ffffff;
+  --dpu-border: #e2e8f0;
+  --dpu-danger: #b91c1c;
+  --dpu-success: #15803d;
+  --dpu-warning: #b45309;
+  --dpu-radius: 16px;
+  --dpu-radius-sm: 12px;
+  --dpu-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --dpu-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.1);
+  --dpu-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dpu-duration: 0.35s;
+  --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
+  --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
+  --dpu-header-h: 56px;
+  --dpu-footer-h: 72px;
+
+  /* FiMobile bridge — legacy classes inherit DPU brand */
+  --fimobile-theme-color: var(--dpu-brand);
+  --fimobile-theme-color-grad-1: #0b4f4a;
+  --fimobile-theme-color-grad-2: #0f766e;
+  --fimobile-theme-color-grad-3: #14b8a6;
+  --fimobile-page-bg-1: var(--dpu-surface);
+  --fimobile-page-bg-2: #e8f0ef;
+  --fimobile-card-color: rgba(255, 255, 255, 0.92);
+  --fimobile-rounded: var(--dpu-radius);
+  --fimobile-padding: 16px;
+}

@@ -1,0 +1,36 @@
+/**
+ * DPU Design Tokens — shared reference (Admin + Mobile)
+ * Keep values in sync with Webview-Mobile/src/assets/css/dpu-tokens.css
+ *
+ * Brand:    --dpu-brand #0f766e, --dpu-brand-hover #0d9488, --dpu-brand-deep #0b4f4a
+ * Ink:      --dpu-ink #0f172a, --dpu-muted #64748b
+ * Surface:  --dpu-surface #eef2f6, --dpu-surface-elevated / --dpu-card #ffffff
+ * Border:   --dpu-border #e2e8f0
+ * Semantic: --dpu-danger #b91c1c, --dpu-success #15803d, --dpu-warning #b45309
+ * Shape:    --dpu-radius 14px (admin) / 16px (mobile), --dpu-radius-sm 10px
+ * Motion:   --dpu-ease cubic-bezier(0.22,1,0.36,1), --dpu-duration 0.35s
+ * Font:     --dpu-font "Noto Sans Thai", "Manrope", system-ui, sans-serif
+ */
+:root {
+  --dpu-brand: #0f766e;
+  --dpu-brand-hover: #0d9488;
+  --dpu-brand-deep: #0b4f4a;
+  --dpu-brand-soft: rgba(15, 118, 110, 0.12);
+  --dpu-ink: #0f172a;
+  --dpu-muted: #64748b;
+  --dpu-surface: #eef2f6;
+  --dpu-surface-elevated: #ffffff;
+  --dpu-card: #ffffff;
+  --dpu-border: #e2e8f0;
+  --dpu-danger: #b91c1c;
+  --dpu-success: #15803d;
+  --dpu-warning: #b45309;
+  --dpu-radius: 14px;
+  --dpu-radius-sm: 10px;
+  --dpu-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --dpu-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.1);
+  --dpu-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dpu-duration: 0.35s;
+  --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
+  --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
+}

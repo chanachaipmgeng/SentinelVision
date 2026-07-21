@@ -60,11 +60,11 @@
   <div class="col-12 col-md-6  mb-4">
     <div class="card shadow-sm">
       <div class="card-body">
-        <agm-map [latitude]="companyModel.latitude" [longitude]="companyModel.longitude" style="height: 300px"
-          [zoom]="15">
-          <agm-marker [latitude]="companyModel.latitude" [longitude]="companyModel.longitude">
-          </agm-marker>
-        </agm-map>
+        <app-dpu-location-map
+          [latitude]="companyModel.latitude"
+          [longitude]="companyModel.longitude"
+          [height]="300">
+        </app-dpu-location-map>
       </div>
     </div>
   </div>

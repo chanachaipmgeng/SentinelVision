@@ -22,26 +22,25 @@ const STEPS_ALL: any[] = [
     query(
       ':leave > *',
       [
-        style({ transform: 'translateY(0%)', opacity: 1 }),
+        style({ opacity: 1 }),
         animate(
-          '0.2s ease-in-out',
-          style({ transform: 'translateY(-3%)', opacity: 0 })
+          '0.22s cubic-bezier(0.22, 1, 0.36, 1)',
+          style({ opacity: 0 })
         ),
         style({ position: 'fixed' })
       ],
       { optional: true }
     ),
     query(
-      ':enter > *',
+      ':enter > *:not(.ti-modal):not(.hs-overlay)',
       [
         style({
-          transform: 'translateY(-3%)',
           opacity: 0,
           position: 'static'
         }),
         animate(
-          '0.5s ease-in-out',
-          style({ transform: 'translateY(0%)', opacity: 1 })
+          '0.45s cubic-bezier(0.22, 1, 0.36, 1)',
+          style({ opacity: 1 })
         )
       ],
       { optional: true }
@@ -49,11 +48,11 @@ const STEPS_ALL: any[] = [
   ]),
   query(
     ':enter .' + ROUTE_ANIMATIONS_ELEMENTS,
-    stagger(75, [
-      style({ transform: 'translateY(10%)', opacity: 0 }),
+    stagger(60, [
+      style({ opacity: 0 }),
       animate(
-        '0.5s ease-in-out',
-        style({ transform: 'translateY(0%)', opacity: 1 })
+        '0.4s cubic-bezier(0.22, 1, 0.36, 1)',
+        style({ opacity: 1 })
       )
     ]),
     { optional: true }

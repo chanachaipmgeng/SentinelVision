@@ -47,22 +47,22 @@
             <p class="mb-0 font-semibold text-[1rem] text-truncate">
               <a href="javascript:void(0);">{{item.member.firstName+ ' ' +item.member.lastName}}</a>
             </p>
-            <p class="mb-0 text-[0.75rem] text-[#8c9097] dark:text-white/50 text-truncate">
+            <p class="mb-0 text-[0.75rem] text-dpu-muted dark:text-white/50 text-truncate">
               {{item.member.email}}</p>
           </div>
         </div>
         <div class="team-member-stats sm:flex items-center justify-evenly">
           <div class="text-center p-4 w-full">
             <p class="font-semibold mb-0">รหัสพนักงาน</p>
-            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.employeeId}}</span>
+            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.employeeId}}</span>
           </div>
           <div class="text-center p-4 w-full">
             <p class="font-semibold mb-0">แผนก</p>
-            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.position.thName}}</span>
+            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.position.thName}}</span>
           </div>
           <div class="text-center p-4 w-full">
             <p class="font-semibold mb-0">ตำแหน่ง</p>
-            <span class="text-[#8c9097] dark:text-white/50 text-[0.75rem]">{{item.department.thName}}</span>
+            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.department.thName}}</span>
           </div>
         </div>
       </div>
@@ -158,8 +158,24 @@
           </div>
           <div class="xl:col-span-6 col-span-12">
             <label for="deal-lead-score" class="form-label">รหัสพนักงาน</label>
-            <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="รหัสพนักงาน"
               [(ngModel)]="selectModel.employeeId">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">วันเกิด</label>
+            <input type="date" class="form-control" [(ngModel)]="selectModel.member.birthDate">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">ที่อยู่</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="selectModel.member.address"></textarea>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">ผู้ติดต่อฉุกเฉิน</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.member.emergencyContactName">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">เบอร์ติดต่อฉุกเฉิน</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.member.emergencyContactPhone">
           </div>
           <div class="xl:col-span-6 col-span-12">
             <label for="deal-name" class="form-label">หัวหน้างาน</label>

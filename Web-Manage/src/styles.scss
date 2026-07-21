@@ -1,10 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
 * {
-  font-family: "Noto Sans Thai", serif;
-  // src: url("./assets/fonts/NotoSansThai/NotoSansThai-VariableFont_wdth,wght.ttf");
+  font-family: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
 }
 
 @import "./assets/css/style.css";
+@import "./assets/css/dpu-tokens.css";
+@import "./assets/css/dpu-theme.css";
 @import '../node_modules/ngx-owl-carousel-o/lib/styles/prebuilt-themes/owl.carousel.css';
 
 // @import "../node_modules/angular-calendar/scss/angular-calendar.scss";

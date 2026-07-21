@@ -47,7 +47,23 @@ ports:
 
 Then `ng serve` with `environment.ts` → `http://localhost:8000`.
 
-## Useful compose commands
+## Demo seed + smoke tests
+
+With the stack up (`docker compose up -d`):
+
+```powershell
+.\scripts\seed-and-test.ps1 -Reset
+```
+
+Or separately:
+
+```bash
+docker compose run --rm -v ./API-Fast:/app --entrypoint python api scripts/seed_demo_data.py --reset
+docker compose run --rm -v ./API-Fast:/app --entrypoint python api scripts/smoke_test_api.py --base-url http://api:8000
+```
+
+Seed fills all 8 tables. Default password for seeded users: `Password123!`
+(accounts: `sysadmin`, `admin`, `boss`, `emp1`, `emp2`).
 
 ```bash
 docker compose logs -f api

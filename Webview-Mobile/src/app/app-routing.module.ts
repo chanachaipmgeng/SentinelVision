@@ -2,33 +2,36 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './shared/services/auth.guard';
 import { ApphomelayoutComponent } from './apphomelayout/apphomelayout.component';
-import { GeneralSettingComponent } from './general-setting/general-setting.component';
 
 const routes: Routes = [
   {
     path: '',
+    component: ApphomelayoutComponent,
+    canActivate: [AuthGuard],
     children: [
       {
         path: 'company',
         loadChildren: () =>
           import('./company/company.module').then((m) => m.CompanyModule),
-        canActivate: [AuthGuard]
+        canActivate: [AuthGuard],
       },
       {
         path: 'general',
         loadChildren: () =>
-          import('./general-setting/general-setting.module').then((m) => m.GeneralSettingModule),
-        canActivate: [AuthGuard]
+          import('./general-setting/general-setting.module').then(
+            (m) => m.GeneralSettingModule
+          ),
+        canActivate: [AuthGuard],
       },
       {
         path: 'services',
         loadChildren: () =>
-          import('./apps-service-other/apps-service-other.module').then((m) => m.AppsServiceOtherModule),
-        canActivate: [AuthGuard]
-      }
+          import('./apps-service-other/apps-service-other.module').then(
+            (m) => m.AppsServiceOtherModule
+          ),
+        canActivate: [AuthGuard],
+      },
     ],
-    component: ApphomelayoutComponent,
-    canActivate: [AuthGuard]
   },
   {
     path: '',
@@ -43,39 +46,23 @@ const routes: Routes = [
     ],
   },
   {
-    path: 'component',
-    loadChildren: () =>
-      import('./appinnerlayout/appinner-routing.module').then(
-        (m) => m.AppinnerlayoutRoutingModule
-      )
-  },
-  {
-    path: 'apps',
-    component: ApphomelayoutComponent,
-    loadChildren: () =>
-      import('./apphomelayout/apphome-routing.module').then(
-        (m) => m.ApphomelayoutRoutingModule
-      )
+    path: 'signin/AD/:tokenAD',
+    redirectTo: 'auth/signin',
   },
   {
     path: '**',
-    redirectTo: 'component/pagenotfound',
+    redirectTo: 'company/home-company',
   },
-  {
-    path: 'signin/AD/:tokenAD',
-    redirectTo: 'auth/signin',
-  }
 ];
 
 @NgModule({
   imports: [
     RouterModule.forRoot(routes, {
-      // initialNavigation: 'enabled',
       useHash: true,
       scrollPositionRestoration: 'enabled',
-      onSameUrlNavigation: 'reload'
+      onSameUrlNavigation: 'reload',
     }),
   ],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

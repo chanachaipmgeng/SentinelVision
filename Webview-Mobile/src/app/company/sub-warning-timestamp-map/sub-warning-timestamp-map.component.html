@@ -74,10 +74,7 @@
   <div class="col-12">
     <div class="card shadow-sm mb-2">
       <div class="card-body">
-        <agm-map [latitude]="latitude" [longitude]="longitude" style="height: 350px" [zoom]="15">
-          <agm-marker [latitude]="latitude" [longitude]="longitude" optimized="false">
-          </agm-marker>
-        </agm-map>
+        <app-dpu-location-map [latitude]="latitude" [longitude]="longitude" [height]="320"></app-dpu-location-map>
       </div>
     </div>
   </div>

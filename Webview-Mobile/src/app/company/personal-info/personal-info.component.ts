@@ -132,6 +132,23 @@ export class PersonalInfoComponent implements OnInit {
   //   };
   // }
 
+  saveProfileDetails() {
+    swal({
+      title: "Are you sure?",
+      text: "คุณต้องการบันทึกโปรไฟล์หรือไม่",
+      icon: "warning",
+      dangerMode: false,
+      buttons: ["Cancel", "Confirm"],
+    }).then((willSave: any) => {
+      if (willSave) {
+        this.employeeService.update(this.personalModel, this.companyId).subscribe(() => {
+          swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
+          this.getEmpProfile();
+        });
+      }
+    });
+  }
+
   save() {
     swal({
       title: "Are you sure?",

@@ -1,74 +1,66 @@
-<!-- welcome user -->
-
-<div class="row mb-4">
-  <div class="col-3">
-    <div class="avatar shadow rounded-10">
-      <img appShowLoading src="{{companyModel.getPicture()}}">
+<section class="dpu-hero card shadow-sm mb-4">
+  <div class="dpu-hero__content">
+    <div class="dpu-hero__avatar">
+      <img appShowLoading [src]="companyModel.getPicture()" alt="">
+    </div>
+    <div>
+      <p class="dpu-hero__greet">สวัสดี</p>
+      <h2 class="dpu-hero__name">{{ employeeModel.getFullname() }}</h2>
+      <p class="dpu-hero__company">{{ companyModel.companyName }}</p>
     </div>
   </div>
-  <div class="col align-self-center ps-0">
-    <h4 class="text-color-theme"><span class="fw-normal">Hi</span>, {{employeeModel.getFullname()}}</h4>
-    <p class="text-muted">{{companyModel.companyName}}</p>
+  <div class="dpu-quick-actions">
+    <a class="dpu-action" routerLink="/company/face-scan">
+      <i class="bi bi-camera-fill"></i>
+      <span>ลงเวลา</span>
+    </a>
+    <a class="dpu-action" routerLink="/company/timestamp-log/{{employeeModel.member.memberId}}">
+      <i class="bi bi-clock-history"></i>
+      <span>ประวัติ</span>
+    </a>
+    <a class="dpu-action" routerLink="/general">
+      <i class="bi bi-person-gear"></i>
+      <span>โปรไฟล์</span>
+    </a>
   </div>
-</div>
+</section>
 
-<!-- Transactions -->
-<div class="row mb-3">
-  <div class="col">
-    <h6 class="title">{{"Timestamp Record2" | translate}}</h6>
+<section class="dpu-section mb-3">
+  <div class="dpu-section__head">
+    <h6 class="title mb-0">{{ 'Timestamp Record2' | translate }}</h6>
+    <a routerLink="/company/timestamp-log/{{employeeModel.member.memberId}}" class="small">{{ 'ประวัติ' | translate }}</a>
   </div>
-  <div class="col-auto">
-    <a routerLink="/company/timestamp-log/{{employeeModel.member.memberId}}" class="small">{{"ประวัติ" | translate}}</a>
-  </div>
-</div>
+</section>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <ul class="list-group list-group-flush bg-none">
-      <li class="list-group-item" *ngFor="let item of timeList">
-        <div class="row">
-          <div class="col-auto">
-            <div class="avatar avatar-50 shadow rounded-10">
-              <img appShowLoading *ngIf="item?.getPicture() != '' ;else personblank" src="{{item?.getPicture()}}">
-              <ng-template #personblank>
-                <img src="assets/img/icon/person.png">
-              </ng-template>
-            </div>
-          </div>
-          <div class="col align-self-center ps-0">
-            <p class="text-color-theme mb-0">{{item.getLocation()}}</p>
-
-          </div>
-          <div class="col-auto align-self-center text-end">
-            <p class="mb-0">{{item.timestamp | date : 'HH:mm'}}</p>
-            <span
-              class="tag text-white py-1 px-2 {{item.timestampType==0?'bg-warning border-warning':'bg-success border-success'}}">{{item.timestampType==0?"Warning":"Complete"}}</span>
-          </div>
-        </div>
-      </li>
-    </ul>
-  </div>
-</div>
-
-
-
-<div class="row mb-3">
-  <div class="col">
-    <h6 class="title">{{"Table of Work" | translate}}</h6>
-  </div>
-</div>
-<div class="row mb-3">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <full-calendar #fullCalendar [options]="calendarOptions"></full-calendar>
+<div class="dpu-timeline mb-4">
+  <article class="dpu-timeline-item" *ngFor="let item of timeList">
+    <div class="dpu-timeline-item__avatar">
+      <img appShowLoading *ngIf="item?.getPicture(); else personblank" [src]="item?.getPicture()" alt="">
+      <ng-template #personblank>
+        <img src="assets/img/icon/person.png" alt="">
+      </ng-template>
     </div>
-  </div>
+    <div class="dpu-timeline-item__body">
+      <p class="mb-0 fw-semibold">{{ item.getLocation() }}</p>
+      <small class="text-muted">{{ item.timestamp | date : 'HH:mm' }}</small>
+    </div>
+    <span class="dpu-badge" [class.dpu-badge--warn]="item.timestampType==0" [class.dpu-badge--ok]="item.timestampType!=0">
+      {{ item.timestampType==0 ? 'Warning' : 'Complete' }}
+    </span>
+  </article>
+  <p class="text-muted small px-1" *ngIf="timeList.length === 0">ยังไม่มีรายการลงเวลา</p>
 </div>
 
-<div class="row mb-3" *ngIf="isSubEmp">
-  <div class="col">
-    <h6 class="title">{{"Subordinate Data" | translate}}</h6>
-  </div>
+<section class="dpu-section mb-3">
+  <h6 class="title">{{ 'Table of Work' | translate }}</h6>
+</section>
+
+<div class="card shadow-sm mb-4 dpu-calendar-card">
+  <full-calendar #fullCalendar [options]="calendarOptions"></full-calendar>
 </div>
+
+<section class="dpu-section mb-3" *ngIf="isSubEmp">
+  <h6 class="title">{{ 'Subordinate Data' | translate }}</h6>
+</section>
 
 <app-subordinate-data *ngIf="isSubEmp"></app-subordinate-data>

@@ -53,6 +53,16 @@ async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
             member.status = user_data.status
         if user_data.picture:
             member.picture = user_data.picture
+        if user_data.birthDate is not None:
+            member.birthDate = user_data.birthDate
+        if user_data.address is not None:
+            member.address = user_data.address
+        if user_data.emergencyContactName is not None:
+            member.emergencyContactName = user_data.emergencyContactName
+        if user_data.emergencyContactPhone is not None:
+            member.emergencyContactPhone = user_data.emergencyContactPhone
+        if user_data.attachmentUrls is not None:
+            member.attachmentUrls = user_data.attachmentUrls
 
         # Save changes
         await db.commit()

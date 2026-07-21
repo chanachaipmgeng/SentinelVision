@@ -1,278 +1,32 @@
-<!-- Add overlay or fullmenu instead overlay -->
-<!-- <div class="closemenu text-muted" (click)="menuclose()">Close Menu</div> -->
-<div class="sidebar dark-bg">
-  <!-- user information -->
-  <div class="row my-3">
-    <div class="col-12 ">
-      <div class="shadow-none border-0">
-        <div class="row">
-          <div class="col-auto">
-            <figure class="avatar avatar-70 rounded-15">
-              <img src="{{employeeModel?.getPicture()}}">
-              <ng-template #personblank>
-                <img src="assets/img/icon/person.png">
-              </ng-template>
-            </figure>
-          </div>
-          <div class="col align-self-center text-end">
-            <i class="bi bi-x-lg fw-bolder text-muted " (click)="menuclose()"></i>
-            <!-- <button routerLink="/company/company-list" routerLinkActive="active" target="_self"
-                  (click)="menuclose()" class="btn btn-44 btn-light">
-                  <i class="bi bi-building"></i>
-                </button> -->
-          </div>
-        </div>
-        <div class="row mt-3">
-          <div class="col-auto">
-            <p class="text-color-theme fw-bold-600 mb-0 mb-1">{{employeeModel?.getFullname()}}</p>
-            <p class="text-muted size-12">{{companyModel.companyName}} ,{{employeeModel?.position?.getName()}}</p>
-            <!-- <p class="text-muted">{{employeeModel?.companyName}}</p> -->
-          </div>
-          <div class="col text-end">
-            <button routerLink="/company/company-list" routerLinkActive="active" target="_self" (click)="menuclose()"
-              class="btn btn-44  bg-light">
-              <img src="../assets/img/icon-menu/company-list.png" class="img-menu">
-
-            </button>
-          </div>
-        </div>
-        <!-- <div class="card-body">
-              <div class="row">
-
-                <div class="col align-self-center">
-                  <div class="logo-small">
-                    <img src="{{companyModel.pictureUrl}}" alt="" style="height: auto;width: 50%;">
-
-                  </div>
-                </div>
-
-              </div>
-              <div class="row" style="margin-top: 10px;">
-
-                <div class="col align-self-center">
-                  <h6 style="font-size: 0.9rem;">{{employeeModel?.companyName}}</h6>
-                </div>
-                <div class="col-auto">
-                  <button routerLink="/company/company-list" routerLinkActive="active" target="_self"
-                    (click)="menuclose()" class="btn btn-44 btn-light">
-                    <i class="bi bi-house"></i>
-                  </button>
-                </div>
-              </div>
-            </div> -->
-
-        <!-- <div class="card-body">
-            <div class="row">
-              <div class="col-auto">
-                <figure class="avatar avatar-44 rounded-15">
-
-                  <img *ngIf="employeeModel?.pictureUrl != '' ;else personblank" src="{{employeeModel?.pictureUrl}}">
-                  <ng-template #personblank>
-                    <img src="assets/img/icon/person.png">
-                  </ng-template>
-                </figure>
-              </div>
-              <div class="col px-0 align-self-center">
-                <p class="mb-1">{{employeeModel?.fullName}}</p>
-                <p class="text-muted size-12">{{employeeModel?.position}}</p>
-              </div>
-
-            </div>
-          </div> -->
-
-      </div>
-    </div>
+<div class="dpu-sidebar-panel sidebar dark-bg">
+  <div class="dpu-sidebar-head">
+    <figure class="avatar avatar-70 rounded-15">
+      <img [src]="employeeModel?.getPicture() || 'assets/img/icon/person.png'" alt="">
+    </figure>
+    <button type="button" class="dpu-sidebar-close" (click)="menuclose()" aria-label="Close menu">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
 
-  <!-- user emnu navigation -->
-  <div class="row">
-    <div class="col-12">
-      <ul class="nav nav-pills">
-        <li class="nav-item">
-          <a class="nav-link" aria-current="page" routerLink="/company/home-company" routerLinkActive='active'
-            (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon rounded-circle bg-light shadow-md"
-              [ngStyle]="{'color': '#3665aa'}"><img src="../assets/img/icon-menu/home.png" class="img-menu"></div>
-            <div class="col mt-2">{{"Home" | translate}}</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-        <ng-container *ngFor="let item of listMenu; let i=index">
-          <li class="nav-item" *ngIf="item.link">
-            <a class="nav-link" aria-current="page" [routerLink]="item.link" routerLinkActive='active'
-              (click)="menuclose()">
-              <div class="avatar avatar-40 rounded icon rounded-circle bg-light shadow-md"><img src="{{item.icon}}"
-                  class="img-menu"></div>
-              <div class="col mt-2">{{item.name | translate}}</div>
-              <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-            </a>
-          </li>
-        </ng-container>
-        <!-- เอกสารอ้างอิง -->
-        <!-- <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-text"></i></div>
-            <div class="col">เอกสารอ้างอิง</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i>
-            </div>
-          </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item nav-link" routerLink="/company/payslip" routerLinkActive='active'
-                (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-text"></i></div>
-                <div class="col">payslip</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-            <li><a class="dropdown-item nav-link" routerLink="/company/twi-50" routerLinkActive='active'
-                (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-text"></i></div>
-                <div class="col">50ทวิ</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-            <li><a class="dropdown-item nav-link" routerLink="/company/pnd-91" routerLinkActive='active'
-                (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-text"></i></div>
-                <div class="col">ภงด.91</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-          </ul>
-        </li> -->
-
-        <!-- sup-emp-data
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/sup-emp-data" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-chat-text"></i></div>
-            <div class="col">ข้อมูลทีมงาน</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-
-
-        <!-- <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-people"></i></div>
-            <div class="col">ข้อมูลทีมงาน</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i>
-            </div>
-          </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item nav-link" routerLink="/company/subordinate-data" routerLinkActive='active'
-                (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-person"></i></div>
-                <div class="col">รายชื่อทีมงาน</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-            <li><a class="dropdown-item nav-link" routerLink="/company/subordinate-warning" routerLinkActive='active'
-                (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-calendar-check"></i></div>
-                <div class="col">ลงเวลาผิดที่</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-            <li><a class="dropdown-item nav-link" routerLink="-" routerLinkActive='active' (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-clock-history"></i></div>
-                <div class="col">ข้อมูลลงเวลา</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-            <li><a class="dropdown-item nav-link" routerLink="-" routerLinkActive='active' (click)="menuclose()">
-                <div class="avatar avatar-40 rounded icon"><i class="bi bi-person-bounding-box"></i></div>
-                <div class="col">อนุมัติใบหน้า</div>
-                <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-              </a></li>
-          </ul>
-        </li> -->
-
-
-        <!-- ข้อมูลการทำงานตามเดือน -->
-        <!-- <li class="nav-item">
-          <a class="nav-link" routerLink="" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-chat-text"></i></div>
-            <div class="col">ข้อมูลการทำงานตามเดือน</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-
-
-
-        <!--
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/pages" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-earmark-text"></i></div>
-            <div class="col">Pages <span class="badge bg-info fw-light">new</span></div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/style" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-palette"></i></div>
-            <div class="col">Style <i class="bi bi-star-fill text-warning small"></i></div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-
-        <!-- <li class="nav-item">
-          <a class="nav-link" routerLink="/company/notifications" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-bell"></i></div>
-            <div class="col">Notification</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/blog" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-newspaper"></i></div>
-            <div class="col">Blogs</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/style" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-palette"></i></div>
-            <div class="col">Style <i class="bi bi-star-fill text-warning small"></i></div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/pages" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-earmark-text"></i></div>
-            <div class="col">Pages <span class="badge bg-info fw-light">new</span></div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-
-
-        <!-- <li class="nav-item">
-          <a class="nav-link" routerLink="/company/pages" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-file-earmark-text"></i></div>
-            <div class="col">Pages <span class="badge bg-info fw-light">new</span></div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-
-        <!-- <li class="nav-item">
-          <a class="nav-link" routerLink="/company/resign" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon"><i class="bi bi-person-dash"></i></div>
-            <div class="col">{{"Resign" | translate}}</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/company/change-boss" routerLinkActive='active' (click)="menuclose()">
-            <div class="avatar avatar-40 rounded icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor"
-                class="bi bi-person-gear" viewBox="0 0 16 16">
-                <path
-                  d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1zm3.63-4.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0" />
-              </svg>
-            </div>
-            <div class="col">{{"เปลี่ยนหัวหน้า" | translate}}</div>
-            <div class="arrow"><i class="bi bi-chevron-right"></i></div>
-          </a>
-        </li> -->
-      </ul>
-    </div>
+  <div class="dpu-sidebar-user">
+    <p class="dpu-sidebar-name">{{ employeeModel?.getFullname() }}</p>
+    <p class="dpu-sidebar-meta">{{ companyModel.companyName }} · {{ employeeModel?.position?.getName() }}</p>
+    <button type="button" class="btn btn-sm btn-light mt-2" routerLink="/company/company-list" (click)="menuclose()">
+      <i class="bi bi-building me-1"></i> เปลี่ยนบริษัท
+    </button>
   </div>
+
+  <nav class="dpu-sidebar-nav">
+    <a class="dpu-sidebar-link" routerLink="/company/home-company" routerLinkActive="active" (click)="menuclose()">
+      <span class="dpu-sidebar-icon"><i class="bi bi-house-door"></i></span>
+      <span>{{ 'Home' | translate }}</span>
+      <i class="bi bi-chevron-right ms-auto"></i>
+    </a>
+
+    <a class="dpu-sidebar-link" *ngFor="let item of listMenu" [routerLink]="item.link" routerLinkActive="active" (click)="menuclose()">
+      <span class="dpu-sidebar-icon"><i class="bi" [ngClass]="item.icon"></i></span>
+      <span>{{ item.name | translate }}</span>
+      <i class="bi bi-chevron-right ms-auto"></i>
+    </a>
+  </nav>
 </div>

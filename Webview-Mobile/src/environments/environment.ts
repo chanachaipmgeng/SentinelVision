@@ -6,9 +6,9 @@
 export const environment = {
   production: false,
   baseUrl: 'http://localhost:8000',
-  // baseUrl : "https://zeeme.myhr.co.th",
-  apiUrl : "http://localhost:8000",
-}
+  apiUrl: 'http://localhost:8000',
+  googleMapsApiKey: 'AIzaSyDWyV4FNQLMx9rdpy6eABvSlnNe_3GrW6s',
+};
 /*
  * For easier debugging in development mode, you can import the following file
  * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.

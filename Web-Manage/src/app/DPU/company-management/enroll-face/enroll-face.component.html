@@ -1,12 +1,9 @@
-<video #video width="640" height="480"
-  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" autoplay
-  (loadedmetadata)="detectFace()">
-</video>
-
-<!-- Canvas element -->
-<canvas #canvas width="640" height="480"
-  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
-</canvas>
-
-<button *ngIf="checkMatch" style="position: absolute;  left: 0;bottom: 0;margin-bottom: 3rem;width: 100%;" type="button"
-  class="ti-btn bg-primary text-white !font-medium" (click)="captureImage()">ตรวจสอบใบหน้า</button>
+<div class="dpu-camera-overlay">
+  <video #video width="640" height="480" class="dpu-camera-overlay__video" autoplay
+    (loadedmetadata)="detectFace()">
+  </video>
+  <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
+  <div class="dpu-camera-overlay__controls" *ngIf="checkMatch">
+    <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="captureImage()">ตรวจสอบใบหน้า</button>
+  </div>
+</div>

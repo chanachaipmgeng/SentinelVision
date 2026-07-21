@@ -149,7 +149,7 @@ export class NavService implements OnDestroy {
         children: [
           { path: '/company/company-location', title: 'สถานที่การลงเวลา', type: 'link' },
           { path: '/company/timestamp-log', title: 'ข้อมูลการลงเวลา', type: 'link' },
-          // { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
+          { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
         ],
       }
     ];

@@ -1276,7 +1276,7 @@ pre[class*=language-] {
 /* global*/
 /* Start::app-header */
 .app-header {
-  @apply w-full max-w-full h-[3.75rem] z-[49] fixed top-0 start-0 border-b border-b-headerbordercolor dark:border-white/10 transition-all ease-linear duration-[0.1s] bg-white dark:bg-bodybg;
+  @apply w-full max-w-full h-[3.75rem] z-[49] fixed top-0 start-0 border-b border-b-headerbordercolor dark:border-white/10 transition-all ease-linear duration-100 bg-white dark:bg-bodybg;
 }
 .app-header #mainHeaderProfile {
   @apply text-headerprimecolor;
@@ -1327,7 +1327,7 @@ pre[class*=language-] {
   @apply fill-headerprimecolor text-headerprimecolor;
 }
 .main-header-container .header-link-icon {
-  @apply w-7 h-7 text-xl text-headerprimecolor fill-headerprimecolor transition-all ease-linear duration-[0.05s] relative rounded-[50%] p-1;
+  @apply w-7 h-7 text-xl text-headerprimecolor fill-headerprimecolor transition-all ease-linear duration-75 relative rounded-[50%] p-1;
 }
 .main-header-container .header-link-icon:hover {
   @apply bg-light;
@@ -1527,7 +1527,7 @@ pre[class*=language-] {
 }
 
 .animated-arrow {
-  @apply absolute start-0 top-0 z-[50] cursor-pointer p-[0.3125rem] mt-[0.375rem] mb-0 ms-2 me-0 transition-all ease-in-out duration-[0.05s];
+  @apply absolute start-0 top-0 z-[50] cursor-pointer p-[0.3125rem] mt-[0.375rem] mb-0 ms-2 me-0 transition-all ease-in-out duration-75;
 }
 
 .animated-arrow.hor-toggle span {
@@ -1535,12 +1535,12 @@ pre[class*=language-] {
 }
 
 .animated-arrow span {
-  @apply cursor-pointer h-0.5 w-3 bg-headerprimecolor dark:bg-white/60 absolute block content-[""] transition-all ease-in-out duration-[0.05s];
+  @apply cursor-pointer h-0.5 w-3 bg-headerprimecolor dark:bg-white/60 absolute block content-[""] transition-all ease-in-out duration-75;
 }
 
 .animated-arrow span:before,
 .animated-arrow span:after {
-  @apply transition-all ease-in-out duration-[0.05s];
+  @apply transition-all ease-in-out duration-75;
 }
 
 .animated-arrow span {
@@ -1866,7 +1866,7 @@ pre[class*=language-] {
   @apply rounded-md py-[0.35rem] px-4;
 }
 .nav.tab-style-1 .nav-link.active {
-  @apply bg-primary text-white shadow-md transition-colors ease-in duration-[0.15sec];
+  @apply bg-primary text-white shadow-md transition-colors ease-in duration-150;
 }
 
 .tab-content .tab-pane {
@@ -2124,7 +2124,7 @@ pre[class*=language-] {
 }
 
 .nft-btn {
-  @apply absolute end-[5%] bottom-[5%] h-8 w-8 p-[5px] rounded-full bg-black/10 text-white text-[1rem] inline-flex items-center justify-center transition-all ease-linear duration-[0.3sec]
+  @apply absolute end-[5%] bottom-[5%] h-8 w-8 p-[5px] rounded-full bg-black/10 text-white text-[1rem] inline-flex items-center justify-center transition-all ease-linear duration-300
   z-[1];
 }
 .nft-btn:hover {
@@ -2356,14 +2356,14 @@ pre[class*=language-] {
 }
 
 .nav.panel-tabs-task a {
-  @apply py-[0.4rem] px-2 text-[0.711rem] transition-all ease-linear duration-[0.3sec] !important;
+  @apply py-[0.4rem] px-2 text-[0.711rem] transition-all ease-linear duration-300 !important;
 }
 
 .avatar-list-stacked {
   @apply p-0;
 }
 .avatar-list-stacked .avatar {
-  @apply -me-[0.5rem] border rounded-full border-solid border-black/[0.05] align-middle transition-all ease-linear duration-[200ms] !important;
+  @apply -me-[0.5rem] border rounded-full border-solid border-black/[0.05] align-middle transition-all ease-linear duration-200 !important;
 }
 .avatar-list-stacked .avatar:last-child {
   @apply me-0 !important;
@@ -2690,7 +2690,7 @@ pre[class*=language-] {
 }
 
 .category-link {
-  @apply p-[1.25rem] rounded-md border border-solid border-defaultborder dark:border-defaultborder/10 flex flex-col items-center justify-center text-textmuted transition-all ease-linear duration-[0.3s];
+  @apply p-[1.25rem] rounded-md border border-solid border-defaultborder dark:border-defaultborder/10 flex flex-col items-center justify-center text-textmuted transition-all ease-linear duration-300;
 }
 .category-link.primary .category-svg {
   @apply fill-primary;
@@ -2706,7 +2706,7 @@ pre[class*=language-] {
 }
 
 .category-link .category-svg {
-  @apply h-[1.875rem] w-[1.875rem] mb-4 transition-all ease-linear duration-[0.3sec];
+  @apply h-[1.875rem] w-[1.875rem] mb-4 transition-all ease-linear duration-300;
 }
 
 .category-link.primary:not(.active):hover,
@@ -3226,7 +3226,7 @@ pre[class*=language-] {
 
 .bg-banner {
   @apply bg-primary dark:bg-primary text-white relative overflow-hidden z-[1] before:absolute before:h-full before:w-full before:top-0 before:bg-[url("../images/media/backgrounds/7.jpg")] before:bg-no-repeat
-  before:bg-bottom before:bg-cover before:opacity-[0.1] before:transition-all before:ease-linear before:duration-[0.3sec] before:-z-[1];
+  before:bg-bottom before:bg-cover before:opacity-[0.1] before:transition-all before:ease-linear before:duration-300 before:-z-[1];
 }
 
 .featured-card-4 svg {
@@ -5005,10 +5005,10 @@ label {
 }
 
 .app-sidebar {
-  @apply w-[15rem] h-full bg-[#111c43] dark:bg-bodybg border-e border-e-white/10 fixed top-0 start-0 font-Montserrat z-[49] transition-all ease-linear duration-[0.05s];
+  @apply w-[15rem] h-full bg-[#111c43] dark:bg-bodybg border-e border-e-white/10 fixed top-0 start-0 font-Montserrat z-[49] transition-all ease-linear duration-75;
 }
 .app-sidebar .main-sidebar-header {
-  @apply h-[3.75rem] w-[15rem] fixed flex  dark:bg-bodybg z-[9] items-center justify-center py-[0.813rem] px-5 border-b border-b-white/10 border-e border-e-white/10 transition-all ease-linear duration-[0.05s];
+  @apply h-[3.75rem] w-[15rem] fixed flex  dark:bg-bodybg z-[9] items-center justify-center py-[0.813rem] px-5 border-b border-b-white/10 border-e border-e-white/10 transition-all ease-linear duration-75;
 }
 .app-sidebar .main-sidebar-header .header-logo img {
   @apply h-8 leading-8;
@@ -5078,7 +5078,7 @@ label {
   @apply me-2.5 w-[1.15rem] h-[1.15rem] text-[1.15rem] text-center text-[#a3aed1] fill-[#a3aed1] dark:text-[#8f9bb3] rounded-md;
 }
 .app-sidebar .side-menu__angle {
-  @apply origin-center absolute end-3 text-[0.85rem] text-[#a3aed1] dark:text-[#8f9bb3] transition-all ease-linear duration-[0.05s];
+  @apply origin-center absolute end-3 text-[0.85rem] text-[#a3aed1] dark:text-[#8f9bb3] transition-all ease-linear duration-75;
 }
 .app-sidebar .slide.side-menu__label1 {
   @apply hidden;
@@ -5379,7 +5379,7 @@ label {
   }
   [data-nav-layout=horizontal] .main-menu {
     @apply flex !important;
-    @apply transition-all ease-linear duration-[0.5s] flex-nowrap;
+    @apply transition-all ease-linear duration-500 flex-nowrap;
   }
   [data-nav-layout=horizontal] .main-menu-container {
     @apply inline-flex;
@@ -9502,19 +9502,19 @@ span.flatpickr-weekday {
 }
 
 #chart-year {
-  @apply float-left relative transition-all ease-linear duration-[1s] z-[3];
+  @apply float-left relative transition-all ease-linear duration-1000 z-[3];
 }
 
 #chart-year.chart-quarter-activated {
-  @apply translate-x-0 transition-all ease-linear duration-[1s];
+  @apply translate-x-0 transition-all ease-linear duration-1000;
 }
 
 #chart-quarter {
-  @apply float-left relative -z-[2] transition-all ease-linear duration-[1s];
+  @apply float-left relative -z-[2] transition-all ease-linear duration-1000;
 }
 
 #chart-quarter.active {
-  @apply transition-all ease-linear duration-[1.1s] translate-x-0 z-[1];
+  @apply transition-all ease-linear duration-1000 translate-x-0 z-[1];
 }
 
 @media screen and (min-width: 480px) {
@@ -10811,9 +10811,9 @@ input.gridjs-input {
   @apply relative;
 }
 .ti-btn-hover.ti-btn-hover-animate {
-  @apply transition-all duration-[0.2s] ease-linear delay-[0s] before:content-[""] before:text-[0.8125rem] before:absolute
+  @apply transition-all duration-200 ease-linear delay-0 before:content-[""] before:text-[0.8125rem] before:absolute
         before:flex before:items-center before:justify-center before:end-0 before:top-0 before:opacity-0 before:h-full before:w-[2rem] before:transition-all
-        before:duration-[0.2s] before:ease-linear before:delay-[0s];
+        before:duration-200 before:ease-linear before:delay-0;
 }
 .ti-btn-hover.ti-btn-hover-animate:hover {
   @apply pe-8 before:opacity-[1] before:indent-0;
@@ -11028,14 +11028,14 @@ select:focus {
 
 /* Start:: toggle switches-1 */
 .toggle {
-  @apply w-[3.75rem] h-[1.563rem] bg-light ms-[0.625rem] mb-[0.313rem] p-[0.125rem] rounded-[0.188rem] relative overflow-hidden transition-all duration-[0.2s] ease-linear;
+  @apply w-[3.75rem] h-[1.563rem] bg-light ms-[0.625rem] mb-[0.313rem] p-[0.125rem] rounded-[0.188rem] relative overflow-hidden transition-all duration-200 ease-linear;
 }
 .toggle span {
-  @apply absolute top-[0.188rem] bottom-1 start-[0.188rem] block w-[1.25rem] rounded-[0.125rem] bg-white shadow-sm cursor-pointer transition-all duration-[0.2s] ease-linear
+  @apply absolute top-[0.188rem] bottom-1 start-[0.188rem] block w-[1.25rem] rounded-[0.125rem] bg-white shadow-sm cursor-pointer transition-all duration-200 ease-linear
     before:-start-[1.563rem] before:content-["on"] after:content-["off"] after:-end-[1.813rem] after:text-textmuted;
 }
 .toggle span::before, .toggle span::after {
-  @apply absolute text-[0.625rem] font-medium space-x-2 rtl:space-x-reverse uppercase top-[0.188rem] leading-[1.38] transition-all duration-[0.2s] ease-linear;
+  @apply absolute text-[0.625rem] font-medium space-x-2 rtl:space-x-reverse uppercase top-[0.188rem] leading-[1.38] transition-all duration-200 ease-linear;
 }
 .toggle.on {
   @apply bg-primary/30;
@@ -11153,8 +11153,8 @@ select:focus {
 }
 
 .custom-toggle-switch > label {
-  @apply before:bg-textmuted before:rounded-md before:h-4 before:-mt-2 before:absolute before:opacity-[0.3] before:transition-all before:duration-[0.4s] before:ease-in-out before:w-[2.5rem]
-  after:bg-white after:rounded-[1rem] after:h-[1.5rem]  after:shadow-[0_0_0.313rem_rgba(228,229,237,0.8)] after:-start-1 after:-mt-2 after:absolute after:-top-1 after:transition-all after:duration-[0.3s] after:ease-in-out after:w-[1.5rem];
+  @apply before:bg-textmuted before:rounded-md before:h-4 before:-mt-2 before:absolute before:opacity-[0.3] before:transition-all before:duration-500 before:ease-in-out before:w-[2.5rem]
+  after:bg-white after:rounded-[1rem] after:h-[1.5rem]  after:shadow-[0_0_0.313rem_rgba(228,229,237,0.8)] after:-start-1 after:-mt-2 after:absolute after:-top-1 after:transition-all after:duration-300 after:ease-in-out after:w-[1.5rem];
 }
 
 .custom-toggle-switch > input[type=checkbox]:checked + label::after {

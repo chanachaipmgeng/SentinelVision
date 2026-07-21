@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
 import { SharedModule } from "../../../shared/shared.module";
 import { NgSelectModule } from "@ng-select/ng-select";
 import { CompanyLocationModel } from "../../models/company-location.model";
@@ -8,8 +8,10 @@ import { TokenService } from "../../../shared/services/token.service";
 import swal from 'sweetalert';
 import { TranslateModule, TranslateService } from "@ngx-translate/core";
 import { FormsModule } from "@angular/forms";
-import { RouterModule } from "@angular/router";
-import { GoogleMap, GoogleMapsModule, MapInfoWindow, MapMarker } from "@angular/google-maps";
+import { GoogleMap, GoogleMapsModule, MapAdvancedMarker, MapInfoWindow } from "@angular/google-maps";
+import { environment } from "../../../../environments/environment";
+import { mountPlaceAutocomplete } from "../../../shared/utils/place-autocomplete";
+
 @Component({
   selector: 'app-company-location',
   standalone: true,
@@ -18,14 +20,14 @@ import { GoogleMap, GoogleMapsModule, MapInfoWindow, MapMarker } from "@angular/
     TranslateModule,
     NgSelectModule,
     FormsModule,
-    GoogleMapsModule, MapMarker
+    GoogleMapsModule, MapAdvancedMarker
   ],
   templateUrl: './company-location.component.html',
   styleUrl: './company-location.component.css',
   encapsulation: ViewEncapsulation.None
 })
 export class CompanyLocationComponent {
-  @ViewChild('searchBox', { static: false }) searchBoxElement!: ElementRef;
+  @ViewChild('placeAutocompleteHost', { static: false }) placeAutocompleteHost!: ElementRef<HTMLElement>;
   @ViewChild(GoogleMap) map!: GoogleMap;
   @ViewChild(MapInfoWindow) infoWindow: MapInfoWindow | undefined;
   @ViewChild('closeModal') public childModal?: ElementRef;
@@ -53,17 +55,14 @@ export class CompanyLocationComponent {
       this.updatePagedItems()
     }
   }
+  readonly mapId = environment.googleMapsMapId;
   center: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
   zoom = 5;
   radius = 50;
-  markerOptions: google.maps.MarkerOptions = { draggable: false };
+  markerOptions: google.maps.marker.AdvancedMarkerElementOptions = { gmpDraggable: false };
   markerPositions: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
-  autocompleteInput: string = '';
   _searchTerm = "";
   companyId = ""
-  adressType: string = 'geocode';
-
-  @ViewChild('addresstext') addresstext: any;
 
   constructor(private comLocationService: CompanyLocationService, public translate: TranslateService, private tokenService: TokenService) {
     this.companyId = this.tokenService.getSelectCompany().companyId;;
@@ -71,42 +70,37 @@ export class CompanyLocationComponent {
   }
   ngOnInit(): void {}
 
-  async ngAfterViewInit() {
-    // await this.loadGoogleMapsAPI();
-    this.initAutocomplete();
-  }
-
-  initAutocomplete() {
-    if (!this.searchBoxElement || !this.searchBoxElement.nativeElement) {
-      console.error("❌ SearchBox element not found!");
+  async initPlaceAutocomplete() {
+    const host = this.placeAutocompleteHost?.nativeElement;
+    if (!host) {
       return;
     }
 
-    const input = this.searchBoxElement.nativeElement;
-    const searchBox = new google.maps.places.SearchBox(input);
-
-    searchBox.addListener('places_changed', () => {
-      const places = searchBox.getPlaces();
-      if (!places || places.length === 0) return;
-
-      const place = places[0];
-      if (!place.geometry || !place.geometry.location) return;
-      this.selectModel.latitude =  place.geometry.location.lat()
-      this.selectModel.longitude =  place.geometry.location.lng()
-      this.selectModel.locationName = place.name!
-      // this.center = {
-      //   lat: place.geometry.location.lat(),
-      //   lng: place.geometry.location.lng(),
-      // };
-
-      // this.markerPositions = this.center;
-      // console.log(`📍 New Location: ${this.center.lat}, ${this.center.lng}`);
+    await mountPlaceAutocomplete(host, (place) => {
+      this.selectModel.latitude = place.lat;
+      this.selectModel.longitude = place.lng;
+      if (place.name) {
+        this.selectModel.locationName = place.name;
+      }
+      this.center = { lat: place.lat, lng: place.lng };
+      this.markerPositions = this.center;
     });
+  }
+
+  private schedulePlaceAutocomplete() {
+    setTimeout(() => void this.initPlaceAutocomplete(), 150);
+  }
+
+  get mapCenter(): google.maps.LatLngLiteral {
+    return {
+      lat: this.toCoord(this.selectModel.latitude, 13.7563),
+      lng: this.toCoord(this.selectModel.longitude, 100.5018),
+    };
   }
 
   getLocation() {
     this.comLocationService.getLists(this.companyId).subscribe(result => {
-      this.itemsList = result
+      this.itemsList = (result || []).map((item) => new CompanyLocationModel(item));
       this.updatePagedItems()
     })
   }
@@ -143,15 +137,19 @@ export class CompanyLocationComponent {
   new() {
     this.action = 'add'
     this.selectModel = new CompanyLocationModel()
-    this.selectModel.latitude = 0.00
-    this.selectModel.longitude = 0.00
+    this.selectModel.latitude = 13.7563
+    this.selectModel.longitude = 100.5018
+    this.center = this.mapCenter
+    this.markerPositions = this.mapCenter
+    this.schedulePlaceAutocomplete()
   }
 
   view(item: CompanyLocationModel) {
     this.action = 'edit'
     this.selectModel = new CompanyLocationModel(item)
-    this.markerPositions = { lat: this.selectModel.latitude, lng: this.selectModel.longitude }
-    console.log(this.selectModel)
+    this.center = this.mapCenter
+    this.markerPositions = this.mapCenter
+    this.schedulePlaceAutocomplete()
   }
 
   save() {
@@ -166,14 +164,12 @@ export class CompanyLocationComponent {
         if (willDelete) {
           if (this.action == 'add') {
             this.comLocationService.save(this.companyId, this.selectModel).subscribe(result => {
-              console.log(result)
               swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
               this.getLocation()
               this.childModal?.nativeElement.click()
             })
           } else if (this.action == 'edit') {
             this.comLocationService.update(this.companyId, this.selectModel).subscribe(result => {
-              console.log(result)
               swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
               this.getLocation()
               this.childModal?.nativeElement.click()
@@ -245,17 +241,26 @@ export class CompanyLocationComponent {
   }
 
   changeMarker() {
-    this.markerPositions = { lat: this.selectModel.latitude, lng: this.selectModel.longitude }
+    this.selectModel.latitude = this.toCoord(this.selectModel.latitude, 13.7563);
+    this.selectModel.longitude = this.toCoord(this.selectModel.longitude, 100.5018);
+    this.center = this.mapCenter;
+    this.markerPositions = this.mapCenter;
   }
 
-  addMarker(event: google.maps.MapMouseEvent, marker: MapMarker) {
-    console.log(event)
-    console.log(marker)
-    this.selectModel.latitude = event.latLng!.toJSON().lat
-    this.selectModel.longitude = event.latLng!.toJSON().lng
-    this.markerPositions = { lat: event.latLng!.toJSON().lat, lng: event.latLng!.toJSON().lng }
-    if (this.infoWindow && marker.title) {
-      this.infoWindow.open(marker);
+  addMarker(event: google.maps.MapMouseEvent) {
+    if (!event.latLng) {
+      return;
     }
+    const lat = event.latLng.toJSON().lat;
+    const lng = event.latLng.toJSON().lng;
+    this.selectModel.latitude = lat;
+    this.selectModel.longitude = lng;
+    this.center = { lat, lng };
+    this.markerPositions = { lat, lng };
+  }
+
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 }

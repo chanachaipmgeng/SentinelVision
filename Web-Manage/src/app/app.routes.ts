@@ -6,7 +6,7 @@ import { CoverComponent } from './authentication/reset-password/cover/cover.comp
 
 export const App_Route: Route[] = [
   { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
-  { path: '', component: ContentLayoutComponent, children: content },
-  { path: 'auth/login', component: LoginComponent },
-  { path: 'auth/reset-password', component: CoverComponent },
+  { path: '', component: ContentLayoutComponent, children: content, data: { animation: 'Content' } },
+  { path: 'auth/login', component: LoginComponent, data: { animation: 'Login' } },
+  { path: 'auth/reset-password', component: CoverComponent, data: { animation: 'ResetPassword' } },
 ];

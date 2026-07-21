@@ -28,8 +28,8 @@ export class CompanyModel extends BaseModel {
     this.companyCode = data?.companyCode!;
     this.companyInfo = data?.companyInfo!;
     this.address = data?.address!;
-    this.latitude = data?.latitude!;
-    this.longitude = data?.longitude!;
+    this.latitude = this.toCoord(data?.latitude, 13.7563);
+    this.longitude = this.toCoord(data?.longitude, 100.5018);
     this.status = data?.status!;
     this.picture = data?.picture!;
     this.ownerName = data?.ownerName!
@@ -48,6 +48,12 @@ export class CompanyModel extends BaseModel {
 
   getPicture(): string {
     return this.picture ? environment.baseUrl + '/images/' + this.picture : './assets/images/faces/9.jpg'
+  }
+
+  /** Google Maps requires finite numbers (API/ngModel may return strings). */
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 }
 

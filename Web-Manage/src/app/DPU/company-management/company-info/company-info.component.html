@@ -4,7 +4,7 @@
 <!-- Start::row-1 -->
 <div class="grid grid-cols-12 gap-6">
   <div class="xl:col-span-8 col-span-12">
-    <div class="box custom-box">
+    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <div class="box-header justify-between flex">
         <div class="box-title">
           ข้อมูลบริษัท
@@ -77,17 +77,17 @@
       </div>
       <div class="box-footer">
         <div class="ltr:float-right rtl:float-left">
-          <button type="button" class="ti-btn bg-primary text-white m-1" (click)="save()">
+          <button type="button" class="ti-btn bg-primary text-white m-1 modern-btn" (click)="save()">
             บันทึกการเปลี่ยนแปลง
           </button>
-          <button type="button" class="ti-btn ti-btn-ghost-secondary ti-btn-wave" (click)="reset()">ยกเลิก</button>
+          <button type="button" class="ti-btn ti-btn-ghost-secondary ti-btn-wave modern-btn" (click)="reset()">ยกเลิก</button>
 
         </div>
       </div>
     </div>
   </div>
   <div class="xl:col-span-4 col-span-12">
-    <div class="box custom-box">
+    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
       <div class="box-header justify-between">
         <div class="box-title">แผนที่บริษัท</div>
       </div>
@@ -95,27 +95,26 @@
         <div class="grid grid-cols-12 sm:gap-6">
           <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
             <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
-            <input type="text" class="form-control" id="input" [(ngModel)]="companyModel.latitude"
+            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="companyModel.latitude"
               (ngModelChange)="changeMarker()">
           </div>
 
           <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
             <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
-            <input type="text" class="form-control" id="input" [(ngModel)]="companyModel.longitude"
+            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="companyModel.longitude"
               (ngModelChange)="changeMarker()">
           </div>
           <div class="xl:col-span-12 col-span-12">
             <div class="xl:col-span-12 col-span-12">
-              <input id="searchBox" #searchBox type="text" placeholder="ค้นหาสถานที่..."
-                class="form-control w-full p-2 border rounded mb-3">
-
+              <div #placeAutocompleteHost class="w-full mb-3"></div>
             </div>
             <google-map class="xl:col-span-12 col-span-12" height="400px"
-              [center]="{ lat: companyModel.latitude, lng: companyModel.longitude }" [zoom]="12"
-              (mapClick)="addMarker($event,mapMarker)">
+              [mapId]="mapId"
+              [center]="mapCenter" [zoom]="12"
+              (mapClick)="addMarker($event)">
 
-              <map-marker #mapMarker="mapMarker"
-                [position]="{ lat: companyModel.latitude, lng: companyModel.longitude }" [options]="markerOptions" />
+              <map-advanced-marker
+                [position]="mapCenter" [options]="markerOptions" />
 
             </google-map>
 

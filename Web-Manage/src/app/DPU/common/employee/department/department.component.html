@@ -3,18 +3,18 @@
 
 <div class="grid grid-cols-12 gap-6">
   <div class="xl:col-span-12 col-span-12">
-    <div class="box">
+    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div class="box-header justify-between">
         <div class="box-title">
           {{ 'All List' | translate}} <span
             class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
             data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
             translate}}
           </a>
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2" *ngIf="someSelected"
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2 modern-btn" *ngIf="someSelected"
             (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
             translate}}
           </a>

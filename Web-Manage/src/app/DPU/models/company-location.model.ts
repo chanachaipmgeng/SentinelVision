@@ -20,15 +20,20 @@ export class CompanyLocationModel extends BaseModel{
     super(data,translateService);
     this.companyId = data?.companyId!
     this.locationId = data?.locationId!
-    this.latitude = data?.latitude!
-    this.longitude = data?.longitude!;
+    this.latitude = this.toCoord(data?.latitude, 13.7563);
+    this.longitude = this.toCoord(data?.longitude, 100.5018);
     this.locationName = data?.locationName!;
     this.startDate = data?.startDate!;
     this.endDate = data?.endDate!
     this.locationType = data?.locationType!
     this.createdAt = data?.createdAt!;
     this.updatedAt = data?.updatedAt!
-    this.radius = data?.radius!
+    this.radius = Number(data?.radius) || 0
+  }
+
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 
   getStatus(): string {

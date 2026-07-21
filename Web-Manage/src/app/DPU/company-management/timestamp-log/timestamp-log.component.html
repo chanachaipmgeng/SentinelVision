@@ -7,7 +7,7 @@
   <div class="xl:col-span-12 col-span-12">
 
     <div class="flex flex-wrap gap-2">
-      <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2"
+      <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn"
         routerLink="/company/timestamp-face"><i class="ri-add-line font-semibold align-middle"></i>{{ 'ลงเวลาพนักงาน' |
         translate}}
       </a>
@@ -62,7 +62,7 @@
         @for(item of filterList;track filterList){
         <li>
           <div
-            class="box border-s-[0.25rem] {{item.timestampType==0?'border-warning':''}} {{item.timestampType==1||item.timestampType==2?'border-success':''}} {{item.timestampType==3?'border-danger':''}}"
+            class="box modern-card animate-in fade-in slide-in-from-bottom-4 duration-500 border-s-[0.25rem] {{item.timestampType==0?'border-warning':''}} {{item.timestampType==1||item.timestampType==2?'border-success':''}} {{item.timestampType==3?'border-danger':''}}"
             (click)="view(item)">
             <div class="box-body !p-4">
               <a href="javascript:void(0);">
@@ -138,7 +138,7 @@
     </ul>
   </div>
   <div class="xxl:col-span-4 xl:col-span-4 col-span-12" *ngIf="selectModel">
-    <div class="box custom-box">
+    <div class="box custom-box modern-card glass animate-in zoom-in duration-500 delay-200">
       <div class="box-header justify-between">
         <div class="box-title">
           รายละเอียดการลงเวลา
@@ -203,18 +203,18 @@
                   aria-label="Text input with segmented dropdown button" placeholder="ชื่อสถานที่"
                   [(ngModel)]="selectModel.locationName" [disabled]="selectModel.timestampType!=0">
                 <a *ngIf="selectModel.timestampType==0" (click)="approveTime(selectModel)"
-                  class="ti-btn ti-btn-primary m-1 !me-2 !font-medium"><i
+                  class="ti-btn ti-btn-primary m-1 !me-2 !font-medium modern-btn"><i
                     class="ri-check-line me-1 align-middle"></i>อนุมัติ</a>
                 <a *ngIf="selectModel.timestampType==0" (click)="disapproveTime(selectModel)"
-                  class="ti-btn ti-btn-success m-1 !font-medium"><i
+                  class="ti-btn ti-btn-success m-1 !font-medium modern-btn"><i
                     class="ri-close-line me-1 align-middle"></i>ไม่อนุมัติ</a>
               </div>
               <div class="xxl:col-span-12 xl:col-span-12 col-span-12">
-                <google-map height="400px" [center]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }"
+                <google-map height="400px" [mapId]="mapId" [center]="mapCenter"
                   [zoom]="12">
 
-                  <map-marker #mapMarker="mapMarker"
-                    [position]="{ lat:  selectModel.latitude, lng:  selectModel.longitude }"
+                  <map-advanced-marker
+                    [position]="mapCenter"
                     [options]="markerOptions" />
 
                 </google-map>

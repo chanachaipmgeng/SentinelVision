@@ -1,0 +1,88 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: dpu-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dpu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dpu_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-dpu}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dpu} -d ${POSTGRES_DB:-dpu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  api:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile
+    container_name: dpu-api
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
+      FACE_RECOGNITION_THRESHOLD: ${FACE_RECOGNITION_THRESHOLD:-0.40}
+      IMAGE_BLUR_THRESHOLD: ${IMAGE_BLUR_THRESHOLD:-100.0}
+      IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-50}
+      IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-200}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    volumes:
+      - api_enrolled:/app/enrolled_images
+      - api_uploaded:/app/uploaded_images
+      - api_temp:/app/temp_images
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  admin:
+    build:
+      context: ./Web-Manage
+      dockerfile: Dockerfile
+    container_name: dpu-admin
+    expose:
+      - "80"
+    restart: unless-stopped
+
+  mobile:
+    build:
+      context: ./Webview-Mobile
+      dockerfile: Dockerfile
+    container_name: dpu-mobile
+    expose:
+      - "80"
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: dpu-nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+      admin:
+        condition: service_started
+      mobile:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  api_enrolled:
+  api_uploaded:
+  api_temp:

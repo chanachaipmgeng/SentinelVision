@@ -1,0 +1,4 @@
+# Skip huge face-api / tf model blobs not needed for production static shell
+src/assets/models
+*.rar
+*.pkl

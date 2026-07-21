@@ -21,7 +21,7 @@ import { FileItem, FileUploader, ParsedResponseHeaders } from "ng2-file-upload";
 import { environment } from "../../../../environments/environment";
 import { HttpClient } from "@angular/common/http";
 import * as faceapi from 'face-api.js';
-import { FaceManagementComponent } from './dialogs/face-management/face-management.component';
+import { FaceManagementComponent } from '../dialogs/face-management/face-management.component';
 @Component({
   selector: 'app-company-emp',
   standalone: true,

@@ -1,62 +1,60 @@
-from scipy.spatial import distance as dist
+"""Multi-frame liveness for InsightFace (same-person + bbox motion)."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
-# ค่าคงที่สำหรับ Liveness Detection
-EYE_AR_THRESH = 0.23  # ค่า Threshold สำหรับการหลับตา
-EYE_AR_CONSEC_FRAMES = 2  # จำนวนเฟรมต่อเนื่องที่ต้องหลับตาเพื่อยืนยันการกระพริบ
 
-def eye_aspect_ratio(eye):
+def cosine_distance(a: List[float], b: List[float]) -> float:
+    """Cosine distance for L2-normalized vectors: 1 - dot(a, b)."""
+    va = np.asarray(a, dtype=np.float32)
+    vb = np.asarray(b, dtype=np.float32)
+    return float(1.0 - np.dot(va, vb))
+
+
+def bbox_center(bbox: np.ndarray) -> Tuple[float, float]:
+    return (
+        float((bbox[0] + bbox[2]) / 2.0),
+        float((bbox[1] + bbox[3]) / 2.0),
+    )
+
+
+def check_multi_frame_liveness(
+    frames: List[Optional[Dict[str, Any]]],
+    *,
+    same_person_max_distance: float,
+    min_bbox_motion: float,
+) -> Tuple[bool, str]:
     """
-    คำนวณอัตราส่วนของดวงตา (Eye Aspect Ratio - EAR)
-    eye: list ของ facial landmarks สำหรับดวงตาข้างหนึ่ง
+    frames: list of None or {"embedding": list[float], "bbox": np.ndarray}
+
+    Passes when:
+    1. At least half of frames contain a single detected face
+    2. Embeddings across valid frames are the same person (low cosine distance)
+    3. BBox centers move enough to reject a static photo replay
     """
-    # คำนวณระยะห่างแนวตั้งระหว่างเปลือกตาบนและล่าง
-    A = dist.euclidean(eye[1], eye[5])
-    B = dist.euclidean(eye[2], eye[4])
+    valid = [f for f in frames if f is not None]
+    if len(valid) < max(2, len(frames) / 2):
+        return False, "Face not consistently detected in frames."
 
-    # คำนวณระยะห่างแนวนอนระหว่างหัวตาและหางตา
-    C = dist.euclidean(eye[0], eye[3])
+    embeddings = [f["embedding"] for f in valid]
+    anchor = embeddings[0]
+    for emb in embeddings[1:]:
+        dist = cosine_distance(anchor, emb)
+        if dist > same_person_max_distance:
+            return False, f"Face identity inconsistent across frames (distance={dist:.3f})."
 
-    # คำนวณ EAR
-    ear = (A + B) / (2.0 * C)
-    return ear
+    centers = [bbox_center(f["bbox"]) for f in valid]
+    max_motion = 0.0
+    for i in range(len(centers)):
+        for j in range(i + 1, len(centers)):
+            dx = centers[i][0] - centers[j][0]
+            dy = centers[i][1] - centers[j][1]
+            max_motion = max(max_motion, float(np.hypot(dx, dy)))
 
-def check_blink(face_landmarks_list):
-    """
-    ตรวจสอบการกระพริบตาจาก list ของ facial landmarks ที่ได้จากหลายๆ เฟรม
-    face_landmarks_list: list ของผลลัพธ์จาก face_recognition.face_landmarks()
-    """
-    if len(face_landmarks_list) < EYE_AR_CONSEC_FRAMES * 2:
-        # ต้องการเฟรมอย่างน้อยสองเท่าของจำนวนเฟรมที่ต้องต่อเนื่องกัน
-        return False, "Not enough frames for blink detection"
+    if max_motion < min_bbox_motion:
+        return False, f"Insufficient face motion (motion={max_motion:.2f}px)."
 
-    blink_counter = 0
-    total_blinks = 0
-
-    left_eye_landmarks = [face['left_eye'] for face in face_landmarks_list]
-    right_eye_landmarks = [face['right_eye'] for face in face_landmarks_list]
-
-    for i in range(len(face_landmarks_list)):
-        left_ear = eye_aspect_ratio(left_eye_landmarks[i])
-        right_ear = eye_aspect_ratio(right_eye_landmarks[i])
-
-        # ใช้ค่าเฉลี่ยของตาสองข้าง
-        ear = (left_ear + right_ear) / 2.0
-
-        if ear < EYE_AR_THRESH:
-            blink_counter += 1
-        else:
-            # ถ้ามีการนับเฟรมที่หลับตาต่อเนื่องกันมา
-            if blink_counter >= EYE_AR_CONSEC_FRAMES:
-                total_blinks += 1
-            # รีเซ็ตตัวนับ
-            blink_counter = 0
-    
-    # ตรวจสอบครั้งสุดท้ายหลังจบ loop
-    if blink_counter >= EYE_AR_CONSEC_FRAMES:
-        total_blinks += 1
-
-    if total_blinks > 0:
-        return True, f"Blink detected ({total_blinks} blinks)"
-    else:
-        return False, "No blink detected"
+    return True, f"Liveness passed (motion={max_motion:.2f}px, frames={len(valid)})"

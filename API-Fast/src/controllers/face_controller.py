@@ -5,18 +5,16 @@ from pathlib import Path
 from uuid import UUID
 import uuid
 import shutil
-import json
 from typing import List
 
 from ..models.member import Member
 from ..models.face_encoding import FaceEncoding
-from ..utils.face_recognition import generate_face_encoding, verify_liveness_and_get_encoding
-from ..utils.face_index import search_face
+from ..utils.face_engine import generate_face_encoding, verify_liveness_and_get_encoding
 from ..config.settings import settings
 
 
 async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
-    """สร้าง Encoding, บันทึก record ใน DB, และเก็บไฟล์รูปภาพ"""
+    """Create InsightFace embedding, store in pgvector, save enrolled image."""
     member = await db.get(Member, memberId)
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -24,53 +22,91 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
     temp_dir = Path("temp_images")
     temp_dir.mkdir(exist_ok=True)
     temp_file_path = temp_dir / f"{uuid.uuid4()}.jpg"
-    file_moved = False  # Flag to check if file has been moved
+    file_moved = False
 
     try:
-        # Save to temp path first
         with temp_file_path.open("wb") as buffer:
             shutil.copyfileobj(image_file.file, buffer)
-        
-        encoding = generate_face_encoding(str(temp_file_path))
-        
-        if encoding is None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No face detected in the image.")
 
-        # สร้าง object ใหม่สำหรับตาราง FaceEncoding
+        encoding = generate_face_encoding(str(temp_file_path))
+        if encoding is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No face detected in the image.",
+            )
+
         new_face_encoding = FaceEncoding(
             memberId=member.memberId,
-            encoding=json.dumps(encoding)
+            embedding=encoding,
         )
         db.add(new_face_encoding)
         await db.commit()
         await db.refresh(new_face_encoding)
 
-        # ย้ายไฟล์จาก temp ไปยัง permanent location
         permanent_dir = Path("enrolled_images")
+        permanent_dir.mkdir(exist_ok=True)
         permanent_path = permanent_dir / f"{new_face_encoding.faceEncodingId}.jpg"
         shutil.move(str(temp_file_path), permanent_path)
         file_moved = True
-        
-        return {"message": "New face encoding added successfully", "faceEncodingId": str(new_face_encoding.faceEncodingId)}
 
+        return {
+            "message": "New face encoding added successfully",
+            "faceEncodingId": str(new_face_encoding.faceEncodingId),
+        }
+
+    except HTTPException:
+        await db.rollback()
+        raise
+    except ValueError as ve:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
     finally:
-        # ลบไฟล์ชั่วคราวถ้ายังไม่ได้ย้ายไฟล์
         if not file_moved and temp_file_path.exists():
             temp_file_path.unlink()
 
 
+async def _search_face_pgvector(
+    db: AsyncSession, target_encoding: List[float], threshold: float
+):
+    """Nearest neighbor by cosine distance; return (faceEncodingId, memberId, distance) or None."""
+    distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
+    stmt = (
+        select(
+            FaceEncoding.faceEncodingId,
+            FaceEncoding.memberId,
+            distance_expr.label("distance"),
+        )
+        .order_by(distance_expr)
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    row = result.first()
+    if row is None:
+        return None
+
+    face_encoding_id, member_id, distance = row
+    if distance is None or float(distance) >= threshold:
+        return None
+    return face_encoding_id, member_id, float(distance)
+
+
 async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
-    """ตรวจสอบ Liveness และค้นหาใบหน้าด้วย FAISS index"""
+    """Liveness check + 1:N match via pgvector cosine distance."""
     if not image_files:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No image files provided for liveness check")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No image files provided for liveness check",
+        )
 
     temp_dir = Path("temp_images")
     temp_dir.mkdir(exist_ok=True)
     temp_image_paths = []
-    
+
     try:
         for image_file in image_files:
             image_path = temp_dir / f"{uuid.uuid4()}.jpg"
@@ -78,71 +114,78 @@ async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
                 shutil.copyfileobj(image_file.file, buffer)
             temp_image_paths.append(str(image_path))
 
-        # 1. Verify liveness and get the encoding of the current face
         target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
 
-        # 2. Search for the best match in the FAISS index
-        face_encoding_id, distance = search_face(
+        match = await _search_face_pgvector(
+            db,
             target_encoding,
-            threshold=settings.FACE_RECOGNITION_THRESHOLD
+            threshold=settings.FACE_RECOGNITION_THRESHOLD,
         )
 
-        # 3. If a match is found, get the corresponding memberId
-        if face_encoding_id:
-            encoding_record = await db.get(FaceEncoding, face_encoding_id)
-            if encoding_record:
-                matched_member_id = encoding_record.memberId
-                print(f"FAISS match corresponds to memberId: {matched_member_id}")
-                return {"message": "Face match found!", "memberId": str(matched_member_id)}
+        if match:
+            face_encoding_id, matched_member_id, distance = match
+            print(
+                f"pgvector match faceEncodingId={face_encoding_id} "
+                f"memberId={matched_member_id} distance={distance:.4f}"
+            )
+            return {
+                "message": "Face match found!",
+                "memberId": str(matched_member_id),
+            }
 
-        # 4. If no match, raise error
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Face does not match any record.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Face does not match any record.",
+        )
 
+    except HTTPException:
+        raise
     except (ValueError, RuntimeError) as ve:
-        # Catches errors from liveness check and FAISS search (e.g., index not found)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
     finally:
-        # Clean up all temporary images
         for path in temp_image_paths:
-            if Path(path).exists():
-                Path(path).unlink()
+            p = Path(path)
+            if p.exists():
+                p.unlink()
+
 
 async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
-    """ดึงข้อมูล Encodings ทั้งหมดของพนักงานคนเดียว"""
+    """List enrolled encodings for a member (metadata + image URL)."""
     stmt = select(FaceEncoding).where(FaceEncoding.memberId == memberId)
     result = await db.execute(stmt)
     encodings = result.scalars().all()
 
-    response = [
+    return [
         {
             "faceEncodingId": str(enc.faceEncodingId),
             "memberId": str(enc.memberId),
             "createdAt": enc.createdAt,
-            "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg"
+            "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg",
         }
         for enc in encodings
     ]
-    return response
+
 
 async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
-    """ลบ Face Encoding หนึ่งรายการ (และไฟล์รูปภาพ)"""
+    """Delete one face encoding row and its enrolled image."""
     encoding_record = await db.get(FaceEncoding, faceEncodingId)
     if not encoding_record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Face encoding not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Face encoding not found"
+        )
 
-    # Delete record from DB
     await db.delete(encoding_record)
     await db.commit()
 
-    # Delete image file from filesystem
     try:
         image_path = Path(f"enrolled_images/{faceEncodingId}.jpg")
         if image_path.exists():
             image_path.unlink()
     except Exception as e:
-        # Log this error, but don't fail the request if the DB record was deleted.
         print(f"Error deleting image file {image_path}: {e}")
 
     return {"message": "Face encoding deleted successfully"}

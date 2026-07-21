@@ -1,7 +1,7 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { environment } from 'src/environments/environment';
+import { environment } from '../../../../../environments/environment';
 import swal from 'sweetalert';
 
 // Define an interface for the encoding object for better type safety
@@ -17,7 +17,7 @@ interface FaceEncoding {
   standalone: true,
   imports: [CommonModule], // CommonModule is needed for *ngIf, *ngFor etc.
   templateUrl: './face-management.component.html',
-  styleUrls: ['./face-management.component.scss']
+  styleUrls: ['./face-management.component.css']
 })
 export class FaceManagementComponent implements OnInit {
 

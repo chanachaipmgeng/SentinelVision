@@ -1,0 +1,15 @@
+__pycache__
+*.py[cod]
+.env
+.venv
+venv
+temp_images
+enrolled_images
+uploaded_images
+*.faiss
+*.pkl
+.git
+*.md
+trained_model.yml
+face_encodings.pkl
+dataset.rar

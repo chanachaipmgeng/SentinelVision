@@ -1,0 +1,9 @@
+node_modules
+dist
+.angular
+.git
+*.md
+.gitignore
+.editorconfig
+Dockerfile
+.dockerignore

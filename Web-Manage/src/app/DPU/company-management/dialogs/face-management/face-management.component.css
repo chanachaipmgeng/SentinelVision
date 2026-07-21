@@ -1,0 +1,6 @@
+/* Face management dialog styles */
+.face-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}

@@ -28,10 +28,14 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
       FACE_RECOGNITION_THRESHOLD: ${FACE_RECOGNITION_THRESHOLD:-0.40}
-      IMAGE_BLUR_THRESHOLD: ${IMAGE_BLUR_THRESHOLD:-100.0}
+      IMAGE_BLUR_THRESHOLD: ${IMAGE_BLUR_THRESHOLD:-50.0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-50}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-200}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      # InsightFace device: cuda:0 (default) or cpu — matches AI_VISION worker pattern
+      FACE_DEVICE: ${FACE_DEVICE:-cuda:0}
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
@@ -40,12 +44,14 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    # GPU passthrough: use docker-compose.gpu.yml when Docker Desktop exposes NVIDIA
+    #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d api
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')\""]
       interval: 15s
       timeout: 10s
       retries: 10
-      start_period: 40s
+      start_period: 60s
 
   admin:
     build:

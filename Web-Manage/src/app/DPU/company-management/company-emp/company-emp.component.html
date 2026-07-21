@@ -1,14 +1,14 @@
 <app-page-header [title]="'พนักงาน'" [activeTitle]="'จัดการบริษัท'" [title1]="'พนักงาน'"></app-page-header>
 <div class="grid grid-cols-12 gap-x-6">
   <div class="xl:col-span-12 col-span-12">
-    <div class="box mt-6">
+    <div class="box mt-6 modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <div class="box-header justify-between">
         <div class="box-title">
           {{ 'All List' | translate}} <span
             class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
             data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'เพิ่ม' |
             translate}}
           </a>
@@ -33,7 +33,7 @@
   </div>
   @for(item of filterList;track filterList){
   <div class="xxl:col-span-4 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
-    <div class="box team-member-card">
+    <div class="box team-member-card modern-card animate-in zoom-in duration-500 delay-200">
       <div class="teammember-cover-image mt-1">
         <span class="avatar avatar-xl avatar-rounded">
           <img [src]="item.member.getPicture()" alt="">
@@ -70,23 +70,23 @@
         <div class="btn-list">
           <div class="btn-list">
             <button type="button" aria-label="button" data-hs-overlay="#modal-detail" (click)="view(item)"
-              class="ti-btn ti-btn-sm  ti-btn-primary me-[0.375rem]"><i class="ri-edit-line"></i></button>
+              class="ti-btn ti-btn-sm  ti-btn-primary me-[0.375rem] modern-btn"><i class="ri-edit-line"></i></button>
             <button routerLink="/company/timestamp-log/{{item.company_employeeId}}" routerLinkActive="active"
-              type="button" aria-label="button" class="ti-btn ti-btn-sm ti-btn-secondary !me-[0.375rem]">
+              type="button" aria-label="button" class="ti-btn ti-btn-sm ti-btn-secondary !me-[0.375rem] modern-btn">
               <i class="ri-time-line"></i>
 
             </button>
-            <button data-hs-overlay="#modal-face" (click)="view(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-warning me-[0.375rem]">
+            <button data-hs-overlay="#modal-face" (click)="openFaceEnroll(item)" type="button" aria-label="button"
+              class="ti-btn ti-btn-sm ti-btn-warning me-[0.375rem] modern-btn">
               <i class="ri-account-circle-line"></i>
             </button>
             <!-- New Button for Face Management -->
             <button data-hs-overlay="#modal-face-management" (click)="openFaceManagementModal(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-info me-[0.375rem]">
+              class="ti-btn ti-btn-sm ti-btn-info me-[0.375rem] modern-btn">
               <i class="ri-gallery-line"></i>
             </button>
             <button (click)="delete(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-danger me-0"><i class="ri-delete-bin-line"></i></button>
+              class="ti-btn ti-btn-sm ti-btn-danger me-0 modern-btn"><i class="ri-delete-bin-line"></i></button>
           </div>
         </div>
       </div>
@@ -105,7 +105,7 @@
 
 
 <!-- Start:: New Deal -->
-<div id="modal-detail" class="hs-overlay hidden ti-modal">
+<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
@@ -256,42 +256,41 @@
   </div>
 </div>
 
-<div id="modal-face" class="hs-overlay hidden ti-modal">
+<div id="modal-face" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">บันทึกใบหน้า
         </h6>
         <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
-          data-hs-overlay="#modal-face">
+          data-hs-overlay="#modal-face" (click)="stopFaceCamera()">
           <span class="sr-only">Close</span>
           <i class="ri-close-line"></i>
         </button>
       </div>
       <div class="ti-modal-body">
-        <div
-          class="flex flex-wrap align-item-center sm:mt-0 mt-[3rem] justify-between border-b border-dashed dark:border-defaultborder/10 p-4">
-          <div class="team-member-details flex-grow">
-            <video #video width="640" height="480" style="width: 100%; object-fit: cover;" autoplay
-              (loadedmetadata)="detectFace()">
+        <div class="relative border-b border-dashed dark:border-defaultborder/10 p-4">
+          <div class="relative w-full overflow-hidden rounded">
+            <video #video width="640" height="480" playsinline autoplay muted
+              style="width: 100%; height: auto; object-fit: cover; display: block;">
             </video>
-
-            <!-- Canvas element -->
-            <canvas #canvas width="640" height="480" hidden
-              style="position: absolute; width: 100%; height: 100%; object-fit: cover;">
+            <canvas #canvas width="640" height="480"
+              style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
             </canvas>
           </div>
+          <p class="mt-3 mb-0 text-center text-sm text-defaulttextcolor">{{ faceStatus }}</p>
         </div>
-
-
       </div>
       <div class="ti-modal-footer">
-        <button #closeModalFace type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
-          data-hs-overlay="#modal-face">
+        <button #closeModalFace type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle"
+          data-hs-overlay="#modal-face" (click)="stopFaceCamera()">
           ยกเลิก
         </button>
-        <button *ngIf="checkMatch" type="button" class="ti-btn bg-primary text-white !font-medium"
-          (click)="captureImage()">บันทึกใบหน้า</button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium"
+          [disabled]="isUploadingFace || !selectModel.member.memberId"
+          (click)="captureImage()">
+          {{ isUploadingFace ? 'กำลังบันทึก...' : (checkMatch ? 'บันทึกใบหน้า' : 'บันทึกใบหน้า (ยังไม่พบใบหน้า)') }}
+        </button>
       </div>
     </div>
   </div>
@@ -391,7 +390,7 @@
 </div> -->
 
 <!-- Start:: Face Management Modal -->
-<div id="modal-face-management" class="hs-overlay hidden ti-modal">
+<div id="modal-face-management" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-4xl">
     <div class="ti-modal-content">
       <div class="ti-modal-header">

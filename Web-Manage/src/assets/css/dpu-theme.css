@@ -100,7 +100,8 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 
 .page > * {
   position: relative;
-  z-index: 1;
+  /* Do not set z-index here — it traps hs-overlay modals under Preline's
+     body-level .hs-overlay-backdrop (z-50) and blocks dialog clicks. */
 }
 
 .app-header,
@@ -117,6 +118,7 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   border-bottom: 1px solid rgba(226, 232, 240, 0.85) !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 4px 20px rgba(15, 23, 42, 0.04);
   transition: box-shadow var(--dpu-duration) var(--dpu-ease);
+  z-index: 49 !important;
 }
 
 .app-header .main-header {
@@ -611,19 +613,56 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   font-size: 0.85rem;
 }
 
-/* ---- Modals ---- */
+/* ---- Modals ----
+   Preline appends .hs-overlay-backdrop to <body> (z-50). Modal markup lives inside
+   .page/.content (often under a stacking context from layout/animations), so the
+   backdrop paints ABOVE .ti-modal-content and steals all clicks.
+   Fix: neutralize the body backdrop and dim via the overlay panel itself. */
+.hs-overlay-backdrop,
+[data-hs-overlay-backdrop-template] {
+  opacity: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
 .ti-modal,
 .hs-overlay.ti-modal {
-  z-index: 110 !important;
+  z-index: 1055 !important;
+  pointer-events: auto !important;
+  background-color: rgb(15 23 42 / 0.45) !important;
+}
+
+.ti-modal.hidden,
+.hs-overlay.ti-modal.hidden {
+  background-color: transparent !important;
+  pointer-events: none !important;
+}
+
+.ti-modal .ti-modal-box,
+.hs-overlay.ti-modal .ti-modal-box {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto !important;
+  opacity: 1 !important; /* avoid stuck opacity-0 when open class races */
+}
+
+.hs-overlay.open .ti-modal-box,
+.hs-overlay.ti-modal.open .ti-modal-box,
+.hs-overlay:not(.hidden) .ti-modal-box {
+  opacity: 1 !important;
 }
 
 .ti-modal-content,
 .hs-overlay .ti-modal-content {
+  position: relative;
+  z-index: 3;
   border-radius: var(--dpu-radius) !important;
   border: 1px solid var(--dpu-border) !important;
   box-shadow: var(--dpu-shadow-lg) !important;
   max-height: min(90vh, 52rem);
   overflow: hidden;
+  pointer-events: auto !important;
 }
 
 .ti-modal .ti-modal-body {

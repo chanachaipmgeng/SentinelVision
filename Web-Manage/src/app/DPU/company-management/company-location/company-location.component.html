@@ -4,14 +4,14 @@
 
 <div class="grid grid-cols-12 gap-6">
   <div class="xl:col-span-12 col-span-12">
-    <div class="box">
+    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <div class="box-header justify-between">
         <div class="box-title">
           {{ 'All List' | translate}} <span
             class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2" (click)="new()"
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
             data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
             translate}}
           </a>
@@ -27,7 +27,7 @@
           </a> -->
 
 
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2" *ngIf="someSelected"
+          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2 modern-btn" *ngIf="someSelected"
             (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
             translate}}
           </a>
@@ -162,7 +162,7 @@
     </div>
   </div>
   <div class="xl:col-span-12 col-span-12">
-    <div class="box custom-box">
+    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
       <div class="box-header justify-between">
         <div class="box-title">แผนที่บริษัท</div>
       </div>
@@ -170,10 +170,10 @@
         <div class="grid grid-cols-12 sm:gap-6">
           <div class="xl:col-span-12 col-span-12">
 
-            <google-map class="xl:col-span-12 col-span-12" height="400px" [center]="center" [zoom]="zoom">
+            <google-map class="xl:col-span-12 col-span-12" height="400px" [mapId]="mapId" [center]="center" [zoom]="zoom">
               <map-circle *ngFor="let item of itemsList" [center]="{ lat:  item.latitude, lng:  item.longitude }"
                 [radius]="item.radius*1000" />
-              <map-marker *ngFor="let item of itemsList" #mapMarker="mapMarker"
+              <map-advanced-marker *ngFor="let item of itemsList"
                 [position]="{ lat:  item.latitude, lng:  item.longitude }" [options]="markerOptions" />
 
             </google-map>
@@ -205,10 +205,10 @@
 
           <div class="xl:col-span-12 col-span-12">
             <label for="deal-title" class="form-label">{{'ชื่อสถานที่' | translate}}</label>
-            <!-- <input type="text" class="form-control" id="deal-title" placeholder=""
-              [(ngModel)]="selectModel.locationName"> -->
-            <input [(ngModel)]="selectModel.locationName" id="searchBox" #searchBox type="text"
-              placeholder="ค้นหาสถานที่..." class="form-control w-full p-2 border rounded mb-3">
+            <input [(ngModel)]="selectModel.locationName" id="locationName" type="text"
+              placeholder="ชื่อสถานที่" class="form-control w-full p-2 border rounded mb-3">
+            <label class="form-label">ค้นหาบนแผนที่</label>
+            <div #placeAutocompleteHost class="w-full mb-3"></div>
             <div class="text-danger" *ngIf="!selectModel.locationName">
               {{'Please fill in information' | translate}}
             </div>
@@ -238,13 +238,13 @@
         <div class="grid grid-cols-12 sm:gap-6">
           <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
             <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
-            <input type="text" class="form-control" id="input" [(ngModel)]="selectModel.latitude"
+            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="selectModel.latitude"
               (ngModelChange)="changeMarker()">
           </div>
 
           <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
             <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
-            <input type="text" class="form-control" id="input" [(ngModel)]="selectModel.longitude"
+            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="selectModel.longitude"
               (ngModelChange)="changeMarker()">
           </div>
 
@@ -262,11 +262,12 @@
 
             </div>
             <google-map class="xl:col-span-12 col-span-12" height="400px"
-              [center]="{ lat: selectModel.latitude, lng: selectModel.longitude }" [zoom]="12"
-              (mapClick)="addMarker($event,mapMarker)">
-              <map-circle [center]="{ lat: selectModel.latitude, lng: selectModel.longitude }"
+              [mapId]="mapId"
+              [center]="mapCenter" [zoom]="12"
+              (mapClick)="addMarker($event)">
+              <map-circle [center]="mapCenter"
                 [radius]="selectModel.radius*1000" />
-              <map-marker #mapMarker="mapMarker" [position]="{ lat: selectModel.latitude, lng: selectModel.longitude }"
+              <map-advanced-marker [position]="mapCenter"
                 [options]="markerOptions" />
 
             </google-map>

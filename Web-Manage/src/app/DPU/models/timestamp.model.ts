@@ -30,8 +30,8 @@ export class TimestampModel extends BaseModel {
     this.companyId = data?.companyId!
     this.timestampId = data?.timestampId!
     this.locationName = data?.locationName!
-    this.latitude = data?.latitude!
-    this.longitude = data?.longitude!;
+    this.latitude = this.toCoord(data?.latitude, 13.7563);
+    this.longitude = this.toCoord(data?.longitude, 100.5018);
     this.timestampType = data?.timestampType!;
     this.timestamp = data?.timestamp!
     this.photoTimestamp = data?.photoTimestamp!
@@ -71,5 +71,10 @@ export class TimestampModel extends BaseModel {
 
   getLocation(): string {
     return this.locationName ? this.locationName : "ไม่ทราบสถานที่"
+  }
+
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 }

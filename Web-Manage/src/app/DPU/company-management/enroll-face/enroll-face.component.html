@@ -3,7 +3,21 @@
     (loadedmetadata)="detectFace()">
   </video>
   <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
-  <div class="dpu-camera-overlay__controls" *ngIf="checkMatch">
-    <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="captureImage()">ตรวจสอบใบหน้า</button>
+
+  <div class="dpu-camera-overlay__controls">
+    <p class="mb-2 text-center text-white text-sm">{{ captureMessage }}</p>
+
+    <div *ngIf="isCapturing" class="mb-3 w-full bg-white/20 rounded overflow-hidden h-2">
+      <div class="bg-primary h-2 transition-all" [style.width.%]="captureProgress"></div>
+    </div>
+
+    <button
+      *ngIf="checkMatch"
+      type="button"
+      class="ti-btn ti-btn-primary-full w-full modern-btn"
+      [disabled]="isCapturing"
+      (click)="captureImage()">
+      {{ isCapturing ? 'กำลังตรวจสอบ...' : 'ตรวจสอบใบหน้า' }}
+    </button>
   </div>
 </div>

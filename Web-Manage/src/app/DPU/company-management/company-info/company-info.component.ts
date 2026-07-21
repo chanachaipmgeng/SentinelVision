@@ -1,7 +1,7 @@
 import { CommonModule } from "@angular/common";
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
 import { SharedModule } from "../../../shared/shared.module";
-import { GoogleMapsModule, MapInfoWindow, MapMarker } from '@angular/google-maps';
+import { GoogleMapsModule, MapAdvancedMarker, MapInfoWindow } from '@angular/google-maps';
 import { NgSelectModule } from "@ng-select/ng-select";
 import { ActivatedRoute, Router } from "@angular/router";
 import { TokenService } from "../../../shared/services/token.service";
@@ -13,25 +13,30 @@ import { FileItem, FileUploader, ParsedResponseHeaders } from "ng2-file-upload";
 import { TranslateModule } from '@ngx-translate/core';
 import swal from 'sweetalert';
 import { environment } from "../../../../environments/environment";
+import { mountPlaceAutocomplete } from "../../../shared/utils/place-autocomplete";
+
 @Component({
   selector: 'app-company-info',
   standalone: true,
-  imports: [SharedModule, NgSelectModule, CommonModule, FormsModule, FileUploadModule, TranslateModule, NgSelectModule, GoogleMapsModule, MapMarker],
+  imports: [SharedModule, NgSelectModule, CommonModule, FormsModule, FileUploadModule, TranslateModule, NgSelectModule, GoogleMapsModule, MapAdvancedMarker],
   templateUrl: './company-info.component.html',
   styleUrl: './company-info.component.css',
   encapsulation: ViewEncapsulation.None
 })
 export class CompanyInfoComponent {
   @ViewChild(MapInfoWindow) infoWindow: MapInfoWindow | undefined;
+  @ViewChild('placeAutocompleteHost', { static: false }) placeAutocompleteHost!: ElementRef<HTMLElement>;
+
+  readonly mapId = environment.googleMapsMapId;
   center: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
   zoom = 4;
-  markerOptions: google.maps.MarkerOptions = { draggable: false };
+  markerOptions: google.maps.marker.AdvancedMarkerElementOptions = { gmpDraggable: false };
   markerPositions: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
   companyId = ""
   companyModel: CompanyModel = new CompanyModel()
   uploaderProfile: FileUploader | undefined;
   uploadErrorMsg: string = "";
-  @ViewChild('searchBox', { static: false }) searchBoxElement!: ElementRef;
+
   constructor(private router: Router, private route: ActivatedRoute, private comService: CompanyService, private tokenService: TokenService) {
     this.companyId = this.tokenService.getSelectCompany().companyId;
     this.getCompanyInfo()
@@ -39,34 +44,24 @@ export class CompanyInfoComponent {
   }
 
   async ngAfterViewInit() {
-    // await this.loadGoogleMapsAPI();
-    this.initAutocomplete();
+    await this.initPlaceAutocomplete();
   }
 
-  initAutocomplete() {
-    if (!this.searchBoxElement || !this.searchBoxElement.nativeElement) {
-      console.error("❌ SearchBox element not found!");
+  async initPlaceAutocomplete() {
+    const host = this.placeAutocompleteHost?.nativeElement;
+    if (!host) {
+      console.error('Place autocomplete host element not found');
       return;
     }
 
-    const input = this.searchBoxElement.nativeElement;
-    const searchBox = new google.maps.places.SearchBox(input);
-
-    searchBox.addListener('places_changed', () => {
-      const places = searchBox.getPlaces();
-      if (!places || places.length === 0) return;
-
-      const place = places[0];
-      if (!place.geometry || !place.geometry.location) return;
-      this.companyModel.latitude = place.geometry.location.lat()
-      this.companyModel.longitude = place.geometry.location.lng()
-      // this.center = {
-      //   lat: place.geometry.location.lat(),
-      //   lng: place.geometry.location.lng(),
-      // };
-
-      // this.markerPositions = this.center;
-      // console.log(`📍 New Location: ${this.center.lat}, ${this.center.lng}`);
+    await mountPlaceAutocomplete(host, (place) => {
+      this.companyModel.latitude = place.lat;
+      this.companyModel.longitude = place.lng;
+      if (place.address) {
+        this.companyModel.address = place.address;
+      }
+      this.center = { lat: place.lat, lng: place.lng };
+      this.markerPositions = this.center;
     });
   }
 
@@ -110,7 +105,6 @@ export class CompanyInfoComponent {
     ) => {
       if (item.isSuccess) {
         const res = JSON.parse(response);
-        console.log("res", res);
         this.companyModel.picture = res.filename
         swal(res.message, "บันทึกสำเร็จ", "success");
 
@@ -121,28 +115,44 @@ export class CompanyInfoComponent {
     };
   }
 
-  changeMarker() {
-    this.markerPositions = { lat: this.companyModel.latitude, lng: this.companyModel.longitude }
+  get mapCenter(): google.maps.LatLngLiteral {
+    return {
+      lat: this.toCoord(this.companyModel.latitude, 13.7563),
+      lng: this.toCoord(this.companyModel.longitude, 100.5018),
+    };
   }
 
-  addMarker(event: google.maps.MapMouseEvent, marker: MapMarker) {
-    console.log(event)
-    console.log(marker)
-    this.companyModel.latitude = event.latLng!.toJSON().lat
-    this.companyModel.longitude = event.latLng!.toJSON().lng
-    this.markerPositions = { lat: event.latLng!.toJSON().lat, lng: event.latLng!.toJSON().lng }
-    if (this.infoWindow && marker.title) {
-      this.infoWindow.open(marker);
+  changeMarker() {
+    this.companyModel.latitude = this.toCoord(this.companyModel.latitude, 13.7563);
+    this.companyModel.longitude = this.toCoord(this.companyModel.longitude, 100.5018);
+    this.center = this.mapCenter;
+    this.markerPositions = this.mapCenter;
+  }
+
+  addMarker(event: google.maps.MapMouseEvent) {
+    if (!event.latLng) {
+      return;
     }
+    const lat = event.latLng.toJSON().lat;
+    const lng = event.latLng.toJSON().lng;
+    this.companyModel.latitude = lat;
+    this.companyModel.longitude = lng;
+    this.center = { lat, lng };
+    this.markerPositions = { lat, lng };
   }
 
   getCompanyInfo() {
     this.comService.getById(this.companyId).subscribe(result => {
-      ;
-      this.companyModel = result
+      this.companyModel = new CompanyModel(result);
       this.tokenService.saveSelectCompany(result);
-      console.log("companyModel", this.companyModel)
+      this.center = this.mapCenter;
+      this.markerPositions = this.mapCenter;
     })
+  }
+
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 
   reset() {

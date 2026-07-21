@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
 import {
   trigger,
   state,
@@ -10,17 +10,24 @@ import {
   // ...
 } from '@angular/animations';
 import { fromEvent } from 'rxjs';
+import { routeAnimations } from './shared/animations/route-animations';
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
-  animations:[]
+  animations: [routeAnimations]
 })
 export class AppComponent {
   title = 'ynex';
   public isSpinner = true;
+
+  constructor(private contexts: ChildrenOutletContexts) {}
+
+  getRouteAnimationData() {
+    return this.contexts.getContext('primary')?.route?.snapshot?.data?.['animation'];
+  }
 
   ngOnInit() {
     this.applyDpuThemeDefaults();

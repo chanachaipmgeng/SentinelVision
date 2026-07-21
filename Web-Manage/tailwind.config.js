@@ -231,6 +231,7 @@ module.exports = {
     require("@tailwindcss/forms"),
     require("tailwind-clip-path"),
     require("preline/plugin"),
+    require("tailwindcss-animate"),
     plugin(function ({ addComponents }) {
       addComponents({
         ".dirrtl": {

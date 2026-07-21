@@ -16,7 +16,8 @@ import { FormsModule } from '@angular/forms';
 import moment from 'moment';
 import { EmployeeModel } from '../../models/employee.model';
 import { EmployeeService } from '../../services/employee.service';
-import { GoogleMapsModule, MapMarker } from '@angular/google-maps';
+import { GoogleMapsModule, MapAdvancedMarker } from '@angular/google-maps';
+import { environment } from '../../../../environments/environment';
 @Component({
   selector: 'app-timestamp-log',
   templateUrl: './timestamp-log.component.html',
@@ -26,7 +27,7 @@ import { GoogleMapsModule, MapMarker } from '@angular/google-maps';
     TranslateModule,
     NgSelectModule,
     FormsModule,
-    GoogleMapsModule, MapMarker,
+    GoogleMapsModule, MapAdvancedMarker,
     RouterModule,
     FlatpickrModule],
   styleUrls: ['./timestamp-log.component.css'],
@@ -82,7 +83,8 @@ export class TimestampLogComponent {
   pageIndex = 0;
   center: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
   zoom = 5;
-  markerOptions: google.maps.MarkerOptions = { draggable: false };
+  readonly mapId = environment.googleMapsMapId;
+  markerOptions: google.maps.marker.AdvancedMarkerElementOptions = { gmpDraggable: false };
   markerPositions: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
   get searchTerm(): string {
     return this._searchTerm;
@@ -176,7 +178,20 @@ export class TimestampLogComponent {
   view(item: TimestampModel) {
     this.action = 'edit'
     this.selectModel = new TimestampModel(item, this.translate)
-    console.log(this.selectModel)
+    this.center = this.mapCenter
+    this.markerPositions = this.mapCenter
+  }
+
+  get mapCenter(): google.maps.LatLngLiteral {
+    return {
+      lat: this.toCoord(this.selectModel?.latitude, 13.7563),
+      lng: this.toCoord(this.selectModel?.longitude, 100.5018),
+    };
+  }
+
+  private toCoord(value: unknown, fallback: number): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
   }
 
   approveTime(item: TimestampModel) {

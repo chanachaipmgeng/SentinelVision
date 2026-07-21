@@ -33,6 +33,25 @@ interface SmoothBox {
   height: number;
 }
 
+type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
+
+interface FaceTrack {
+  id: number;
+  box: SmoothBox;
+  firstSeenAt: number;
+  lastSeenAt: number;
+  label: string | null;
+  memberId: string | null;
+  confidence: number | null;
+  phase: TrackPhase;
+  lastIdentifyAt: number;
+  identifyInFlight: boolean;
+  captureFrames: string[];
+  captureTimer: ReturnType<typeof setInterval> | null;
+  retryAfter: number;
+  statusText: string | null;
+}
+
 @Component({
   selector: 'app-enroll-face',
   standalone: true,
@@ -45,14 +64,13 @@ export class EnrollFaceComponent implements OnDestroy {
   @ViewChild('canvas') canvas: ElementRef;
   locationList: CompanyLocationModel[] = [];
   locationArea: CompanyLocationModel[] = [];
-  checkMatch = false;
   companyId = '';
   location: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
   errorMessage: string | null = null;
 
-  isCapturing = false;
-  captureProgress = 0;
-  captureMessage = 'วางใบหน้าให้อยู่กลางจอ — ระบบจะลงเวลาอัตโนมัติ';
+  captureMessage = 'โหมด walk-by — หลายคนเดินผ่านได้ ลงเวลาเร็วโดยไม่ต้องขยับหน้า';
+  activeFaceCount = 0;
+  checkingInCount = 0;
   toastMessage = '';
   toastKind: 'success' | 'warning' | 'error' | 'info' = 'info';
   showToast = false;
@@ -60,27 +78,32 @@ export class EnrollFaceComponent implements OnDestroy {
   feed: CheckInFeedItem[] = [];
   latestResult: CheckInFeedItem | null = null;
 
-  /** Live overlay identity (from lightweight identify). */
-  liveLabel: string | null = null;
-  liveConfidence: number | null = null;
-
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
   private videoStream: MediaStream | null = null;
-  private faceSeenSince: number | null = null;
-  private cooldownUntil = 0;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly autoStartHoldMs = 700;
-  private readonly cooldownMs = 7000;
-  private readonly frameCount = 5;
-  private readonly captureIntervalMs = 140;
+  private detectBusy = false;
 
-  private smoothBox: SmoothBox | null = null;
-  private readonly boxLerp = 0.38;
-  private lastIdentifyAt = 0;
-  private identifyInFlight = false;
-  private identifyReqId = 0;
-  private readonly identifyEveryMs = 1100;
-  private faceLostSince: number | null = null;
+  private tracks: FaceTrack[] = [];
+  private nextTrackId = 1;
+  private readonly memberCooldownUntil = new Map<string, number>();
+  private checkInInFlight = 0;
+
+  private readonly boxLerp = 0.4;
+  private readonly iouMatchMin = 0.28;
+  private readonly trackMissTtlMs = 450;
+  /** Shorter hold for walk-by (no head-motion wait). */
+  private readonly autoStartHoldMs = 320;
+  private readonly memberCooldownMs = 5 * 60 * 1000;
+  private readonly identifyEveryMs = 1200;
+  /** Walk-by: 1–2 quality crops, no multi-frame motion liveness. */
+  private readonly frameCount = 2;
+  private readonly captureIntervalMs = 90;
+  private readonly maxConcurrentCheckIn = 3;
+  private readonly maxConcurrentIdentify = 2;
+  private readonly minFaceWidth = 48;
+  private readonly cropPad = 0.4;
+  private readonly retryFailMs = 1800;
+  private readonly checkInEndpoint = '/face/members/check-in-walkby';
 
   constructor(
     private http: HttpClient,
@@ -105,6 +128,11 @@ export class EnrollFaceComponent implements OnDestroy {
     }
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
+    }
+    for (const track of this.tracks) {
+      if (track.captureTimer) {
+        clearInterval(track.captureTimer);
+      }
     }
     if (this.videoStream) {
       this.videoStream.getTracks().forEach((track) => track.stop());
@@ -132,7 +160,7 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   async detectFace() {
-    const videoEl = this.video.nativeElement;
+    const videoEl = this.video.nativeElement as HTMLVideoElement;
     const displaySize = { width: videoEl.width, height: videoEl.height };
     faceapi.matchDimensions(this.canvas.nativeElement, displaySize);
 
@@ -141,106 +169,157 @@ export class EnrollFaceComponent implements OnDestroy {
     }
 
     this.faceDetectionInterval = setInterval(async () => {
-      if (!videoEl.srcObject || videoEl.readyState < 2) {
+      if (this.detectBusy || !videoEl.srcObject || videoEl.readyState < 2) {
         return;
       }
+      this.detectBusy = true;
 
       try {
         const detections = await faceapi.detectAllFaces(
           videoEl,
-          new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 }),
+          new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 }),
         );
         const resized = faceapi.resizeResults(detections, displaySize);
-        const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
-        ctx.clearRect(0, 0, displaySize.width, displaySize.height);
-
         const now = Date.now();
-        if (resized.length > 0) {
-          this.faceLostSince = null;
-          const box = resized[0].box;
-          const target: SmoothBox = {
-            x: box.x,
-            y: box.y,
-            width: box.width,
-            height: box.height,
-          };
-          this.smoothBox = this.lerpBox(this.smoothBox, target, this.boxLerp);
-          this.drawSmoothOverlay(ctx, this.smoothBox!, this.liveLabel, this.liveConfidence);
+        const boxes: SmoothBox[] = resized.map((d) => ({
+          x: d.box.x,
+          y: d.box.y,
+          width: d.box.width,
+          height: d.box.height,
+        }));
 
-          if (
-            !this.isCapturing &&
-            now >= this.cooldownUntil &&
-            !this.identifyInFlight &&
-            now - this.lastIdentifyAt >= this.identifyEveryMs
-          ) {
-            this.lastIdentifyAt = now;
-            this.runLiveIdentify();
+        this.updateTracks(boxes, now);
+        this.drawAllTracks(displaySize);
+
+        let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
+        for (const track of this.tracks) {
+          if (identifySlots <= 0) {
+            break;
           }
-        } else {
-          if (!this.faceLostSince) {
-            this.faceLostSince = now;
-          }
-          if (this.smoothBox && this.faceLostSince && now - this.faceLostSince < 280) {
-            this.drawSmoothOverlay(ctx, this.smoothBox, this.liveLabel, this.liveConfidence);
-          } else {
-            this.smoothBox = null;
-            if (this.liveLabel) {
-              this.ngZone.run(() => {
-                this.liveLabel = null;
-                this.liveConfidence = null;
-                this.cdr.detectChanges();
-              });
-            }
+          if (this.shouldIdentify(track, now)) {
+            identifySlots -= 1;
+            this.runTrackIdentify(track);
           }
         }
 
-        if (this.isCapturing) {
-          return;
+        for (const track of this.tracks) {
+          if (this.shouldStartCheckIn(track, now)) {
+            this.startTrackCapture(track);
+          }
         }
 
         this.ngZone.run(() => {
-          this.checkMatch = resized.length > 0;
-
-          if (now < this.cooldownUntil) {
-            const waitSec = Math.ceil((this.cooldownUntil - now) / 1000);
-            this.captureMessage = `พร้อมสแกนคนถัดไปใน ${waitSec} วิ`;
-            this.faceSeenSince = null;
-            this.cdr.detectChanges();
-            return;
-          }
-
-          if (this.checkMatch) {
-            if (!this.faceSeenSince) {
-              this.faceSeenSince = now;
-            }
-            const held = now - this.faceSeenSince;
-            if (held >= this.autoStartHoldMs) {
-              this.captureMessage = this.liveLabel
-                ? `กำลังลงเวลา — ${this.liveLabel}`
-                : 'พบใบหน้า — กำลังลงเวลาอัตโนมัติ';
-              this.cdr.detectChanges();
-              this.captureImage();
-              return;
-            }
-            this.captureMessage = this.liveLabel
-              ? `พบ ${this.liveLabel} — กำลังยืนยัน...`
-              : 'พบใบหน้า — กำลังยืนยัน...';
-          } else {
-            this.faceSeenSince = null;
-            this.captureMessage = 'วางใบหน้าให้อยู่กลางจอ — ระบบจะลงเวลาอัตโนมัติ';
-          }
+          this.activeFaceCount = this.tracks.length;
+          this.checkingInCount = this.tracks.filter(
+            (t) => t.phase === 'capturing' || t.phase === 'checking_in',
+          ).length;
+          this.captureMessage = this.buildStatusMessage();
           this.cdr.detectChanges();
         });
       } catch (e) {
         console.error('detectFace error', e);
+      } finally {
+        this.detectBusy = false;
       }
-    }, 100);
+    }, 90);
   }
 
-  private lerpBox(prev: SmoothBox | null, next: SmoothBox, t: number): SmoothBox {
-    if (!prev) {
-      return { ...next };
+  private buildStatusMessage(): string {
+    if (this.tracks.length === 0) {
+      return 'โหมด walk-by — เดินผ่านกล้องได้หลายคนพร้อมกัน';
     }
+    const names = this.tracks
+      .map((t) => t.label)
+      .filter((n): n is string => !!n)
+      .slice(0, 3);
+    const busy = this.checkingInCount;
+    const parts: string[] = [`พบ ${this.tracks.length} ใบหน้า`];
+    if (names.length) {
+      parts.push(names.join(', '));
+    }
+    if (busy > 0) {
+      parts.push(`กำลังลงเวลา ${busy} คน`);
+    }
+    return parts.join(' · ');
+  }
+
+  private updateTracks(detections: SmoothBox[], now: number) {
+    const usedDet = new Set<number>();
+    const matchedTrackIds = new Set<number>();
+
+    for (const track of this.tracks) {
+      let bestIdx = -1;
+      let bestIou = this.iouMatchMin;
+      for (let i = 0; i < detections.length; i++) {
+        if (usedDet.has(i)) {
+          continue;
+        }
+        const score = this.iou(track.box, detections[i]);
+        if (score > bestIou) {
+          bestIou = score;
+          bestIdx = i;
+        }
+      }
+      if (bestIdx >= 0) {
+        usedDet.add(bestIdx);
+        matchedTrackIds.add(track.id);
+        track.box = this.lerpBox(track.box, detections[bestIdx], this.boxLerp);
+        track.lastSeenAt = now;
+      }
+    }
+
+    this.tracks = this.tracks.filter((track) => {
+      if (matchedTrackIds.has(track.id)) {
+        return true;
+      }
+      if (track.phase === 'capturing' || track.phase === 'checking_in') {
+        // Keep briefly while request in flight even if face left frame
+        return now - track.lastSeenAt < 2500;
+      }
+      if (now - track.lastSeenAt > this.trackMissTtlMs) {
+        if (track.captureTimer) {
+          clearInterval(track.captureTimer);
+          track.captureTimer = null;
+        }
+        return false;
+      }
+      return true;
+    });
+
+    for (let i = 0; i < detections.length; i++) {
+      if (usedDet.has(i)) {
+        continue;
+      }
+      this.tracks.push({
+        id: this.nextTrackId++,
+        box: { ...detections[i] },
+        firstSeenAt: now,
+        lastSeenAt: now,
+        label: null,
+        memberId: null,
+        confidence: null,
+        phase: 'watching',
+        lastIdentifyAt: 0,
+        identifyInFlight: false,
+        captureFrames: [],
+        captureTimer: null,
+        retryAfter: 0,
+        statusText: null,
+      });
+    }
+  }
+
+  private iou(a: SmoothBox, b: SmoothBox): number {
+    const x1 = Math.max(a.x, b.x);
+    const y1 = Math.max(a.y, b.y);
+    const x2 = Math.min(a.x + a.width, b.x + b.width);
+    const y2 = Math.min(a.y + a.height, b.y + b.height);
+    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    const union = a.width * a.height + b.width * b.height - inter;
+    return union > 0 ? inter / union : 0;
+  }
+
+  private lerpBox(prev: SmoothBox, next: SmoothBox, t: number): SmoothBox {
     return {
       x: prev.x + (next.x - prev.x) * t,
       y: prev.y + (next.y - prev.y) * t,
@@ -249,11 +328,35 @@ export class EnrollFaceComponent implements OnDestroy {
     };
   }
 
+  private drawAllTracks(displaySize: { width: number; height: number }) {
+    const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, displaySize.width, displaySize.height);
+    for (const track of this.tracks) {
+      const onCooldown = track.memberId ? this.isMemberOnCooldown(track.memberId) : false;
+      const label =
+        track.phase === 'checking_in' || track.phase === 'capturing'
+          ? `${track.label || 'กำลังลงเวลา'}…`
+          : onCooldown && track.label
+            ? `${track.label} ✓`
+            : track.label;
+      this.drawSmoothOverlay(
+        ctx,
+        track.box,
+        label,
+        track.confidence,
+        track.phase === 'done' || onCooldown,
+        track.phase === 'capturing' || track.phase === 'checking_in',
+      );
+    }
+  }
+
   private drawSmoothOverlay(
     ctx: CanvasRenderingContext2D,
     box: SmoothBox,
     label: string | null,
     confidence: number | null,
+    done: boolean,
+    busy: boolean,
   ) {
     const pad = 6;
     const x = box.x - pad;
@@ -262,47 +365,63 @@ export class EnrollFaceComponent implements OnDestroy {
     const h = box.height + pad * 2;
     const radius = 14;
 
+    let stroke = 'rgba(148, 163, 184, 0.9)';
+    let corner = '#94a3b8';
+    let labelBg = 'rgba(51, 65, 85, 0.92)';
+    if (done) {
+      stroke = 'rgba(52, 211, 153, 0.95)';
+      corner = '#34d399';
+      labelBg = 'rgba(6, 95, 70, 0.92)';
+    } else if (busy) {
+      stroke = 'rgba(251, 191, 36, 0.95)';
+      corner = '#fbbf24';
+      labelBg = 'rgba(146, 64, 14, 0.92)';
+    } else if (label) {
+      stroke = 'rgba(45, 212, 191, 0.95)';
+      corner = '#5eead4';
+      labelBg = 'rgba(15, 118, 110, 0.92)';
+    }
+
     ctx.save();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = label ? 'rgba(45, 212, 191, 0.95)' : 'rgba(148, 163, 184, 0.9)';
-    ctx.shadowColor = label ? 'rgba(45, 212, 191, 0.45)' : 'rgba(15, 23, 42, 0.35)';
-    ctx.shadowBlur = 10;
+    ctx.strokeStyle = stroke;
+    ctx.shadowColor = stroke;
+    ctx.shadowBlur = 8;
     this.roundRect(ctx, x, y, w, h, radius);
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Corner accents
-    const corner = Math.min(28, w * 0.22, h * 0.22);
+    const c = Math.min(28, w * 0.22, h * 0.22);
     ctx.lineWidth = 4;
-    ctx.strokeStyle = label ? '#5eead4' : '#94a3b8';
+    ctx.strokeStyle = corner;
     ctx.beginPath();
-    ctx.moveTo(x, y + corner);
+    ctx.moveTo(x, y + c);
     ctx.lineTo(x, y);
-    ctx.lineTo(x + corner, y);
-    ctx.moveTo(x + w - corner, y);
+    ctx.lineTo(x + c, y);
+    ctx.moveTo(x + w - c, y);
     ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w, y + corner);
-    ctx.moveTo(x + w, y + h - corner);
+    ctx.lineTo(x + w, y + c);
+    ctx.moveTo(x + w, y + h - c);
     ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x + w - corner, y + h);
-    ctx.moveTo(x + corner, y + h);
+    ctx.lineTo(x + w - c, y + h);
+    ctx.moveTo(x + c, y + h);
     ctx.lineTo(x, y + h);
-    ctx.lineTo(x, y + h - corner);
+    ctx.lineTo(x, y + h - c);
     ctx.stroke();
 
     if (label) {
-      const text = confidence != null
+      const text = confidence != null && !busy && !done
         ? `${label}  ${confidence.toFixed(0)}%`
         : label;
-      ctx.font = '600 16px "Segoe UI", system-ui, sans-serif';
+      ctx.font = '600 15px "Segoe UI", system-ui, sans-serif';
       const metrics = ctx.measureText(text);
       const labelPadX = 10;
-      const labelH = 28;
+      const labelH = 26;
       const labelW = metrics.width + labelPadX * 2;
       const labelX = x;
       const labelY = Math.max(8, y - labelH - 6);
 
-      ctx.fillStyle = 'rgba(15, 118, 110, 0.92)';
+      ctx.fillStyle = labelBg;
       this.roundRect(ctx, labelX, labelY, labelW, labelH, 8);
       ctx.fill();
       ctx.fillStyle = '#ecfdf5';
@@ -330,174 +449,283 @@ export class EnrollFaceComponent implements OnDestroy {
     ctx.closePath();
   }
 
-  private runLiveIdentify() {
-    this.identifyInFlight = true;
-    const reqId = ++this.identifyReqId;
-    const dataUrl = this.captureFrame();
+  private isMemberOnCooldown(memberId: string, now = Date.now()): boolean {
+    const until = this.memberCooldownUntil.get(memberId) || 0;
+    return now < until;
+  }
+
+  private setMemberCooldown(memberId: string, ms = this.memberCooldownMs) {
+    this.memberCooldownUntil.set(memberId, Date.now() + ms);
+  }
+
+  private shouldIdentify(track: FaceTrack, now: number): boolean {
+    if (track.identifyInFlight) {
+      return false;
+    }
+    if (track.phase === 'capturing' || track.phase === 'checking_in') {
+      return false;
+    }
+    if (track.box.width < this.minFaceWidth) {
+      return false;
+    }
+    if (track.memberId && this.isMemberOnCooldown(track.memberId, now)) {
+      track.phase = 'cooldown';
+      return false;
+    }
+    return now - track.lastIdentifyAt >= this.identifyEveryMs;
+  }
+
+  private shouldStartCheckIn(track: FaceTrack, now: number): boolean {
+    if (track.phase !== 'watching') {
+      return false;
+    }
+    if (now < track.retryAfter) {
+      return false;
+    }
+    if (this.checkInInFlight >= this.maxConcurrentCheckIn) {
+      return false;
+    }
+    if (track.box.width < this.minFaceWidth) {
+      return false;
+    }
+    if (now - track.firstSeenAt < this.autoStartHoldMs) {
+      return false;
+    }
+    if (track.memberId && this.isMemberOnCooldown(track.memberId, now)) {
+      track.phase = 'cooldown';
+      return false;
+    }
+    return true;
+  }
+
+  private runTrackIdentify(track: FaceTrack) {
+    track.identifyInFlight = true;
+    track.lastIdentifyAt = Date.now();
+    const trackId = track.id;
+    const dataUrl = this.captureFaceCrop(track.box);
+    if (!dataUrl) {
+      track.identifyInFlight = false;
+      return;
+    }
     const formData = new FormData();
-    formData.append('file', this.dataURLtoFile(dataUrl, 'live.jpg'));
+    formData.append('file', this.dataURLtoFile(dataUrl, `live_${trackId}.jpg`));
 
     this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
       next: (response: any) => {
-        if (reqId !== this.identifyReqId) {
+        const t = this.tracks.find((x) => x.id === trackId);
+        if (!t) {
           return;
         }
-        this.identifyInFlight = false;
-        const name = response.member?.fullName || response.member?.firstName || null;
+        t.identifyInFlight = false;
+        t.memberId = response.memberId || response.member?.memberId || null;
+        t.label = response.member?.fullName || response.member?.firstName || t.label;
         const confidence = Number(response.confidencePercent ?? NaN);
-        this.ngZone.run(() => {
-          this.liveLabel = name;
-          this.liveConfidence = Number.isFinite(confidence) ? confidence : null;
-          this.cdr.detectChanges();
-        });
+        t.confidence = Number.isFinite(confidence) ? confidence : null;
+        if (t.memberId && this.isMemberOnCooldown(t.memberId)) {
+          t.phase = 'cooldown';
+        }
+        this.cdr.detectChanges();
       },
       error: () => {
-        if (reqId !== this.identifyReqId) {
-          return;
+        const t = this.tracks.find((x) => x.id === trackId);
+        if (t) {
+          t.identifyInFlight = false;
         }
-        this.identifyInFlight = false;
-        // Keep previous label briefly; clear only if we never had one
       },
     });
   }
 
-  captureImage(): void {
-    if (this.isCapturing || !this.checkMatch) {
+  private startTrackCapture(track: FaceTrack) {
+    if (track.phase !== 'watching') {
       return;
     }
+    track.phase = 'capturing';
+    track.captureFrames = [];
+    track.statusText = 'walkby';
 
-    this.isCapturing = true;
-    this.faceSeenSince = null;
-    this.captureProgress = 0;
-    this.captureMessage = 'กำลังตรวจ liveness... กรุณาขยับใบหน้าเล็กน้อย';
-    this.cdr.detectChanges();
+    // Grab first crop immediately, then 1 more shortly after
+    const first = this.captureFaceCrop(track.box);
+    if (first) {
+      track.captureFrames.push(first);
+    }
 
-    const capturedFrames: string[] = [];
-
-    const captureProcess = setInterval(() => {
-      if (capturedFrames.length >= this.frameCount) {
-        clearInterval(captureProcess);
-        this.sendCheckIn(capturedFrames);
+    track.captureTimer = setInterval(() => {
+      const live = this.tracks.find((x) => x.id === track.id);
+      if (!live) {
+        if (track.captureTimer) {
+          clearInterval(track.captureTimer);
+        }
         return;
       }
-
-      const frame = this.captureFrame();
-      capturedFrames.push(frame);
-      this.ngZone.run(() => {
-        this.captureProgress = (capturedFrames.length / this.frameCount) * 100;
-        this.cdr.detectChanges();
-      });
+      const crop = this.captureFaceCrop(live.box);
+      if (crop) {
+        live.captureFrames.push(crop);
+      }
+      if (live.captureFrames.length >= this.frameCount) {
+        if (live.captureTimer) {
+          clearInterval(live.captureTimer);
+          live.captureTimer = null;
+        }
+        this.sendTrackCheckIn(live);
+      }
     }, this.captureIntervalMs);
   }
 
-  captureFrame(): string {
-    const video = this.video.nativeElement;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || video.width || 640;
-    canvas.height = video.videoHeight || video.height || 480;
-    const context = canvas.getContext('2d');
-    context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.85);
-  }
+  private sendTrackCheckIn(track: FaceTrack) {
+    const frames = [...track.captureFrames];
+    if (frames.length < 1) {
+      track.phase = 'watching';
+      track.retryAfter = Date.now() + this.retryFailMs;
+      return;
+    }
 
-  sendCheckIn(frames: string[]): void {
-    this.captureMessage = 'กำลังลงเวลา...';
-    this.cdr.detectChanges();
+    track.phase = 'checking_in';
+    this.checkInInFlight += 1;
+    const trackId = track.id;
 
     const formData = new FormData();
     frames.forEach((dataUrl, index) => {
-      formData.append('files', this.dataURLtoFile(dataUrl, `frame_${index}.jpg`));
+      formData.append('files', this.dataURLtoFile(dataUrl, `t${trackId}_${index}.jpg`));
     });
     formData.append('companyId', this.companyId);
     formData.append('latitude', String(this.location?.latitude ?? 0));
     formData.append('longitude', String(this.location?.longitude ?? 0));
-    formData.append('note', 'Face kiosk auto check-in');
+    formData.append('note', 'Face kiosk walk-by check-in');
 
-    this.http.post(environment.baseUrl + `/face/members/check-in`, formData).subscribe({
+    this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
       next: (response: any) => {
-        const employee = response.employee || {};
-        const member = response.member || employee.member || {};
-        const ts = response.timestamp || {};
-        const isWarning = !!response.isWarning || Number(ts.timestampType) === 0;
-        const employeeName =
-          employee.fullName ||
-          member.fullName ||
-          `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
-          'พนักงาน';
-        const confidencePercent = Number(
-          response.confidencePercent ?? ((1 - Number(response.distance || 0)) * 100),
-        );
-        const time = ts.timestamp ? new Date(ts.timestamp) : new Date();
-        const timeLabel = time.toLocaleTimeString('th', {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-        const photoUrl = ts.photoTimestamp
-          ? `${environment.baseUrl}/images/${ts.photoTimestamp}`
-          : frames[Math.floor(frames.length / 2)];
+        this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+        const t = this.tracks.find((x) => x.id === trackId);
+        const memberId = response.memberId || response.member?.memberId || t?.memberId;
+        if (memberId) {
+          const dedupeMs = response.dedupeSeconds
+            ? Number(response.dedupeSeconds) * 1000
+            : this.memberCooldownMs;
+          this.setMemberCooldown(memberId, dedupeMs);
+        }
 
-        const item: CheckInFeedItem = {
-          id: ts.timestampId || `${Date.now()}`,
-          employeeName,
-          employeeId: employee.employeeId || '-',
-          department: employee.department || '-',
-          position: employee.position || '-',
-          statusLabel: isWarning ? 'Warning — นอกพื้นที่' : 'ลงเวลาปกติ',
-          statusKind: isWarning ? 'warning' : 'success',
-          locationName: ts.locationName || (isWarning ? 'นอกพื้นที่ลงเวลา' : '-'),
-          timestamp: time,
-          photoUrl,
-          message: `${employeeName} · ${timeLabel}`,
-          confidencePercent: Number.isFinite(confidencePercent) ? confidencePercent : null,
-          matchQuality: response.matchQuality ?? null,
-          distance: response.distance != null ? Number(response.distance) : null,
-        };
+        if (response.duplicate) {
+          if (t) {
+            t.phase = 'cooldown';
+            t.memberId = memberId || t.memberId;
+            t.label = response.employee?.fullName || response.member?.fullName || t.label;
+            t.statusText = 'duplicate';
+          }
+          const name = response.employee?.fullName || response.member?.fullName || 'พนักงาน';
+          this.notify(`${name} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`, 'info');
+          this.cdr.detectChanges();
+          return;
+        }
 
-        this.liveLabel = employeeName;
-        this.liveConfidence = item.confidencePercent ?? null;
-        this.prependFeed(item);
-        this.notify(
-          isWarning
-            ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
-            : `ลงเวลาสำเร็จ: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
-          isWarning ? 'warning' : 'success',
-        );
-        this.captureMessage = isWarning
-          ? `บันทึก Warning แล้ว — ${employeeName}`
-          : `ลงเวลาสำเร็จ — ${employeeName}`;
-        this.resetCaptureState(true);
+        this.handleCheckInSuccess(response, frames, t);
       },
       error: (error) => {
-        const detail = error.error?.detail || 'Check-in failed. Please try again.';
-        this.pushErrorResult('ลงเวลาไม่สำเร็จ', detail);
-        this.resetCaptureState(true);
+        this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+        const t = this.tracks.find((x) => x.id === trackId);
+        if (t) {
+          t.phase = 'watching';
+          t.retryAfter = Date.now() + this.retryFailMs;
+          t.captureFrames = [];
+        }
+        const detail = error.error?.detail || 'Check-in failed';
+        this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
+        this.cdr.detectChanges();
       },
     });
   }
 
-  private prependFeed(item: CheckInFeedItem) {
-    this.latestResult = item;
-    this.feed = [item, ...this.feed].slice(0, 20);
-    this.cdr.detectChanges();
+  private handleCheckInSuccess(response: any, frames: string[], track: FaceTrack | undefined) {
+    const employee = response.employee || {};
+    const member = response.member || employee.member || {};
+    const ts = response.timestamp || {};
+    const isWarning = !!response.isWarning || Number(ts.timestampType) === 0;
+    const employeeName =
+      employee.fullName ||
+      member.fullName ||
+      `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
+      'พนักงาน';
+    const confidencePercent = Number(
+      response.confidencePercent ?? ((1 - Number(response.distance || 0)) * 100),
+    );
+    const time = ts.timestamp ? new Date(ts.timestamp) : new Date();
+    const timeLabel = time.toLocaleTimeString('th', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const photoUrl = ts.photoTimestamp
+      ? `${environment.baseUrl}/images/${ts.photoTimestamp}`
+      : frames[Math.floor(frames.length / 2)];
+
+    if (track) {
+      track.phase = 'done';
+      track.label = employeeName;
+      track.memberId = response.memberId || member.memberId || track.memberId;
+      track.confidence = Number.isFinite(confidencePercent) ? confidencePercent : track.confidence;
+    }
+
+    const item: CheckInFeedItem = {
+      id: ts.timestampId || `${Date.now()}`,
+      employeeName,
+      employeeId: employee.employeeId || '-',
+      department: employee.department || '-',
+      position: employee.position || '-',
+      statusLabel: isWarning ? 'Warning — นอกพื้นที่' : 'ลงเวลาปกติ',
+      statusKind: isWarning ? 'warning' : 'success',
+      locationName: ts.locationName || (isWarning ? 'นอกพื้นที่ลงเวลา' : '-'),
+      timestamp: time,
+      photoUrl,
+      message: `${employeeName} · ${timeLabel}`,
+      confidencePercent: Number.isFinite(confidencePercent) ? confidencePercent : null,
+      matchQuality: response.matchQuality ?? null,
+      distance: response.distance != null ? Number(response.distance) : null,
+    };
+
+    this.prependFeed(item);
+    this.notify(
+      isWarning
+        ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
+        : `ลงเวลาสำเร็จ: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
+      isWarning ? 'warning' : 'success',
+    );
   }
 
-  private pushErrorResult(title: string, detail: string) {
-    const item: CheckInFeedItem = {
-      id: `err-${Date.now()}`,
-      employeeName: title,
-      employeeId: '-',
-      department: '-',
-      position: '-',
-      statusLabel: 'ไม่สำเร็จ',
-      statusKind: 'error',
-      locationName: '-',
-      timestamp: new Date(),
-      photoUrl: null,
-      message: detail,
-    };
-    this.prependFeed(item);
-    this.notify(`${title}: ${detail}`, 'error');
+  /** Crop face from live video using box in display (canvas) coordinates. */
+  private captureFaceCrop(box: SmoothBox): string | null {
+    const video = this.video.nativeElement as HTMLVideoElement;
+    const vw = video.videoWidth || video.width || 640;
+    const vh = video.videoHeight || video.height || 480;
+    const dw = video.width || 640;
+    const dh = video.height || 480;
+
+    const padX = box.width * this.cropPad;
+    const padY = box.height * this.cropPad;
+    let x = ((box.x - padX) / dw) * vw;
+    let y = ((box.y - padY) / dh) * vh;
+    let w = ((box.width + padX * 2) / dw) * vw;
+    let h = ((box.height + padY * 2) / dh) * vh;
+
+    x = Math.max(0, Math.min(x, vw - 2));
+    y = Math.max(0, Math.min(y, vh - 2));
+    w = Math.max(32, Math.min(w, vw - x));
+    h = Math.max(32, Math.min(h, vh - y));
+
+    const out = Math.max(160, Math.min(320, Math.round(Math.max(w, h))));
+    const canvas = document.createElement('canvas');
+    canvas.width = out;
+    canvas.height = out;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return null;
+    }
+    ctx.drawImage(video, x, y, w, h, 0, 0, out, out);
+    return canvas.toDataURL('image/jpeg', 0.88);
+  }
+
+  private prependFeed(item: CheckInFeedItem) {
+    this.latestResult = item;
+    this.feed = [item, ...this.feed].slice(0, 30);
+    this.cdr.detectChanges();
   }
 
   private notify(message: string, kind: 'success' | 'warning' | 'error' | 'info') {
@@ -510,22 +738,7 @@ export class EnrollFaceComponent implements OnDestroy {
     this.toastTimer = setTimeout(() => {
       this.showToast = false;
       this.cdr.detectChanges();
-    }, 4500);
-    this.cdr.detectChanges();
-  }
-
-  resetCaptureState(startCooldown = false) {
-    this.isCapturing = false;
-    this.captureProgress = 0;
-    this.faceSeenSince = null;
-    if (startCooldown) {
-      this.cooldownUntil = Date.now() + this.cooldownMs;
-      this.captureMessage = `พร้อมสแกนคนถัดไปใน ${Math.ceil(this.cooldownMs / 1000)} วิ`;
-    } else {
-      this.captureMessage = this.checkMatch
-        ? (this.liveLabel ? `พบ ${this.liveLabel}` : 'พบใบหน้า — กำลังยืนยัน...')
-        : 'วางใบหน้าให้อยู่กลางจอ — ระบบจะลงเวลาอัตโนมัติ';
-    }
+    }, 4000);
     this.cdr.detectChanges();
   }
 

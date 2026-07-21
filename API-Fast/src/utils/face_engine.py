@@ -10,7 +10,7 @@ import numpy as np
 from insightface.app import FaceAnalysis
 
 from .image_quality import check_image_quality
-from .liveness_detection import check_multi_frame_liveness
+from .liveness_detection import check_multi_frame_liveness, cosine_distance
 from ..config.settings import settings
 
 _face_app: Optional[FaceAnalysis] = None
@@ -191,3 +191,42 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
     if encoding is None:
         raise ValueError("Could not generate face encoding from validation frame.")
     return encoding
+
+
+def get_walkby_encoding(image_paths: List[str]) -> List[float]:
+    """
+    Walk-by mode: 1–2 frames, no head-motion liveness.
+    - Detect face on each frame
+    - If 2+ frames: require same-person embedding consistency
+    - Prefer a quality-checked embedding; fall back without quality if needed
+    """
+    if not image_paths:
+        raise ValueError("No image frames provided for walk-by check-in")
+
+    candidates: List[List[float]] = []
+    for path in image_paths:
+        encoding = None
+        try:
+            encoding = generate_face_encoding(path)
+        except ValueError:
+            encoding = None
+        if encoding is None:
+            result = extract_face_features(path, require_quality=False)
+            if result is not None:
+                encoding = result[0]
+        if encoding is not None:
+            candidates.append(encoding)
+
+    if not candidates:
+        raise ValueError("No face detected for walk-by check-in")
+
+    if len(candidates) >= 2:
+        anchor = candidates[0]
+        for emb in candidates[1:]:
+            dist = cosine_distance(anchor, emb)
+            if dist > settings.LIVENESS_SAME_PERSON_MAX_DISTANCE:
+                raise ValueError(
+                    f"Face identity inconsistent across walk-by frames (distance={dist:.3f})."
+                )
+
+    return candidates[len(candidates) // 2]

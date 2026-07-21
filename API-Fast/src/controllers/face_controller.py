@@ -4,6 +4,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status, UploadFile
 from pathlib import Path
 from uuid import UUID
+from datetime import datetime, timedelta, timezone
 import uuid
 import shutil
 from typing import List, Optional
@@ -11,9 +12,11 @@ from typing import List, Optional
 from ..models.member import Member
 from ..models.face_encoding import FaceEncoding
 from ..models.company_employee import CompanyEmployee
+from ..models.employee_timestamp import EmployeeTimestamp
 from ..utils.face_engine import (
     generate_face_encoding,
     verify_liveness_and_get_encoding,
+    get_walkby_encoding,
     extract_face_features,
 )
 from ..config.settings import settings
@@ -307,6 +310,128 @@ def _employee_brief(company_employee: CompanyEmployee) -> dict:
     }
 
 
+async def _finalize_check_in(
+    *,
+    db: AsyncSession,
+    companyId: UUID,
+    latitude: float,
+    longitude: float,
+    note: Optional[str],
+    target_encoding: List[float],
+    photo_source_path: str,
+    liveness_passed: bool,
+    mode: str,
+    default_note: str,
+) -> dict:
+    match_payload = await _resolve_match_response(
+        db, target_encoding, liveness_passed=liveness_passed
+    )
+
+    member_id = UUID(match_payload["memberId"])
+    result = await db.execute(
+        select(CompanyEmployee)
+        .where(
+            CompanyEmployee.memberId == member_id,
+            CompanyEmployee.companyId == companyId,
+        )
+        .options(
+            selectinload(CompanyEmployee.member),
+            selectinload(CompanyEmployee.position),
+            selectinload(CompanyEmployee.department),
+        )
+    )
+    company_employee = result.scalar_one_or_none()
+    if not company_employee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Matched face is not an employee of this company.",
+        )
+
+    dedupe_seconds = int(getattr(settings, "CHECK_IN_DEDUPE_SECONDS", 300) or 0)
+    if dedupe_seconds > 0:
+        since = datetime.now(timezone.utc) - timedelta(seconds=dedupe_seconds)
+        recent = await db.execute(
+            select(EmployeeTimestamp)
+            .where(
+                EmployeeTimestamp.company_employeeId
+                == company_employee.company_employeeId,
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.timestamp >= since,
+            )
+            .order_by(EmployeeTimestamp.timestamp.desc())
+            .limit(1)
+        )
+        existing_ts = recent.scalar_one_or_none()
+        if existing_ts:
+            ts_type = existing_ts.timestampType
+            ts_type_value = getattr(ts_type, "value", ts_type)
+            photo = existing_ts.photoTimestamp
+            return {
+                **match_payload,
+                "message": "Already checked in recently",
+                "checkedIn": False,
+                "duplicate": True,
+                "mode": mode,
+                "dedupeSeconds": dedupe_seconds,
+                "isWarning": int(ts_type_value) == 0,
+                "employee": _employee_brief(company_employee),
+                "timestamp": {
+                    "timestampId": str(existing_ts.timestampId),
+                    "timestamp": existing_ts.timestamp,
+                    "timestampType": ts_type_value,
+                    "locationName": existing_ts.locationName,
+                    "latitude": existing_ts.latitude,
+                    "longitude": existing_ts.longitude,
+                    "photoTimestamp": photo,
+                    "photoUrl": f"/images/{photo}" if photo else None,
+                    "approvalStatus": existing_ts.approvalStatus,
+                    "note": existing_ts.note,
+                },
+            }
+
+    photo_filename = _persist_photo_from_path(photo_source_path)
+    check_in_note = (note or "").strip() or default_note
+    timestamp = await create_timestamp(
+        {
+            "company_employeeId": company_employee.company_employeeId,
+            "latitude": latitude,
+            "longitude": longitude,
+            "photoTimestamp": photo_filename,
+            "note": check_in_note,
+        },
+        companyId,
+        db,
+    )
+
+    ts_type = timestamp.get("timestampType")
+    ts_type_value = getattr(ts_type, "value", ts_type)
+    is_warning = int(ts_type_value) == 0
+
+    return {
+        **match_payload,
+        "message": "Check-in saved"
+        if not is_warning
+        else "Check-in saved (outside area)",
+        "checkedIn": True,
+        "duplicate": False,
+        "mode": mode,
+        "isWarning": is_warning,
+        "employee": _employee_brief(company_employee),
+        "timestamp": {
+            "timestampId": str(timestamp["timestampId"]),
+            "timestamp": timestamp["timestamp"],
+            "timestampType": ts_type_value,
+            "locationName": timestamp.get("locationName"),
+            "latitude": timestamp.get("latitude"),
+            "longitude": timestamp.get("longitude"),
+            "photoTimestamp": timestamp.get("photoTimestamp"),
+            "photoUrl": f"/images/{photo_filename}",
+            "approvalStatus": timestamp.get("approvalStatus"),
+            "note": timestamp.get("note"),
+        },
+    }
+
+
 async def check_in_face(
     image_files: List[UploadFile],
     companyId: UUID,
@@ -328,72 +453,67 @@ async def check_in_face(
     try:
         temp_image_paths = await _save_temp_frames(image_files)
         target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
-        match_payload = await _resolve_match_response(
-            db, target_encoding, liveness_passed=True
-        )
-
-        member_id = UUID(match_payload["memberId"])
-        result = await db.execute(
-            select(CompanyEmployee)
-            .where(
-                CompanyEmployee.memberId == member_id,
-                CompanyEmployee.companyId == companyId,
-            )
-            .options(
-                selectinload(CompanyEmployee.member),
-                selectinload(CompanyEmployee.position),
-                selectinload(CompanyEmployee.department),
-            )
-        )
-        company_employee = result.scalar_one_or_none()
-        if not company_employee:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Matched face is not an employee of this company.",
-            )
-
         mid_path = temp_image_paths[len(temp_image_paths) // 2]
-        photo_filename = _persist_photo_from_path(mid_path)
-
-        check_in_note = (note or "").strip() or "Face kiosk auto check-in"
-        timestamp = await create_timestamp(
-            {
-                "company_employeeId": company_employee.company_employeeId,
-                "latitude": latitude,
-                "longitude": longitude,
-                "photoTimestamp": photo_filename,
-                "note": check_in_note,
-            },
-            companyId,
-            db,
+        return await _finalize_check_in(
+            db=db,
+            companyId=companyId,
+            latitude=latitude,
+            longitude=longitude,
+            note=note,
+            target_encoding=target_encoding,
+            photo_source_path=mid_path,
+            liveness_passed=True,
+            mode="secure",
+            default_note="Face kiosk auto check-in",
         )
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    finally:
+        _cleanup_paths(temp_image_paths)
 
-        ts_type = timestamp.get("timestampType")
-        ts_type_value = getattr(ts_type, "value", ts_type)
-        is_warning = int(ts_type_value) == 0
 
-        return {
-            **match_payload,
-            "message": "Check-in saved"
-            if not is_warning
-            else "Check-in saved (outside area)",
-            "checkedIn": True,
-            "isWarning": is_warning,
-            "employee": _employee_brief(company_employee),
-            "timestamp": {
-                "timestampId": str(timestamp["timestampId"]),
-                "timestamp": timestamp["timestamp"],
-                "timestampType": ts_type_value,
-                "locationName": timestamp.get("locationName"),
-                "latitude": timestamp.get("latitude"),
-                "longitude": timestamp.get("longitude"),
-                "photoTimestamp": timestamp.get("photoTimestamp"),
-                "photoUrl": f"/images/{photo_filename}",
-                "approvalStatus": timestamp.get("approvalStatus"),
-                "note": timestamp.get("note"),
-            },
-        }
+async def check_in_face_walkby(
+    image_files: List[UploadFile],
+    companyId: UUID,
+    latitude: float,
+    longitude: float,
+    db: AsyncSession,
+    note: Optional[str] = None,
+):
+    """
+    Walk-by check-in: 1–2 face crops, no motion liveness (faster multi-person pass).
+    """
+    if not image_files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No image files provided for walk-by check-in",
+        )
+    if len(image_files) > 3:
+        image_files = image_files[:3]
 
+    temp_image_paths: List[str] = []
+    try:
+        temp_image_paths = await _save_temp_frames(image_files)
+        target_encoding = get_walkby_encoding(temp_image_paths)
+        mid_path = temp_image_paths[len(temp_image_paths) // 2]
+        return await _finalize_check_in(
+            db=db,
+            companyId=companyId,
+            latitude=latitude,
+            longitude=longitude,
+            note=note,
+            target_encoding=target_encoding,
+            photo_source_path=mid_path,
+            liveness_passed=False,
+            mode="walkby",
+            default_note="Face kiosk walk-by check-in",
+        )
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:

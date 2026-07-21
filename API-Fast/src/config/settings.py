@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # Minimum bbox center movement (pixels) across frames to reject a static photo
     LIVENESS_MIN_BBOX_MOTION: float = 4.0
 
+    # Soft dedupe: skip creating another timestamp for same employee within this window (0 = off)
+    CHECK_IN_DEDUPE_SECONDS: int = 300
+
     # InsightFace / ONNX device: "cuda:0" (default, AI_VISION-style) or "cpu"
     FACE_DEVICE: str = "cuda:0"
 

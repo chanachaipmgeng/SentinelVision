@@ -1,48 +1,73 @@
 <div class="dpu-kiosk">
-  <div *ngIf="showToast" class="dpu-kiosk__toast" [ngClass]="'is-' + toastKind">
+  <div *ngIf="showToast" class="dpu-kiosk__toast" [ngClass]="'is-' + toastKind" role="status">
     {{ toastMessage }}
   </div>
 
-  <div class="dpu-kiosk__layout">
-    <!-- Camera column -->
-    <section class="dpu-kiosk__camera-panel">
-      <header class="dpu-kiosk__panel-head">
-        <h1 class="dpu-kiosk__title">ลงเวลาด้วยใบหน้า</h1>
-        <p class="dpu-kiosk__subtitle">โหมด walk-by — หลายคนพร้อมกัน โดยไม่ต้องหยุดขยับหน้า</p>
-      </header>
+  <!-- Top bar: brand + clock + live metrics -->
+  <header class="dpu-kiosk__top">
+    <div class="dpu-kiosk__brand">
+      <p class="dpu-kiosk__eyebrow">{{ companyName }}</p>
+      <h1 class="dpu-kiosk__title">ลงเวลาด้วยใบหน้า</h1>
+    </div>
+    <div class="dpu-kiosk__clock" aria-live="polite">
+      <span class="dpu-kiosk__clock-time">{{ clockNow | date: 'HH:mm:ss' }}</span>
+      <span class="dpu-kiosk__clock-date">{{ clockNow | date: 'EEE d MMM yyyy' }}</span>
+    </div>
+  </header>
 
+  <!-- Status chips -->
+  <div class="dpu-kiosk__chips" aria-label="สถานะระบบ">
+    <span class="dpu-kiosk__chip" [class.is-on]="wsConnected" [class.is-off]="!wsConnected">
+      <i class="ri-wifi-line"></i>
+      {{ wsConnected ? 'Stream เชื่อมแล้ว' : 'กำลังเชื่อม…' }}
+    </span>
+    <span class="dpu-kiosk__chip" [class.is-ok]="inArea" [class.is-warn]="!inArea">
+      <i class="ri-map-pin-line"></i>
+      {{ areaLabel }}
+    </span>
+    <span class="dpu-kiosk__chip">
+      <i class="ri-user-smile-line"></i>
+      ติดตาม {{ activeFaceCount }}
+    </span>
+    <span class="dpu-kiosk__chip is-busy" *ngIf="checkingInCount > 0">
+      <i class="ri-loader-4-line"></i>
+      ลงเวลา {{ checkingInCount }}
+    </span>
+    <span class="dpu-kiosk__chip" *ngIf="queuePending > 0">
+      <i class="ri-cpu-line"></i>
+      คิว GPU {{ queuePending }}
+    </span>
+    <span class="dpu-kiosk__chip dpu-kiosk__chip--stat">
+      วันนี้ในรอบนี้ {{ sessionTotal }}
+      <span class="dpu-kiosk__chip-split">
+        <em class="is-ok">{{ successCount }}</em>
+        <em class="is-warn">{{ warningCount }}</em>
+        <em class="is-err" *ngIf="errorCount">{{ errorCount }}</em>
+      </span>
+    </span>
+  </div>
+
+  <div class="dpu-kiosk__layout">
+    <!-- Camera -->
+    <section class="dpu-kiosk__camera-panel">
       <div class="dpu-camera-overlay dpu-kiosk__viewport">
         <video #video width="640" height="480" class="dpu-camera-overlay__video" autoplay muted playsinline
           (loadedmetadata)="detectFace()">
         </video>
         <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
 
-        <div class="dpu-camera-overlay__controls">
-          <p class="mb-2 text-center text-white text-sm">{{ captureMessage }}</p>
-          <p class="mb-1 text-center text-white/80 text-xs" *ngIf="activeFaceCount > 0">
-            ติดตาม {{ activeFaceCount }} คน
-            <span *ngIf="checkingInCount > 0"> · กำลังบันทึก {{ checkingInCount }}</span>
-          </p>
-          <p class="mb-0 text-center text-white/70 text-xs">
-            พื้นที่:
-            <span [class.text-success]="locationArea.length > 0" [class.text-warning]="locationArea.length === 0">
-              {{ locationArea.length > 0 ? (locationArea[0].locationName || 'ในพื้นที่') : 'นอกพื้นที่ (Warning)' }}
-            </span>
-          </p>
+        <div class="dpu-kiosk__hud">
+          <p class="dpu-kiosk__hud-msg">{{ captureMessage }}</p>
         </div>
       </div>
 
-      <p *ngIf="errorMessage" class="dpu-kiosk__geo-error">{{ errorMessage }}</p>
-    </section>
+      <p *ngIf="errorMessage" class="dpu-kiosk__geo-error">
+        <i class="ri-error-warning-line"></i> {{ errorMessage }}
+      </p>
 
-    <!-- Results column -->
-    <aside class="dpu-kiosk__feed-panel">
-      <header class="dpu-kiosk__panel-head">
-        <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">ผลการลงเวลา</h2>
-        <p class="dpu-kiosk__subtitle">แสดงทันทีว่าเป็นใคร และสถานะปกติ / Warning</p>
-      </header>
-
-      <div *ngIf="latestResult" class="dpu-kiosk__latest" [ngClass]="'is-' + latestResult.statusKind">
+      <!-- Compact latest under camera (always visible after check-in) -->
+      <div *ngIf="latestResult" id="dpu-kiosk-latest" class="dpu-kiosk__latest dpu-kiosk__latest--compact"
+        [ngClass]="'is-' + latestResult.statusKind">
         <div class="dpu-kiosk__latest-photo">
           <img *ngIf="latestResult.photoUrl" [src]="latestResult.photoUrl" alt="" />
           <div *ngIf="!latestResult.photoUrl" class="dpu-kiosk__latest-photo-fallback">
@@ -50,29 +75,91 @@
           </div>
         </div>
         <div class="dpu-kiosk__latest-body">
-          <span class="dpu-kiosk__badge" [ngClass]="'is-' + latestResult.statusKind">
-            {{ latestResult.statusLabel }}
-          </span>
+          <div class="dpu-kiosk__latest-top">
+            <span class="dpu-kiosk__badge" [ngClass]="'is-' + latestResult.statusKind">
+              {{ latestResult.statusLabel }}
+            </span>
+            <time class="dpu-kiosk__time-inline">{{ latestResult.timestamp | date: 'HH:mm:ss' }}</time>
+          </div>
           <h3 class="dpu-kiosk__person">{{ latestResult.employeeName }}</h3>
-          <p class="dpu-kiosk__meta">รหัส {{ latestResult.employeeId }} · {{ latestResult.department }}</p>
-          <p class="dpu-kiosk__meta">{{ latestResult.position }}</p>
-          <p class="dpu-kiosk__meta" *ngIf="latestResult.confidencePercent != null">
-            มั่นใจ {{ latestResult.confidencePercent | number:'1.1-1' }}%
-            <span *ngIf="latestResult.matchQuality"> · คุณภาพ {{ latestResult.matchQuality }}</span>
-            <span *ngIf="latestResult.distance != null"> · distance {{ latestResult.distance | number:'1.3-3' }}</span>
+          <p class="dpu-kiosk__meta mb-0">
+            รหัส {{ latestResult.employeeId }}
+            · {{ latestResult.department }}
+            · {{ latestResult.position }}
           </p>
-          <p class="dpu-kiosk__meta">
+          <p class="dpu-kiosk__meta mb-0">
             <i class="ri-map-pin-line"></i> {{ latestResult.locationName }}
+            <span *ngIf="latestResult.confidencePercent != null">
+              · มั่นใจ {{ latestResult.confidencePercent | number:'1.0-1' }}%
+            </span>
           </p>
-          <p class="dpu-kiosk__time">
-            {{ latestResult.timestamp | date: 'HH:mm:ss' }}
-            <span>{{ latestResult.timestamp | date: 'd MMM yyyy' }}</span>
-          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <aside class="dpu-kiosk__feed-panel">
+      <header class="dpu-kiosk__panel-head">
+        <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">รายละเอียดผลล่าสุด</h2>
+        <p class="dpu-kiosk__subtitle">อัปเดตทันทีเมื่อลงเวลาสำเร็จ / Warning / ซ้ำ</p>
+      </header>
+
+      <div *ngIf="latestResult" class="dpu-kiosk__latest dpu-kiosk__latest--detail" [ngClass]="'is-' + latestResult.statusKind">
+        <div class="dpu-kiosk__latest-photo">
+          <img *ngIf="latestResult.photoUrl" [src]="latestResult.photoUrl" alt="" />
+          <div *ngIf="!latestResult.photoUrl" class="dpu-kiosk__latest-photo-fallback">
+            <i class="ri-user-smile-line"></i>
+          </div>
+        </div>
+        <div class="dpu-kiosk__latest-body">
+          <div class="dpu-kiosk__latest-top">
+            <span class="dpu-kiosk__badge" [ngClass]="'is-' + latestResult.statusKind">
+              {{ latestResult.statusLabel }}
+            </span>
+            <time class="dpu-kiosk__time-inline">{{ latestResult.timestamp | date: 'HH:mm:ss' }}</time>
+          </div>
+          <h3 class="dpu-kiosk__person">{{ latestResult.employeeName }}</h3>
+          <dl class="dpu-kiosk__facts">
+            <div>
+              <dt>รหัส</dt>
+              <dd>{{ latestResult.employeeId || '-' }}</dd>
+            </div>
+            <div>
+              <dt>แผนก</dt>
+              <dd>{{ latestResult.department || '-' }}</dd>
+            </div>
+            <div>
+              <dt>ตำแหน่ง</dt>
+              <dd>{{ latestResult.position || '-' }}</dd>
+            </div>
+            <div *ngIf="latestResult.confidencePercent != null">
+              <dt>ความมั่นใจ</dt>
+              <dd>
+                {{ latestResult.confidencePercent | number:'1.1-1' }}%
+                <span *ngIf="latestResult.matchQuality"> · {{ latestResult.matchQuality }}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>สถานที่</dt>
+              <dd>{{ latestResult.locationName || '-' }}</dd>
+            </div>
+            <div>
+              <dt>วันที่</dt>
+              <dd>{{ latestResult.timestamp | date: 'd MMM yyyy' }}</dd>
+            </div>
+          </dl>
         </div>
       </div>
 
       <div *ngIf="!latestResult" class="dpu-kiosk__empty">
-        ยังไม่มีรายการ — ให้พนักงานเดินผ่านกล้องเพื่อลงเวลา
+        <i class="ri-walk-line"></i>
+        <p>ยังไม่มีรายการ</p>
+        <span>ให้พนักงานเดินผ่านกล้องเพื่อลงเวลา</span>
+      </div>
+
+      <div class="dpu-kiosk__feed-head" *ngIf="feed.length > 0">
+        <h3 class="dpu-kiosk__section-title">ประวัติรอบนี้</h3>
+        <span class="dpu-kiosk__feed-count">{{ feed.length }} รายการ</span>
       </div>
 
       <ul class="dpu-kiosk__feed" *ngIf="feed.length > 0">
@@ -89,7 +176,12 @@
               </span>
             </div>
             <p class="dpu-kiosk__meta mb-0">
-              {{ item.timestamp | date: 'HH:mm:ss' }} · {{ item.locationName }}
+              {{ item.timestamp | date: 'HH:mm:ss' }}
+              · {{ item.employeeId }}
+              · {{ item.department }}
+            </p>
+            <p class="dpu-kiosk__meta mb-0">
+              {{ item.locationName }}
               <span *ngIf="item.confidencePercent != null"> · {{ item.confidencePercent | number:'1.0-1' }}%</span>
             </p>
             <p *ngIf="item.statusKind === 'error'" class="dpu-kiosk__meta dpu-kiosk__meta--error mb-0">

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     # Soft dedupe: skip creating another timestamp for same employee within this window (0 = off)
     CHECK_IN_DEDUPE_SECONDS: int = 300
 
+    # Phase-3 GPU queue: parallel InsightFace workers (1 recommended for single GPU)
+    FACE_GPU_WORKERS: int = 1
+    FACE_GPU_QUEUE_SIZE: int = 64
+
     # InsightFace / ONNX device: "cuda:0" (default, AI_VISION-style) or "cpu"
     FACE_DEVICE: str = "cuda:0"
 

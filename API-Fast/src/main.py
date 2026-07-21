@@ -63,6 +63,14 @@ async def startup():
         await ensure_face_embedding_index(conn)
         await ensure_profile_and_approval_columns(conn)
 
+    from .config.settings import settings
+    from .utils.face_gpu_queue import start_face_gpu_workers
+
+    await start_face_gpu_workers(
+        workers=settings.FACE_GPU_WORKERS,
+        queue_size=settings.FACE_GPU_QUEUE_SIZE,
+    )
+
 
 UPLOAD_DIR = "./uploaded_images"
 ENROLLED_DIR = "./enrolled_images"

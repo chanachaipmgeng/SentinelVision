@@ -19,6 +19,7 @@ from ..utils.face_engine import (
     get_walkby_encoding,
     extract_face_features,
 )
+from ..utils.face_gpu_queue import run_on_face_gpu
 from ..config.settings import settings
 from ..controllers.employee_timestamp_controller import create_timestamp
 
@@ -261,7 +262,9 @@ async def identify_face(image_file: UploadFile, db: AsyncSession):
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames([image_file])
-        features = extract_face_features(temp_image_paths[0], require_quality=False)
+        features = await run_on_face_gpu(
+            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
+        )
         if features is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -452,7 +455,9 @@ async def check_in_face(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames(image_files)
-        target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
+        target_encoding = await run_on_face_gpu(
+            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps)
+        )
         mid_path = temp_image_paths[len(temp_image_paths) // 2]
         return await _finalize_check_in(
             db=db,
@@ -500,7 +505,9 @@ async def check_in_face_walkby(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames(image_files)
-        target_encoding = get_walkby_encoding(temp_image_paths)
+        target_encoding = await run_on_face_gpu(
+            lambda ps=list(temp_image_paths): get_walkby_encoding(ps)
+        )
         mid_path = temp_image_paths[len(temp_image_paths) // 2]
         return await _finalize_check_in(
             db=db,

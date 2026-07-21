@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from ..config.database import get_db
@@ -11,9 +11,22 @@ from ..controllers.face_controller import (
     get_encodings_for_member,
     delete_face_encoding,
 )
+from ..controllers.face_ws_controller import kiosk_websocket
+from ..utils.face_gpu_queue import face_gpu_queue_stats
 from uuid import UUID
 
 router = APIRouter()
+
+
+@router.websocket("/ws/kiosk")
+async def face_kiosk_ws(websocket: WebSocket):
+    """Realtime kiosk stream: session → identify/checkin via GPU queue."""
+    await kiosk_websocket(websocket)
+
+
+@router.get("/queue-stats")
+async def face_queue_stats():
+    return face_gpu_queue_stats()
 
 
 @router.post("/members/{memberId}/add-face")

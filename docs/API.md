@@ -25,8 +25,13 @@ Interactive docs: http://localhost/docs
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| POST | `/face/members/{memberId}/add-face` | open | multipart file |
-| POST | `/face/members/check-face-emp` | open | multipart `files` (multi-frame) → `{ memberId }` |
+| POST | `/face/members/{memberId}/add-face` | open | multipart `file` enroll |
+| POST | `/face/members/check-face-emp` | open | multipart `files` + liveness → match payload |
+| POST | `/face/members/identify` | open | single frame → name/confidence (no timestamp) |
+| POST | `/face/members/check-in` | open | secure: liveness + photo + timestamp |
+| POST | `/face/members/check-in-walkby` | open | 1–2 frames, no motion liveness + timestamp |
+| WS | `/face/ws/kiosk` | open | stream: session → identify / checkin via GPU queue |
+| GET | `/face/queue-stats` | open | GPU queue health |
 | GET | `/face/members/{memberId}/encodings` | open | gallery metadata |
 | DELETE | `/face/encodings/{faceEncodingId}` | open | |
 

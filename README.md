@@ -22,6 +22,7 @@ docker compose up --build
 | [docs/SETUP.md](docs/SETUP.md) | ติดตั้ง / Docker / env |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | โครงสร้างระบบและ face pipeline |
 | [docs/API.md](docs/API.md) | สรุป endpoint |
+| [docs/CURSOR-AGENT.md](docs/CURSOR-AGENT.md) | Cursor rules & skills สำหรับ AI agent |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | สิ่งที่ยังค้าง |
 
 ## Layout

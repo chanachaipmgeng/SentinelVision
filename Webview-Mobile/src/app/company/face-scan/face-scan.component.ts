@@ -13,6 +13,7 @@ import swal from 'sweetalert';
 import { CompanyLocationModel } from 'src/app/shared/models/company-location.model';
 import { CompanyLocationService } from 'src/app/shared/services/company-location.service';
 import { assetUrl } from 'src/app/shared/utils/asset-url';
+import { playCheckInBeep, unlockBeepAudio } from 'src/app/shared/utils/beep';
 
 @Component({
   selector: 'app-face-scan',
@@ -58,6 +59,7 @@ export class FaceScanComponent implements OnDestroy {
   }
 
   ngOnInit() {
+    unlockBeepAudio();
     this.loadModelsAndStartVideo();
     this.getCompanyLocation();
   }
@@ -217,6 +219,7 @@ export class FaceScanComponent implements OnDestroy {
       this.timestampService.save(this.companyId, this.timestampModel).subscribe({
         next: (result) => {
           const pending = result.approvalStatus === 'PENDING' || result.timestampType == 0;
+          playCheckInBeep();
           swal(
             pending ? "รออนุมัติ !!" : "Complete !!",
             `ลงเวลาการทำงาน ${this.employeeModel.getFullname()} เวลา ${new Date(result.timestamp).toLocaleTimeString("th", { hour: '2-digit', minute: '2-digit' })}`,

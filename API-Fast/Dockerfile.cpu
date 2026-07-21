@@ -1,0 +1,33 @@
+# CPU-only API image (no NVIDIA base). Use with docker-compose.cpu.yml override.
+FROM python:3.11-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    INSIGHTFACE_HOME=/root/.insightface \
+    FACE_DEVICE=cpu
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.cpu.txt .
+RUN pip install --upgrade pip && pip install -r requirements.cpu.txt
+
+RUN python -c "from insightface.app import FaceAnalysis; \
+app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); \
+app.prepare(ctx_id=-1, det_size=(640, 640)); \
+print('InsightFace buffalo_l ready')"
+
+COPY . .
+
+RUN mkdir -p enrolled_images uploaded_images temp_images
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -15,22 +15,94 @@ from ..config.settings import settings
 
 _face_app: Optional[FaceAnalysis] = None
 _face_app_lock = threading.Lock()
+_face_app_device: Optional[str] = None
+
+
+def _cuda_runtime_usable() -> bool:
+    """True only when CUDA EP exists AND the container can see a GPU."""
+    try:
+        import onnxruntime as ort
+
+        if "CUDAExecutionProvider" not in set(ort.get_available_providers()):
+            return False
+    except Exception:
+        return False
+
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            ["nvidia-smi", "-L"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if result.returncode != 0:
+            print(
+                f"nvidia-smi failed (rc={result.returncode}): "
+                f"{(result.stderr or result.stdout or '').strip()[:200]}",
+                flush=True,
+            )
+            return False
+        return "GPU" in (result.stdout or "")
+    except Exception as exc:
+        print(f"GPU probe failed ({exc})", flush=True)
+        return False
+
+
+def _resolve_providers_and_ctx(device: str) -> Tuple[List[str], int]:
+    """Match AI_VISION worker FaceRecognizer provider selection."""
+    use_cuda = device.lower().startswith("cuda")
+    if use_cuda:
+        if not _cuda_runtime_usable():
+            print(
+                "FACE_DEVICE is cuda but GPU is not usable in this container; "
+                "falling back to CPU. Enable Docker Desktop GPU and start with "
+                "docker-compose.gpu.yml when ready.",
+                flush=True,
+            )
+            return ["CPUExecutionProvider"], -1
+
+        gpu_id = 0
+        if ":" in device:
+            gpu_id = int(device.split(":")[1])
+        return ["CUDAExecutionProvider", "CPUExecutionProvider"], gpu_id
+
+    return ["CPUExecutionProvider"], -1
 
 
 def get_face_app() -> FaceAnalysis:
-    """Lazy singleton FaceAnalysis (CPU)."""
-    global _face_app
+    """Lazy singleton FaceAnalysis (CUDA when available, else CPU)."""
+    global _face_app, _face_app_device
     if _face_app is not None:
         return _face_app
     with _face_app_lock:
         if _face_app is None:
-            app = FaceAnalysis(
-                name="buffalo_l",
-                providers=["CPUExecutionProvider"],
-            )
-            app.prepare(ctx_id=-1, det_size=(640, 640))
+            device = (settings.FACE_DEVICE or "cuda:0").strip() or "cuda:0"
+            providers, ctx_id = _resolve_providers_and_ctx(device)
+            print(f"Loading InsightFace buffalo_l providers={providers} ctx_id={ctx_id}", flush=True)
+            try:
+                app = FaceAnalysis(name="buffalo_l", providers=providers)
+                app.prepare(ctx_id=ctx_id, det_size=(640, 640))
+                _face_app_device = device if ctx_id >= 0 else "cpu"
+            except Exception as exc:
+                if ctx_id < 0:
+                    raise
+                print(
+                    f"CUDA InsightFace init failed ({exc}); falling back to CPU.",
+                    flush=True,
+                )
+                app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+                app.prepare(ctx_id=-1, det_size=(640, 640))
+                _face_app_device = "cpu"
             _face_app = app
+            print(f"InsightFace ready on {_face_app_device}", flush=True)
     return _face_app
+
+
+def get_face_device() -> str:
+    get_face_app()
+    return _face_app_device or "cpu"
 
 
 def _largest_face(faces):

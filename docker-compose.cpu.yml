@@ -1,0 +1,10 @@
+# CPU-only override (no NVIDIA base image). Example:
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build api
+services:
+  api:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile.cpu
+    environment:
+      FACE_DEVICE: cpu
+      NVIDIA_VISIBLE_DEVICES: ""

@@ -13,6 +13,7 @@ email-validator
 python-dotenv
 pgvector
 numpy
-insightface
-onnxruntime
+insightface==0.7.3
+# GPU ONNX Runtime (AI_VISION worker pattern). Do not install onnxruntime alongside this.
+onnxruntime-gpu==1.20.1
 onnx

@@ -7,6 +7,7 @@ from ..controllers.face_controller import (
     check_face_emp,
     identify_face,
     check_in_face,
+    check_in_face_walkby,
     get_encodings_for_member,
     delete_face_encoding,
 )
@@ -46,8 +47,23 @@ async def check_in_face_route(
     note: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """One-shot: liveness + match + save photo + create timestamp."""
+    """Secure mode: multi-frame liveness + match + timestamp."""
     return await check_in_face(
+        files, companyId, latitude, longitude, db, note=note
+    )
+
+
+@router.post("/members/check-in-walkby")
+async def check_in_face_walkby_route(
+    files: List[UploadFile] = File(...),
+    companyId: UUID = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    note: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Walk-by mode: 1–2 frames, no motion liveness (multi-person pass-through)."""
+    return await check_in_face_walkby(
         files, companyId, latitude, longitude, db, note=note
     )
 
@@ -64,4 +80,4 @@ async def delete_encoding_route(
     faceEncodingId: UUID, db: AsyncSession = Depends(get_db)
 ):
     return await delete_face_encoding(faceEncodingId, db)
-
+

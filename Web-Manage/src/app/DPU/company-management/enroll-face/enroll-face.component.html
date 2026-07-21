@@ -8,7 +8,7 @@
     <section class="dpu-kiosk__camera-panel">
       <header class="dpu-kiosk__panel-head">
         <h1 class="dpu-kiosk__title">ลงเวลาด้วยใบหน้า</h1>
-        <p class="dpu-kiosk__subtitle">กรอบใบหน้าแบบเรียลไทม์ + แสดงชื่อ — ลงเวลาอัตโนมัติด้วย API ครั้งเดียว</p>
+        <p class="dpu-kiosk__subtitle">โหมด walk-by — หลายคนพร้อมกัน โดยไม่ต้องหยุดขยับหน้า</p>
       </header>
 
       <div class="dpu-camera-overlay dpu-kiosk__viewport">
@@ -19,9 +19,10 @@
 
         <div class="dpu-camera-overlay__controls">
           <p class="mb-2 text-center text-white text-sm">{{ captureMessage }}</p>
-          <div *ngIf="isCapturing" class="mb-1 w-full bg-white/20 rounded overflow-hidden h-2">
-            <div class="bg-primary h-2 transition-all" [style.width.%]="captureProgress"></div>
-          </div>
+          <p class="mb-1 text-center text-white/80 text-xs" *ngIf="activeFaceCount > 0">
+            ติดตาม {{ activeFaceCount }} คน
+            <span *ngIf="checkingInCount > 0"> · กำลังบันทึก {{ checkingInCount }}</span>
+          </p>
           <p class="mb-0 text-center text-white/70 text-xs">
             พื้นที่:
             <span [class.text-success]="locationArea.length > 0" [class.text-warning]="locationArea.length === 0">
@@ -71,7 +72,7 @@
       </div>
 
       <div *ngIf="!latestResult" class="dpu-kiosk__empty">
-        ยังไม่มีรายการ — ให้พนักงานมองกล้องเพื่อลงเวลา
+        ยังไม่มีรายการ — ให้พนักงานเดินผ่านกล้องเพื่อลงเวลา
       </div>
 
       <ul class="dpu-kiosk__feed" *ngIf="feed.length > 0">

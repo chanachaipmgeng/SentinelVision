@@ -5,6 +5,7 @@ import { TokenService } from 'src/app/shared/services/token.service';
 import { environment } from 'src/environments/environment';
 import swal from 'sweetalert';
 import { assetUrl } from 'src/app/shared/utils/asset-url';
+import { playCaptureBeep, unlockBeepAudio } from 'src/app/shared/utils/beep';
 
 interface SmoothBox {
   x: number;
@@ -73,6 +74,7 @@ export class EnrollmentFaceSettingComponent implements OnDestroy {
 
   async ngOnInit() {
     try {
+      unlockBeepAudio();
       await this.ensureFaceModels();
       await this.startVideo();
       this.faceStatus = `มุม 1/5 — ${this.currentAngle?.hint}`;
@@ -266,6 +268,7 @@ export class EnrollmentFaceSettingComponent implements OnDestroy {
     step.preview = captureCanvas.toDataURL('image/jpeg', 0.92);
     step.captured = true;
     this.capturedImage = step.preview;
+    playCaptureBeep();
 
     if (this.currentAngleIndex < this.faceAngleSteps.length - 1) {
       this.currentAngleIndex += 1;

@@ -23,6 +23,7 @@ import { HttpClient } from "@angular/common/http";
 import * as faceapi from 'face-api.js';
 import { FaceManagementComponent } from '../dialogs/face-management/face-management.component';
 import { firstValueFrom } from 'rxjs';
+import { playCaptureBeep, unlockBeepAudio } from '../../../shared/utils/beep';
 
 interface SmoothBox {
   x: number;
@@ -158,6 +159,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.cdr.detectChanges();
 
     try {
+      unlockBeepAudio();
       await this.ensureFaceModels();
       await this.startVideo();
       this.updateAngleStatus();
@@ -371,6 +373,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     step.preview = captureCanvas.toDataURL('image/jpeg', 0.92);
     step.captured = true;
     this.capturedImage = step.preview;
+    playCaptureBeep();
 
     if (this.currentAngleIndex < this.faceAngleSteps.length - 1) {
       this.currentAngleIndex += 1;

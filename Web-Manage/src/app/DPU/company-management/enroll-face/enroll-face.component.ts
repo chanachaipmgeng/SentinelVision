@@ -8,6 +8,12 @@ import { TokenService } from '../../../shared/services/token.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
+import {
+  playCheckInBeep,
+  playDuplicateBeep,
+  playWarningBeep,
+  unlockBeepAudio,
+} from '../../../shared/utils/beep';
 
 export interface CheckInFeedItem {
   id: string;
@@ -155,6 +161,7 @@ export class EnrollFaceComponent implements OnDestroy {
 
   ngOnInit() {
     this.getCurrentLocation();
+    unlockBeepAudio();
     faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
     this.startVideo();
     this.getCompanyLocation();
@@ -942,6 +949,13 @@ export class EnrollFaceComponent implements OnDestroy {
     };
 
     this.prependFeed(item);
+    if (isDuplicate) {
+      playDuplicateBeep();
+    } else if (isWarning) {
+      playWarningBeep();
+    } else {
+      playCheckInBeep();
+    }
     this.notify(
       isDuplicate
         ? `${employeeName} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`

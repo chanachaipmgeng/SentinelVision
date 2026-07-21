@@ -260,7 +260,7 @@
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">บันทึกใบหน้า
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">บันทึกใบหน้า 5 มุม
         </h6>
         <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
           data-hs-overlay="#modal-face" (click)="stopFaceCamera()">
@@ -270,6 +270,26 @@
       </div>
       <div class="ti-modal-body">
         <div class="relative border-b border-dashed dark:border-defaultborder/10 p-4">
+          <div class="flex flex-wrap justify-center gap-2 mb-3">
+            <div *ngFor="let step of faceAngleSteps; let i = index"
+              class="flex flex-col items-center gap-1 min-w-[3.25rem]">
+              <div class="w-12 h-12 rounded-lg overflow-hidden border-2 flex items-center justify-center text-xs font-semibold"
+                [ngClass]="{
+                  'border-success bg-success/10': step.captured,
+                  'border-primary bg-primary/10': !step.captured && i === currentAngleIndex,
+                  'border-defaultborder': !step.captured && i !== currentAngleIndex
+                }">
+                <img *ngIf="step.preview" [src]="step.preview" alt="" class="w-full h-full object-cover">
+                <span *ngIf="!step.preview">{{ i + 1 }}</span>
+              </div>
+              <span class="text-[11px]"
+                [ngClass]="{
+                  'text-success': step.captured,
+                  'text-primary': !step.captured && i === currentAngleIndex,
+                  'text-defaulttextcolor': !step.captured && i !== currentAngleIndex
+                }">{{ step.label }}</span>
+            </div>
+          </div>
           <div class="relative w-full overflow-hidden rounded">
             <video #video width="640" height="480" playsinline autoplay muted
               style="width: 100%; height: auto; object-fit: cover; display: block;">
@@ -279,6 +299,7 @@
             </canvas>
           </div>
           <p class="mt-3 mb-0 text-center text-sm text-defaulttextcolor">{{ faceStatus }}</p>
+          <p class="mt-1 mb-0 text-center text-xs text-textmuted">{{ capturedAngleCount }}/5 มุม · ระบบถ่ายอัตโนมัติเมื่อท่าถูกต้อง</p>
         </div>
       </div>
       <div class="ti-modal-footer">
@@ -287,9 +308,11 @@
           ยกเลิก
         </button>
         <button type="button" class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="isUploadingFace || !selectModel.member.memberId"
+          [disabled]="isUploadingFace || !selectModel.member.memberId || (!allAnglesCaptured && !isFaceDetected)"
           (click)="captureImage()">
-          {{ isUploadingFace ? 'กำลังบันทึก...' : (checkMatch ? 'บันทึกใบหน้า' : 'บันทึกใบหน้า (ยังไม่พบใบหน้า)') }}
+          <ng-container *ngIf="isUploadingFace">{{ uploadProgressLabel || 'กำลังบันทึก...' }}</ng-container>
+          <ng-container *ngIf="!isUploadingFace && allAnglesCaptured">บันทึก 5 มุม</ng-container>
+          <ng-container *ngIf="!isUploadingFace && !allAnglesCaptured">ถ่ายมุมนี้</ng-container>
         </button>
       </div>
     </div>

@@ -1,21 +1,44 @@
-<!-- add-face-camera.component.html -->
 <div class="row" style="height: 85vh;max-height: 80vh;">
   <div class="col-12 p-0" style="position: relative; height: 100%;">
     <div class="card shadow-sm h-100" style="border: none;">
       <div class="card-body p-0 justify-content-center" style="position: relative; height: 100%;">
 
-        <!-- Video element -->
+        <div style="position: absolute; top: 0.75rem; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; gap: 0.5rem; padding: 0 0.5rem;">
+          <div *ngFor="let step of faceAngleSteps; let i = index"
+               style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+            <div [style.border-color]="step.captured ? '#34d399' : (i === currentAngleIndex ? '#2dd4bf' : '#94a3b8')"
+                 style="width: 2.75rem; height: 2.75rem; border-radius: 0.5rem; overflow: hidden; border: 2px solid; display: flex; align-items: center; justify-content: center; background: rgba(15,23,42,0.55); color: #fff; font-size: 0.75rem; font-weight: 600;">
+              <img *ngIf="step.preview" [src]="step.preview" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+              <span *ngIf="!step.preview">{{ i + 1 }}</span>
+            </div>
+            <span style="font-size: 0.7rem; color: #e2e8f0;">{{ step.label }}</span>
+          </div>
+        </div>
+
         <video #video width="640" height="480"
                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
-               autoplay
-               (loadedmetadata)="detectFace()">
+               playsinline autoplay muted>
         </video>
 
-        <!-- Canvas element -->
         <canvas #canvas width="640" height="480"
-                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none;">
         </canvas>
-        <button *ngIf="checkMatch" class="btn btn-primary" style="position: absolute;  left: 0;bottom: 0;margin-bottom: 3rem;width: 100%;" (click)="captureImage()">บันทึกใบหน้า</button>
+
+        <div style="position: absolute; left: 0; right: 0; bottom: 5.5rem; z-index: 3; text-align: center; padding: 0 1rem;">
+          <div style="display: inline-block; background: rgba(15,23,42,0.75); color: #ecfdf5; border-radius: 999px; padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+            {{ faceStatus }}
+          </div>
+          <div style="margin-top: 0.35rem; color: #cbd5e1; font-size: 0.75rem;">{{ capturedAngleCount }}/5 มุม</div>
+        </div>
+
+        <button class="btn btn-primary"
+                style="position: absolute; left: 0; bottom: 0; margin-bottom: 1.5rem; width: 100%; z-index: 3;"
+                [disabled]="isUploadingFace || (!allAnglesCaptured && !isFaceDetected)"
+                (click)="captureImage()">
+          <ng-container *ngIf="isUploadingFace">{{ uploadProgressLabel || 'กำลังบันทึก...' }}</ng-container>
+          <ng-container *ngIf="!isUploadingFace && allAnglesCaptured">บันทึก 5 มุม</ng-container>
+          <ng-container *ngIf="!isUploadingFace && !allAnglesCaptured">ถ่ายมุมนี้</ng-container>
+        </button>
       </div>
     </div>
   </div>

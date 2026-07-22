@@ -127,17 +127,20 @@ def extract_face_features(
     """
     Detect the largest face and return (normed_embedding list, bbox).
     bbox is [x1, y1, x2, y2].
-    """
-    if require_quality:
-        is_good, message = check_image_quality(image_path)
-        if not is_good:
-            raise ValueError(message)
 
+    Quality (blur/brightness) is evaluated on the face crop so soft webcam
+    backgrounds do not reject usable enroll frames.
+    """
     image = _read_bgr(image_path)
     faces = get_face_app().get(image)
     face = _largest_face(faces)
     if face is None:
         return None
+
+    if require_quality:
+        is_good, message = check_image_quality(image_path, face.bbox)
+        if not is_good:
+            raise ValueError(message)
 
     embedding = face.normed_embedding
     if embedding is None:

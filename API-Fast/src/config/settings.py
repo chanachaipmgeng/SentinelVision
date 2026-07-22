@@ -20,10 +20,11 @@ class Settings(BaseSettings):
     # InsightFace / ONNX device: "cuda:0" (default, AI_VISION-style) or "cpu"
     FACE_DEVICE: str = "cuda:0"
 
-    # Image Quality Settings (Laplacian variance; lower = allow blurrier webcam frames)
-    IMAGE_BLUR_THRESHOLD: float = 50.0
-    IMAGE_BRIGHTNESS_MIN: int = 50
-    IMAGE_BRIGHTNESS_MAX: int = 200
+    # Image Quality Settings — measured on face crop when available
+    # (Laplacian variance; lower = allow blurrier webcam frames)
+    IMAGE_BLUR_THRESHOLD: float = 20.0
+    IMAGE_BRIGHTNESS_MIN: int = 40
+    IMAGE_BRIGHTNESS_MAX: int = 220
 
     class Config:
         env_file = ".env"

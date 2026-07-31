@@ -1,5 +1,7 @@
 # Setup
 
+สำหรับติดตั้งบนเซิร์ฟเวอร์จริง (clone จาก GitLab + seed mock) ดูคู่มือเต็มที่ [DEPLOY-SERVER.md](DEPLOY-SERVER.md)
+
 ## Requirements
 
 - Docker Desktop (Compose v2)

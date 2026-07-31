@@ -1,6 +1,7 @@
 # Project docs
 
-- [SETUP](SETUP.md) — run the stack
+- [SETUP](SETUP.md) — run the stack (local / Docker Desktop)
+- [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
 - [ARCHITECTURE](ARCHITECTURE.md) — components and face flow
 - [API](API.md) — endpoint summary
 - [CURSOR-AGENT](CURSOR-AGENT.md) — Cursor rules & skills for agents

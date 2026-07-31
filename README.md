@@ -19,7 +19,8 @@ docker compose up --build
 
 | Doc | Contents |
 |-----|----------|
-| [docs/SETUP.md](docs/SETUP.md) | ติดตั้ง / Docker / env |
+| [docs/DEPLOY-SERVER.md](docs/DEPLOY-SERVER.md) | **คู่มือติดตั้งบนเซิร์ฟเวอร์** (clone / Docker / GPU·CPU / seed mock) |
+| [docs/SETUP.md](docs/SETUP.md) | ติดตั้งบนเครื่องพัฒนา / Docker / env |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | โครงสร้างระบบและ face pipeline |
 | [docs/API.md](docs/API.md) | สรุป endpoint |
 | [docs/CURSOR-AGENT.md](docs/CURSOR-AGENT.md) | Cursor rules & skills สำหรับ AI agent |

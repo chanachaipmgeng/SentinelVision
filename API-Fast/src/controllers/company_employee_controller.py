@@ -2,9 +2,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from datetime import datetime
+
 from ..schemas.company_employee_schema import CompanyEmployeePost, CompanyEmployeeUpdate
 from ..models.company_employee import CompanyEmployee
-from ..models.member import Member, RoleType
+from ..models.member import Member, RoleType, StatusType
 from ..models.company import Company
 from ..models.position import Position
 from ..models.department import Department
@@ -182,8 +184,14 @@ async def register_member(
             firstName=emp_data.member.firstName,
             lastName=emp_data.member.lastName,
             picture=emp_data.member.picture,
+            phoneNumber=emp_data.member.phoneNumber,
+            birthDate=emp_data.member.birthDate,
+            address=emp_data.member.address,
+            emergencyContactName=emp_data.member.emergencyContactName,
+            emergencyContactPhone=emp_data.member.emergencyContactPhone,
+            attachmentUrls=emp_data.member.attachmentUrls,
             role=RoleType.MEMBER,
-            status='ENABLE'
+            status=StatusType.ENABLE,
         )
         member.hash_password("1234")
         db.add(member)
@@ -205,18 +213,24 @@ async def register_member(
             detail="Member is already registered in this company"
         )
 
+    if not emp_data.position or not emp_data.department:
+        raise HTTPException(
+            status_code=400,
+            detail="กรุณาเลือกแผนกและตำแหน่ง",
+        )
+
     # เพิ่มพนักงานในบริษัท
     new_employee = CompanyEmployee(
         memberId=member.memberId,
         companyId=company.companyId,
-        positionId = emp_data.position.positionId,
-        departmentId = emp_data.department.departmentId,
-        employeeId = emp_data.employeeId,
-        bossId = emp_data.bossId,
-        salary = emp_data.salary,
-        companyRoleType = emp_data.companyRoleType,
-        empType = emp_data.empType,
-        startDate = emp_data.startDate
+        positionId=emp_data.position.positionId,
+        departmentId=emp_data.department.departmentId,
+        employeeId=emp_data.employeeId or "",
+        bossId=emp_data.bossId or "",
+        salary=emp_data.salary if emp_data.salary is not None else 0,
+        companyRoleType=emp_data.companyRoleType,
+        empType=emp_data.empType,
+        startDate=emp_data.startDate or datetime.utcnow(),
     )
     db.add(new_employee)
     await db.commit()

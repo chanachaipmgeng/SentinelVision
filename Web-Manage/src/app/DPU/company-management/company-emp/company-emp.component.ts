@@ -720,20 +720,9 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   }
 
   save() {
-    if (!this.selectModel?.member?.email) {
-      swal('ข้อมูลไม่ครบ', 'กรุณากรอกอีเมล', 'info');
-      return;
-    }
-    if (!this.selectModel?.department?.departmentId) {
-      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกแผนก', 'info');
-      return;
-    }
-    if (!this.selectModel?.position?.positionId) {
-      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกตำแหน่ง', 'info');
-      return;
-    }
-    if (this.selectModel.empType === undefined || this.selectModel.empType === null) {
-      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกประเภทพนักงาน', 'info');
+    const clientError = this.validateEmployeeForm();
+    if (clientError) {
+      swal('ไม่สามารถบันทึกได้', clientError, 'warning');
       return;
     }
 
@@ -756,10 +745,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
                 this.ngOnInit();
                 this.childModal?.nativeElement.click();
               },
-              error: (err) => {
-                const detail = this.formatApiError(err);
-                swal('บันทึกไม่สำเร็จ', detail, 'error');
-              },
+              error: (err) => this.showSaveError(err),
             });
           } else {
             this.employeeService.update(this.selectModel, this.companyId).subscribe({
@@ -768,52 +754,143 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
                 this.ngOnInit();
                 this.childModal?.nativeElement.click();
               },
-              error: (err) => {
-                const detail = this.formatApiError(err);
-                swal('บันทึกไม่สำเร็จ', detail, 'error');
-              },
+              error: (err) => this.showSaveError(err),
             });
           }
         }
       });
   }
 
+  private validateEmployeeForm(): string | null {
+    const email = (this.selectModel?.member?.email || '').trim();
+    if (!email) {
+      return 'กรุณากรอกอีเมล';
+    }
+    // Match EmailStr: local@domain with a dot in the domain (e.g. name@company.com)
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) {
+      return `รูปแบบอีเมลไม่ถูกต้อง: "${email}"\nตัวอย่างที่ถูกต้อง: name@company.com\n(ต้องมีเครื่องหมาย @ และจุดในโดเมน)`;
+    }
+    if (!this.selectModel?.member?.firstName?.trim()) {
+      return 'กรุณากรอกชื่อ';
+    }
+    if (!this.selectModel?.member?.lastName?.trim()) {
+      return 'กรุณากรอกนามสกุล';
+    }
+    if (!this.selectModel?.department?.departmentId) {
+      return 'กรุณาเลือกแผนก';
+    }
+    if (!this.selectModel?.position?.positionId) {
+      return 'กรุณาเลือกตำแหน่ง';
+    }
+    if (this.selectModel.empType === undefined || this.selectModel.empType === null) {
+      return 'กรุณาเลือกประเภทพนักงาน (รายวัน/รายเดือน)';
+    }
+    return null;
+  }
+
+  private showSaveError(err: any): void {
+    const detail = this.formatApiError(err);
+    const status = err?.status;
+    const title =
+      status === 422
+        ? 'ข้อมูลไม่ถูกต้อง (422)'
+        : status === 400
+          ? 'ไม่สามารถเพิ่มพนักงานได้'
+          : status === 409
+            ? 'ข้อมูลซ้ำ'
+            : 'บันทึกไม่สำเร็จ';
+    swal({
+      title,
+      text: detail,
+      icon: 'error',
+    });
+  }
+
   private formatApiError(err: any): string {
     const detail = err?.error?.detail;
     if (typeof detail === 'string') {
-      return detail;
+      return this.translateApiMessage(detail);
     }
     if (Array.isArray(detail)) {
-      return detail
-        .map((d: any) => {
-          const loc = Array.isArray(d.loc) ? d.loc.filter((x: any) => x !== 'body').join('.') : '';
-          return loc ? `${loc}: ${d.msg}` : d.msg;
-        })
-        .join('\n');
+      const lines = detail.map((d: any) => this.translateValidationItem(d));
+      return lines.filter(Boolean).join('\n') || 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
+    }
+    if (err?.status === 0) {
+      return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่';
     }
     return err?.message || 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
   }
 
+  private translateValidationItem(d: any): string {
+    const locParts = Array.isArray(d?.loc)
+      ? d.loc.filter((x: any) => x !== 'body' && typeof x === 'string')
+      : [];
+    const fieldKey = locParts[locParts.length - 1] || '';
+    const fieldLabel = this.fieldLabelTh(fieldKey, locParts);
+    const msg = this.translateApiMessage(String(d?.msg || ''));
+    if (fieldLabel && msg) {
+      return `• ${fieldLabel}: ${msg}`;
+    }
+    return msg ? `• ${msg}` : '';
+  }
+
+  private fieldLabelTh(field: string, locParts: string[] = []): string {
+    const map: Record<string, string> = {
+      email: 'อีเมล',
+      firstName: 'ชื่อ',
+      lastName: 'นามสกุล',
+      phoneNumber: 'เบอร์โทร',
+      birthDate: 'วันเกิด',
+      address: 'ที่อยู่',
+      emergencyContactName: 'ผู้ติดต่อฉุกเฉิน',
+      emergencyContactPhone: 'เบอร์ติดต่อฉุกเฉิน',
+      employeeId: 'รหัสพนักงาน',
+      salary: 'เงินเดือน',
+      bossId: 'หัวหน้างาน',
+      startDate: 'วันเริ่มงาน',
+      empType: 'ประเภทพนักงาน',
+      companyRoleType: 'สิทธิ์การใช้งาน',
+      position: 'ตำแหน่ง',
+      department: 'แผนก',
+      positionId: 'ตำแหน่ง',
+      departmentId: 'แผนก',
+      member: 'ข้อมูลสมาชิก',
+    };
+    if (map[field]) {
+      return map[field];
+    }
+    if (locParts.includes('email')) {
+      return 'อีเมล';
+    }
+    return field || 'ข้อมูล';
+  }
+
+  private translateApiMessage(msg: string): string {
+    const m = (msg || '').toLowerCase();
+    if (m.includes('not a valid email') || m.includes('value is not a valid email')) {
+      if (m.includes('period') || m.includes('dot')) {
+        return 'รูปแบบอีเมลไม่ถูกต้อง — หลัง @ ต้องมีจุด เช่น name@company.com (ตอนนี้ใช้แบบ name@sss ไม่ได้)';
+      }
+      return 'รูปแบบอีเมลไม่ถูกต้อง กรุณาใช้รูปแบบ name@company.com';
+    }
+    if (m.includes('already registered') || m.includes('already exists')) {
+      return 'อีเมลนี้มีพนักงานในบริษัทนี้อยู่แล้ว';
+    }
+    if (m.includes('field required') || m.includes('missing')) {
+      return 'ยังไม่ได้กรอก / เลือกค่านี้';
+    }
+    if (m.includes('valid date') || m.includes('datetime')) {
+      return 'รูปแบบวันที่ไม่ถูกต้อง';
+    }
+    if (m.includes('กรุณาเลือก')) {
+      return msg;
+    }
+    return msg || 'ข้อมูลไม่ถูกต้อง';
+  }
+
   updateEmp() {
-    swal({
-      title: "Are you sure?",
-      text: "คุณต้องการบันทึกหรือไม่",
-      icon: "warning",
-      dangerMode: false,
-      buttons: ["Cancel", "Confirm"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.employeeService.save(this.selectModel, this.companyId).subscribe(result => {
-            swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-            this.ngOnInit()
-            this.childModal?.nativeElement.click()
-          })
-        }
-
-      });
-
-
+    this.save();
   }
 
   // filterEmp(empId: string) {

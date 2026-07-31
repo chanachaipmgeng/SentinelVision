@@ -720,6 +720,23 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   }
 
   save() {
+    if (!this.selectModel?.member?.email) {
+      swal('ข้อมูลไม่ครบ', 'กรุณากรอกอีเมล', 'info');
+      return;
+    }
+    if (!this.selectModel?.department?.departmentId) {
+      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกแผนก', 'info');
+      return;
+    }
+    if (!this.selectModel?.position?.positionId) {
+      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกตำแหน่ง', 'info');
+      return;
+    }
+    if (this.selectModel.empType === undefined || this.selectModel.empType === null) {
+      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกประเภทพนักงาน', 'info');
+      return;
+    }
+
     swal({
       title: "Are you sure?",
       text: "คุณต้องการบันทึกหรือไม่",
@@ -730,27 +747,51 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       .then((willDelete: any) => {
         if (willDelete) {
           if (!this.isEdit) {
-            this.selectModel.companyRoleType = 0
-            this.employeeService.save(this.selectModel, this.companyId).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.ngOnInit()
-              this.childModal?.nativeElement.click()
-            })
+            if (this.selectModel.companyRoleType === undefined || this.selectModel.companyRoleType === null) {
+              this.selectModel.companyRoleType = 0;
+            }
+            this.employeeService.save(this.selectModel, this.companyId).subscribe({
+              next: () => {
+                swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
+                this.ngOnInit();
+                this.childModal?.nativeElement.click();
+              },
+              error: (err) => {
+                const detail = this.formatApiError(err);
+                swal('บันทึกไม่สำเร็จ', detail, 'error');
+              },
+            });
           } else {
-            this.employeeService.update(this.selectModel, this.companyId).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.ngOnInit()
-              this.childModal?.nativeElement.click()
-            })
-
+            this.employeeService.update(this.selectModel, this.companyId).subscribe({
+              next: () => {
+                swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
+                this.ngOnInit();
+                this.childModal?.nativeElement.click();
+              },
+              error: (err) => {
+                const detail = this.formatApiError(err);
+                swal('บันทึกไม่สำเร็จ', detail, 'error');
+              },
+            });
           }
-          // this.selectModel.member.role = 0
-
         }
-
       });
+  }
 
-
+  private formatApiError(err: any): string {
+    const detail = err?.error?.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    if (Array.isArray(detail)) {
+      return detail
+        .map((d: any) => {
+          const loc = Array.isArray(d.loc) ? d.loc.filter((x: any) => x !== 'body').join('.') : '';
+          return loc ? `${loc}: ${d.msg}` : d.msg;
+        })
+        .join('\n');
+    }
+    return err?.message || 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
   }
 
   updateEmp() {

@@ -93,11 +93,55 @@ export class EmployeeService {
   }
 
   save(body: EmployeeModel, companyId: string) {
-    return this.http.post<ResponseModel>(this.apiBaseUrl + "/" + companyId, new EmployeeModel(body));
+    return this.http.post<ResponseModel>(this.apiBaseUrl + "/" + companyId, this.toApiPayload(body));
   }
 
   update(body: EmployeeModel, companyId: string) {
-    return this.http.put<ResponseModel>(this.apiBaseUrl + "/" + companyId, new EmployeeModel(body));
+    return this.http.put<ResponseModel>(this.apiBaseUrl + "/" + companyId, this.toApiPayload(body));
+  }
+
+  /** Strip empty optional fields that otherwise cause FastAPI 422 validation errors. */
+  private toApiPayload(body: EmployeeModel): Record<string, unknown> {
+    const m = body?.member || ({} as any);
+    const blank = (v: any) => v === '' || v === undefined || v === null;
+    const member: Record<string, unknown> = {
+      email: m.email,
+      firstName: blank(m.firstName) ? null : m.firstName,
+      lastName: blank(m.lastName) ? null : m.lastName,
+      picture: blank(m.picture) ? null : m.picture,
+      phoneNumber: blank(m.phoneNumber) ? null : m.phoneNumber,
+      birthDate: blank(m.birthDate) ? null : m.birthDate,
+      address: blank(m.address) ? null : m.address,
+      emergencyContactName: blank(m.emergencyContactName) ? null : m.emergencyContactName,
+      emergencyContactPhone: blank(m.emergencyContactPhone) ? null : m.emergencyContactPhone,
+      attachmentUrls: blank(m.attachmentUrls) ? null : m.attachmentUrls,
+    };
+    const position = body?.position?.positionId
+      ? {
+          positionId: body.position.positionId,
+          thName: body.position.thName || null,
+          engName: body.position.engName || null,
+        }
+      : null;
+    const department = body?.department?.departmentId
+      ? {
+          departmentId: body.department.departmentId,
+          thName: body.department.thName || null,
+          engName: body.department.engName || null,
+        }
+      : null;
+    return {
+      member,
+      position,
+      department,
+      employeeId: blank(body.employeeId) ? null : body.employeeId,
+      salary: blank(body.salary) ? 0 : Number(body.salary),
+      bossId: blank(body.bossId) ? null : body.bossId,
+      companyRoleType: body.companyRoleType ?? 0,
+      empType: body.empType ?? 1,
+      startDate: blank(body.startDate) ? null : body.startDate,
+      company_employeeId: blank(body.company_employeeId) ? undefined : body.company_employeeId,
+    };
   }
 
   delete(companyId: string, body: EmployeeModel) {

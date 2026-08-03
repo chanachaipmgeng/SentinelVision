@@ -280,6 +280,7 @@ docker compose run --rm \
 | API 502 | `docker compose logs api` · restart nginx หลัง recreate api: `docker compose up -d --build nginx` |
 | Seed ไม่ติด | API ต้อง healthy ก่อน · ดู log จากคำสั่ง `docker compose run ... seed_demo_data.py` |
 | Face / enroll บอก blur | แสงสว่างพอ · เกณฑ์อยู่ใน `.env` (`IMAGE_BLUR_THRESHOLD`) |
+| Build API ล้มเหลว `onnxruntime-gpu` No matching distribution | ดึงโค้ดล่าสุด (`git pull`) — โปรเจกต์ใช้ `onnxruntime-gpu==1.21.0` แล้ว (1.20.1 ถูกลบจาก PyPI) |
 | ไม่มี GPU / CUDA error | ใช้ `docker-compose.cpu.yml` และ `FACE_DEVICE=cpu` |
 | Login ไม่ได้หลัง seed | ใช้ username ในตารางด้านบน + รหัส `Password123!` |
 | Git pull ไม่ได้ | ตรวจสิทธิ์ GitLab / credential บนเซิร์ฟเวอร์ |

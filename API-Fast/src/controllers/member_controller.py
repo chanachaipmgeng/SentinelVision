@@ -34,24 +34,24 @@ async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
         if not member:
             raise HTTPException(status_code=404, detail="Member not found")
 
-        # Update member fields
-        if user_data.username:
+        # Update member fields (use is not None — role/status 0 are valid)
+        if user_data.username is not None:
             member.username = user_data.username
         if user_data.password:
             member.hash_password(user_data.password)
-        if user_data.firstName:
+        if user_data.firstName is not None:
             member.firstName = user_data.firstName
-        if user_data.lastName:
+        if user_data.lastName is not None:
             member.lastName = user_data.lastName
-        if user_data.email:
+        if user_data.email is not None:
             member.email = user_data.email
-        if user_data.phoneNumber:
+        if user_data.phoneNumber is not None:
             member.phoneNumber = user_data.phoneNumber
-        if user_data.role:
+        if user_data.role is not None:
             member.role = user_data.role
-        if user_data.status:
+        if user_data.status is not None:
             member.status = user_data.status
-        if user_data.picture:
+        if user_data.picture is not None:
             member.picture = user_data.picture
         if user_data.birthDate is not None:
             member.birthDate = user_data.birthDate

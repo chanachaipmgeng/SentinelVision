@@ -278,6 +278,7 @@ docker compose run --rm \
 |-------|------------|
 | เปิดเว็บไม่ได้ | `docker compose ps` ดูว่า `nginx` / `admin` Up หรือยัง · ตรวจ firewall พอร์ต `HTTP_PORT` |
 | API 502 | `docker compose logs api` · restart nginx หลัง recreate api: `docker compose up -d --build nginx` |
+| Upload ได้ 413 Request Entity Too Large | เพิ่ม `client_max_body_size 100m;` ใน **nginx ฝั่ง TLS ด้านนอก** (ค่าเริ่มต้นมักเป็น 1m) แล้ว `nginx -s reload` · rebuild `dpu-nginx` ด้วย |
 | Seed ไม่ติด | API ต้อง healthy ก่อน · ดู log จากคำสั่ง `docker compose run ... seed_demo_data.py` |
 | Face / enroll บอก blur | แสงสว่างพอ · เกณฑ์อยู่ใน `.env` (`IMAGE_BLUR_THRESHOLD`) |
 | Build API ล้มเหลว `onnxruntime-gpu` No matching distribution | ดึงโค้ดล่าสุด (`git pull`) — โปรเจกต์ใช้ `onnxruntime-gpu==1.21.0` แล้ว (1.20.1 ถูกลบจาก PyPI) |

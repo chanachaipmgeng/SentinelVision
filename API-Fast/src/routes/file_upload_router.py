@@ -11,8 +11,7 @@ router = APIRouter()
 UPLOAD_DIR = "./uploaded_images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)  # Create folder if it doesn't exist
 
-@router.post("/upload-image/")
-async def upload_image(file: UploadFile = File(...)):
+async def _save_upload_image(file: UploadFile) -> JSONResponse:
     # Validate file type
     if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         raise HTTPException(
@@ -20,7 +19,7 @@ async def upload_image(file: UploadFile = File(...)):
         )
 
     # Generate a new filename
-    file_extension = os.path.splitext(file.filename)[-1].lower()
+    file_extension = os.path.splitext(file.filename or "")[-1].lower() or ".jpg"
     new_filename = f"{uuid4()}{file_extension}"
     file_path = os.path.join(UPLOAD_DIR, new_filename)
 
@@ -38,6 +37,15 @@ async def upload_image(file: UploadFile = File(...)):
         },
     )
 
+
+# Accept both /api/upload-image and /api/upload-image/ (Angular uses no trailing slash).
+@router.post("/upload-image")
+@router.post("/upload-image/")
+async def upload_image(file: UploadFile = File(...)):
+    return await _save_upload_image(file)
+
+
+@router.post("/upload-image-base64")
 @router.post("/upload-image-base64/")
 async def upload_image_base64(base64_image: str = Form(...)):
     # Decode the base64 string

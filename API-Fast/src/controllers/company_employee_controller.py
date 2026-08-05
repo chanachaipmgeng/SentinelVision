@@ -50,7 +50,7 @@ async def get_all_companyEmployees(companyId: str, db: AsyncSession):
         response.append({
             "member": _member_dict(employee.member),
             "companyId": employee.companyId,
-            "employeeId": employee.employeeId,
+            "employeeId": employee.employeeId or "",
             "position": {
                 "positionId": employee.position.positionId,
                 "thName": employee.position.thName,
@@ -62,11 +62,11 @@ async def get_all_companyEmployees(companyId: str, db: AsyncSession):
                 "engName": employee.department.engName
             } if employee.department else None,
             "company_employeeId": employee.company_employeeId,
-            "salary" : employee.salary,
-            "startDate" : employee.startDate,
-            "companyRoleType" : employee.companyRoleType,
-            "empType" : employee.empType,
-            "bossId" : employee.bossId
+            "salary": employee.salary if employee.salary is not None else 0,
+            "startDate": employee.startDate,
+            "companyRoleType": employee.companyRoleType,
+            "empType": employee.empType,
+            "bossId": employee.bossId or "",
         })
 
     return response
@@ -138,7 +138,7 @@ async def get_company_sub_employee_by_id(company_employeeId: str, companyId: str
                 "picture": employee.member.picture
             },
             "companyId": employee.companyId,
-            "employeeId": employee.employeeId,
+            "employeeId": employee.employeeId or "",
             "position": {
                 "positionId": employee.position.positionId,
                 "thName": employee.position.thName,
@@ -150,11 +150,11 @@ async def get_company_sub_employee_by_id(company_employeeId: str, companyId: str
                 "engName": employee.department.engName
             } if employee.department else None,
             "company_employeeId": employee.company_employeeId,
-            "salary" : employee.salary,
-            "startDate" : employee.startDate,
-            "companyRoleType" : employee.companyRoleType,
-            "empType" : employee.empType,
-            "bossId" : employee.bossId
+            "salary": employee.salary if employee.salary is not None else 0,
+            "startDate": employee.startDate,
+            "companyRoleType": employee.companyRoleType,
+            "empType": employee.empType,
+            "bossId": employee.bossId or "",
         })
 
     return response
@@ -274,12 +274,18 @@ async def update_company_employee(
     #     if hasattr(company_employee, key) and value is not None:
     #         setattr(company_employee, key, value)
     if company_employee:
-        company_employee.employeeId = company_employee_data.employeeId
-        company_employee.salary = company_employee_data.salary
-        company_employee.bossId = company_employee_data.bossId
+        # Frontend sends null for blank optional strings — store "" not NULL
+        company_employee.employeeId = company_employee_data.employeeId or ""
+        company_employee.salary = (
+            company_employee_data.salary
+            if company_employee_data.salary is not None
+            else 0
+        )
+        company_employee.bossId = company_employee_data.bossId or ""
         company_employee.companyRoleType = company_employee_data.companyRoleType
         company_employee.empType = company_employee_data.empType
-        company_employee.startDate = company_employee_data.startDate
+        if company_employee_data.startDate is not None:
+            company_employee.startDate = company_employee_data.startDate
     # อัปเดตข้อมูล Member
     if member_info:
         member = await db.get(Member, company_employee.memberId)
@@ -304,8 +310,6 @@ async def update_company_employee(
                 member.emergencyContactPhone = member_info.emergencyContactPhone
             if member_info.attachmentUrls is not None:
                 member.attachmentUrls = member_info.attachmentUrls
-            await db.commit()
-            await db.refresh(member)
 
     # อัปเดตข้อมูล Position
     if position_info:
@@ -315,19 +319,35 @@ async def update_company_employee(
     if department_info:
         company_employee.departmentId = department_info.departmentId
 
-    await db.commit()  # บันทึกการเปลี่ยนแปลงของ CompanyEmployee
-    await db.refresh(company_employee)  # โหลดข้อมูล CompanyEmployee ที่อัปเดต
+    await db.commit()
 
-    # จัดรูปแบบ Response
+    # Re-load with relationships (async session expires them after commit)
+    company_employee = await get_company_employee_by_id(
+        str(company_employee_data.company_employeeId), companyId, db
+    )
+    position = company_employee.position
+    department = company_employee.department
     return {
         "member": _member_dict(company_employee.member),
         "companyId": company_employee.companyId,
-        "position": position_info,
-        "department": department_info,
+        "position": {
+            "positionId": position.positionId,
+            "thName": position.thName,
+            "engName": position.engName,
+        }
+        if position
+        else None,
+        "department": {
+            "departmentId": department.departmentId,
+            "thName": department.thName,
+            "engName": department.engName,
+        }
+        if department
+        else None,
         "company_employeeId": company_employee.company_employeeId,
-        "employeeId": company_employee.employeeId,
-        "salary": company_employee.salary,
-        "bossId": company_employee.bossId,
+        "employeeId": company_employee.employeeId or "",
+        "salary": company_employee.salary if company_employee.salary is not None else 0,
+        "bossId": company_employee.bossId or "",
         "companyRoleType": company_employee.companyRoleType,
         "empType": company_employee.empType,
         "startDate": company_employee.startDate,

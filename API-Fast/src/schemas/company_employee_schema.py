@@ -191,12 +191,22 @@ class CompanyEmployeeResponse(BaseModel):
     position: Optional[PositionResponse]
     department: Optional[DepartmentResponse]
     company_employeeId: UUID
-    employeeId: str
-    salary: float
-    bossId: str
+    employeeId: str = ""
+    salary: float = 0
+    bossId: str = ""
     companyRoleType: CompanyRoleType
     empType: EmpType
     startDate: datetime
+
+    @field_validator("employeeId", "bossId", mode="before")
+    @classmethod
+    def null_string_to_empty(cls, v: Any) -> str:
+        return "" if v is None else v
+
+    @field_validator("salary", mode="before")
+    @classmethod
+    def null_salary_to_zero(cls, v: Any) -> Any:
+        return 0 if v is None else v
 
     class Config:
         from_attributes = True

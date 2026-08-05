@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, field_validator
+from typing import Any, Optional
 from uuid import UUID
 from datetime import datetime
 from ..models.employee_timestamp import TimestampType, ApprovalStatus
@@ -68,8 +68,16 @@ class EmployeeModel(BaseModel):
     position: Optional[PositionResponse]
     department: Optional[DepartmentResponse]
     company_employeeId: UUID
-    employeeId: str
-    bossId: str
+    employeeId: str = ""
+    bossId: str = ""
+
+    @field_validator("employeeId", "bossId", mode="before")
+    @classmethod
+    def null_string_to_empty(cls, v: Any) -> str:
+        return "" if v is None else v
+
+    class Config:
+        from_attributes = True
 
 
 class EmployeeTimestampResponse(EmployeeTimestampBase):

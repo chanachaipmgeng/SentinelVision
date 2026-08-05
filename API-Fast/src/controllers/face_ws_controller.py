@@ -296,6 +296,18 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     latitude = float(data.get("latitude") or 0)
                 if data.get("longitude") is not None:
                     longitude = float(data.get("longitude") or 0)
+                if abs(latitude) < 1e-6 and abs(longitude) < 1e-6:
+                    await _send(
+                        websocket,
+                        {
+                            "type": "error",
+                            "intent": "checkin",
+                            "trackId": data.get("trackId"),
+                            "requestId": data.get("requestId"),
+                            "detail": "Invalid GPS (0,0). Enable location / use HTTPS before check-in.",
+                        },
+                    )
+                    continue
                 await _handle_checkin(
                     websocket,
                     track_id=data.get("trackId"),

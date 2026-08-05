@@ -84,17 +84,42 @@ export class CompanyLocationService {
       );
   }
 
+  /** Strip UI-only fields; normalize dates for FastAPI datetime fields. */
+  private toApiPayload(body: CompanyLocationModel): Record<string, unknown> {
+    const blank = (v: any) => v === '' || v === undefined || v === null;
+    const toDateTime = (v: any) => {
+      if (blank(v)) {
+        return null;
+      }
+      const s = String(v);
+      // HTML date input → YYYY-MM-DD; API accepts date or datetime
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        return `${s}T00:00:00Z`;
+      }
+      return s;
+    };
+    return {
+      latitude: Number(body.latitude),
+      longitude: Number(body.longitude),
+      radius: blank(body.radius) ? 0.5 : Number(body.radius),
+      locationName: (body.locationName || '').trim(),
+      locationType: body.locationType ?? 0,
+      startDate: toDateTime(body.startDate),
+      endDate: toDateTime(body.endDate),
+    };
+  }
+
   save(companyId: string, body: CompanyLocationModel) {
     return this.http.post<ResponseModel>(
       this.apiBaseUrl + "/" + companyId,
-      new CompanyLocationModel(body, this.translateService),
+      this.toApiPayload(body),
     );
   }
 
   update(companyId: string, body: CompanyLocationModel) {
     return this.http.put<ResponseModel>(
       this.apiBaseUrl + "/" + companyId + "/" + body.locationId,
-      new CompanyLocationModel(body, this.translateService),
+      this.toApiPayload(body),
     );
   }
 
@@ -103,7 +128,7 @@ export class CompanyLocationService {
       headers: new HttpHeaders({
         "Content-Type": "application/json",
       }),
-      body: new CompanyLocationModel(body, this.translateService),
+      body: this.toApiPayload(body),
     };
     return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + companyId + "/" + body.locationId, options);
   }

@@ -14,7 +14,7 @@ from ..schemas.department_schema import DepartmentCreate, DepartmentUpdate, Depa
 
 router = APIRouter()
 
-@router.get("/", response_model=List[DepartmentResponse])
+@router.get("", response_model=List[DepartmentResponse])
 async def get_departments_route(db: AsyncSession = Depends(get_db)):
     return await get_all_departments(db)
 
@@ -26,7 +26,7 @@ async def get_department_by_id_route(departmentId: str, db: AsyncSession = Depen
 async def get_departments_by_companyId_route(companyId: str, db: AsyncSession = Depends(get_db)):
     return await get_departments_by_companyId(companyId, db)
 
-@router.post("/", response_model=DepartmentResponse)
+@router.post("", response_model=DepartmentResponse)
 async def create_department_route(department: DepartmentCreate, db: AsyncSession = Depends(get_db)):
     return await create_department(department.dict(), db)
 

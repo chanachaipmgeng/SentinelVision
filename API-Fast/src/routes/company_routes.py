@@ -13,7 +13,7 @@ from typing import List
 
 router = APIRouter()
 
-@router.get("/", response_model=List[CompanyResponse])
+@router.get("", response_model=List[CompanyResponse])
 async def get_companies_route(db: AsyncSession = Depends(get_db)):
     return await get_all_companies(db)
 
@@ -21,7 +21,7 @@ async def get_companies_route(db: AsyncSession = Depends(get_db)):
 async def get_company_by_id_route(companyId: str, db: AsyncSession = Depends(get_db)):
     return await get_company_by_id(companyId, db)
 
-@router.post("/", response_model=CompanyResponse)
+@router.post("", response_model=CompanyResponse)
 async def create_company_route(company: CompanyBase, db: AsyncSession = Depends(get_db)):
     return await create_company(company.dict(), db)
 

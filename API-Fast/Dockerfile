@@ -45,4 +45,4 @@ RUN mkdir -p enrolled_images uploaded_images temp_images
 EXPOSE 8000
 
 # nvidia/cuda image sets an nvidia entrypoint; keep it but ensure CMD is clear
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

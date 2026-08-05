@@ -14,7 +14,7 @@ from ..schemas.position_schema import PositionCreate, PositionUpdate, PositionRe
 
 router = APIRouter()
 
-@router.get("/", response_model=List[PositionResponse])
+@router.get("", response_model=List[PositionResponse])
 async def get_positions_route(db: AsyncSession = Depends(get_db)):
     return await get_all_positions(db)
 
@@ -26,7 +26,7 @@ async def get_position_by_id_route(positionId: str, db: AsyncSession = Depends(g
 async def get_positions_by_companyId_route(companyId: str, db: AsyncSession = Depends(get_db)):
     return await get_positions_by_companyId(companyId, db)
 
-@router.post("/", response_model=PositionResponse)
+@router.post("", response_model=PositionResponse)
 async def create_position_route(position: PositionCreate, db: AsyncSession = Depends(get_db)):
     return await create_position(position.dict(), db)
 

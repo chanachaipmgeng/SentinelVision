@@ -85,11 +85,17 @@ export class CompanyLocationService {
   }
 
   save(companyId: string, body: CompanyLocationModel) {
-    return this.http.post<ResponseModel>(this.apiBaseUrl + "/" + companyId, new CompanyLocationModel(body));
+    return this.http.post<ResponseModel>(
+      this.apiBaseUrl + "/" + companyId,
+      new CompanyLocationModel(body, this.translateService),
+    );
   }
 
   update(companyId: string, body: CompanyLocationModel) {
-    return this.http.put<ResponseModel>(this.apiBaseUrl + "/" + companyId + "/" + body.locationId, new CompanyLocationModel(body));
+    return this.http.put<ResponseModel>(
+      this.apiBaseUrl + "/" + companyId + "/" + body.locationId,
+      new CompanyLocationModel(body, this.translateService),
+    );
   }
 
   delete(companyId: string, body: CompanyLocationModel) {
@@ -97,7 +103,7 @@ export class CompanyLocationService {
       headers: new HttpHeaders({
         "Content-Type": "application/json",
       }),
-      body: new CompanyLocationModel(body),
+      body: new CompanyLocationModel(body, this.translateService),
     };
     return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + companyId + "/" + body.locationId, options);
   }

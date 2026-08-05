@@ -80,6 +80,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   companyId = ""
   _searchTerm = "";
   isEdit = false;
+  isImporting = false;
+  @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
   constructor(
     private http: HttpClient,
     private employeeService: EmployeeService,
@@ -703,6 +705,123 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   new() {
     this.isEdit = false
     this.selectModel = new EmployeeModel()
+  }
+
+  downloadImportTemplate(): void {
+    this.employeeService.downloadImportTemplate(this.companyId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'employee-import-template.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        void this.resolveBlobError(err).then((msg) =>
+          swal('ดาวน์โหลดไม่สำเร็จ', msg, 'error'),
+        );
+      },
+    });
+  }
+
+  private async resolveBlobError(err: any): Promise<string> {
+    if (err?.error instanceof Blob) {
+      try {
+        const text = await err.error.text();
+        const json = JSON.parse(text);
+        if (typeof json?.detail === 'string') {
+          return this.translateApiMessage(json.detail);
+        }
+      } catch {
+        /* fall through */
+      }
+    }
+    return this.formatApiError(err);
+  }
+
+  triggerImportFile(): void {
+    if (this.isImporting) {
+      return;
+    }
+    if (this.importFileInput?.nativeElement) {
+      this.importFileInput.nativeElement.value = '';
+      this.importFileInput.nativeElement.click();
+    }
+  }
+
+  onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    const name = (file.name || '').toLowerCase();
+    if (!name.endsWith('.xlsx') && !name.endsWith('.xlsm')) {
+      swal('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์ Excel (.xlsx)', 'warning');
+      input.value = '';
+      return;
+    }
+
+    swal({
+      title: 'นำเข้าพนักงานจาก Excel?',
+      text: `ไฟล์: ${file.name}\nระบบจะเพิ่มเฉพาะแถวที่ข้อมูลถูกต้อง`,
+      icon: 'warning',
+      dangerMode: false,
+      buttons: ['Cancel', 'Confirm'],
+    }).then((ok: any) => {
+      if (!ok) {
+        input.value = '';
+        return;
+      }
+      this.isImporting = true;
+      this.employeeService.importExcel(this.companyId, file).subscribe({
+        next: (result) => {
+          this.isImporting = false;
+          input.value = '';
+          this.ngOnInit();
+          this.showImportResult(result);
+        },
+        error: (err) => {
+          this.isImporting = false;
+          input.value = '';
+          swal('นำเข้าไม่สำเร็จ', this.formatApiError(err), 'error');
+        },
+      });
+    });
+  }
+
+  private showImportResult(result: {
+    total: number;
+    success: number;
+    failed: number;
+    errors?: { row: number; email: string; message: string }[];
+  }): void {
+    const errorLines = (result.errors || [])
+      .slice(0, 8)
+      .map((e) => `• แถว ${e.row}${e.email ? ` (${e.email})` : ''}: ${e.message}`);
+    const more =
+      (result.errors?.length || 0) > 8
+        ? `\n…และอีก ${(result.errors!.length - 8)} รายการ`
+        : '';
+    const text = [
+      `ทั้งหมด ${result.total} แถว`,
+      `สำเร็จ ${result.success} รายการ`,
+      `ไม่สำเร็จ ${result.failed} รายการ`,
+      errorLines.length ? '\nรายละเอียดข้อผิดพลาด:\n' + errorLines.join('\n') + more : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const icon =
+      result.failed === 0 ? 'success' : result.success > 0 ? 'warning' : 'error';
+    const title =
+      result.failed === 0
+        ? 'นำเข้าสำเร็จ'
+        : result.success > 0
+          ? 'นำเข้าบางส่วนสำเร็จ'
+          : 'นำเข้าไม่สำเร็จ';
+    swal({ title, text, icon });
   }
 
   view(item: EmployeeModel) {

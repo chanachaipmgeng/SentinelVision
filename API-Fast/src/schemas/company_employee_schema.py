@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator, model_validator
-from typing import Any, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 from datetime import date, datetime
 
@@ -200,3 +200,24 @@ class CompanyEmployeeResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EmployeeImportCreatedRow(BaseModel):
+    row: int
+    email: str
+    company_employeeId: str
+    employeeId: str = ""
+
+
+class EmployeeImportErrorRow(BaseModel):
+    row: int
+    email: str = ""
+    message: str
+
+
+class EmployeeImportResult(BaseModel):
+    total: int
+    success: int
+    failed: int
+    created: List[EmployeeImportCreatedRow] = []
+    errors: List[EmployeeImportErrorRow] = []

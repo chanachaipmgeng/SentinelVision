@@ -8,6 +8,18 @@
             class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
         </div>
         <div class="flex flex-wrap gap-2">
+          <button type="button" class="ti-btn ti-btn-success-full modern-btn"
+            [disabled]="isImporting" (click)="downloadImportTemplate()">
+            <i class="ri-file-excel-2-line font-semibold align-middle"></i>
+            ดาวน์โหลดเทมเพลต
+          </button>
+          <button type="button" class="ti-btn ti-btn-info-full modern-btn"
+            [disabled]="isImporting" (click)="triggerImportFile()">
+            <i class="ri-upload-2-line font-semibold align-middle"></i>
+            {{ isImporting ? 'กำลังนำเข้า...' : 'นำเข้า Excel' }}
+          </button>
+          <input #importFileInput type="file" class="hidden" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            (change)="onImportFileSelected($event)">
           <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
             data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'เพิ่ม' |
             translate}}

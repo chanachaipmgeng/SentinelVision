@@ -162,5 +162,40 @@ export class EmployeeService {
       );
   }
 
+  downloadImportTemplate(companyId: string) {
+    return this.http.get(this.apiBaseUrl + "/" + companyId + "/import-template", {
+      responseType: "blob",
+    });
+  }
 
+  importExcel(companyId: string, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return this.http.post<EmployeeImportResult>(
+      this.apiBaseUrl + "/" + companyId + "/import",
+      formData
+    );
+  }
+
+}
+
+export interface EmployeeImportCreatedRow {
+  row: number;
+  email: string;
+  company_employeeId: string;
+  employeeId: string;
+}
+
+export interface EmployeeImportErrorRow {
+  row: number;
+  email: string;
+  message: string;
+}
+
+export interface EmployeeImportResult {
+  total: number;
+  success: number;
+  failed: number;
+  created: EmployeeImportCreatedRow[];
+  errors: EmployeeImportErrorRow[];
 }

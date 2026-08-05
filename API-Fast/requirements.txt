@@ -11,6 +11,7 @@ python-multipart
 pydantic-settings
 email-validator
 python-dotenv
+openpyxl
 pgvector
 numpy
 insightface==0.7.3

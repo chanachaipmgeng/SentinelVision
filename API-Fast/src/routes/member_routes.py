@@ -15,7 +15,7 @@ from ..middlewares.auth_middleware import authenticate_jwt  # Middleware for tok
 
 router = APIRouter()
 
-@router.get("/", response_model=List[MemberResponse])
+@router.get("", response_model=List[MemberResponse])
 async def get_members(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
@@ -33,7 +33,7 @@ async def get_member(
         raise HTTPException(status_code=404, detail="Member not found")
     return member
 
-@router.post("/", response_model=MemberResponse)
+@router.post("", response_model=MemberResponse)
 async def create_new_member(
     member: MemberCreate,
     db: AsyncSession = Depends(get_db),

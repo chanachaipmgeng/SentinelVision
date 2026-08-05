@@ -35,7 +35,8 @@ from .routes import (
 )
 
 logging.basicConfig(level=logging.DEBUG)
-app = FastAPI(title="DPU Attendance API", version="2.0.0")
+# Disable trailing-slash 307 redirects (breaks HTTPS clients behind TLS proxies).
+app = FastAPI(title="DPU Attendance API", version="2.0.0", redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,6 +49,8 @@ app.add_middleware(
         "http://localhost:4201",
         "http://127.0.0.1:4200",
         "http://127.0.0.1:4201",
+        "https://face-in.myhr.co.th",
+        "http://face-in.myhr.co.th",
     ],
     allow_credentials=True,
     allow_methods=["*"],

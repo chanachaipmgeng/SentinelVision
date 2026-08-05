@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+import io
 
-from ..schemas.company_schema import CompanyBase, CompanyResponse
+from ..schemas.company_schema import CompanyResponse
 from ..config.database import get_db
 from ..controllers.company_employee_controller import (
     get_all_companyEmployees,
@@ -13,16 +15,49 @@ from ..controllers.company_employee_controller import (
     register_member,
     get_companies_by_member,
     get_companies_admin,
-    get_company_member_by_id
+    get_company_member_by_id,
 )
-from ..schemas.company_employee_schema import CompanyEmployeeBase, CompanyEmployeePost, CompanyEmployeeUpdate, CompanyEmployeeResponse
-from ..schemas.member_schema import MemberBase, MemberResponse
+from ..controllers.employee_import_controller import (
+    build_employee_import_template,
+    import_employees_from_excel,
+)
+from ..schemas.company_employee_schema import (
+    CompanyEmployeePost,
+    CompanyEmployeeUpdate,
+    CompanyEmployeeResponse,
+    EmployeeImportResult,
+)
 router = APIRouter()
 
 # ดึงข้อมูลพนักงานในบริษัททั้งหมดตาม companyId
 @router.get("/company/{companyId}", response_model=List[CompanyEmployeeResponse])
 async def get_companyEmployees_route(companyId: str, db: AsyncSession = Depends(get_db)):
     return await get_all_companyEmployees(companyId, db)
+
+
+# Excel import template (must be registered before /{company_employeeId})
+@router.get("/company/{companyId}/import-template")
+async def download_employee_import_template_route(
+    companyId: str, db: AsyncSession = Depends(get_db)
+):
+    data = await build_employee_import_template(companyId, db)
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": 'attachment; filename="employee-import-template.xlsx"'
+        },
+    )
+
+
+@router.post("/company/{companyId}/import", response_model=EmployeeImportResult)
+async def import_employees_excel_route(
+    companyId: str,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    return await import_employees_from_excel(companyId, file, db)
+
 
 # ดึงข้อมูลพนักงานในบริษัทตาม company_employeeId และ companyId
 @router.get("/company/{companyId}/{company_employeeId}", response_model=CompanyEmployeeResponse)

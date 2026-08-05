@@ -142,6 +142,12 @@ export class CompanyLocationComponent {
     this.selectModel = new CompanyLocationModel(undefined, this.translate)
     this.selectModel.latitude = 13.7563
     this.selectModel.longitude = 100.5018
+    this.selectModel.radius = 0.5
+    this.selectModel.locationType = 0
+    this.selectModel.locationName = ''
+    const today = new Date().toISOString().slice(0, 10)
+    this.selectModel.startDate = today
+    this.selectModel.endDate = today
     this.center = this.mapCenter
     this.markerPositions = this.mapCenter
     this.schedulePlaceAutocomplete()
@@ -150,12 +156,35 @@ export class CompanyLocationComponent {
   view(item: CompanyLocationModel) {
     this.action = 'edit'
     this.selectModel = new CompanyLocationModel(item, this.translate)
+    // date inputs need YYYY-MM-DD
+    if (this.selectModel.startDate) {
+      this.selectModel.startDate = String(this.selectModel.startDate).slice(0, 10)
+    }
+    if (this.selectModel.endDate) {
+      this.selectModel.endDate = String(this.selectModel.endDate).slice(0, 10)
+    }
     this.center = this.mapCenter
     this.markerPositions = this.mapCenter
     this.schedulePlaceAutocomplete()
   }
 
   save() {
+    const name = (this.selectModel.locationName || '').trim()
+    if (!name) {
+      swal('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อสถานที่', 'warning')
+      return
+    }
+    if (!Number.isFinite(Number(this.selectModel.latitude)) || !Number.isFinite(Number(this.selectModel.longitude))) {
+      swal('ข้อมูลไม่ครบ', 'กรุณาเลือกตำแหน่งบนแผนที่', 'warning')
+      return
+    }
+    if (this.selectModel.locationType === undefined || this.selectModel.locationType === null) {
+      this.selectModel.locationType = 0
+    }
+    if (!this.selectModel.radius && this.selectModel.radius !== 0) {
+      this.selectModel.radius = 0.5
+    }
+
     swal({
       title: "Are you sure?",
       text: "คุณต้องการบันทึกหรือไม่",
@@ -163,27 +192,32 @@ export class CompanyLocationComponent {
       dangerMode: false,
       buttons: ["Cancel", "Confirm"],
     })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          if (this.action == 'add') {
-            this.comLocationService.save(this.companyId, this.selectModel).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.getLocation()
-              this.childModal?.nativeElement.click()
-            })
-          } else if (this.action == 'edit') {
-            this.comLocationService.update(this.companyId, this.selectModel).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.getLocation()
-              this.childModal?.nativeElement.click()
-            })
-          }
-
+      .then((ok: any) => {
+        if (!ok) {
+          return
         }
-
+        const req$ =
+          this.action === 'edit'
+            ? this.comLocationService.update(this.companyId, this.selectModel)
+            : this.comLocationService.save(this.companyId, this.selectModel)
+        req$.subscribe({
+          next: () => {
+            swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
+            this.getLocation()
+            this.childModal?.nativeElement.click()
+          },
+          error: (err) => {
+            const detail = err?.error?.detail
+            let msg = 'บันทึกสถานที่ไม่สำเร็จ'
+            if (typeof detail === 'string') {
+              msg = detail
+            } else if (Array.isArray(detail)) {
+              msg = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('\n')
+            }
+            swal('บันทึกไม่สำเร็จ', msg, 'error')
+          },
+        })
       });
-
-
   }
 
   updatePagedItems() {

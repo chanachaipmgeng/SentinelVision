@@ -37,7 +37,7 @@ export class CompanyLocationComponent {
   someSelected = false;
   itemsList: CompanyLocationModel[] = []
   filterList: CompanyLocationModel[] = []
-  selectModel: CompanyLocationModel = new CompanyLocationModel()
+  selectModel: CompanyLocationModel;
   empList: CompanyLocationModel[] = []
   selectedItems = new Map<string, boolean>();
   descName = 'engName'
@@ -65,7 +65,8 @@ export class CompanyLocationComponent {
   companyId = ""
 
   constructor(private comLocationService: CompanyLocationService, public translate: TranslateService, private tokenService: TokenService) {
-    this.companyId = this.tokenService.getSelectCompany().companyId;;
+    this.selectModel = new CompanyLocationModel(undefined, this.translate);
+    this.companyId = this.tokenService.getSelectCompany().companyId;
     this.getLocation()
   }
   ngOnInit(): void {}
@@ -100,7 +101,9 @@ export class CompanyLocationComponent {
 
   getLocation() {
     this.comLocationService.getLists(this.companyId).subscribe(result => {
-      this.itemsList = (result || []).map((item) => new CompanyLocationModel(item));
+      // Service already maps with TranslateService — do not rebuild without it
+      // (getStatus() needs translateService.instant).
+      this.itemsList = result || [];
       this.updatePagedItems()
     })
   }
@@ -136,7 +139,7 @@ export class CompanyLocationComponent {
 
   new() {
     this.action = 'add'
-    this.selectModel = new CompanyLocationModel()
+    this.selectModel = new CompanyLocationModel(undefined, this.translate)
     this.selectModel.latitude = 13.7563
     this.selectModel.longitude = 100.5018
     this.center = this.mapCenter
@@ -146,7 +149,7 @@ export class CompanyLocationComponent {
 
   view(item: CompanyLocationModel) {
     this.action = 'edit'
-    this.selectModel = new CompanyLocationModel(item)
+    this.selectModel = new CompanyLocationModel(item, this.translate)
     this.center = this.mapCenter
     this.markerPositions = this.mapCenter
     this.schedulePlaceAutocomplete()

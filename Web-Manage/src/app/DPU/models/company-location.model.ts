@@ -37,10 +37,13 @@ export class CompanyLocationModel extends BaseModel{
   }
 
   getStatus(): string {
-    if (this.locationType == 1) {
-      return this.translateService.instant('TEMPORARY')
-    } else {
-      return this.translateService.instant('PERMANENT')
+    const isTemporary =
+      this.locationType === 1 ||
+      this.locationType === ('TEMPORARY' as unknown as number);
+    const key = isTemporary ? 'TEMPORARY' : 'PERMANENT';
+    if (this.translateService?.instant) {
+      return this.translateService.instant(key);
     }
+    return isTemporary ? 'TEMPORARY' : 'PERMANENT';
   }
 }

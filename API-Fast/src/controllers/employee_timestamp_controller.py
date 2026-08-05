@@ -13,9 +13,51 @@ from ..models.company_location import CompanyLocation
 from ..utils.geolocation import get_distance_in_km
 
 
+def _employee_brief(emp: Optional[CompanyEmployee]) -> Optional[dict]:
+    if not emp:
+        return None
+    member = emp.member
+    position = emp.position
+    department = emp.department
+    return {
+        "member": {
+            "memberId": member.memberId,
+            "username": member.username,
+            "email": member.email,
+            "firstName": member.firstName,
+            "lastName": member.lastName,
+            "phoneNumber": getattr(member, "phoneNumber", None),
+            "birthDate": getattr(member, "birthDate", None),
+            "address": getattr(member, "address", None),
+            "emergencyContactName": getattr(member, "emergencyContactName", None),
+            "emergencyContactPhone": getattr(member, "emergencyContactPhone", None),
+            "attachmentUrls": getattr(member, "attachmentUrls", None),
+        }
+        if member
+        else None,
+        "position": {
+            "positionId": position.positionId,
+            "thName": position.thName,
+            "engName": position.engName,
+        }
+        if position
+        else None,
+        "department": {
+            "departmentId": department.departmentId,
+            "thName": department.thName,
+            "engName": department.engName,
+        }
+        if department
+        else None,
+        "company_employeeId": emp.company_employeeId,
+        "employeeId": emp.employeeId or "",
+        "bossId": emp.bossId or "",
+    }
+
+
 def _timestamp_payload(time: EmployeeTimestamp) -> dict:
     return {
-        "employee": time.company_employee,
+        "employee": _employee_brief(time.company_employee),
         "company_employeeId": time.company_employeeId,
         "timestampType": time.timestampType,
         "locationName": time.locationName,

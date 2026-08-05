@@ -71,8 +71,11 @@ export class EnrollFaceComponent implements OnDestroy {
   locationList: CompanyLocationModel[] = [];
   locationArea: CompanyLocationModel[] = [];
   companyId = '';
+  /** Default 0,0 = invalid until browser geolocation succeeds. */
   location: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
+  locationReady = false;
   errorMessage: string | null = null;
+  private geoWatchId: number | null = null;
 
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
@@ -133,14 +136,28 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   get inArea(): boolean {
-    return this.locationArea.length > 0;
+    return this.locationReady && this.locationArea.length > 0;
   }
 
   get areaLabel(): string {
+    if (!this.locationReady) {
+      return this.errorMessage ? 'ไม่มี GPS' : 'รอพิกัด…';
+    }
     if (this.inArea) {
       return this.locationArea[0].locationName || 'ในพื้นที่';
     }
     return 'นอกพื้นที่';
+  }
+
+  /** True when browser returned a real fix (not the 0,0 placeholder). */
+  get hasValidLocation(): boolean {
+    const lat = Number(this.location?.latitude);
+    const lng = Number(this.location?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return false;
+    }
+    // Null Island / uninitialized defaults used by this kiosk
+    return Math.abs(lat) > 0.0001 || Math.abs(lng) > 0.0001;
   }
 
   get successCount(): number {
@@ -174,6 +191,10 @@ export class EnrollFaceComponent implements OnDestroy {
 
   ngOnDestroy() {
     this.destroyWs = true;
+    if (this.geoWatchId != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(this.geoWatchId);
+      this.geoWatchId = null;
+    }
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
     }
@@ -290,6 +311,11 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   private buildStatusMessage(): string {
+    if (!this.hasValidLocation) {
+      return this.errorMessage
+        ? `รอ GPS: ${this.errorMessage}`
+        : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่ลงเวลาจนกว่าได้ GPS';
+    }
     if (this.tracks.length === 0) {
       const link = this.wsConnected ? 'stream เชื่อมแล้ว' : 'stream กำลังเชื่อม...';
       return `โหมด stream (${link}) — เดินผ่านกล้องได้หลายคน`;
@@ -343,12 +369,7 @@ export class EnrollFaceComponent implements OnDestroy {
           this.wsConnected = true;
           this.cdr.detectChanges();
         });
-        this.wsSend({
-          type: 'session',
-          companyId: this.companyId,
-          latitude: this.location?.latitude ?? 0,
-          longitude: this.location?.longitude ?? 0,
-        });
+        this.sendWsSession();
       };
 
       ws.onmessage = (ev) => {
@@ -694,6 +715,9 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   private shouldStartCheckIn(track: FaceTrack, now: number): boolean {
+    if (!this.hasValidLocation) {
+      return false;
+    }
     if (track.phase !== 'watching') {
       return false;
     }
@@ -809,11 +833,20 @@ export class EnrollFaceComponent implements OnDestroy {
       track.retryAfter = Date.now() + this.retryFailMs;
       return;
     }
+    if (!this.hasValidLocation) {
+      track.phase = 'watching';
+      track.captureFrames = [];
+      track.retryAfter = Date.now() + this.retryFailMs;
+      this.notify('ยังไม่มีพิกัด GPS — รอเบราว์เซอร์อนุญาตตำแหน่งก่อนลงเวลา', 'warning');
+      return;
+    }
 
     track.phase = 'checking_in';
     this.checkInInFlight += 1;
     const trackId = track.id;
     const requestId = this.nextWsRequestId(trackId);
+    const lat = this.location.latitude;
+    const lng = this.location.longitude;
 
     if (
       this.wsSend({
@@ -821,8 +854,8 @@ export class EnrollFaceComponent implements OnDestroy {
         trackId,
         requestId,
         images: frames,
-        latitude: this.location?.latitude ?? 0,
-        longitude: this.location?.longitude ?? 0,
+        latitude: lat,
+        longitude: lng,
         note: 'Face kiosk websocket walk-by',
       })
     ) {
@@ -835,8 +868,8 @@ export class EnrollFaceComponent implements OnDestroy {
       formData.append('files', this.dataURLtoFile(dataUrl, `t${trackId}_${index}.jpg`));
     });
     formData.append('companyId', this.companyId);
-    formData.append('latitude', String(this.location?.latitude ?? 0));
-    formData.append('longitude', String(this.location?.longitude ?? 0));
+    formData.append('latitude', String(lat));
+    formData.append('longitude', String(lng));
     formData.append('note', 'Face kiosk walk-by check-in');
 
     this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
@@ -1037,44 +1070,93 @@ export class EnrollFaceComponent implements OnDestroy {
     return new File([u8arr], filename, { type: mime });
   }
 
+  private sendWsSession(): void {
+    if (!this.wsConnected) {
+      return;
+    }
+    // Avoid locking the WS session on Null Island (0,0) before GPS arrives.
+    if (!this.hasValidLocation) {
+      this.wsSend({
+        type: 'session',
+        companyId: this.companyId,
+      });
+      return;
+    }
+    this.wsSend({
+      type: 'session',
+      companyId: this.companyId,
+      latitude: this.location.latitude,
+      longitude: this.location.longitude,
+    });
+  }
+
+  private applyGeoPosition(position: GeolocationPosition): void {
+    this.location = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    };
+    this.locationReady = this.hasValidLocation;
+    this.searchCompanyLocation();
+    this.errorMessage = null;
+    this.sendWsSession();
+    this.cdr.detectChanges();
+  }
+
   getCurrentLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          this.searchCompanyLocation();
-          this.errorMessage = null;
-          if (this.wsConnected) {
-            this.wsSend({
-              type: 'session',
-              companyId: this.companyId,
-              latitude: this.location.latitude,
-              longitude: this.location.longitude,
-            });
-          }
-        },
-        (error) => {
+    if (!navigator.geolocation) {
+      this.locationReady = false;
+      this.errorMessage = 'เบราว์เซอร์นี้ไม่รองรับ Geolocation';
+      return;
+    }
+
+    // Secure context required (HTTPS or localhost). HTTP on LAN often yields no fix → stays 0,0.
+    const host = window.location.hostname;
+    if (!window.isSecureContext && host !== 'localhost' && host !== '127.0.0.1') {
+      this.locationReady = false;
+      this.errorMessage = 'ต้องเปิด kiosk ผ่าน HTTPS ถึงจะอ่าน GPS ได้ (ตอนนี้ไม่ใช่ secure context)';
+      console.error(this.errorMessage);
+    }
+
+    const options: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 10000,
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => this.ngZone.run(() => this.applyGeoPosition(position)),
+      (error) => {
+        this.ngZone.run(() => {
+          this.locationReady = false;
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              this.errorMessage = 'Permission denied by the user.';
+              this.errorMessage = 'ผู้ใช้ปฏิเสธการแชร์ตำแหน่ง — อนุญาต Location ในเบราว์เซอร์';
               break;
             case error.POSITION_UNAVAILABLE:
-              this.errorMessage = 'Location information is unavailable.';
+              this.errorMessage = 'อ่านตำแหน่งไม่ได้ (เครื่องไม่มี GPS / สัญญาณไม่พอ)';
               break;
             case error.TIMEOUT:
-              this.errorMessage = 'The request to get user location timed out.';
+              this.errorMessage = 'ขอตำแหน่งหมดเวลา — ลองรีเฟรชหน้า';
               break;
             default:
-              this.errorMessage = 'An unknown error occurred.';
+              this.errorMessage = 'ขอตำแหน่งไม่สำเร็จ';
           }
-          console.error('Error fetching location:', this.errorMessage);
+          console.error('Error fetching location:', this.errorMessage, error);
+          this.cdr.detectChanges();
+        });
+      },
+      options,
+    );
+
+    // Keep refreshing so kiosk does not stick on a stale/failed first read.
+    if (this.geoWatchId == null) {
+      this.geoWatchId = navigator.geolocation.watchPosition(
+        (position) => this.ngZone.run(() => this.applyGeoPosition(position)),
+        () => {
+          /* keep last error from getCurrentPosition */
         },
+        options,
       );
-    } else {
-      this.errorMessage = 'Geolocation is not supported by this browser.';
     }
   }
 

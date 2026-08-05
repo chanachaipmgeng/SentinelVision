@@ -153,6 +153,17 @@ export class FaceScanComponent implements OnDestroy {
   }
 
   async sendFramesForVerification(frames: string[]) {
+    if (!this.hasValidLocation()) {
+      swal(
+        'ยังไม่มีพิกัด GPS',
+        this.errorMessage || 'กรุณาอนุญาตตำแหน่งก่อนลงเวลา (ต้องใช้ HTTPS)',
+        'warning',
+      );
+      this.resetCaptureState();
+      this.getCurrentLocation();
+      return;
+    }
+
     this.captureMessage = 'Verifying...';
     const formData = new FormData();
     frames.forEach((dataUrl, index) => {
@@ -192,7 +203,27 @@ export class FaceScanComponent implements OnDestroy {
     });
   }
 
+  private hasValidLocation(): boolean {
+    const lat = Number(this.location?.latitude);
+    const lng = Number(this.location?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return false;
+    }
+    return Math.abs(lat) > 0.0001 || Math.abs(lng) > 0.0001;
+  }
+
   saveTimestamp() {
+    if (!this.hasValidLocation()) {
+      swal(
+        'ยังไม่มีพิกัด GPS',
+        this.errorMessage || 'กรุณาอนุญาตตำแหน่งในเบราว์เซอร์ แล้วลองลงเวลาใหม่ (ต้องใช้ HTTPS)',
+        'warning',
+      );
+      this.resetCaptureState();
+      this.getCurrentLocation();
+      return;
+    }
+
     // First, get the latest employee info using the verified memberId
     this.employeeService.getMemberById(this.companyId, this.memberId).subscribe(employeeResult => {
       this.employeeModel = employeeResult;
@@ -213,8 +244,8 @@ export class FaceScanComponent implements OnDestroy {
         this.timestampModel.locationName = this.locationArea[0].locationName;
         this.timestampModel.note = '';
       }
-      this.timestampModel.latitude = this.location?.latitude;
-      this.timestampModel.longitude = this.location?.longitude;
+      this.timestampModel.latitude = this.location.latitude;
+      this.timestampModel.longitude = this.location.longitude;
 
       this.timestampService.save(this.companyId, this.timestampModel).subscribe({
         next: (result) => {
@@ -264,23 +295,24 @@ export class FaceScanComponent implements OnDestroy {
   }
 
   getCurrentLocation() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          };
-          this.searchCompanyLocation();
-          this.errorMessage = null;
-        },
-        (error) => {
-          this.errorMessage = 'Could not get location. Please enable GPS.';
-        }
-      );
-    } else {
-      this.errorMessage = 'Geolocation is not supported by this browser.';
+    if (!navigator.geolocation) {
+      this.errorMessage = 'เบราว์เซอร์นี้ไม่รองรับ Geolocation';
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        this.location = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        this.searchCompanyLocation();
+        this.errorMessage = null;
+      },
+      () => {
+        this.errorMessage = 'อ่านตำแหน่งไม่ได้ กรุณาเปิด GPS และอนุญาต Location (ต้องใช้ HTTPS)';
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
+    );
   }
 
   private toRad(value: number): number {

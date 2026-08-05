@@ -392,13 +392,27 @@ async def _finalize_check_in(
                 },
             }
 
+    try:
+        lat_f = float(latitude)
+        lon_f = float(longitude)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Latitude and Longitude are required for check-in.",
+        )
+    if abs(lat_f) < 1e-6 and abs(lon_f) < 1e-6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid GPS coordinates (0,0). Enable location / open via HTTPS before check-in.",
+        )
+
     photo_filename = _persist_photo_from_path(photo_source_path)
     check_in_note = (note or "").strip() or default_note
     timestamp = await create_timestamp(
         {
             "company_employeeId": company_employee.company_employeeId,
-            "latitude": latitude,
-            "longitude": longitude,
+            "latitude": lat_f,
+            "longitude": lon_f,
             "photoTimestamp": photo_filename,
             "note": check_in_note,
         },

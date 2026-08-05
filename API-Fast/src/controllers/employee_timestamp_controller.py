@@ -109,6 +109,14 @@ async def get_timestamp_by_id(timestampId: UUID, companyId: UUID, db: AsyncSessi
     return _timestamp_payload(timestamp)
 
 
+def _is_null_island(lat: float, lon: float) -> bool:
+    """Placeholder / failed geolocation often arrives as exactly 0,0."""
+    try:
+        return abs(float(lat)) < 1e-6 and abs(float(lon)) < 1e-6
+    except (TypeError, ValueError):
+        return True
+
+
 async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
     user_lat = data.get("latitude")
     user_lon = data.get("longitude")
@@ -118,6 +126,11 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Latitude and Longitude are required.",
+        )
+    if _is_null_island(user_lat, user_lon):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid GPS coordinates (0,0). Enable location / open kiosk via HTTPS.",
         )
 
     stmt = select(CompanyLocation).where(CompanyLocation.companyId == companyId)

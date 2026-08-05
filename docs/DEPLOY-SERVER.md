@@ -82,6 +82,7 @@ nano .env
 | `SECRET_KEY` | สตริงสุ่มยาว | ใช้ใน production ต้องเปลี่ยน |
 | `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
+| `CHECK_IN_DEDUPE_SECONDS` | `300` | กันลงเวลาซ้ำ (วินาที) · `0` = ปิด |
 | `IMAGE_BLUR_THRESHOLD` | `20.0` | เกณฑ์ blur ตอน enroll |
 
 ตัวอย่าง `.env` สำหรับ production เบื้องต้น:

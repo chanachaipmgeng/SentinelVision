@@ -57,58 +57,35 @@ export class HeaderComponent {
     this.exitFullScreenIconVisible = this.isFullScreen;
   }
   toggleSidebar() {
-    let html = this.elementRef.nativeElement.ownerDocument.documentElement;
-    // const windowObject: any = window;
-    if (localStorage.getItem('data-toggled') == 'true') {
-      document.querySelector('html')?.getAttribute('data-toggled') ==
-        'icon-overlay-close';
-    } else if (html?.getAttribute('data-vertical-style') == 'overlay') {
-      document.querySelector('html')?.getAttribute('data-toggled') != null
-        ? document.querySelector('html')?.removeAttribute('data-toggled')
-        : document
-          .querySelector('html')
-          ?.setAttribute('data-toggled', 'icon-overlay-close');
-    } else if (localStorage.getItem('ynex-sidemenu-styles') == 'closed') {
-      html?.setAttribute(
-        'data-toggled',
-        html?.getAttribute('data-toggled') == 'close-menu-close'
-          ? ''
-          : 'close-menu-close'
-      );
-    } else if (localStorage.getItem('ynex-sidemenu-styles') == 'icontext') {
-      html?.setAttribute(
-        'data-toggled',
-        html?.getAttribute('data-toggled') == 'icon-text-close'
-          ? ''
-          : 'icon-text-close'
-      );
-    } else if (localStorage.getItem('ynex-sidemenu-styles') == 'detached') {
-      html?.setAttribute(
-        'data-toggled',
-        html?.getAttribute('data-toggled') == 'detached-close'
-          ? ''
-          : 'detached-close'
-      );
-    } else if (localStorage.getItem('ynex-sidemenu-styles') == 'doublemenu') {
-      html?.setAttribute(
-        'data-toggled',
-        html?.getAttribute('data-toggled') == 'double-menu-close'
-          ? 'double-menu-open'
-          : 'double-menu-close'
-      );
+    const html = this.elementRef.nativeElement.ownerDocument.documentElement as HTMLElement;
+    if (!html) return;
 
-      // document.querySelector('.slide-menu')?.classList.add('double-menu-active');
-    }
-
+    // Mobile: slide-in drawer
     if (window.innerWidth <= 992) {
-      html?.setAttribute(
-        'data-toggled',
-        html?.getAttribute('data-toggled') == 'open' ? 'close' : 'open'
-      );
-      if (html?.getAttribute('data-toggled') == 'open') {
-        document.querySelector('#responsive-overlay')?.classList.add('active');
+      const next = html.getAttribute('data-toggled') === 'open' ? 'close' : 'open';
+      html.setAttribute('data-toggled', next);
+      const overlay = document.querySelector('#responsive-overlay');
+      if (next === 'open') {
+        overlay?.classList.add('active');
+      } else {
+        overlay?.classList.remove('active');
       }
+      return;
     }
+
+    // Desktop: fully hide / show the sidebar (not icon-rail collapse)
+    const hiddenStates = new Set([
+      'dpu-sidebar-hidden',
+      'icon-overlay-close',
+      'close-menu-close',
+    ]);
+    const current = html.getAttribute('data-toggled') || '';
+    if (hiddenStates.has(current)) {
+      html.removeAttribute('data-toggled');
+    } else {
+      html.setAttribute('data-toggled', 'dpu-sidebar-hidden');
+    }
+    html.removeAttribute('icon-overlay');
   }
   // Search
   public menuItems!: Menu[];

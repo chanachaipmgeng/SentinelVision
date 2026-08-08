@@ -1,183 +1,246 @@
-<app-page-header [title]="'สถานที่การลงเวลา'" [activeTitle]="'จัดการการลงเวลา'"
-  [title1]="'สถานที่การลงเวลา'"></app-page-header>
+<app-page-header
+  [title]="'สถานที่การลงเวลา'"
+  [activeTitle]="'จัดการบริษัท'"
+  [title1]="'สถานที่การลงเวลา'">
+</app-page-header>
 
-
-<div class="grid grid-cols-12 gap-6">
-  <div class="xl:col-span-12 col-span-12">
-    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-      <div class="box-header justify-between">
-        <div class="box-title">
-          {{ 'All List' | translate}} <span
-            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
-            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
-            translate}}
-          </a>
-
-          <!-- <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-success-full me-2" *ngIf="someSelected"
-            (click)="adjustSelect('A')"><i class="ri-user-follow-line font-semibold align-middle"></i>{{ 'Active' |
-            translate}}
-          </a>
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-secondary-full me-2"
-            *ngIf="someSelected" (click)="adjustSelect('U')"><i
-              class="ri-user-unfollow-line font-semibold align-middle"></i>{{ 'Unactive' |
-            translate}}
-          </a> -->
-
-
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2 modern-btn" *ngIf="someSelected"
-            (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
-            translate}}
-          </a>
-          <div>
-            <input class="form-control form-control" type="text" placeholder="ค้นหาสถานที่"
-              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
+<div class="loc-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <!-- Toolbar -->
+  <div class="col-span-12">
+    <div class="box loc-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header loc-toolbar-header">
+        <div class="loc-toolbar-inner">
+          <div class="loc-toolbar-title">
+            <div class="box-title !mb-0">สถานที่ลงเวลา</div>
+            <span class="loc-stat-chip">ทั้งหมด {{ totalAll }}</span>
+            <span class="loc-stat-chip loc-stat-chip--ok">ถาวร {{ permanentCount }}</span>
+            <span class="loc-stat-chip loc-stat-chip--temp">ชั่วคราว {{ temporaryCount }}</span>
+            <span class="loc-stat-chip loc-stat-chip--soft" *ngIf="searchTerm || typeFilter">พบ {{ totalFiltered }}</span>
           </div>
-          <!-- <div>
-              <input class="form-control form-control" type="text" placeholder="กรองตามบริษัท"
-                aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
-            </div> -->
-          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
-            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
-          </a>
-          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
-          </ul> -->
-        </div>
-      </div>
-      <div class="box-body">
-        <div class="table-responsive">
-          <table class="table whitespace-nowrap min-w-full ti-custom-table-hover">
-            <thead>
-              <tr class="border-b border-defaultborder">
-                <th scope="col" class="!text-start">
-                  <input class="form-check-input check-all" type="checkbox" id="all-products"
-                    (change)="toggleAll($event)" [checked]="allSelected" aria-label="...">
-                </th>
-                <th scope="col" class="text-start">ชื่อสถานที่</th>
-                <th scope="col" class="text-start">ละติจูด</th>
-                <th scope="col" class="text-start">ลองจิจูด</th>
-                <th scope="col" class="text-start">{{"ประเภท" | translate}}</th>
-                <th scope="col" class="text-start">วันที่เริ่มต้น</th>
-                <th scope="col" class="text-start">วันที่สิ้นสุด</th>
-                <th scope="col" class="text-start">{{"Update Date" | translate}}</th>
-                <th scope="col" class="text-start"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for(item of filterList;track filterList){
 
-              <tr class="border border-defaultborder dark:border-defaultborder/10">
-                <td class="product-checkbox"><input class="form-check-input" type="checkbox"
-                    [checked]="selectedItems.get(item.locationId)" (change)="onCheckboxChange(item.locationId)"
-                    aria-label="..." value="">
-                </td>
-                <td>
-                  <div class="flex">
-                    <div class="ms-2">
-                      <p class="font-semibold mb-0 flex items-center text-primary"><a (click)="view(item)"
-                          routerLinkActive="active">
-                          {{item.locationName}}</a></p>
-                      <p class="text-[0.75rem] text-muted mb-0">{{item.locationId}}</p>
-                    </div>
-                  </div>
-                </td>
-                <td> {{item.latitude}}</td>
-                <td> {{item.longitude}}</td>
-                <td> <span
-                    class="badge bg-{{ item.locationType == 0 ? 'primary' : 'warning'}} {{ item.locationType == 0 ? 'text-white' : ''}}">{{item.getStatus()}}</span>
-                </td>
-                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.startDate ?
-                    (item.startDate | date
-                    : 'medium') : '-'}}</span></td>
-
-                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.endDate ?
-                    (item.endDate | date
-                    : 'medium') : '-'}}</span></td>
-
-                <td><span class="badge bg-info/10 text-primary"><i class="bi bi-clock me-1"></i>{{item.updatedAt ?
-                    (item.updatedAt | date
-                    : 'medium') : '-'}}</span>
-                <td>
-
-                <td>
-                  <div class="flex flex-row items-center !gap-2 ">
-                    <a aria-label="anchor" (click)="view(item)" data-hs-overlay="#modal-detail"
-                      class="ti-btn ti-btn-wave  !gap-0 !m-0 bg-info/10 text-info hover:bg-info hover:text-white hover:border-info"><i
-                        class="ri-pencil-line"></i></a>
-                    <a aria-label="anchor" href="javascript:void(0);" (click)="delete(item)"
-                      class="ti-btn ti-btn-wave product-btn !gap-0 !m-0  bg-danger/10 text-danger hover:bg-danger hover:text-white hover:border-danger"><i
-                        class="ri-delete-bin-line"></i></a>
-                  </div>
-                </td>
-              </tr>
-              }
-
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="box-footer">
-        <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
-          <div class="mb-2 sm:mb-0">
-            <div>
-              {{'Showing' | translate}} {{filterList.length}} {{'entries'
-              | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
+          <div class="loc-toolbar-controls">
+            <div class="loc-search">
+              <i class="ri-search-line loc-search-icon" aria-hidden="true"></i>
+              <input
+                class="form-control loc-search-input"
+                type="search"
+                [(ngModel)]="searchTerm"
+                placeholder="ค้นหาชื่อสถานที่ พิกัด ประเภท..."
+                aria-label="ค้นหาสถานที่">
+              <button *ngIf="searchTerm" type="button" class="loc-search-clear" (click)="clearSearch()" title="ล้างคำค้น">
+                <i class="ri-close-line"></i>
+              </button>
             </div>
-          </div>
-          <div class="ms-auto">
-            <nav aria-label="Page navigation">
-              <ul class="ti-pagination  mb-0">
-                <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
-                    class="page-link px-3 py-[0.375rem]"
-                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous' | translate}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
-                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
 
-                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
-                    href="javascript:void(0);">{{pageIndex +1}}</a>
-                </li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                    (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
-                <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                  class="page-item"><a class="page-link px-3 py-[0.375rem]"
-                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
-                    translate}}</a>
-                </li>
-              </ul>
-            </nav>
+            <div class="loc-type-toggle" role="group" aria-label="กรองประเภท">
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === ''" (click)="setTypeFilter('')">ทั้งหมด</button>
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '0'" (click)="setTypeFilter('0')">ถาวร</button>
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '1'" (click)="setTypeFilter('1')">ชั่วคราว</button>
+            </div>
+
+            <button
+              *ngIf="someSelected"
+              type="button"
+              class="ti-btn ti-btn-danger-full modern-btn loc-tool-btn"
+              (click)="deleteSelect()">
+              <i class="ri-delete-bin-line"></i>
+              <span>ลบที่เลือก</span>
+            </button>
+
+            <a
+              href="javascript:void(0);"
+              class="ti-btn ti-btn-primary-full modern-btn loc-tool-btn"
+              (click)="new()"
+              data-hs-overlay="#modal-detail">
+              <i class="ri-add-line"></i>
+              <span>เพิ่มสถานที่</span>
+            </a>
           </div>
         </div>
       </div>
     </div>
   </div>
-  <div class="xl:col-span-12 col-span-12">
-    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-      <div class="box-header justify-between">
-        <div class="box-title">แผนที่บริษัท</div>
+
+  <!-- List -->
+  <div class="col-span-12 xl:col-span-5">
+    <div class="box loc-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+      <div class="box-header loc-panel-header">
+        <div class="flex items-center gap-2">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [checked]="allSelected"
+            (change)="toggleAll($event)"
+            [disabled]="!filteredSource.length"
+            aria-label="เลือกทั้งหมด">
+          <div class="box-title !mb-0">รายการสถานที่</div>
+        </div>
+        <span class="loc-muted-count" *ngIf="totalFiltered">
+          แสดง {{ pageFrom }}–{{ pageTo }} จาก {{ totalFiltered }}
+        </span>
       </div>
-      <div class="box-body">
-        <div class="grid grid-cols-12 sm:gap-6">
-          <div class="xl:col-span-12 col-span-12">
 
-            <google-map class="xl:col-span-12 col-span-12" height="400px" [mapId]="mapId" [center]="center" [zoom]="zoom">
-              <map-circle *ngFor="let item of itemsList" [center]="{ lat:  item.latitude, lng:  item.longitude }"
-                [radius]="item.radius*1000" />
-              <map-advanced-marker *ngFor="let item of itemsList"
-                [position]="{ lat:  item.latitude, lng:  item.longitude }" [options]="markerOptions" />
+      <div class="box-body loc-list-body">
+        <div *ngIf="loading" class="loc-empty">
+          <span class="ti-spinner animation-spin loc-empty-spinner" role="status"></span>
+          <p>กำลังโหลดสถานที่...</p>
+        </div>
 
-            </google-map>
+        <div *ngIf="!loading && pageItems.length === 0" class="loc-empty">
+          <i class="ri-map-pin-line loc-empty-icon"></i>
+          <p *ngIf="!searchTerm && !typeFilter">ยังไม่มีสถานที่ลงเวลา</p>
+          <p *ngIf="searchTerm || typeFilter">ไม่พบสถานที่ตามเงื่อนไข</p>
+          <button *ngIf="searchTerm || typeFilter" type="button" class="ti-btn ti-btn-light modern-btn"
+            (click)="setTypeFilter(''); clearSearch()">
+            ล้างตัวกรอง
+          </button>
+        </div>
 
+        <ul *ngIf="!loading && pageItems.length" class="loc-queue list-none mb-0">
+          <li *ngFor="let item of pageItems; let i = index">
+            <div
+              class="loc-queue-item"
+              [class.active]="isSelected(item)"
+              [attr.data-tone]="isTemporary(item) ? 'temp' : 'ok'"
+              [style.animation-delay.ms]="itemEnterDelay(i)"
+              (click)="selectItem(item)">
+              <input
+                class="form-check-input loc-queue-check"
+                type="checkbox"
+                [checked]="selectedItems.get(item.locationId)"
+                (change)="onCheckboxChange(item.locationId, $event)"
+                (click)="$event.stopPropagation()"
+                aria-label="เลือกสถานที่">
+
+              <div class="loc-queue-pin" [attr.data-tone]="isTemporary(item) ? 'temp' : 'ok'">
+                <i class="ri-map-pin-2-fill"></i>
+              </div>
+
+              <div class="loc-queue-meta">
+                <div class="loc-queue-name">{{ item.locationName || '—' }}</div>
+                <div class="loc-queue-sub">
+                  <span>{{ item.latitude | number:'1.4-5' }}, {{ item.longitude | number:'1.4-5' }}</span>
+                  <span class="loc-dot">·</span>
+                  <span>รัศมี {{ item.radius || 0 }} กม.</span>
+                </div>
+                <span class="loc-type-badge" [attr.data-tone]="isTemporary(item) ? 'temp' : 'ok'">
+                  {{ item.getStatus() }}
+                </span>
+              </div>
+
+              <div class="loc-queue-actions" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="loc-icon-btn"
+                  title="แก้ไข"
+                  (click)="openEdit(item)"
+                  data-hs-overlay="#modal-detail">
+                  <i class="ri-pencil-line"></i>
+                </button>
+                <button type="button" class="loc-icon-btn loc-icon-btn--danger" title="ลบ" (click)="delete(item)">
+                  <i class="ri-delete-bin-line"></i>
+                </button>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <div class="box-footer loc-pager" *ngIf="!loading && totalFiltered > pageSize">
+        <button type="button" class="loc-page-btn" [disabled]="pageIndex === 0" (click)="prevPage()">
+          <i class="ri-arrow-left-s-line"></i>
+        </button>
+        <span class="loc-page-label">หน้า {{ pageIndex + 1 }} / {{ totalPages }}</span>
+        <button type="button" class="loc-page-btn" [disabled]="pageIndex >= totalPages - 1" (click)="nextPage()">
+          <i class="ri-arrow-right-s-line"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="col-span-12 xl:col-span-7">
+    <div
+      *ngIf="!selected && !loading"
+      class="box loc-detail-panel modern-card glass loc-detail-placeholder animate-in fade-in duration-500">
+      <div class="loc-empty">
+        <i class="ri-map-2-line loc-empty-icon"></i>
+        <p>เลือกสถานที่เพื่อดูรายละเอียดและแผนที่</p>
+      </div>
+    </div>
+
+    <div *ngIf="selected as item" class="box loc-detail-panel modern-card glass animate-in zoom-in duration-400">
+      <div class="box-header loc-panel-header">
+        <div>
+          <div class="box-title !mb-0">{{ item.locationName }}</div>
+          <p class="loc-panel-sub mb-0">รายละเอียดพื้นที่ลงเวลา</p>
+        </div>
+        <span class="loc-type-pill" [attr.data-tone]="isTemporary(item) ? 'temp' : 'ok'">
+          {{ item.getStatus() }}
+        </span>
+      </div>
+
+      <div class="box-body loc-detail-body">
+        <div class="loc-facts-grid">
+          <div class="loc-fact">
+            <span class="loc-fact-label">พิกัด</span>
+            <span class="loc-fact-value">{{ item.latitude }}, {{ item.longitude }}</span>
+          </div>
+          <div class="loc-fact">
+            <span class="loc-fact-label">รัศมี</span>
+            <span class="loc-fact-value">{{ item.radius || 0 }} กม.</span>
+          </div>
+          <div class="loc-fact">
+            <span class="loc-fact-label">เริ่มต้น</span>
+            <span class="loc-fact-value">{{ item.startDate ? (item.startDate | date: 'dd/MM/yyyy') : '—' }}</span>
+          </div>
+          <div class="loc-fact">
+            <span class="loc-fact-label">สิ้นสุด</span>
+            <span class="loc-fact-value">{{ item.endDate ? (item.endDate | date: 'dd/MM/yyyy') : '—' }}</span>
+          </div>
+          <div class="loc-fact loc-fact--wide">
+            <span class="loc-fact-label">อัปเดตล่าสุด</span>
+            <span class="loc-fact-value">{{ item.updatedAt ? (item.updatedAt | date: 'dd/MM/yyyy HH:mm') : '—' }}</span>
+          </div>
+        </div>
+
+        <div class="loc-detail-actions">
+          <a [href]="mapsLink" target="_blank" rel="noopener noreferrer" class="ti-btn ti-btn-light modern-btn loc-tool-btn">
+            <i class="ri-external-link-line"></i>
+            <span>เปิดใน Maps</span>
+          </a>
+          <button
+            type="button"
+            class="ti-btn ti-btn-primary-full modern-btn loc-tool-btn"
+            (click)="openEdit(item)"
+            data-hs-overlay="#modal-detail">
+            <i class="ri-pencil-line"></i>
+            <span>แก้ไข</span>
+          </button>
+          <button type="button" class="ti-btn ti-btn-danger-full modern-btn loc-tool-btn" (click)="delete(item)">
+            <i class="ri-delete-bin-line"></i>
+            <span>ลบ</span>
+          </button>
+        </div>
+
+        <div class="loc-map-block">
+          <div class="loc-map-caption">
+            <span><i class="ri-radar-line"></i> ตำแหน่งและรัศมีประมาณ {{ item.radius || 0 }} กม.</span>
+            <span class="loc-map-coords">{{ selectedLat | number:'1.5-5' }}, {{ selectedLng | number:'1.5-5' }}</span>
+          </div>
+          <div class="loc-map-frame">
+            @if (mapsReady) {
+              <google-map height="100%" width="100%" [center]="center" [zoom]="zoom">
+                <map-circle
+                  [center]="center"
+                  [radius]="selectedRadiusM"
+                  [options]="circleOptions">
+                </map-circle>
+                <map-marker [position]="center" [options]="markerOptions"></map-marker>
+              </google-map>
+            } @else {
+              <app-location-map [lat]="selectedLat" [lng]="selectedLng" [zoom]="15" height="300px"></app-location-map>
+            }
           </div>
         </div>
       </div>
@@ -185,105 +248,103 @@
   </div>
 </div>
 
-
-<!-- Start:: Create Contact -->
+<!-- Create / Edit modal -->
 <div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out loc-modal-box">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">{{ 'Create' |
-          translate }} {{ 'Location' | translate }}
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor">
+          {{ action === 'edit' ? 'แก้ไขสถานที่' : 'เพิ่มสถานที่' }}
         </h6>
         <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
           data-hs-overlay="#modal-detail" #closeModal>
-          <span class="sr-only">{{'Close' | translate}}</span>
+          <span class="sr-only">Close</span>
           <i class="ri-close-line"></i>
         </button>
       </div>
-      <div class="ti-modal-body px-4">
-        <div class="grid grid-cols-12 gap-4">
 
-          <div class="xl:col-span-12 col-span-12">
-            <label for="deal-title" class="form-label">{{'ชื่อสถานที่' | translate}}</label>
-            <input [(ngModel)]="selectModel.locationName" id="locationName" type="text"
-              placeholder="ชื่อสถานที่" class="form-control w-full p-2 border rounded mb-3">
+      <div class="ti-modal-body px-4 loc-modal-body">
+        <div class="grid grid-cols-12 gap-4">
+          <div class="col-span-12">
+            <label class="form-label">ชื่อสถานที่</label>
+            <input [(ngModel)]="selectModel.locationName" type="text" placeholder="เช่น สำนักงานใหญ่"
+              class="form-control">
+          </div>
+
+          <div class="col-span-12" *ngIf="mapsReady">
             <label class="form-label">ค้นหาบนแผนที่</label>
-            <div #placeAutocompleteHost class="w-full mb-3"></div>
-            <div class="text-danger" *ngIf="!selectModel.locationName">
-              {{'Please fill in information' | translate}}
+            <div #placeAutocompleteHost class="w-full"></div>
+          </div>
+          <div class="col-span-12" *ngIf="!mapsReady">
+            <div class="loc-maps-hint">
+              Google Maps ยังใช้ไม่ได้บนโดเมนนี้ — ระบุพิกัดเอง หรือเปิด Maps แล้วคัดลอก lat/lng
             </div>
           </div>
 
-
-          <div class="xl:col-span-12 col-span-12">
-            <label class="form-label">{{'ประเภท' | translate}}</label>
-            <ng-select name="choices-multiple-remove-button2" id="choices-multiple-remove-button2" placeholder=""
-              [(ngModel)]="selectModel.locationType">
-              <ng-option [value]="0">{{'PERMANENT' | translate}}</ng-option>
-              <ng-option [value]="1" selected>{{'TEMPORARY' | translate}}</ng-option>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">ประเภท</label>
+            <ng-select [(ngModel)]="selectModel.locationType" [clearable]="false" [appendTo]="'body'">
+              <ng-option [value]="0">{{ 'PERMANENT' | translate }}</ng-option>
+              <ng-option [value]="1">{{ 'TEMPORARY' | translate }}</ng-option>
             </ng-select>
           </div>
 
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
-            <label for="input-start-date" class="form-label">{{ "Plan Start" | translate}}</label>
-            <input type="date" class="form-control" id="input-start-date" [(ngModel)]="selectModel.startDate">
-          </div>
-
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
-            <label for="input-end-date" class="form-label">{{ "Plan End" | translate}}</label>
-            <input type="date" class="form-control" id="input-end-date" [(ngModel)]="selectModel.endDate">
-          </div>
-
-        </div>
-        <div class="grid grid-cols-12 sm:gap-6">
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
-            <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
-            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="selectModel.latitude"
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">รัศมี (กม.)</label>
+            <input [(ngModel)]="selectModel.radius" type="number" step="0.1" min="0" class="form-control"
               (ngModelChange)="changeMarker()">
           </div>
 
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
-            <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
-            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="selectModel.longitude"
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">วันที่เริ่มต้น</label>
+            <input type="date" class="form-control" [(ngModel)]="selectModel.startDate">
+          </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">วันที่สิ้นสุด</label>
+            <input type="date" class="form-control" [(ngModel)]="selectModel.endDate">
+          </div>
+
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">ละติจูด</label>
+            <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.latitude"
+              (ngModelChange)="changeMarker()">
+          </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">ลองจิจูด</label>
+            <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.longitude"
               (ngModelChange)="changeMarker()">
           </div>
 
-          <div class="xl:col-span-12 col-span-12">
-            <label for="deal-title" class="form-label">{{'รัศมี (KM)' | translate}}</label>
-            <!-- <input type="text" class="form-control" id="deal-title" placeholder=""
-              [(ngModel)]="selectModel.locationName"> -->
-            <input [(ngModel)]="selectModel.radius" type="number" placeholder="รัศมี"
-              class="form-control w-full p-2 border rounded mb-3">
-
-          </div>
-
-          <div class="xl:col-span-12 col-span-12">
-            <div class="mb-4">
-
+          <div class="col-span-12">
+            <label class="form-label">แผนที่ — คลิกเพื่อปักหมุด</label>
+            <div class="loc-modal-map">
+              @if (mapsReady) {
+                <google-map height="320px" width="100%" [center]="mapCenter" [zoom]="12" (mapClick)="addMarker($event)">
+                  <map-circle [center]="mapCenter" [radius]="editRadiusM" [options]="circleOptions"></map-circle>
+                  <map-marker [position]="mapCenter" [options]="markerOptions"></map-marker>
+                </google-map>
+              } @else {
+                <app-location-map
+                  [lat]="mapCenter.lat"
+                  [lng]="mapCenter.lng"
+                  [zoom]="14"
+                  height="280px">
+                </app-location-map>
+              }
             </div>
-            <google-map class="xl:col-span-12 col-span-12" height="400px"
-              [mapId]="mapId"
-              [center]="mapCenter" [zoom]="12"
-              (mapClick)="addMarker($event)">
-              <map-circle [center]="mapCenter"
-                [radius]="selectModel.radius*1000" />
-              <map-advanced-marker [position]="mapCenter"
-                [options]="markerOptions" />
-
-            </google-map>
-
           </div>
         </div>
       </div>
+
       <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle"
           data-hs-overlay="#modal-detail">
-          {{'Cancel' | translate}}
+          ยกเลิก
         </button>
-        <button type="button" (click)="save()" class="ti-btn bg-primary text-white !font-medium">{{'Save' |
-          translate}}</button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" [disabled]="saving" (click)="save()">
+          {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
+        </button>
       </div>
     </div>
   </div>
 </div>
-<!-- End:: Create Contact -->

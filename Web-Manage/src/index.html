@@ -108,6 +108,12 @@
       key: "AIzaSyDWyV4FNQLMx9rdpy6eABvSlnNe_3GrW6s"
     });
   </script> -->
+  <script>
+    // Called by Google Maps when the API key/referrer is rejected.
+    window.gm_authFailure = function () {
+      window.__dpuMapsAuthFailed = true;
+    };
+  </script>
   <script
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDWyV4FNQLMx9rdpy6eABvSlnNe_3GrW6s&loading=async&libraries=places,marker&v=weekly"
     async

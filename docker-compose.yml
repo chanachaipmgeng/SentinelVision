@@ -64,15 +64,6 @@ services:
       - "80"
     restart: unless-stopped
 
-  mobile:
-    build:
-      context: ./Webview-Mobile
-      dockerfile: Dockerfile
-    container_name: dpu-mobile
-    expose:
-      - "80"
-    restart: unless-stopped
-
   nginx:
     build:
       context: ./docker/nginx
@@ -84,8 +75,6 @@ services:
       api:
         condition: service_healthy
       admin:
-        condition: service_started
-      mobile:
         condition: service_started
     restart: unless-stopped
 

@@ -12,7 +12,7 @@ docker compose up --build
 | URL | บริการ |
 |-----|--------|
 | http://localhost/ | Admin |
-| http://localhost/mobile/ | Mobile |
+| http://localhost/company/timestamp-face | Kiosk ลงเวลาด้วยใบหน้า |
 | http://localhost/docs | API Swagger |
 
 ## Documentation
@@ -32,8 +32,7 @@ docker compose up --build
 docker-compose.yml
 docker/                 # nginx + DB init
 API-Fast/               # FastAPI + InsightFace
-Web-Manage/             # Angular 17 admin
-Webview-Mobile/         # Angular 15 mobile
+Web-Manage/             # Angular 17 admin + face kiosk
 docs/
 ```
 

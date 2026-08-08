@@ -13,7 +13,6 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack b
 |------|------|
 | `API-Fast/` | FastAPI + InsightFace + GPU queue |
 | `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
-| `Webview-Mobile/` | Angular 15 employee app |
 | `docker/` | nginx gateway + DB init |
 | `docs/` | SETUP, ARCHITECTURE, API, agent guide (`CURSOR-AGENT.md`) |
 | `.cursor/rules/` | Always-on + scoped agent rules |
@@ -26,7 +25,6 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 ```
 
 - Admin: `http://localhost/`
-- Mobile: `http://localhost/mobile/`
 - API docs: `http://localhost/docs`
 - Kiosk: `http://localhost/company/timestamp-face`
 
@@ -35,6 +33,7 @@ Code is **baked into images** — rebuild the service after source changes (`api
 ## Agent defaults
 
 - Prefer existing patterns; do not invent a second face stack
+- Check-in UX is the **admin kiosk** (`/company/timestamp-face`); there is no separate mobile app
 - Do not commit unless asked; do not put secrets in rules/docs
 - After API/UI/nginx changes: rebuild and verify health / queue-stats
 - Thai UI copy is OK for kiosk; keep code/comments in English unless the file already uses Thai

@@ -4,9 +4,9 @@
 
 DPU Attendance is a face-recognition check-in system for companies:
 
-1. Admin enrolls employee faces and manages orgs/locations
-2. Employee checks in from mobile by capturing multiple camera frames
-3. API verifies liveness, matches InsightFace embeddings in Postgres (pgvector), then mobile creates a geo-validated timestamp
+1. Admin enrolls employee faces and manages orgs/locations in Web-Manage
+2. Employees check in at the **admin face kiosk** (`/company/timestamp-face`)
+3. API matches InsightFace embeddings in Postgres (pgvector), applies dedupe/geofence, and writes timestamps
 
 ## Runtime topology (Docker)
 
@@ -16,38 +16,36 @@ Browser
   ▼
 nginx :80
   ├─ /              → admin (Web-Manage static)
-  ├─ /mobile/       → mobile (Webview-Mobile static)
   └─ /auth,/face,…  → api (FastAPI :8000)
                         │
                         ▼
                    Postgres + pgvector :5432
 ```
 
-Start everything with `docker compose up --build`.
+Start with `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build`.
 
 ## Components
 
 | Component | Path | Role |
 |-----------|------|------|
 | Gateway | `docker/nginx/` | Reverse proxy |
-| API | `API-Fast/` | Auth, CRUD, face, timestamps, dashboard |
-| Admin UI | `Web-Manage/` | Angular 17 company/admin console |
-| Mobile UI | `Webview-Mobile/` | Angular 15 employee check-in |
+| API | `API-Fast/` | Auth, CRUD, face, timestamps, dashboard, system TTS settings |
+| Admin UI | `Web-Manage/` | Angular 17 company/admin console + face kiosk |
 | Database | `pgvector/pgvector:pg16` | Relational data + `vector(512)` embeddings |
 
 ## Face pipeline
 
 1. **Enroll** `POST /face/members/{id}/add-face` → InsightFace `buffalo_l` → store `embedding vector(512)` + image under `enrolled_images/`
-2. **Match** (mobile / tools) `POST /face/members/check-face-emp` → multi-frame liveness → pgvector NN → member payload
-3. **Admin kiosk** (`/company/timestamp-face`):
+2. **Admin kiosk** (`/company/timestamp-face`):
    - Multi-person track + face crops
    - Prefer `WS /face/ws/kiosk` (identify + walk-by check-in via GPU queue)
    - Fallback `POST /face/members/check-in-walkby` (or secure `/check-in`)
    - Server dedupe (`CHECK_IN_DEDUPE_SECONDS`) + geofenced timestamp
    - UI: fullscreen chrome via `html.dpu-kiosk-mode` (hides admin header/sidebar)
-4. Mobile may still upload a photo and `POST /timestamp/company/{id}` with GPS; server validates area via Haversine
+   - Optional speech via browser TTS; templates from `GET/PUT /system/tts-settings` (admin page `/admin/system-setting`)
+3. **Identify / tools** `POST /face/members/check-face-emp` → multi-frame liveness → pgvector NN → member payload
 
-Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, FAISS / OpenCV pickle artifacts.
+Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, `Webview-Mobile/`, FAISS / OpenCV pickle artifacts.
 
 ## Admin UI (Web-Manage)
 
@@ -57,6 +55,7 @@ Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, 
 - Shell layout: `shared/layouts/content-layout/` + header/sidebar
 - Menus: `shared/services/nav.service.ts` (`getCommonMenu` / `getCompanyMenu`)
 - Dashboard (`/company/dashboard`): charts + Leaflet check-in map + polled realtime feed via `GET /dashboard/stats/{companyId}` (`mapPoints`, `recentActivity`)
+- Global TTS: `/admin/system-setting` → `system_setting` table (`key=tts`)
 
 ## Key source paths
 
@@ -65,6 +64,6 @@ Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, 
 - Face HTTP / WS: `API-Fast/src/controllers/face_controller.py`, `face_ws_controller.py`
 - Embeddings model: `API-Fast/src/models/face_encoding.py`
 - Timestamp + geo: `API-Fast/src/controllers/employee_timestamp_controller.py`
+- System TTS: `API-Fast/src/controllers/system_controller.py`, `models/system_setting.py`
 - Admin kiosk: `Web-Manage/src/app/DPU/company-management/enroll-face/`
-- Mobile check-in: `Webview-Mobile/src/app/company/face-scan/`
 - Agent rules/skills: [CURSOR-AGENT.md](CURSOR-AGENT.md)

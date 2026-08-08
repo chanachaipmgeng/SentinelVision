@@ -6,8 +6,8 @@ This document tracks the major architectural and security improvements made to t
 
 ### 11. Full-stack Docker + nginx gateway (2026)
 
-- **Description:** Packaged Web-Manage and Webview-Mobile as static nginx images; single **nginx** gateway on port 80 fronts admin (`/`), mobile (`/mobile/`), and FastAPI routes (same-origin `baseUrl: ''`).
-- **Benefit:** One `docker compose up --build` starts DB, API, both UIs, and reverse proxy.
+- **Description:** Packaged Web-Manage as a static nginx image; single **nginx** gateway on port 80 fronts admin (`/`) and FastAPI routes (same-origin `baseUrl: ''`). Employee mobile UI (`Webview-Mobile`) was later removed — check-in is admin kiosk only.
+- **Benefit:** One `docker compose up --build` starts DB, API, admin UI, and reverse proxy.
 
 ---
 

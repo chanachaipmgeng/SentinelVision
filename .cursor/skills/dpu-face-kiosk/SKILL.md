@@ -11,7 +11,7 @@ description: >-
 
 ## When to use
 
-Changing kiosk UX, face match/check-in, stream mode, GPU inference queuing, or fullscreen shell for `/company/timestamp-face`.
+Changing kiosk UX, face match/check-in, stream mode, GPU inference queuing, or fullscreen shell for `/company/timestamp-face` (the only check-in UI — no separate mobile app).
 
 ## Read first
 

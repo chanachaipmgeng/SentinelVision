@@ -373,6 +373,35 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   display: none !important;
 }
 
+/* Header toggle: fully hide sidebar (desktop) */
+@media (min-width: 992px) {
+  html[data-toggled="dpu-sidebar-hidden"] .app-sidebar,
+  html[data-toggled="dpu-sidebar-hidden"] app-sidebar {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  html[data-toggled="dpu-sidebar-hidden"] .app-header {
+    padding-inline-start: 0 !important;
+  }
+
+  html[data-toggled="dpu-sidebar-hidden"] .content {
+    margin-inline-start: 0 !important;
+  }
+
+  html[data-toggled="dpu-sidebar-hidden"] .footer {
+    padding-inline-start: 0 !important;
+    margin-inline-start: 0 !important;
+  }
+}
+
+html[data-toggled="dpu-sidebar-hidden"] .animated-arrow span {
+  background: var(--dpu-brand, #0f766e);
+}
+
 /* Light menu text when theme forces white sidebar logo variants */
 [data-menu-styles="light"] .app-sidebar {
   background: linear-gradient(180deg, #0b3d3a 0%, #0f4f4a 42%, #0d5c56 100%) !important;
@@ -558,6 +587,12 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 }
 
 /* ---- Login / auth surface ---- */
+body.dpu-login-body {
+  background: #031716 !important;
+  background-image: none !important;
+  min-height: 100dvh;
+}
+
 .dpu-auth {
   min-height: 100vh;
   display: flex;

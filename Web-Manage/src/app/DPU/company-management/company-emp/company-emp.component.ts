@@ -71,7 +71,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   private readonly tablePageSize = 10;
   private readonly cardsPageSize = 9;
   /** Exclusive list layout — only one view shown at a time. */
-  listViewMode: 'table' | 'cards' = 'table';
+  listViewMode: 'table' | 'cards' = 'cards';
   private readonly listViewStorageKey = 'dpu.companyEmp.listView';
   public selectedMemberId: string | null = null;
   public selectedMemberName = '';
@@ -895,10 +895,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     } catch {
       /* ignore */
     }
-    this.listViewMode =
-      typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
-        ? 'cards'
-        : 'table';
+    this.listViewMode = 'cards';
     this.syncPageSizeForView();
   }
 

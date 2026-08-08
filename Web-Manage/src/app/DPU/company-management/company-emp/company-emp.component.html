@@ -286,14 +286,14 @@
       </div>
       <div class="ti-modal-body">
         <div class="relative border-b border-dashed dark:border-defaultborder/10 p-4">
-          <div class="flex justify-center gap-2 mb-4">
-            <button type="button" class="ti-btn ti-btn-sm"
+          <div class="face-enroll-mode-actions flex flex-wrap justify-center gap-2 mb-4">
+            <button type="button" class="ti-btn !mb-0"
               [ngClass]="faceEnrollMode === 'camera' ? 'ti-btn-primary-full' : 'ti-btn-light'"
               [disabled]="isUploadingFace"
               (click)="setFaceEnrollMode('camera')">
               <i class="ri-camera-line align-middle me-1"></i>ถ่ายจากกล้อง
             </button>
-            <button type="button" class="ti-btn ti-btn-sm"
+            <button type="button" class="ti-btn !mb-0"
               [ngClass]="faceEnrollMode === 'upload' ? 'ti-btn-primary-full' : 'ti-btn-light'"
               [disabled]="isUploadingFace"
               (click)="setFaceEnrollMode('upload')">

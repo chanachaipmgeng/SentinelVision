@@ -118,9 +118,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   private videoStream: MediaStream | null = null;
   private smoothedBox: SmoothBox | null = null;
   private poseHoldStartedAt = 0;
+  private poseMissStartedAt = 0;
+  private captureCooldownUntil = 0;
+  private faceDetectBusy = false;
   private capturingAngle = false;
   private readonly boxLerp = 0.35;
-  private readonly poseHoldMs = 700;
+  private readonly poseHoldMs = 450;
+  private readonly poseMissGraceMs = 300;
+  private readonly captureCooldownMs = 850;
   private readonly bodyModalIds = ['modal-face', 'modal-detail', 'modal-face-management'];
   private movedModalNodes: HTMLElement[] = [];
 
@@ -163,6 +168,9 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.capturingAngle = false;
     this.smoothedBox = null;
     this.poseHoldStartedAt = 0;
+    this.poseMissStartedAt = 0;
+    this.captureCooldownUntil = 0;
+    this.faceDetectBusy = false;
     this.uploadProgressLabel = '';
     this.faceStatus = 'กำลังโหลดโมเดลและกล้อง...';
     this.cdr.detectChanges();
@@ -394,19 +402,40 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     }
 
     this.faceDetectionInterval = setInterval(async () => {
-      if (!videoEl.srcObject || videoEl.readyState < 2 || this.isUploadingFace) {
+      if (
+        !videoEl.srcObject ||
+        videoEl.readyState < 2 ||
+        this.isUploadingFace ||
+        this.faceDetectBusy ||
+        this.faceEnrollMode !== 'camera'
+      ) {
         return;
       }
+      this.faceDetectBusy = true;
       try {
+        // Refresh display size each tick (modal layout can change)
+        const liveSize = {
+          width: videoEl.clientWidth || videoEl.width || 640,
+          height: videoEl.clientHeight || videoEl.height || 480,
+        };
+        if (
+          this.canvas.nativeElement.width !== liveSize.width ||
+          this.canvas.nativeElement.height !== liveSize.height
+        ) {
+          this.canvas.nativeElement.width = liveSize.width;
+          this.canvas.nativeElement.height = liveSize.height;
+          faceapi.matchDimensions(this.canvas.nativeElement, liveSize);
+        }
+
         const detections = await faceapi
           .detectAllFaces(
             videoEl,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 }),
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 }),
           )
           .withFaceLandmarks();
-        const resized = faceapi.resizeResults(detections, displaySize);
+        const resized = faceapi.resizeResults(detections, liveSize);
         const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
-        ctx.clearRect(0, 0, displaySize.width, displaySize.height);
+        ctx.clearRect(0, 0, liveSize.width, liveSize.height);
 
         const best = resized[0];
         if (best) {
@@ -423,30 +452,58 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
           const pose = this.estimatePose(best.landmarks);
           const step = this.currentAngle;
           const poseOk = step ? this.matchesAngle(step.id, pose) : false;
+          const inCooldown = Date.now() < this.captureCooldownUntil;
           const label = step
-            ? (poseOk ? `${step.label} ✓` : step.label)
+            ? (poseOk && !inCooldown ? `${step.label} ✓` : step.label)
             : 'ครบ 5 มุม';
 
-          this.drawSmoothOverlay(ctx, this.smoothedBox, label, poseOk, this.capturingAngle);
+          this.drawSmoothOverlay(ctx, this.smoothedBox, label, poseOk && !inCooldown, this.capturingAngle);
 
           this.ngZone.run(() => {
             this.isFaceDetected = true;
             this.checkMatch = true;
-            if (step && !step.captured && poseOk && !this.capturingAngle && !this.allAnglesCaptured) {
+            if (
+              step &&
+              !step.captured &&
+              poseOk &&
+              !this.capturingAngle &&
+              !this.allAnglesCaptured &&
+              !inCooldown
+            ) {
+              this.poseMissStartedAt = 0;
               if (!this.poseHoldStartedAt) {
                 this.poseHoldStartedAt = Date.now();
               } else if (Date.now() - this.poseHoldStartedAt >= this.poseHoldMs) {
                 this.captureCurrentAngle();
               } else {
-                const left = Math.ceil((this.poseHoldMs - (Date.now() - this.poseHoldStartedAt)) / 100);
-                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ค้างท่าไว้… ${(left / 10).toFixed(1)}s`;
+                const leftSec = Math.max(
+                  0,
+                  (this.poseHoldMs - (Date.now() - this.poseHoldStartedAt)) / 1000,
+                );
+                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ค้างท่าไว้… ${leftSec.toFixed(1)}s`;
               }
             } else {
-              this.poseHoldStartedAt = 0;
+              // Don't reset hold on a single jitter frame
+              if (this.poseHoldStartedAt && !poseOk) {
+                if (!this.poseMissStartedAt) {
+                  this.poseMissStartedAt = Date.now();
+                } else if (Date.now() - this.poseMissStartedAt >= this.poseMissGraceMs) {
+                  this.poseHoldStartedAt = 0;
+                  this.poseMissStartedAt = 0;
+                }
+              } else if (!poseOk) {
+                this.poseHoldStartedAt = 0;
+                this.poseMissStartedAt = 0;
+              }
+
               if (step && !step.captured) {
-                this.faceStatus = poseOk
-                  ? `มุม ${this.currentAngleIndex + 1}/5 — พร้อมถ่าย`
-                  : `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
+                if (inCooldown) {
+                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
+                } else if (poseOk) {
+                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — พร้อมถ่าย`;
+                } else {
+                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
+                }
               } else if (this.allAnglesCaptured) {
                 this.faceStatus = 'ครบ 5 มุมแล้ว กดบันทึกเพื่ออัปโหลด';
               }
@@ -456,6 +513,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         } else {
           this.smoothedBox = null;
           this.poseHoldStartedAt = 0;
+          this.poseMissStartedAt = 0;
           this.ngZone.run(() => {
             this.isFaceDetected = false;
             this.checkMatch = false;
@@ -468,8 +526,10 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         }
       } catch (e) {
         console.error('detectFace error', e);
+      } finally {
+        this.faceDetectBusy = false;
       }
-    }, 120);
+    }, 100);
   }
 
   captureImage(): void {
@@ -502,6 +562,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     }
     this.capturingAngle = true;
     this.poseHoldStartedAt = 0;
+    this.poseMissStartedAt = 0;
 
     const video = this.video.nativeElement;
     const captureCanvas = document.createElement('canvas');
@@ -517,6 +578,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     step.preview = captureCanvas.toDataURL('image/jpeg', 0.92);
     step.captured = true;
     this.capturedImage = step.preview;
+    this.captureCooldownUntil = Date.now() + this.captureCooldownMs;
     playCaptureBeep();
 
     if (this.currentAngleIndex < this.faceAngleSteps.length - 1) {
@@ -617,16 +679,17 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     const { yaw, pitch } = pose;
     switch (id) {
       case 'front':
-        return Math.abs(yaw) < 0.14 && Math.abs(pitch) < 0.14;
+        // Slightly looser so laptop / desk camera angles still count as front
+        return Math.abs(yaw) < 0.2 && Math.abs(pitch) < 0.22;
       case 'left':
         // User turns their left → nose moves toward image-right
-        return yaw > 0.22 && Math.abs(pitch) < 0.22;
+        return yaw > 0.16 && Math.abs(pitch) < 0.3;
       case 'right':
-        return yaw < -0.22 && Math.abs(pitch) < 0.22;
+        return yaw < -0.16 && Math.abs(pitch) < 0.3;
       case 'up':
-        return pitch < -0.16 && Math.abs(yaw) < 0.22;
+        return pitch < -0.1 && Math.abs(yaw) < 0.28;
       case 'down':
-        return pitch > 0.18 && Math.abs(yaw) < 0.22;
+        return pitch > 0.12 && Math.abs(yaw) < 0.28;
       default:
         return false;
     }

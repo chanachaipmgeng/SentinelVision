@@ -1,3 +1,12 @@
 :host {
   display: block;
 }
+
+/* ti-btn-sm is icon-only (1.75rem) in this theme — keep labeled enroll buttons full size */
+.face-enroll-mode-actions .ti-btn {
+  width: auto;
+  height: auto;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.9rem;
+  white-space: nowrap;
+}

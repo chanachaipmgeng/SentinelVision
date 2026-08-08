@@ -9,10 +9,10 @@ import uuid
 import shutil
 from typing import List, Optional
 
-from ..models.member import Member
+from ..models.member import Member, StatusType as MemberStatus
 from ..models.face_encoding import FaceEncoding
 from ..models.company_employee import CompanyEmployee
-from ..models.employee_timestamp import EmployeeTimestamp
+from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
 from ..utils.face_engine import (
     generate_face_encoding,
     verify_liveness_and_get_encoding,
@@ -724,3 +724,137 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
         )
     finally:
         _cleanup_paths(temp_image_paths)
+
+
+def _member_status_value(status) -> int:
+    if status is None:
+        return 0
+    if hasattr(status, "value"):
+        try:
+            return int(status.value)
+        except (TypeError, ValueError):
+            return 0
+    try:
+        return int(status)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _ts_type_int(ts_type) -> int:
+    if ts_type is None:
+        return -1
+    if isinstance(ts_type, TimestampType):
+        return int(ts_type.value)
+    try:
+        return int(ts_type)
+    except (TypeError, ValueError):
+        return -1
+
+
+async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
+    """Today's check-in roster for the face kiosk side panel (Bangkok day)."""
+    try:
+        try:
+            from zoneinfo import ZoneInfo
+
+            tz = ZoneInfo("Asia/Bangkok")
+        except Exception:
+            tz = timezone(timedelta(hours=7))
+
+        now_local = datetime.now(tz)
+        today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow = today_start + timedelta(days=1)
+
+        emp_result = await db.execute(
+            select(CompanyEmployee)
+            .where(CompanyEmployee.companyId == companyId)
+            .options(
+                selectinload(CompanyEmployee.member),
+                selectinload(CompanyEmployee.position),
+                selectinload(CompanyEmployee.department),
+            )
+        )
+        employees = emp_result.scalars().all()
+
+        active_emps = []
+        for emp in employees:
+            member = emp.member
+            if not member:
+                continue
+            if _member_status_value(member.status) != int(MemberStatus.ENABLE.value):
+                continue
+            active_emps.append(emp)
+
+        ts_result = await db.execute(
+            select(EmployeeTimestamp)
+            .where(
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.timestamp >= today_start,
+                EmployeeTimestamp.timestamp < tomorrow,
+            )
+            .order_by(EmployeeTimestamp.timestamp.desc())
+        )
+        timestamps = ts_result.scalars().all()
+
+        latest_by_emp: dict = {}
+        for ts in timestamps:
+            emp_id = str(ts.company_employeeId)
+            if emp_id not in latest_by_emp:
+                latest_by_emp[emp_id] = ts
+
+        checked_in = []
+        not_checked_in = []
+        for emp in active_emps:
+            member = emp.member
+            emp_key = str(emp.company_employeeId)
+            name = f"{member.firstName or ''} {member.lastName or ''}".strip() or "ไม่ทราบชื่อ"
+            brief = {
+                "company_employeeId": emp_key,
+                "employeeId": emp.employeeId or "",
+                "employeeName": name,
+                "picture": getattr(member, "picture", None),
+                "department": emp.department.thName if emp.department else "",
+                "position": emp.position.thName if emp.position else "",
+            }
+            ts = latest_by_emp.get(emp_key)
+            if ts:
+                ttype = _ts_type_int(ts.timestampType)
+                brief.update(
+                    {
+                        "timestamp": ts.timestamp,
+                        "timestampType": ttype,
+                        "locationName": ts.locationName or "",
+                        "photoTimestamp": ts.photoTimestamp,
+                        "approvalStatus": ts.approvalStatus,
+                    }
+                )
+                checked_in.append(brief)
+            else:
+                not_checked_in.append(brief)
+
+        checked_in.sort(
+            key=lambda x: x.get("timestamp") or datetime.min.replace(tzinfo=tz),
+            reverse=True,
+        )
+        not_checked_in.sort(key=lambda x: x.get("employeeName") or "")
+
+        in_area_count = sum(1 for row in checked_in if row.get("timestampType") == 1)
+        outside_count = sum(1 for row in checked_in if row.get("timestampType") == 0)
+        return {
+            "summary": {
+                "totalEmployees": len(active_emps),
+                "checkedInCount": len(checked_in),
+                "notCheckedInCount": len(not_checked_in),
+                "inAreaCount": in_area_count,
+                "outsideCount": outside_count,
+                "asOf": now_local.isoformat(),
+                "day": today_start.date().isoformat(),
+            },
+            "checkedIn": checked_in,
+            "notCheckedIn": not_checked_in,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load kiosk attendance: {str(e)}",
+        )

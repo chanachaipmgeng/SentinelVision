@@ -1,0 +1,40 @@
+.dpu-dashboard {
+  margin-top: 0.25rem;
+}
+
+.dpu-dash-refresh {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.4rem !important;
+  padding: 0.45rem 0.9rem !important;
+}
+
+.dpu-dash-error {
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.dpu-stat-card .box-body {
+  padding: 1.1rem 1.15rem !important;
+}
+
+.text-dpu-brand-deep {
+  color: var(--dpu-brand-deep, #0b4f4a);
+}
+
+.dpu-muted-count {
+  font-size: 0.78rem;
+  color: var(--dpu-muted, #64748b);
+  font-weight: 600;
+}
+
+.dpu-list-table thead th {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dpu-muted, #64748b);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.dpu-list-table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.04);
+}

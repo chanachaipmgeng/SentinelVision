@@ -1,105 +1,145 @@
-<app-page-header [title]="'Dashboard'" [activeTitle]="'Company'" [title1]="'Dashboard'"></app-page-header>
+<app-page-header [title]="'แดชบอร์ด'" [activeTitle]="'จัดการบริษัท'" [title1]="'แดชบอร์ด'"></app-page-header>
 
-<div class="dashboard-container">
+<div class="dpu-dashboard grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="ภาพรวมบริษัท">
+      <ng-container chips>
+        <app-stat-chip tone="ok" *ngIf="stats">วันนี้ {{ stats.summary.checkInsToday }}</app-stat-chip>
+        <app-stat-chip tone="soft" *ngIf="stats">7 วัน {{ weekTotal }}</app-stat-chip>
+        <app-stat-chip tone="danger" *ngIf="error">ผิดพลาด</app-stat-chip>
+      </ng-container>
+      <ng-container controls>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh" (click)="loadStats()" [disabled]="isLoading">
+          <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i>
+          <span>รีเฟรช</span>
+        </button>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
 
-  <!-- Loading State -->
-  @if (isLoading) {
-    <div class="flex justify-center items-center h-64">
-      <div class="ti-spinner animation-spin !w-8 !h-8" role="status">
-        <span class="sr-only">Loading...</span>
+  <div class="col-span-12" *ngIf="isLoading">
+    <div class="box modern-card glass">
+      <div class="box-body">
+        <app-empty-state [loading]="true" message="กำลังโหลดแดชบอร์ด..."></app-empty-state>
       </div>
     </div>
-  }
+  </div>
 
-  <!-- Error State -->
-  @if (error) {
-    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-      <span class="font-medium">Error!</span> {{ error }}
+  <div class="col-span-12" *ngIf="error && !isLoading">
+    <div class="box modern-card glass dpu-dash-error">
+      <div class="box-body flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="font-semibold text-danger">โหลดไม่สำเร็จ</div>
+          <div class="text-sm text-dpu-muted">{{ error }}</div>
+        </div>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats()">ลองใหม่</button>
+      </div>
     </div>
-  }
+  </div>
 
-  <!-- Content -->
-  @if (stats && !isLoading) {
-    <div class="grid grid-cols-12 gap-x-6">
-      
-      <!-- Summary Cards -->
-      <div class="xl:col-span-4 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
-        <div class="box dpu-stat-card modern-card animate-in zoom-in duration-500 delay-100">
-          <div class="box-body">
-            <div class="flex items-start">
-              <div class="flex-grow">
-                <p class="mb-0 text-dpu-muted">Check-ins Today</p>
-                <div class="text-2xl font-semibold">{{ stats.summary.checkInsToday }}</div>
-              </div>
-              <div class="avatar bg-primary/10 !text-primary">
-                <i class="ri-calendar-check-line text-xl"></i>
-              </div>
+  <ng-container *ngIf="stats && !isLoading">
+    <div class="xl:col-span-4 lg:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500">
+        <div class="box-body">
+          <div class="flex items-start">
+            <div class="flex-grow">
+              <p class="mb-0 text-dpu-muted">ลงเวลาวันนี้</p>
+              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.summary.checkInsToday }}</div>
+            </div>
+            <div class="avatar bg-primary/10 !text-primary">
+              <i class="ri-calendar-check-line text-xl"></i>
             </div>
           </div>
         </div>
       </div>
-      <!-- Add more summary cards here if needed -->
+    </div>
 
-      <!-- Chart -->
-      <div class="col-span-12">
-        <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-          <div class="box-header">
-            <h5 class="box-title">Check-in Trend (Last 7 Days)</h5>
-          </div>
-          <div class="box-body">
-            @if (chartOption) {
-              <div echarts [options]="chartOption" class="h-80"></div>
-            } @else {
-              <p>Chart data is not available.</p>
-            }
+    <div class="xl:col-span-4 lg:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500 delay-75">
+        <div class="box-body">
+          <div class="flex items-start">
+            <div class="flex-grow">
+              <p class="mb-0 text-dpu-muted">รวม 7 วันล่าสุด</p>
+              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ weekTotal }}</div>
+            </div>
+            <div class="avatar bg-primary/10 !text-primary">
+              <i class="ri-line-chart-line text-xl"></i>
+            </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Recent Activity -->
-      <div class="col-span-12">
-        <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
-          <div class="box-header">
-            <h5 class="box-title">Recent Activity</h5>
+    <div class="xl:col-span-4 lg:col-span-12 col-span-12">
+      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500 delay-100">
+        <div class="box-body">
+          <div class="flex items-start">
+            <div class="flex-grow">
+              <p class="mb-0 text-dpu-muted">กิจกรรมล่าสุด</p>
+              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.recentActivity.length }}</div>
+            </div>
+            <div class="avatar bg-primary/10 !text-primary">
+              <i class="ri-history-line text-xl"></i>
+            </div>
           </div>
-          <div class="box-body">
-            <div class="table-responsive">
-              <table class="table whitespace-nowrap min-w-full">
-                <thead>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-12">
+      <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+        <div class="box-header">
+          <h5 class="box-title !mb-0">แนวโน้มการลงเวลา (7 วัน)</h5>
+        </div>
+        <div class="box-body">
+          <div *ngIf="chartOption" echarts [options]="chartOption" class="h-80"></div>
+          <app-empty-state *ngIf="!chartOption" icon="ri-bar-chart-2-line" message="ยังไม่มีข้อมูลกราฟ"></app-empty-state>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-12">
+      <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+        <div class="box-header flex items-center justify-between">
+          <h5 class="box-title !mb-0">กิจกรรมล่าสุด</h5>
+          <span class="dpu-muted-count" *ngIf="stats.recentActivity.length">{{ stats.recentActivity.length }} รายการ</span>
+        </div>
+        <div class="box-body !p-0">
+          <app-empty-state
+            *ngIf="stats.recentActivity.length === 0"
+            icon="ri-time-line"
+            message="ยังไม่มีกิจกรรมล่าสุด">
+          </app-empty-state>
+          <div class="table-responsive" *ngIf="stats.recentActivity.length">
+            <table class="table whitespace-nowrap min-w-full dpu-list-table mb-0">
+              <thead>
+                <tr>
+                  <th>พนักงาน</th>
+                  <th>เวลา</th>
+                  <th>สถานที่</th>
+                  <th>ประเภท</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (activity of stats.recentActivity; track $index) {
                   <tr>
-                    <th scope="col" class="text-start">Employee</th>
-                    <th scope="col" class="text-start">Time</th>
-                    <th scope="col" class="text-start">Location</th>
-                    <th scope="col" class="text-start">Type</th>
+                    <td class="font-semibold">{{ activity.employeeName }}</td>
+                    <td>{{ activity.timestamp | date:'medium' }}</td>
+                    <td>{{ activity.locationName || '—' }}</td>
+                    <td>
+                      @if (activity.timestampType === 1) {
+                        <span class="badge bg-success/10 text-success">ในพื้นที่</span>
+                      } @else {
+                        <span class="badge bg-danger/10 text-danger">นอกพื้นที่</span>
+                      }
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  @for (activity of stats.recentActivity; track $index) {
-                    <tr class="border-b border-gray-200">
-                      <td>{{ activity.employeeName }}</td>
-                      <td>{{ activity.timestamp | date:'medium' }}</td>
-                      <td>{{ activity.locationName }}</td>
-                      <td>
-                        @if (activity.timestampType === 1) {
-                          <span class="badge bg-primary/10 text-primary">In Area</span>
-                        } @else {
-                          <span class="badge bg-danger/10 text-danger">Outside Area</span>
-                        }
-                      </td>
-                    </tr>
-                  }
-                  @if (stats.recentActivity.length === 0) {
-                    <tr>
-                      <td colspan="4" class="text-center text-gray-500 py-4">No recent activity.</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+                }
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-
     </div>
-  }
+  </ng-container>
 </div>

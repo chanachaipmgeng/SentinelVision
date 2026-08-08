@@ -1,309 +1,173 @@
 <app-page-header [title]="'จัดการสมาชิก'" [activeTitle]="'ผู้ดูแลระบบ'" [title1]="'จัดการสมาชิก'"></app-page-header>
 
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="สมาชิก">
+      <ng-container chips>
+        <app-stat-chip>ทั้งหมด {{ itemsList.length }}</app-stat-chip>
+        <app-stat-chip tone="ok">ใช้งาน {{ activeCount }}</app-stat-chip>
+        <app-stat-chip tone="soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</app-stat-chip>
+      </ng-container>
+      <ng-container controls>
+        <app-pill-search [(value)]="searchTerm" placeholder="ค้นหาชื่อ อีเมล เบอร์ ยูสเซอร์..." ariaLabel="ค้นหาสมาชิก"></app-pill-search>
+        <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-success-full modern-btn dpu-tool-btn" (click)="adjustSelect(1)">
+          <i class="ri-user-follow-line"></i><span>เปิดใช้</span>
+        </button>
+        <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-tool-btn" (click)="adjustSelect(0)">
+          <i class="ri-user-unfollow-line"></i><span>ปิดใช้</span>
+        </button>
+        <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn" (click)="deleteSelect()">
+          <i class="ri-delete-bin-line"></i><span>ลบ</span>
+        </button>
+        <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
+          <i class="ri-add-line"></i><span>เพิ่มสมาชิก</span>
+        </a>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
 
-<div class="grid grid-cols-12 gap-6">
-  <div class="xl:col-span-12 col-span-12">
-    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div class="box-header justify-between">
-        <div class="box-title">
-          {{ 'All List' | translate}} <span
-            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
+  <div class="col-span-12">
+    <div class="box dpu-list-panel modern-card glass">
+      <div class="box-header">
+        <div class="flex items-center gap-2">
+          <input class="form-check-input" type="checkbox" [checked]="allSelected" (change)="toggleAll($event)" [disabled]="!filteredSource.length">
+          <div class="box-title !mb-0">รายการสมาชิก</div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
-            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'Create' |
-            translate}}
-          </a>
-
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-success-full me-2 modern-btn" *ngIf="someSelected"
-            (click)="adjustSelect(1)"><i class="ri-user-follow-line font-semibold align-middle"></i>{{ 'Active' |
-            translate}}
-          </a>
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-secondary-full me-2 modern-btn"
-            *ngIf="someSelected" (click)="adjustSelect(0)"><i
-              class="ri-user-unfollow-line font-semibold align-middle"></i>{{ 'Unactive' |
-            translate}}
-          </a>
-
-
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-danger-full me-2 modern-btn" *ngIf="someSelected"
-            (click)="deleteSelect()"><i class="ri-delete-bin-line font-semibold align-middle"></i>{{ 'Delete' |
-            translate}}
-          </a>
-          <div>
-            <input class="form-control form-control" type="text" placeholder="ค้นหาสมาชิก"
-              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
-          </div>
-          <!-- <div>
-            <input class="form-control form-control" type="text" placeholder="กรองตามบริษัท"
-              aria-label=".form-control-sm example" [(ngModel)]='searchTerm'>
-          </div> -->
-          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
-            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
-          </a>
-          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
-          </ul> -->
-        </div>
+        <span class="dpu-muted-count" *ngIf="totalFiltered">{{ totalFiltered }} รายการ</span>
       </div>
-      <div class="box-body">
-        <div class="table-responsive">
-          <table class="table whitespace-nowrap min-w-full ti-custom-table-hover">
+      <div class="box-body dpu-list-body">
+        <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลดสมาชิก..."></app-empty-state>
+        <app-empty-state
+          *ngIf="!loading && pageItems.length === 0"
+          icon="ri-user-line"
+          [message]="searchTerm ? 'ไม่พบสมาชิกตามคำค้น' : 'ยังไม่มีสมาชิก'"
+          [actionLabel]="searchTerm ? 'ล้างการค้นหา' : ''"
+          (action)="clearSearch()">
+        </app-empty-state>
+        <div class="table-responsive" *ngIf="!loading && pageItems.length">
+          <table class="table whitespace-nowrap min-w-full dpu-list-table mb-0">
             <thead>
-              <tr class="border-b border-defaultborder">
-                <th scope="col" class="!text-start">
-                  <input class="form-check-input check-all" type="checkbox" id="all-products"
-                    (change)="toggleAll($event)" [checked]="allSelected" aria-label="...">
-                </th>
-                <th scope="col" class="text-start">{{ 'Username' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'Fullname' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'Email' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'Mobile' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'User Group' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'Status' | translate}}</th>
-                <th scope="col" class="text-start">{{ 'Update Date' | translate}}</th>
-                <th scope="col" class="text-start"></th>
+              <tr>
+                <th class="w-10"></th>
+                <th>สมาชิก</th>
+                <th>อีเมล</th>
+                <th>เบอร์</th>
+                <th>บทบาท</th>
+                <th>สถานะ</th>
+                <th class="text-end">จัดการ</th>
               </tr>
             </thead>
             <tbody>
-              @for(item of filterList;track filterList){
-
-              <tr class="border border-defaultborder dark:border-defaultborder/10">
-                <td class="product-checkbox"><input class="form-check-input" type="checkbox" [checked]="selectedItems.get(item.memberId)"
-                  (change)="onCheckboxChange(item.memberId)" aria-label="..." value="">
-                </td>
-                <td>
-                  <div class="flex items-center">
-                    <span class="avatar avatar-sm p-1 me-1 bg-light !rounded-full">
-                      <img
-                        [src]="item.getPicture()"
-                        alt="" id="profile-img">
-                    </span>
-                    <div class="ms-2">
-                      <p class="font-semibold mb-0 flex items-center text-primary"><a (click)="view(item)">
-                          {{item.username}}</a></p>
-                      <p class="text-[0.75rem] text-muted mb-0">{{item.memberId}}</p>
+              @for (item of pageItems; track item.memberId) {
+                <tr>
+                  <td>
+                    <input class="form-check-input" type="checkbox"
+                      [checked]="selectedItems.get(item.memberId)"
+                      (change)="onCheckboxChange(item.memberId, $event)">
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <span class="avatar avatar-sm avatar-rounded">
+                        <img [src]="item.getPicture()" alt="">
+                      </span>
+                      <div>
+                        <div class="font-semibold">{{ item.getFullname() }}</div>
+                        <div class="text-[0.75rem] text-dpu-muted">{{ item.username }}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-
-                <!-- <td>
-                  <div class="flex">
-                    <div class="ms-2">
-                      <p class="font-semibold mb-0 flex items-center text-primary"><a (click)="view(item)"
-                          data-hs-overlay="#modal-detail">
-                          {{item.username}}</a></p>
-                      <p class="text-[0.75rem] text-muted mb-0">{{item.memberId}}</p>
+                  </td>
+                  <td>{{ item.email || '—' }}</td>
+                  <td>{{ item.phoneNumber || '—' }}</td>
+                  <td><span class="badge bg-primary/10 text-primary">{{ item.getRole() }}</span></td>
+                  <td>
+                    <span class="badge" [class.bg-success]="item.status===1" [class.text-white]="item.status===1"
+                      [class.bg-secondary]="item.status!==1">{{ item.getStatus() }}</span>
+                  </td>
+                  <td class="text-end">
+                    <div class="inline-flex gap-2">
+                      <button type="button" class="dpu-icon-btn" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
                     </div>
-                  </div>
-                </td> -->
-                <td> {{item.firstName}} {{item.lastName}}</td>
-                <td>
-                  <div>
-                    <span class="block mb-1"><i
-                        class="ri-mail-line me-2 align-middle text-[.875rem] text-dpu-muted dark:text-white/50 inline-flex"></i>{{item.email}}</span>
-                  </div>
-                </td>
-                <td>
-                  <div>
-                    <span class="block"><i
-                        class="ri-phone-line me-2 align-middle text-[.875rem] text-dpu-muted dark:text-white/50 inline-flex"></i>{{item.phoneNumber}}</span>
-                  </div>
-                </td>
-                <td> <span
-                    class="badge bg-{{ item.role == 1 ? 'primary' : 'info'}} text-white">{{item.getRole()}}</span>
-                </td>
-                <td> <span
-                    class="badge bg-{{ item.status == 1 ? 'primary' : 'danger'}} text-white">{{item.getStatus()}}</span>
-                </td>
-                <td><span class="badge bg-info/10 text-primary"><i
-                      class="bi bi-clock me-1"></i>{{item.updatedAt | date : 'medium'}}</span></td>
-                <td>
-
-                <td>
-                  <div class="flex flex-row items-center !gap-2 ">
-                    <a aria-label="anchor" (click)="view(item)" data-hs-overlay="#modal-detail"
-                      class="ti-btn ti-btn-wave  !gap-0 !m-0 bg-info/10 text-info hover:bg-info hover:text-white hover:border-info"><i
-                        class="ri-pencil-line"></i></a>
-                    <a aria-label="anchor" href="javascript:void(0);" (click)="delete(item)"
-                      class="ti-btn ti-btn-wave product-btn !gap-0 !m-0  bg-danger/10 text-danger hover:bg-danger hover:text-white hover:border-danger"><i
-                        class="ri-delete-bin-line"></i></a>
-                  </div>
-                </td>
-              </tr>
+                  </td>
+                </tr>
               }
-
             </tbody>
           </table>
         </div>
       </div>
-      <div class="box-footer">
-        <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
-          <div class="mb-2 sm:mb-0">
-            <div>
-              {{'Showing' | translate}} {{filterList.length}} {{'entries'
-              | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
-            </div>
-          </div>
-          <div class="ms-auto">
-            <nav aria-label="Page navigation">
-              <ul class="ti-pagination  mb-0">
-                <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
-                    class="page-link px-3 py-[0.375rem]"
-                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous' | translate}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
-                    (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
-
-                <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
-                    href="javascript:void(0);">{{pageIndex +1}}</a>
-                </li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
-                <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                    *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                    (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
-                <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                  class="page-item"><a class="page-link px-3 py-[0.375rem]"
-                    (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
-                    translate}}</a>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <app-simple-pager [pageIndex]="pageIndex" [pageSize]="pageSize" [total]="totalFiltered" (pageIndexChange)="onPageChange($event)"></app-simple-pager>
     </div>
   </div>
 </div>
 
-
-
-
-<!-- Start:: Create Contact -->
 <div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">{{ 'Create' |
-          translate }} {{ 'User' | translate }}
-        </h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
-          data-hs-overlay="#modal-detail" #closeModal>
-          <span class="sr-only">{{'Close' | translate}}</span>
+        <h6 class="modal-title text-[1rem] font-semibold">{{ action === 'edit' ? 'แก้ไขสมาชิก' : 'เพิ่มสมาชิก' }}</h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem]" data-hs-overlay="#modal-detail" #closeModal>
           <i class="ri-close-line"></i>
         </button>
       </div>
       <div class="ti-modal-body px-4">
         <div class="grid grid-cols-12 gap-4">
-
-          <div class="xl:col-span-12 col-span-12">
-            <div class="mb-0 text-center">
-              <span class="avatar avatar-xxl avatar-rounded">
-                <img [src]="selectModel.getPicture()" alt="" id="profile-img">
-                <span class="badge rounded-full bg-primary avatar-badge">
-                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo" class="absolute w-full h-full opacity-[0]" id="profile-change">
-                  <i class="fe fe-camera text-[.625rem]"></i>
-                </span>
+          <div class="col-span-12 text-center">
+            <span class="avatar avatar-xxl avatar-rounded">
+              <img [src]="selectModel.getPicture()" alt="">
+              <span class="badge rounded-full bg-primary avatar-badge">
+                <input ng2FileSelect [uploader]="uploaderProfile" type="file" accept="image/*" class="absolute w-full h-full opacity-0">
+                <i class="fe fe-camera text-[.625rem]"></i>
               </span>
-            </div>
+            </span>
           </div>
-
-          <div class="xl:col-span-12 col-span-12">
-            <label for="deal-title" class="form-label">{{'Username' | translate}}</label>
-            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.username">
-            <div class="text-danger" *ngIf="!selectModel.username">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.username">
           </div>
-
-          <div class="xl:col-span-12 col-span-12">
-            <label for="deal-title" class="form-label">{{'Password' | translate}}</label>
-            <input type="password" class="form-control" id="deal-title" placeholder=""
-              [(ngModel)]="selectModel.password">
-            <div class="text-danger" *ngIf="!selectModel.password">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">Password</label>
+            <input type="password" class="form-control" [(ngModel)]="selectModel.password">
           </div>
-
-          <div class="xl:col-span-12 col-span-12">
-            <label for="deal-title" class="form-label">{{'Confirm Password' | translate}}</label>
-            <input type="password" class="form-control" id="deal-title" placeholder="" [(ngModel)]="confirmPassword">
-            <div class="text-danger" *ngIf="!confirmPassword">
-              {{'Please fill in information' | translate}}
-            </div>
-            <div class="text-danger" *ngIf="confirmPassword && (confirmPassword != selectModel.password)">
-              {{'Password Not Match' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" [(ngModel)]="confirmPassword">
           </div>
-
-          <div class="xl:col-span-6 col-span-12">
-            <label for="deal-title" class="form-label">{{'ชื่อ' | translate}}</label>
-            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.firstName">
-            <div class="text-danger" *ngIf="!selectModel.firstName">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">ชื่อ</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.firstName">
           </div>
-
-          <div class="xl:col-span-6 col-span-12">
-            <label for="deal-title" class="form-label">{{'นามสกุล' | translate}}</label>
-            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.lastName">
-            <div class="text-danger" *ngIf="!selectModel.lastName">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">นามสกุล</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.lastName">
           </div>
-
-          <div class="xl:col-span-6 col-span-12">
-            <label for="deal-title" class="form-label">{{'อีเมล' | translate}}</label>
-            <input type="text" class="form-control" id="deal-title" placeholder="" [(ngModel)]="selectModel.email">
-            <div class="text-danger" *ngIf="!selectModel.email">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">อีเมล</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.email">
           </div>
-
-
-          <div class="xl:col-span-6 col-span-12">
-            <label for="deal-title" class="form-label">{{'เบอร์ติดต่อ' | translate}}</label>
-            <input type="text" class="form-control" id="deal-title" placeholder=""
-              [(ngModel)]="selectModel.phoneNumber">
-            <div class="text-danger" *ngIf="!selectModel.phoneNumber">
-              {{'Please fill in information' | translate}}
-            </div>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">เบอร์ติดต่อ</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.phoneNumber">
           </div>
-
-
-          <div class="xl:col-span-12 col-span-12">
-            <label class="form-label">{{'User Role' | translate}}</label>
-            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
-              [(ngModel)]="selectModel.role">
-              <ng-option [value]="0">{{'ผู้ใช้งานทั่วไป' | translate}}</ng-option>
-              <ng-option [value]="1">{{'ผู้ดูแลบริษัท' | translate}}</ng-option>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">บทบาท</label>
+            <ng-select [(ngModel)]="selectModel.role" [clearable]="false" [appendTo]="'body'">
+              <ng-option [value]="0">ผู้ใช้งานทั่วไป</ng-option>
+              <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
             </ng-select>
           </div>
-          <div class="xl:col-span-12 col-span-12">
-            <label class="form-label">{{'Status' | translate}}</label>
-            <ng-select name="choices-multiple-remove-button2" id="choices-multiple-remove-button2" placeholder=""
-              [(ngModel)]="selectModel.status">
-              <ng-option [value]="0">{{'Unactive' | translate}}</ng-option>
-              <ng-option [value]="1">{{'Active' | translate}}</ng-option>
+          <div class="col-span-12 md:col-span-6">
+            <label class="form-label">สถานะ</label>
+            <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
+              <ng-option [value]="0">Unactive</ng-option>
+              <ng-option [value]="1">Active</ng-option>
             </ng-select>
           </div>
-
         </div>
       </div>
       <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
-          data-hs-overlay="#modal-detail">
-          {{'Cancel' | translate}}
-        </button>
-        <button type="button" (click)="save()" class="ti-btn bg-primary text-white !font-medium">{{'Save' |
-          translate}}</button>
+        <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">ยกเลิก</button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">บันทึก</button>
       </div>
     </div>
   </div>
 </div>
-<!-- End:: Create Contact -->

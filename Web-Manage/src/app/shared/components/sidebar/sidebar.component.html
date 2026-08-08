@@ -5,7 +5,15 @@
     <a class="header-logo"
       [routerLink]="isInstallerRoute ? '/company/dashboard' : '/admin/home'"
       aria-label="DPU Home">
-      <img src="./assets/images/brand-logos/logo.png" alt="DPU">
+      <!-- desktop-dark = Ynex visible slot on dark menu; asset is the real brand mark -->
+      <img
+        class="desktop-dark dpu-sidebar-logo"
+        src="./assets/images/brand-logos/logo.png"
+        alt="DPU Attendance">
+      <img
+        class="toggle-white dpu-sidebar-logo"
+        src="./assets/images/brand-logos/logo.png"
+        alt="DPU Attendance">
     </a>
   </div>
   <div>

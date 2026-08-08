@@ -20,6 +20,7 @@ import { HttpRequestInterceptor } from './shared/services/http-request.intercept
 import { AuthService } from './shared/services/auth.service';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { provideEcharts } from 'ngx-echarts';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, "./assets/i18n/", ".json");
@@ -56,6 +57,7 @@ export const appConfig: ApplicationConfig = {
     progressBar: true,
   }), NgDragDropModule.forRoot(), HttpClientModule),
     httpInterceptorProviders,
+    provideEcharts(),
   ]
 };
 

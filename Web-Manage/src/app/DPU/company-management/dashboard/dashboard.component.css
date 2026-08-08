@@ -12,12 +12,18 @@
   white-space: nowrap;
 }
 
+.dpu-dash-updated {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dpu-muted, #64748b);
+}
+
 .dpu-dash-error {
   border: 1px solid rgba(220, 38, 38, 0.2);
 }
 
 .dpu-stat-card .box-body {
-  padding: 1.1rem 1.15rem !important;
+  padding: 1.05rem 1.15rem !important;
 }
 
 .text-dpu-brand-deep {
@@ -30,13 +36,116 @@
   font-weight: 600;
 }
 
-.dpu-list-table thead th {
+.dpu-dash-link {
+  display: inline-block;
+  margin-top: 0.35rem;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--dpu-muted, #64748b);
-  background: rgba(248, 250, 252, 0.9);
+  color: var(--dpu-brand, #0f766e);
+  text-decoration: none;
 }
 
-.dpu-list-table tbody tr:hover {
-  background: rgba(15, 118, 110, 0.04);
+.dpu-dash-link:hover {
+  text-decoration: underline;
+}
+
+.dpu-live-panel {
+  min-height: 28rem;
+}
+
+.dpu-live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #94a3b8;
+}
+
+.dpu-live-dot.is-on {
+  background: #16a34a;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+  animation: dpu-live-pulse 1.6s ease infinite;
+}
+
+@keyframes dpu-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16); }
+  50% { box-shadow: 0 0 0 7px rgba(22, 163, 74, 0.05); }
+}
+
+.dpu-live-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.dpu-live-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
+  transition: background 0.2s ease;
+}
+
+.dpu-live-item.is-warn {
+  background: rgba(194, 65, 12, 0.04);
+}
+
+.dpu-live-item.is-new {
+  background: rgba(15, 118, 110, 0.1);
+  animation: dpu-live-in 0.45s ease;
+}
+
+@keyframes dpu-live-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dpu-live-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.7rem;
+  object-fit: cover;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.dpu-live-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.dpu-live-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.dpu-live-row strong {
+  font-size: 0.9rem;
+  color: var(--dpu-ink, #0f172a);
+}
+
+.dpu-live-row time {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dpu-muted, #64748b);
+  font-weight: 600;
+}
+
+.dpu-live-meta {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--dpu-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dpu-live-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
 }

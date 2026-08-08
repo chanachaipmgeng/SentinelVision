@@ -67,12 +67,13 @@ body {
   font-family: var(--dpu-font);
   color: var(--dpu-ink);
   background-color: var(--dpu-surface);
-  background-image:
-    radial-gradient(ellipse 900px 520px at 8% -8%, rgba(15, 118, 110, 0.14), transparent 55%),
-    radial-gradient(ellipse 700px 480px at 96% 4%, rgba(15, 23, 42, 0.06), transparent 50%),
-    radial-gradient(ellipse 600px 400px at 70% 100%, rgba(13, 148, 136, 0.07), transparent 45%),
-    linear-gradient(180deg, #f4f7fa 0%, var(--dpu-surface) 40%);
-  background-attachment: fixed;
+}
+
+/* Ynex modern page-style forces body white — keep DPU surface behind the shell */
+html[data-page-style="modern"] body,
+html.dpu-theme-lock body {
+  background-color: var(--dpu-surface) !important;
+  background-image: none !important;
 }
 
 h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
@@ -186,17 +187,51 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   backdrop-filter: blur(8px);
 }
 
+.app-sidebar .header-logo {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  max-width: 12.5rem;
+}
+
 .app-sidebar .header-logo img {
-  filter: brightness(0) invert(1);
-  opacity: 0.95;
-  max-height: 2.25rem;
+  /* Cancel Ynex invert + blank desktop-dark placeholders */
+  filter: none !important;
+  opacity: 1;
+  max-height: 2.35rem;
   width: auto !important;
+  max-width: 12rem;
+  object-fit: contain;
+  border-radius: 0.45rem;
   transition: transform var(--dpu-duration) var(--dpu-ease), opacity 0.2s ease;
+}
+
+.app-sidebar .header-logo img.dpu-sidebar-logo.desktop-dark {
+  display: block !important;
+}
+
+.app-sidebar .header-logo img.dpu-sidebar-logo.toggle-white {
+  display: none !important;
 }
 
 .app-sidebar .header-logo:hover img {
   transform: scale(1.03);
   opacity: 1;
+}
+
+/* Icon-collapsed sidebar: show compact logo slot */
+[data-toggled="icon-overlay-close"] .app-sidebar .header-logo img.dpu-sidebar-logo.desktop-dark,
+[data-toggled="icon-click-closed"] .app-sidebar .header-logo img.dpu-sidebar-logo.desktop-dark,
+[data-toggled="icon-hover-closed"] .app-sidebar .header-logo img.dpu-sidebar-logo.desktop-dark {
+  display: none !important;
+}
+
+[data-toggled="icon-overlay-close"] .app-sidebar .header-logo img.dpu-sidebar-logo.toggle-white,
+[data-toggled="icon-click-closed"] .app-sidebar .header-logo img.dpu-sidebar-logo.toggle-white,
+[data-toggled="icon-hover-closed"] .app-sidebar .header-logo img.dpu-sidebar-logo.toggle-white {
+  display: block !important;
+  max-height: 1.85rem;
+  max-width: 2.25rem;
 }
 
 .app-sidebar .main-sidebar,
@@ -344,8 +379,17 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 }
 
 /* ---- Content area ---- */
+/* Layout shell background lives on .page (matches DPU teal/slate tokens) */
 .page {
-  background: transparent;
+  min-height: 100dvh;
+  background-color: var(--dpu-surface);
+  background-image:
+    radial-gradient(ellipse 900px 520px at 8% -8%, rgba(15, 118, 110, 0.16), transparent 55%),
+    radial-gradient(ellipse 700px 480px at 96% 4%, rgba(15, 23, 42, 0.06), transparent 50%),
+    radial-gradient(ellipse 600px 400px at 70% 100%, rgba(13, 148, 136, 0.08), transparent 45%),
+    linear-gradient(180deg, #f1f5f9 0%, var(--dpu-surface) 42%, #e8eef3 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .main-content {

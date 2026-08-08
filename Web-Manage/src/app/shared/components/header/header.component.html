@@ -52,22 +52,6 @@
           </div>
         </div>
 
-        <!-- Theme toggle kept for Ynex attrs; hidden via .dpu-theme-lock -->
-        <div class="header-element header-theme-mode hidden !items-center sm:block !py-[1rem] md:!px-[0.5rem] px-2">
-          <a aria-label="Dark mode"
-            class="hs-dark-mode-active:hidden flex hs-dark-mode group flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium transition-all text-xs"
-            href="javascript:void(0);" data-hs-theme-click-value="dark"
-            (click)="themeChange('dark', 'dark','dark')">
-            <i class="bx bx-moon header-link-icon"></i>
-          </a>
-          <a aria-label="Light mode"
-            class="hs-dark-mode-active:flex hidden hs-dark-mode group flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium transition-all text-xs"
-            href="javascript:void(0);" data-hs-theme-click-value="light"
-            (click)="themeChange('light', 'light','dark')">
-            <i class="bx bx-sun header-link-icon"></i>
-          </a>
-        </div>
-
         <!-- Admin quick link -->
         <div *ngIf="adminRole"
           class="header-element header-apps py-[1rem] md:px-[0.5rem] px-2 hs-dropdown ti-dropdown md:!block !hidden [--placement:bottom-left]">
@@ -120,15 +104,6 @@
               </li>
             </ul>
           </div>
-        </div>
-
-        <!-- Switcher kept for Ynex mount; hidden via .dpu-theme-lock -->
-        <div class="header-element md:px-[0.48rem]">
-          <button aria-label="Theme switcher" type="button"
-            class="hs-dropdown-toggle switcher-icon inline-flex flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium align-middle transition-all text-xs"
-            data-hs-overlay="#hs-overlay-switcher">
-            <i class="bx bx-cog header-link-icon animate-spin-slow"></i>
-          </button>
         </div>
       </div>
     </div>

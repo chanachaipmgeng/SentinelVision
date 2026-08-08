@@ -1,16 +1,16 @@
-import { Component, ElementRef, Renderer2 } from '@angular/core';
+import { Component, ElementRef } from '@angular/core';
 import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
 import { TranslateService } from '@ngx-translate/core';
-import { UserModel } from '../../user-auth.model';
 import { UserProfileModel } from '../../../DPU/models/user.model';
+
 interface Item {
   id: number;
   name: string;
   type: string;
   title: string;
-  // Add other properties as needed
 }
+
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
@@ -25,7 +25,7 @@ export class HeaderComponent {
   public isCollapsed = true;
   public selectedLanguage = "";
   constructor(public navServices: NavService,
-    private elementRef: ElementRef, private renderer: Renderer2,
+    private elementRef: ElementRef,
     private tokenService: TokenService,
     private translate: TranslateService) {
 
@@ -55,34 +55,6 @@ export class HeaderComponent {
     this.isFullScreen = !this.isFullScreen;
     this.fullScreenIconVisible = !this.isFullScreen;
     this.exitFullScreenIconVisible = this.isFullScreen;
-  }
-  themeChange(type: string, type1: string, type2: string) {
-    this.elementRef.nativeElement.ownerDocument.documentElement?.setAttribute('class', type);
-    this.elementRef.nativeElement.ownerDocument.documentElement?.setAttribute('style', "");
-    localStorage.removeItem("ynex-background-mode-body");
-    localStorage.removeItem("ynex-background-mode-dark");
-    localStorage.setItem('ynex-theme-mode', type);
-    this.elementRef.nativeElement.ownerDocument.documentElement?.setAttribute('data-header-styles', type1);
-    localStorage.setItem('ynex-header-mode', type1);
-    this.elementRef.nativeElement.ownerDocument.documentElement?.setAttribute('data-menu-styles', type2);
-    localStorage.setItem('ynex-menu-mode', type2);
-    const htmlElement = this.elementRef.nativeElement.ownerDocument.documentElement;
-
-    if (type == 'dark') {
-      const darkbtn = document.querySelector(
-        '#switcher-dark-theme'
-      ) as HTMLInputElement;
-      darkbtn.checked = true;
-      this.renderer.setAttribute(htmlElement, 'data-menu-style', 'dark');
-
-    } else {
-      const lightbtn = document.querySelector(
-        '#switcher-light-theme'
-      ) as HTMLInputElement;
-      lightbtn.checked = true;
-      this.renderer.setAttribute(htmlElement, 'data-menu-style', 'light');
-
-    }
   }
   toggleSidebar() {
     let html = this.elementRef.nativeElement.ownerDocument.documentElement;

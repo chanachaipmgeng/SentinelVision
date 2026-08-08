@@ -5,10 +5,12 @@
 
 .page {
   min-height: 100dvh;
+  /* Background color/atmosphere: dpu-theme.css (.page) */
 }
 
 .content {
   position: relative;
+  background: transparent;
 }
 
 .main-content {

@@ -34,6 +34,7 @@ export class UserProfileModel extends BaseModel {
     this.status = data?.status!
     this.email = data?.email!
     this.role = data?.role!
+    this.picture = data?.picture || ""
     this.birthDate = data?.birthDate || ""
     this.address = data?.address || ""
     this.emergencyContactName = data?.emergencyContactName || ""

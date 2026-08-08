@@ -168,9 +168,12 @@ export class EmployeeService {
     });
   }
 
-  importExcel(companyId: string, file: File) {
+  importExcel(companyId: string, file: File, photosZip?: File | null) {
     const formData = new FormData();
     formData.append("file", file);
+    if (photosZip) {
+      formData.append("photos", photosZip);
+    }
     return this.http.post<EmployeeImportResult>(
       this.apiBaseUrl + "/" + companyId + "/import",
       formData
@@ -184,6 +187,8 @@ export interface EmployeeImportCreatedRow {
   email: string;
   company_employeeId: string;
   employeeId: string;
+  faceEnrolled?: boolean;
+  faceWarning?: string | null;
 }
 
 export interface EmployeeImportErrorRow {
@@ -196,6 +201,7 @@ export interface EmployeeImportResult {
   total: number;
   success: number;
   failed: number;
+  facesEnrolled?: number;
   created: EmployeeImportCreatedRow[];
   errors: EmployeeImportErrorRow[];
 }

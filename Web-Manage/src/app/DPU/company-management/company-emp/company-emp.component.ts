@@ -82,6 +82,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   isEdit = false;
   isImporting = false;
   @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('importPhotosInput') importPhotosInput?: ElementRef<HTMLInputElement>;
+  private pendingImportExcel: File | null = null;
   constructor(
     private http: HttpClient,
     private employeeService: EmployeeService,
@@ -744,6 +746,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     if (this.isImporting) {
       return;
     }
+    this.pendingImportExcel = null;
     if (this.importFileInput?.nativeElement) {
       this.importFileInput.nativeElement.value = '';
       this.importFileInput.nativeElement.click();
@@ -763,31 +766,75 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       return;
     }
 
+    this.pendingImportExcel = file;
+    input.value = '';
+
     swal({
       title: 'นำเข้าพนักงานจาก Excel?',
-      text: `ไฟล์: ${file.name}\nระบบจะเพิ่มเฉพาะแถวที่ข้อมูลถูกต้อง`,
-      icon: 'warning',
-      dangerMode: false,
-      buttons: ['Cancel', 'Confirm'],
-    }).then((ok: any) => {
-      if (!ok) {
-        input.value = '';
+      text:
+        `ไฟล์: ${file.name}\n\n` +
+        'ต้องการแนบ ZIP รูปใบหน้าด้วยหรือไม่?\n' +
+        '(ชื่อไฟล์ใน ZIP ควรตรงคอลัมน์ ไฟล์รูปใบหน้า หรือใช้อีเมล/รหัสพนักงาน)',
+      icon: 'info',
+      buttons: {
+        cancel: { text: 'Cancel', value: null, visible: true },
+        skip: { text: 'นำเข้าโดยไม่มีรูป', value: 'skip' },
+        zip: { text: 'แนบ ZIP รูป', value: 'zip' },
+      } as any,
+    }).then((choice: any) => {
+      if (!choice) {
+        this.pendingImportExcel = null;
         return;
       }
-      this.isImporting = true;
-      this.employeeService.importExcel(this.companyId, file).subscribe({
-        next: (result) => {
-          this.isImporting = false;
-          input.value = '';
-          this.ngOnInit();
-          this.showImportResult(result);
-        },
-        error: (err) => {
-          this.isImporting = false;
-          input.value = '';
-          swal('นำเข้าไม่สำเร็จ', this.formatApiError(err), 'error');
-        },
-      });
+      if (choice === 'zip') {
+        if (this.importPhotosInput?.nativeElement) {
+          this.importPhotosInput.nativeElement.value = '';
+          this.importPhotosInput.nativeElement.click();
+        }
+        return;
+      }
+      this.runEmployeeImport(null);
+    });
+  }
+
+  onImportPhotosSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const zip = input.files?.[0] || null;
+    input.value = '';
+    if (!this.pendingImportExcel) {
+      return;
+    }
+    if (zip) {
+      const name = (zip.name || '').toLowerCase();
+      if (!name.endsWith('.zip')) {
+        swal('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์ ZIP ของรูปใบหน้า', 'warning');
+        this.pendingImportExcel = null;
+        return;
+      }
+    }
+    this.runEmployeeImport(zip);
+  }
+
+  private runEmployeeImport(photosZip: File | null): void {
+    const file = this.pendingImportExcel;
+    this.pendingImportExcel = null;
+    if (!file) {
+      return;
+    }
+    this.isImporting = true;
+    this.cdr.detectChanges();
+    this.employeeService.importExcel(this.companyId, file, photosZip).subscribe({
+      next: (result) => {
+        this.isImporting = false;
+        this.cdr.detectChanges();
+        this.ngOnInit();
+        this.showImportResult(result);
+      },
+      error: (err) => {
+        this.isImporting = false;
+        this.cdr.detectChanges();
+        swal('นำเข้าไม่สำเร็จ', this.formatApiError(err), 'error');
+      },
     });
   }
 
@@ -795,8 +842,17 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     total: number;
     success: number;
     failed: number;
+    facesEnrolled?: number;
+    created?: { faceEnrolled?: boolean; faceWarning?: string | null; row: number; email: string }[];
     errors?: { row: number; email: string; message: string }[];
   }): void {
+    const faceWarnLines = (result.created || [])
+      .filter((c) => c.faceWarning)
+      .slice(0, 5)
+      .map(
+        (c) =>
+          `• แถว ${c.row}${c.email ? ` (${c.email})` : ''}: บันทึกพนักงานแล้ว แต่ใบหน้าไม่สำเร็จ — ${c.faceWarning}`,
+      );
     const errorLines = (result.errors || [])
       .slice(0, 8)
       .map((e) => `• แถว ${e.row}${e.email ? ` (${e.email})` : ''}: ${e.message}`);
@@ -804,19 +860,29 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       (result.errors?.length || 0) > 8
         ? `\n…และอีก ${(result.errors!.length - 8)} รายการ`
         : '';
+    const faces = result.facesEnrolled ?? 0;
     const text = [
       `ทั้งหมด ${result.total} แถว`,
       `สำเร็จ ${result.success} รายการ`,
+      `ลงทะเบียนใบหน้า ${faces} รายการ`,
       `ไม่สำเร็จ ${result.failed} รายการ`,
+      faceWarnLines.length
+        ? '\nคำเตือนรูปใบหน้า:\n' + faceWarnLines.join('\n')
+        : '',
       errorLines.length ? '\nรายละเอียดข้อผิดพลาด:\n' + errorLines.join('\n') + more : '',
     ]
       .filter(Boolean)
       .join('\n');
 
+    const hasFaceWarn = faceWarnLines.length > 0;
     const icon =
-      result.failed === 0 ? 'success' : result.success > 0 ? 'warning' : 'error';
+      result.failed === 0 && !hasFaceWarn
+        ? 'success'
+        : result.success > 0
+          ? 'warning'
+          : 'error';
     const title =
-      result.failed === 0
+      result.failed === 0 && !hasFaceWarn
         ? 'นำเข้าสำเร็จ'
         : result.success > 0
           ? 'นำเข้าบางส่วนสำเร็จ'

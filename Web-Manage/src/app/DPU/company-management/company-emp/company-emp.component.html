@@ -15,11 +15,14 @@
           </button>
           <button type="button" class="ti-btn ti-btn-info-full modern-btn"
             [disabled]="isImporting" (click)="triggerImportFile()">
-            <i class="ri-upload-2-line font-semibold align-middle"></i>
+            <i *ngIf="!isImporting" class="ri-upload-2-line font-semibold align-middle"></i>
+            <span *ngIf="isImporting" class="ti-spinner animation-spin !w-4 !h-4 align-middle me-1" role="status"></span>
             {{ isImporting ? 'กำลังนำเข้า...' : 'นำเข้า Excel' }}
           </button>
           <input #importFileInput type="file" class="hidden" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             (change)="onImportFileSelected($event)">
+          <input #importPhotosInput type="file" class="hidden" accept=".zip,application/zip,application/x-zip-compressed"
+            (change)="onImportPhotosSelected($event)">
           <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
             data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'เพิ่ม' |
             translate}}
@@ -449,3 +452,14 @@
   </div>
 </div>
 <!-- End:: Face Management Modal -->
+
+@if (isImporting) {
+  <div class="fixed inset-0 z-[10050] flex items-center justify-center bg-black/40 backdrop-blur-[1px]"
+    role="status" aria-live="polite" aria-busy="true">
+    <div class="bg-white dark:bg-bodybg rounded-xl shadow-lg px-8 py-7 flex flex-col items-center gap-3 min-w-[260px]">
+      <div class="ti-spinner animation-spin !w-10 !h-10 text-primary" role="status"></div>
+      <div class="text-base font-semibold text-defaulttextcolor">กำลังนำเข้าพนักงาน...</div>
+      <div class="text-sm text-textmuted text-center">กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลและใบหน้า</div>
+    </div>
+  </div>
+}

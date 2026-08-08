@@ -54,9 +54,10 @@ async def download_employee_import_template_route(
 async def import_employees_excel_route(
     companyId: str,
     file: UploadFile = File(...),
+    photos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    return await import_employees_from_excel(companyId, file, db)
+    return await import_employees_from_excel(companyId, file, db, photos=photos)
 
 
 # ดึงข้อมูลพนักงานในบริษัทตาม company_employeeId และ companyId

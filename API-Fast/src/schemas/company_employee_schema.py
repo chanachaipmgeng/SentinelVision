@@ -217,6 +217,8 @@ class EmployeeImportCreatedRow(BaseModel):
     email: str
     company_employeeId: str
     employeeId: str = ""
+    faceEnrolled: bool = False
+    faceWarning: Optional[str] = None
 
 
 class EmployeeImportErrorRow(BaseModel):
@@ -229,5 +231,6 @@ class EmployeeImportResult(BaseModel):
     total: int
     success: int
     failed: int
+    facesEnrolled: int = 0
     created: List[EmployeeImportCreatedRow] = []
     errors: List[EmployeeImportErrorRow] = []

@@ -16,6 +16,7 @@ from .models import (  # noqa: F401
     position,
     employee_timestamp,
     face_encoding,
+    system_setting,
 )
 from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
 from .utils.schema_migrate import ensure_profile_and_approval_columns

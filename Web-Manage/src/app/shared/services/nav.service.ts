@@ -114,6 +114,12 @@ export class NavService implements OnDestroy {
         title: 'จัดการสิทธิ์ผู้ดูแลระบบ',
         type: 'link',
       },
+      {
+        icon: 'settings',
+        path: '/admin/system-setting',
+        title: 'ตั้งค่าระบบ / TTS',
+        type: 'link',
+      },
       // { headTitle: 'User Management' },
 
     ];

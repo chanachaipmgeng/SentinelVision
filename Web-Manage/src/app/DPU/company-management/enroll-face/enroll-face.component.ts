@@ -15,6 +15,14 @@ import {
   playWarningBeep,
   unlockBeepAudio,
 } from '../../../shared/utils/beep';
+import { speakText, unlockSpeech } from '../../../shared/utils/tts';
+import {
+  TtsSettings,
+  TtsTemplateKey,
+  buildSpeechText,
+  resolveTtsSettings,
+} from '../../../shared/utils/tts-templates';
+import { SystemSettingService } from '../../services/system-setting.service';
 
 export interface CheckInFeedItem {
   id: string;
@@ -115,6 +123,7 @@ export class EnrollFaceComponent implements OnDestroy {
   showToast = false;
   companyName = '';
   clockNow = new Date();
+  private ttsSettings: TtsSettings = resolveTtsSettings(null);
 
   feed: CheckInFeedItem[] = [];
   latestResult: CheckInFeedItem | null = null;
@@ -160,6 +169,7 @@ export class EnrollFaceComponent implements OnDestroy {
     private http: HttpClient,
     private tokenService: TokenService,
     private comLocationService: CompanyLocationService,
+    private systemSettingService: SystemSettingService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
   ) {
@@ -233,6 +243,8 @@ export class EnrollFaceComponent implements OnDestroy {
     document.documentElement.classList.add('dpu-kiosk-mode');
     this.getCurrentLocation();
     unlockBeepAudio();
+    unlockSpeech();
+    this.loadTtsSettings();
     faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
     this.startVideo();
     this.getCompanyLocation();
@@ -243,6 +255,31 @@ export class EnrollFaceComponent implements OnDestroy {
       this.clockNow = new Date();
       this.cdr.detectChanges();
     }, 1000);
+  }
+
+  private loadTtsSettings(): void {
+    this.systemSettingService.getTtsSettings().subscribe({
+      next: (settings) => {
+        this.ttsSettings = settings;
+      },
+      error: () => {
+        /* keep defaults */
+      },
+    });
+  }
+
+  private speakCheckIn(
+    key: TtsTemplateKey,
+    vars: { name?: string; firstName?: string; employeeId?: string },
+  ): void {
+    const text = buildSpeechText(this.ttsSettings, key, vars);
+    if (!text) return;
+    speakText(text, {
+      lang: this.ttsSettings.lang,
+      rate: this.ttsSettings.rate,
+      pitch: this.ttsSettings.pitch,
+      cancelPrevious: true,
+    });
   }
 
   ngOnDestroy() {
@@ -297,6 +334,8 @@ export class EnrollFaceComponent implements OnDestroy {
       .then((stream) => {
         this.videoStream = stream;
         this.video.nativeElement.srcObject = stream;
+        unlockBeepAudio();
+        unlockSpeech();
       })
       .catch((err) => {
         console.error('Error accessing camera: ', err);
@@ -993,6 +1032,9 @@ export class EnrollFaceComponent implements OnDestroy {
       `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
       track?.label ||
       'พนักงาน';
+    const firstName =
+      (member.firstName || employee.firstName || employeeName.split(/\s+/)[0] || '').trim();
+    const employeeCode = employee.employeeId || member.username || '';
     const confidencePercent = Number(
       response.confidencePercent ?? ((1 - Number(response.distance || 0)) * 100),
     );
@@ -1050,6 +1092,16 @@ export class EnrollFaceComponent implements OnDestroy {
     } else {
       playCheckInBeep();
     }
+    const speechKey: TtsTemplateKey = isDuplicate
+      ? 'checkInDuplicate'
+      : isWarning
+        ? 'checkInWarning'
+        : 'checkInSuccess';
+    this.speakCheckIn(speechKey, {
+      name: employeeName,
+      firstName,
+      employeeId: employeeCode,
+    });
     this.notify(
       isDuplicate
         ? `${employeeName} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`

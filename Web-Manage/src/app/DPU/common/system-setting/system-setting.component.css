@@ -1,0 +1,129 @@
+.sys-setting-page {
+  margin-top: 0.25rem;
+}
+
+.sys-setting-toolbar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.95rem 1.15rem !important;
+}
+
+.sys-setting-sub {
+  margin-top: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.sys-setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.sys-tool-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  height: 2.4rem !important;
+  padding: 0.45rem 0.95rem !important;
+  white-space: nowrap;
+}
+
+.sys-setting-hint {
+  margin: 0 0 0.95rem;
+  font-size: 0.82rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.sys-setting-hint code {
+  font-size: 0.78rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.35rem;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--dpu-brand-deep, #0b4f4a);
+}
+
+.sys-setting-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.sys-setting-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--dpu-brand-deep, #0b4f4a);
+  cursor: pointer;
+}
+
+.sys-setting-rate {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 11rem;
+}
+
+.sys-setting-rate input[type='range'] {
+  width: 100%;
+}
+
+.sys-setting-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.sys-setting-row .form-label {
+  margin-bottom: 0.3rem;
+}
+
+.sys-setting-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.sys-setting-input-row .form-control {
+  flex: 1 1 14rem;
+  min-width: 0;
+  border-radius: 0.8rem !important;
+}
+
+.sys-preview-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.3rem;
+  height: 2.4rem !important;
+  padding: 0.4rem 0.8rem !important;
+  white-space: nowrap;
+}
+
+.sys-setting-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 3rem 1rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.sys-setting-empty p {
+  margin: 0;
+}
+
+@media (max-width: 767.98px) {
+  .sys-tool-btn span,
+  .sys-preview-btn span {
+    display: none;
+  }
+}

@@ -4,3 +4,12 @@
   flex-wrap: wrap;
   gap: 1rem;
 }
+
+/* ti-btn-sm in this theme is icon-only (1.75rem square) — keep text buttons full-size */
+.face-mgmt-actions .ti-btn {
+  width: auto;
+  height: auto;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.85rem;
+  white-space: nowrap;
+}

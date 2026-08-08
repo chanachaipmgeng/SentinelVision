@@ -21,30 +21,30 @@
             <span class="text-sm text-textmuted p-6 text-center">เปิดกล้องหรืออัปโหลดรูปเพื่อทดสอบ</span>
           }
         </div>
-        <div class="flex flex-wrap gap-2 mt-3">
+        <div class="face-mgmt-actions flex flex-wrap items-center gap-2 mt-3">
           @if (!cameraOn) {
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-primary-full" [disabled]="isVerifying"
+            <button type="button" class="ti-btn ti-btn-primary-full !mb-0" [disabled]="isVerifying"
               (click)="startCamera()">
               <i class="ri-camera-line align-middle me-1"></i>เปิดกล้อง
             </button>
           } @else {
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-success-full" [disabled]="isVerifying"
+            <button type="button" class="ti-btn ti-btn-success-full !mb-0" [disabled]="isVerifying"
               (click)="captureFromCamera()">
               <i class="ri-camera-lens-line align-middle me-1"></i>ถ่ายรูป
             </button>
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-light" [disabled]="isVerifying"
+            <button type="button" class="ti-btn ti-btn-light !mb-0" [disabled]="isVerifying"
               (click)="stopCamera()">
               ปิดกล้อง
             </button>
           }
-          <button type="button" class="ti-btn ti-btn-sm ti-btn-info-full" [disabled]="isVerifying"
+          <button type="button" class="ti-btn ti-btn-info-full !mb-0" [disabled]="isVerifying"
             (click)="triggerVerifyFile()">
             <i class="ri-image-add-line align-middle me-1"></i>อัปโหลดรูป
           </button>
           <input #verifyFileInput type="file" class="hidden"
             accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
             (change)="onVerifyFileSelected($event)">
-          <button type="button" class="ti-btn ti-btn-sm bg-primary text-white"
+          <button type="button" class="ti-btn ti-btn-primary-full !mb-0"
             [disabled]="isVerifying || (!verifyPreview && !cameraOn)"
             (click)="runVerify()">
             @if (isVerifying) {
@@ -98,7 +98,7 @@
           <span class="badge bg-light text-default rounded-full ms-1 text-[0.75rem]">{{ encodings.length }}</span>
         </h6>
       </div>
-      <button type="button" class="ti-btn ti-btn-sm ti-btn-danger"
+      <button type="button" class="ti-btn ti-btn-danger-full !mb-0"
         [disabled]="isLoading || !encodings.length"
         (click)="clearAllEncodings()">
         <i class="ri-delete-bin-2-line align-middle me-1"></i>ล้างทั้งหมด

@@ -57,25 +57,47 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   uploaderProfile: FileUploader | undefined;
   uploadErrorMsg: string = "";
   itemsList: EmployeeModel[] = []
+  /** Full search result set (before paging). */
+  filteredSource: EmployeeModel[] = []
+  /** Current page slice shown in table/cards. */
   filterList: EmployeeModel[] = []
   selectModel: EmployeeModel = new EmployeeModel()
   selectedItems = new Map<string, boolean>();
   departmentList: DepartmentModel[] = []
   positionList: PositionModel[] = []
   pageIndex = 0;
+  /** Table: 10/page · Cards: 9/page (3×3 grid). */
+  pageSize = 10;
+  private readonly tablePageSize = 10;
+  private readonly cardsPageSize = 9;
+  /** Exclusive list layout — only one view shown at a time. */
+  listViewMode: 'table' | 'cards' = 'table';
+  private readonly listViewStorageKey = 'dpu.companyEmp.listView';
   public selectedMemberId: string | null = null;
   get searchTerm(): string {
     return this._searchTerm;
   }
   set searchTerm(val: string) {
     this.pageIndex = 0;
-    this.allSelected = false
-    this._searchTerm = val;
-    if (val != '') {
-      this.filterList = this.filter(val);
-    } else {
-      this.updatePagedItems()
-    }
+    this.allSelected = false;
+    this._searchTerm = val ?? '';
+    this.applyFilter();
+  }
+
+  get totalFiltered(): number {
+    return this.filteredSource.length;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalFiltered / this.pageSize) || 1);
+  }
+
+  get pageStart(): number {
+    return this.totalFiltered === 0 ? 0 : this.pageIndex * this.pageSize + 1;
+  }
+
+  get pageEnd(): number {
+    return Math.min((this.pageIndex + 1) * this.pageSize, this.totalFiltered);
   }
   companyId = ""
   _searchTerm = "";
@@ -851,13 +873,52 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    this.initListViewMode();
     this.getDepartment()
     this.getPosition()
 
     this.employeeService.getLists(this.companyId).subscribe(result => {
       this.itemsList = result
-      this.updatePagedItems()
+      this.applyFilter()
     })
+  }
+
+  private initListViewMode(): void {
+    try {
+      const saved = localStorage.getItem(this.listViewStorageKey);
+      if (saved === 'table' || saved === 'cards') {
+        this.listViewMode = saved;
+        this.syncPageSizeForView();
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    this.listViewMode =
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches
+        ? 'cards'
+        : 'table';
+    this.syncPageSizeForView();
+  }
+
+  private syncPageSizeForView(): void {
+    this.pageSize =
+      this.listViewMode === 'cards' ? this.cardsPageSize : this.tablePageSize;
+  }
+
+  setListViewMode(mode: 'table' | 'cards'): void {
+    if (this.listViewMode === mode) {
+      return;
+    }
+    this.listViewMode = mode;
+    this.syncPageSizeForView();
+    this.pageIndex = 0;
+    this.updatePagedItems();
+    try {
+      localStorage.setItem(this.listViewStorageKey, mode);
+    } catch {
+      /* ignore */
+    }
   }
 
   getDepartment() {
@@ -872,19 +933,46 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     })
   }
 
-  filter(v: string) {
-    this.pageIndex = 0;
-    return this.itemsList?.filter(
+  filter(v: string): EmployeeModel[] {
+    const q = (v || '').toLowerCase().trim();
+    if (!q) {
+      return [...this.itemsList];
+    }
+    return (this.itemsList || []).filter(
       (x) =>
-        x.company_employeeId?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.employeeId?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.getFullname()?.toLowerCase().indexOf(v.toLowerCase()) !== -1
-        ||
-        x.getType()?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.getRole()?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.position.getName().toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.department.getName().toLowerCase().indexOf(v.toLowerCase()) !== -1
+        x.company_employeeId?.toLowerCase().indexOf(q) !== -1 ||
+        x.employeeId?.toLowerCase().indexOf(q) !== -1 ||
+        x.getFullname()?.toLowerCase().indexOf(q) !== -1 ||
+        x.getType()?.toLowerCase().indexOf(q) !== -1 ||
+        x.getRole()?.toLowerCase().indexOf(q) !== -1 ||
+        x.position?.getName()?.toLowerCase().indexOf(q) !== -1 ||
+        x.department?.getName()?.toLowerCase().indexOf(q) !== -1 ||
+        x.member?.email?.toLowerCase().indexOf(q) !== -1,
     );
+  }
+
+  applyFilter(): void {
+    this.filteredSource = this.filter(this._searchTerm);
+    if (this.pageIndex >= this.totalPages) {
+      this.pageIndex = Math.max(0, this.totalPages - 1);
+    }
+    this.updatePagedItems();
+  }
+
+  goToPage(index: number): void {
+    if (index < 0 || index >= this.totalPages) {
+      return;
+    }
+    this.pageIndex = index;
+    this.updatePagedItems();
+  }
+
+  nextPage(): void {
+    this.goToPage(this.pageIndex + 1);
+  }
+
+  prevPage(): void {
+    this.goToPage(this.pageIndex - 1);
   }
 
   delete(item: EmployeeModel) {
@@ -1285,10 +1373,12 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   //   this.selectModel.supervisor = this.itemsList.filter(e => e.employeeId == empId)[0]
   // }
 
-  updatePagedItems() {
-    const startIndex = this.pageIndex * 10;
-    const endIndex = startIndex + 10;
-    // this.filterList = this.itemsList.slice(startIndex, endIndex);
-    this.filterList = this.itemsList
+  updatePagedItems(): void {
+    if (!this.filteredSource?.length && !this._searchTerm) {
+      this.filteredSource = [...(this.itemsList || [])];
+    }
+    const startIndex = this.pageIndex * this.pageSize;
+    this.filterList = this.filteredSource.slice(startIndex, startIndex + this.pageSize);
   }
 }
+

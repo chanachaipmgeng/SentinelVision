@@ -1,123 +1,225 @@
 <app-page-header [title]="'พนักงาน'" [activeTitle]="'จัดการบริษัท'" [title1]="'พนักงาน'"></app-page-header>
-<div class="grid grid-cols-12 gap-x-6">
-  <div class="xl:col-span-12 col-span-12">
-    <div class="box mt-6 modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-      <div class="box-header justify-between">
-        <div class="box-title">
-          {{ 'All List' | translate}} <span
-            class="badge bg-light text-default rounded-full ms-1 text-[0.75rem] align-middle">{{itemsList.length}}</span>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="ti-btn ti-btn-success-full modern-btn"
-            [disabled]="isImporting" (click)="downloadImportTemplate()">
-            <i class="ri-file-excel-2-line font-semibold align-middle"></i>
-            ดาวน์โหลดเทมเพลต
-          </button>
-          <button type="button" class="ti-btn ti-btn-info-full modern-btn"
-            [disabled]="isImporting" (click)="triggerImportFile()">
-            <i *ngIf="!isImporting" class="ri-upload-2-line font-semibold align-middle"></i>
-            <span *ngIf="isImporting" class="ti-spinner animation-spin !w-4 !h-4 align-middle me-1" role="status"></span>
-            {{ isImporting ? 'กำลังนำเข้า...' : 'นำเข้า Excel' }}
-          </button>
-          <input #importFileInput type="file" class="hidden" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            (change)="onImportFileSelected($event)">
-          <input #importPhotosInput type="file" class="hidden" accept=".zip,application/zip,application/x-zip-compressed"
-            (change)="onImportPhotosSelected($event)">
-          <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn" (click)="new()"
-            data-hs-overlay="#modal-detail"><i class="ri-add-line font-semibold align-middle"></i>{{ 'เพิ่ม' |
-            translate}}
-          </a>
-          <div>
-            <input [(ngModel)]='searchTerm' class="form-control form-control" type="text"
-              placeholder="{{ 'ค้นหาข้อมูลพนักงาน' | translate}}" aria-label=".form-control-sm example">
-          </div>
-          <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
-            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
-          </a>
-          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Posted Date</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Status</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Department</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Job Type</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
-          </ul> -->
-        </div>
-      </div>
-    </div>
-  </div>
-  @for(item of filterList;track filterList){
-  <div class="xxl:col-span-4 xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-12 col-span-12">
-    <div class="box team-member-card modern-card animate-in zoom-in duration-500 delay-200">
-      <div class="teammember-cover-image mt-1">
-        <span class="avatar avatar-xl avatar-rounded">
-          <img [src]="item.member.getPicture()" alt="">
-        </span>
 
-      </div>
-      <div class="box-body !p-0">
-        <div
-          class="flex flex-wrap align-item-center sm:mt-0 mt-[3rem] justify-between border-b border-dashed dark:border-defaultborder/10 p-4">
-          <div class="team-member-details flex-grow">
-            <p class="mb-0 font-semibold text-[1rem] text-truncate">
-              <a href="javascript:void(0);">{{item.member.firstName+ ' ' +item.member.lastName}}</a>
-            </p>
-            <p class="mb-0 text-[0.75rem] text-dpu-muted dark:text-white/50 text-truncate">
-              {{item.member.email}}</p>
+<div class="emp-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <div class="box emp-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header emp-toolbar-header">
+        <div class="emp-toolbar-inner">
+          <div class="emp-toolbar-title">
+            <div class="box-title !mb-0">พนักงาน</div>
+            <span class="emp-stat-chip">ทั้งหมด {{ itemsList.length }}</span>
+            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
           </div>
-        </div>
-        <div class="team-member-stats sm:flex items-center justify-evenly">
-          <div class="text-center p-4 w-full">
-            <p class="font-semibold mb-0">รหัสพนักงาน</p>
-            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.employeeId}}</span>
-          </div>
-          <div class="text-center p-4 w-full">
-            <p class="font-semibold mb-0">แผนก</p>
-            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.position.thName}}</span>
-          </div>
-          <div class="text-center p-4 w-full">
-            <p class="font-semibold mb-0">ตำแหน่ง</p>
-            <span class="text-dpu-muted dark:text-white/50 text-[0.75rem]">{{item.department.thName}}</span>
-          </div>
-        </div>
-      </div>
-      <div class="box-footer border-block-start-dashed dark:border-defaultborder/10 text-center">
-        <div class="btn-list">
-          <div class="btn-list">
-            <button type="button" aria-label="button" data-hs-overlay="#modal-detail" (click)="view(item)"
-              class="ti-btn ti-btn-sm  ti-btn-primary me-[0.375rem] modern-btn"><i class="ri-edit-line"></i></button>
-            <button routerLink="/company/timestamp-log/{{item.company_employeeId}}" routerLinkActive="active"
-              type="button" aria-label="button" class="ti-btn ti-btn-sm ti-btn-secondary !me-[0.375rem] modern-btn">
-              <i class="ri-time-line"></i>
 
-            </button>
-            <button data-hs-overlay="#modal-face" (click)="openFaceEnroll(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-warning me-[0.375rem] modern-btn">
-              <i class="ri-account-circle-line"></i>
-            </button>
-            <!-- New Button for Face Management -->
-            <button data-hs-overlay="#modal-face-management" (click)="openFaceManagementModal(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-info me-[0.375rem] modern-btn">
-              <i class="ri-gallery-line"></i>
-            </button>
-            <button (click)="delete(item)" type="button" aria-label="button"
-              class="ti-btn ti-btn-sm ti-btn-danger me-0 modern-btn"><i class="ri-delete-bin-line"></i></button>
+          <div class="emp-toolbar-controls">
+            <div class="emp-search">
+              <i class="ri-search-line emp-search-icon" aria-hidden="true"></i>
+              <input [(ngModel)]="searchTerm" class="form-control emp-search-input" type="search"
+                placeholder="{{ 'ค้นหาข้อมูลพนักงาน' | translate }}" aria-label="ค้นหาพนักงาน">
+            </div>
+
+            <div class="emp-toolbar-btns">
+              <div class="emp-view-toggle" role="group" aria-label="สลับมุมมอง">
+                <button type="button" class="emp-view-btn" title="มุมมองตาราง"
+                  [class.active]="listViewMode === 'table'"
+                  (click)="setListViewMode('table')">
+                  <i class="ri-table-line"></i>
+                </button>
+                <button type="button" class="emp-view-btn" title="มุมมองการ์ด"
+                  [class.active]="listViewMode === 'cards'"
+                  (click)="setListViewMode('cards')">
+                  <i class="ri-layout-grid-line"></i>
+                </button>
+              </div>
+              <button type="button" class="ti-btn ti-btn-success-full modern-btn emp-tool-btn"
+                [disabled]="isImporting" (click)="downloadImportTemplate()">
+                <i class="ri-file-excel-2-line"></i>
+                <span class="emp-tool-label">เทมเพลต</span>
+              </button>
+              <button type="button" class="ti-btn ti-btn-info-full modern-btn emp-tool-btn"
+                [disabled]="isImporting" (click)="triggerImportFile()">
+                <i *ngIf="!isImporting" class="ri-upload-2-line"></i>
+                <span *ngIf="isImporting" class="ti-spinner animation-spin !w-4 !h-4" role="status"></span>
+                <span class="emp-tool-label">{{ isImporting ? 'กำลังนำเข้า...' : 'นำเข้า' }}</span>
+              </button>
+              <input #importFileInput type="file" class="hidden"
+                accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                (change)="onImportFileSelected($event)">
+              <input #importPhotosInput type="file" class="hidden"
+                accept=".zip,application/zip,application/x-zip-compressed"
+                (change)="onImportPhotosSelected($event)">
+              <a href="javascript:void(0);"
+                class="hs-dropdown-toggle ti-btn ti-btn-primary-full modern-btn emp-tool-btn emp-tool-btn--primary"
+                (click)="new()" data-hs-overlay="#modal-detail">
+                <i class="ri-add-line"></i>
+                <span class="emp-tool-label">{{ 'เพิ่ม' | translate }}</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-  }
+
+  <div class="col-span-12">
+    <div class="box emp-list-panel modern-card glass">
+      @if (listViewMode === 'table' && totalFiltered > 0) {
+        <div class="box-body !p-0">
+          <div class="table-responsive">
+            <table class="table whitespace-nowrap emp-table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">พนักงาน</th>
+                  <th scope="col">รหัส</th>
+                  <th scope="col">แผนก</th>
+                  <th scope="col">ตำแหน่ง</th>
+                  <th scope="col" class="text-end">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of filterList; track item.company_employeeId; let i = $index) {
+                  <tr class="emp-row" [style.animation-delay.ms]="i * 40">
+                    <td>
+                      <div class="emp-person">
+                        <span class="avatar avatar-md avatar-rounded emp-avatar">
+                          <img [src]="item.member.getPicture()" alt="">
+                        </span>
+                        <div class="min-w-0">
+                          <p class="mb-0 font-semibold text-truncate">
+                            {{ item.member.firstName }} {{ item.member.lastName }}
+                          </p>
+                          <p class="mb-0 text-[0.75rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="emp-code">{{ item.employeeId || '—' }}</span></td>
+                    <td>{{ item.department?.thName || '—' }}</td>
+                    <td>{{ item.position?.thName || '—' }}</td>
+                    <td>
+                      <div class="emp-actions justify-end">
+                        <button type="button" title="แก้ไข" data-hs-overlay="#modal-detail" (click)="view(item)"
+                          class="ti-btn ti-btn-sm ti-btn-primary modern-btn"><i class="ri-edit-line"></i></button>
+                        <button type="button" title="ประวัติลงเวลา"
+                          routerLink="/company/timestamp-log/{{ item.company_employeeId }}"
+                          class="ti-btn ti-btn-sm ti-btn-secondary modern-btn"><i class="ri-time-line"></i></button>
+                        <button type="button" title="ลงทะเบียนใบหน้า" data-hs-overlay="#modal-face"
+                          (click)="openFaceEnroll(item)"
+                          class="ti-btn ti-btn-sm ti-btn-warning modern-btn"><i class="ri-account-circle-line"></i></button>
+                        <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
+                          (click)="openFaceManagementModal(item)"
+                          class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                        <button type="button" title="ลบ" (click)="delete(item)"
+                          class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (listViewMode === 'cards' && totalFiltered > 0) {
+        <div class="box-body emp-card-grid">
+          @for (item of filterList; track item.company_employeeId; let i = $index) {
+            <article class="emp-card" [style.animation-delay.ms]="i * 45">
+              <div class="emp-card-head emp-card-head--stack">
+                <span class="avatar avatar-xl avatar-rounded emp-avatar">
+                  <img [src]="item.member.getPicture()" alt="">
+                </span>
+                <div class="min-w-0 w-full text-center">
+                  <p class="mb-0 font-semibold text-[0.95rem] text-truncate">
+                    {{ item.member.firstName }} {{ item.member.lastName }}
+                  </p>
+                  <p class="mb-0 text-[0.72rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                </div>
+              </div>
+              <div class="emp-card-meta emp-card-meta--stack">
+                <div>
+                  <span class="emp-meta-label">รหัส</span>
+                  <span class="emp-meta-value">{{ item.employeeId || '—' }}</span>
+                </div>
+                <div>
+                  <span class="emp-meta-label">แผนก</span>
+                  <span class="emp-meta-value">{{ item.department?.thName || '—' }}</span>
+                </div>
+                <div>
+                  <span class="emp-meta-label">ตำแหน่ง</span>
+                  <span class="emp-meta-value">{{ item.position?.thName || '—' }}</span>
+                </div>
+              </div>
+              <div class="emp-actions emp-actions--center">
+                <button type="button" title="แก้ไข" data-hs-overlay="#modal-detail" (click)="view(item)"
+                  class="ti-btn ti-btn-sm ti-btn-primary modern-btn"><i class="ri-edit-line"></i></button>
+                <button type="button" title="ประวัติลงเวลา"
+                  routerLink="/company/timestamp-log/{{ item.company_employeeId }}"
+                  class="ti-btn ti-btn-sm ti-btn-secondary modern-btn"><i class="ri-time-line"></i></button>
+                <button type="button" title="ลงทะเบียนใบหน้า" data-hs-overlay="#modal-face"
+                  (click)="openFaceEnroll(item)"
+                  class="ti-btn ti-btn-sm ti-btn-warning modern-btn"><i class="ri-account-circle-line"></i></button>
+                <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
+                  (click)="openFaceManagementModal(item)"
+                  class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                <button type="button" title="ลบ" (click)="delete(item)"
+                  class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+
+      @if (totalFiltered === 0) {
+        <div class="emp-empty">
+          <i class="ri-user-search-line"></i>
+          <p class="mb-1 font-semibold">{{ searchTerm ? 'ไม่พบพนักงานที่ค้นหา' : 'ยังไม่มีพนักงาน' }}</p>
+          <p class="mb-0 text-sm text-dpu-muted">
+            {{ searchTerm ? 'ลองเปลี่ยนคำค้นหา หรือล้างช่องค้นหา' : 'กดเพิ่ม หรือนำเข้าจาก Excel เพื่อเริ่มต้น' }}
+          </p>
+        </div>
+      }
+
+      @if (totalFiltered > 0) {
+        <div class="box-footer emp-pager">
+          <div class="text-sm text-dpu-muted">
+            แสดง {{ pageStart }}–{{ pageEnd }} จาก {{ totalFiltered }}
+          </div>
+          <nav aria-label="เปลี่ยนหน้า">
+            <ul class="ti-pagination mb-0">
+              <li class="page-item" [class.disabled]="pageIndex === 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="prevPage()">ก่อนหน้า</a>
+              </li>
+              <li class="page-item" *ngIf="pageIndex - 1 > 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage(pageIndex - 2)">{{ pageIndex - 1 }}</a>
+              </li>
+              <li class="page-item" *ngIf="pageIndex > 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage(pageIndex - 1)">{{ pageIndex }}</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link active px-3 py-[0.375rem]" href="javascript:void(0);">{{ pageIndex + 1 }}</a>
+              </li>
+              <li class="page-item" *ngIf="(pageIndex + 1) * pageSize < totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage(pageIndex + 1)">{{ pageIndex + 2 }}</a>
+              </li>
+              <li class="page-item" *ngIf="(pageIndex + 2) * pageSize < totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage(pageIndex + 2)">{{ pageIndex + 3 }}</a>
+              </li>
+              <li class="page-item" [class.disabled]="(pageIndex + 1) * pageSize >= totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="nextPage()">ถัดไป</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      }
+    </div>
+  </div>
 </div>
-<!-- <nav aria-label="Page navigation" class="mb-4">
-  <ul class="ti-pagination !justify-end py-[0.375rem] px-3 text-[1rem] flex flex-row">
-    <li class="page-item disabled"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">Previous</a></li>
-    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">1</a></li>
-    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">2</a></li>
-    <li class="page-item"><a class="page-link py-[0.375rem] px-3" href="javascript:void(0);">Next</a></li>
-  </ul>
-</nav> -->
-
 
 <!-- Start:: New Deal -->
 <div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">

@@ -1,3 +1,0 @@
-# Skip huge optional blobs — keep face-api models for scan/enroll
-*.rar
-*.pkl

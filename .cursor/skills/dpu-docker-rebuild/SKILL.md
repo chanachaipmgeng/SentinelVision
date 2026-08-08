@@ -34,11 +34,11 @@ curl -s http://localhost/face/queue-stats
 curl -s -o NUL -w "%{http_code}" http://localhost/docs
 ```
 
-Expect `dpu-api` healthy, queue `"started": true`.
+Expect `dpu-api` healthy, queue `"started": true`. Stack services: `db`, `api`, `admin`, `nginx` (no mobile app).
 
 After **admin** rebuild, also smoke SPA routes (expect `200`):
 
-- `/`, `/admin/home`, `/company/dashboard`, `/company/timestamp-face`
+- `/`, `/admin/home`, `/company/dashboard`, `/company/timestamp-face`, `/admin/system-setting`
 
 Kiosk fullscreen is CSS-only (`dpu-kiosk-mode`); no API rebuild required for shell/UI-only changes.
 

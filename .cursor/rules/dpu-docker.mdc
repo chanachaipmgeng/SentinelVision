@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Services
 
-`db` (pgvector), `api`, `admin`, `mobile`, `nginx` (:80)
+`db` (pgvector), `api`, `admin`, `nginx` (:80)
 
 GPU API: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api`
 
@@ -19,7 +19,6 @@ GPU API: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d -
 | `API-Fast/src/**` | `api` |
 | `Web-Manage/**` | `admin` |
 | `docker/nginx/default.conf` | `nginx` |
-| Mobile app | `mobile` |
 
 API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code.
 
@@ -27,7 +26,7 @@ API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only �
 
 - Resolve API via Docker DNS `127.0.0.11` + variable `proxy_pass` (avoid stale IP 502)
 - Face WS: `location ^~ /face/ws/` with Upgrade + long timeouts **before** the general `/face` regex
-- Proxy prefixes: auth, members, face, timestamp, images, enrolled_images, …
+- Proxy prefixes: auth, members, face, timestamp, system, dashboard, images, enrolled_images, …
 
 ## Health
 

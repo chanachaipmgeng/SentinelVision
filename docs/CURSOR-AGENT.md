@@ -40,7 +40,9 @@ Shared kit under `Web-Manage/src/app/shared/`:
 - Styles: `shared/styles/dpu-list-page.css`, brand tokens in `assets/css/dpu-theme.css`
 - Shell: `content-layout` + decluttered header/sidebar; company menu includes dashboard + kiosk
 
-Pages already on the standard include company emp / timestamp logs / location / info / department / position, admin member/company/admin-manage, dashboard, company & admin homes, face-management dialog.
+Pages already on the standard include company emp / timestamp logs / location / info / department / position, admin member/company/admin-manage, dashboard, company & admin homes, face-management dialog, system TTS settings (`/admin/system-setting`).
+
+There is **no** `Webview-Mobile` app — check-in is kiosk-only.
 
 ## Related docs
 

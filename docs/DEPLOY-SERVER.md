@@ -142,8 +142,7 @@ docker compose logs -f api
 |----------------------|---------|
 | `dpu-db` | PostgreSQL + pgvector |
 | `dpu-api` | FastAPI + InsightFace |
-| `dpu-admin` | Web Admin (Angular) |
-| `dpu-mobile` | Web Mobile (Angular) |
+| `dpu-admin` | Web Admin + face kiosk (Angular) |
 | `dpu-nginx` | Gateway พอร์ต `HTTP_PORT` |
 
 ---
@@ -178,7 +177,7 @@ chmod +x scripts/seed-and-test.sh
 ### 5.3 หมายเหตุเรื่องใบหน้า
 
 - Seed จะใส่ **face embedding จำลอง** เพื่อให้โครงสร้างตารางครบ
-- **ไม่ใช่ใบหน้าคนจริง** — ตอนใช้งานจริงต้องลงทะเบียนใบหน้าใหม่จาก Admin หรือ Mobile
+- **ไม่ใช่ใบหน้าคนจริง** — ตอนใช้งานจริงต้องลงทะเบียนใบหน้าใหม่จาก Admin
 - หลังย้ายจากระบบ `face_recognition` เก่า (128-d) ต้อง enroll ใหม่ทั้งหมด
 
 ---
@@ -190,7 +189,7 @@ chmod +x scripts/seed-and-test.sh
 | URL | บริการ |
 |-----|--------|
 | `http://<SERVER_IP>/` | Admin (Web-Manage) |
-| `http://<SERVER_IP>/mobile/` | Mobile |
+| `http://<SERVER_IP>/company/timestamp-face` | Kiosk ลงเวลาด้วยใบหน้า |
 | `http://<SERVER_IP>/docs` | API Swagger / OpenAPI |
 | `http://<SERVER_IP>/face/queue-stats` | สถานะคิว GPU (ถ้าเปิดใช้) |
 
@@ -315,4 +314,4 @@ docker compose run --rm \
 
 ---
 
-*อัปเดตล่าสุดให้สอดคล้องกับ Docker stack: `db` · `api` · `admin` · `mobile` · `nginx`*
+*อัปเดตล่าสุดให้สอดคล้องกับ Docker stack: `db` · `api` · `admin` · `nginx`*

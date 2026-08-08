@@ -17,7 +17,7 @@ docker compose up --build
 | URL | Service |
 |-----|---------|
 | http://localhost/ | Admin |
-| http://localhost/mobile/ | Mobile |
+| http://localhost/company/timestamp-face | Face kiosk |
 | http://localhost/docs | OpenAPI |
 | localhost:5432 | PostgreSQL |
 

@@ -121,21 +121,22 @@ export class NavService implements OnDestroy {
 
   getCompanyMenu() {
     return [
-      // Dashboard
       { headTitle: 'จัดการบริษัท' },
-      // { headTitle: 'User Management' },
+      {
+        icon: 'home',
+        path: '/company/dashboard',
+        title: 'แดชบอร์ด',
+        type: 'link',
+      },
       {
         title: 'จัดการข้อมูลบริษัท',
         icon: 'buildings',
         type: 'sub',
-        badgeClass: 'warning',
-        badgeText: 'warning',
         active: false,
         children: [
           { path: '/company/company-info', title: 'ข้อมูลบริษัท', type: 'link' },
           { path: '/company/company-department', title: 'จัดการแผนก', type: 'link' },
           { path: '/company/company-position', title: 'จัดการตำแหน่ง', type: 'link' },
-          // { path: '/company/company-hr', title: 'จัดการผู้ดูแลบริษัท', type: 'link' },
           { path: '/company/company-emp', title: 'พนักงาน', type: 'link' },
         ],
       },
@@ -143,15 +144,14 @@ export class NavService implements OnDestroy {
         title: 'จัดการข้อมูลการลงเวลา',
         icon: 'time',
         type: 'sub',
-        badgeClass: 'warning',
-        badgeText: 'warning',
         active: false,
         children: [
           { path: '/company/company-location', title: 'สถานที่การลงเวลา', type: 'link' },
           { path: '/company/timestamp-log', title: 'ข้อมูลการลงเวลา', type: 'link' },
           { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
+          { path: '/company/timestamp-face', title: 'Kiosk ใบหน้า', type: 'link' },
         ],
-      }
+      },
     ];
   }
 

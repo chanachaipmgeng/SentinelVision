@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.page {
+  min-height: 100dvh;
+}
+
+.content {
+  position: relative;
+}
+
+.main-content {
+  min-height: calc(100dvh - 3.75rem);
+}
+
+/* Keep overlay clickable above page chrome on mobile */
+#responsive-overlay.active {
+  z-index: 40;
+}

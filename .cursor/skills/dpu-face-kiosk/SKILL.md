@@ -3,21 +3,23 @@ name: dpu-face-kiosk
 description: >-
   Implements or debugs DPU multi-person face kiosk (track, walk-by, WebSocket
   stream, GPU queue). Use when editing timestamp-face/enroll-face, face check-in
-  APIs, /face/ws/kiosk, queue-stats, or InsightFace liveness/walk-by modes.
+  APIs, /face/ws/kiosk, queue-stats, InsightFace liveness/walk-by modes, or
+  kiosk fullscreen chrome (dpu-kiosk-mode).
 ---
 
 # DPU face kiosk workflow
 
 ## When to use
 
-Changing kiosk UX, face match/check-in, stream mode, or GPU inference queuing.
+Changing kiosk UX, face match/check-in, stream mode, GPU inference queuing, or fullscreen shell for `/company/timestamp-face`.
 
 ## Read first
 
 1. `.cursor/rules/dpu-face-api.mdc` and `dpu-web-manage.mdc`
 2. `Web-Manage/.../enroll-face/enroll-face.component.ts`
-3. `API-Fast/src/controllers/face_controller.py`, `face_ws_controller.py`
-4. `API-Fast/src/utils/face_engine.py`, `face_gpu_queue.py`
+3. `Web-Manage/.../content-layout.component.ts` + `assets/css/dpu-theme.css` (`dpu-kiosk-mode`)
+4. `API-Fast/src/controllers/face_controller.py`, `face_ws_controller.py`
+5. `API-Fast/src/utils/face_engine.py`, `face_gpu_queue.py`
 
 ## Modes (do not mix carelessly)
 
@@ -29,6 +31,12 @@ Changing kiosk UX, face match/check-in, stream mode, or GPU inference queuing.
 
 Kiosk default: **stream**, HTTP walk-by fallback.
 
+## Fullscreen chrome
+
+- Route match → `html.dpu-kiosk-mode` (content-layout + enroll-face add/remove)
+- CSS hides `app-header`, `app-sidebar`, `app-footer`, overlay; content fills `100dvh`
+- Layout polish only: do **not** alter detectFace / WS / check-in / geofence logic
+
 ## Implementation checklist
 
 - [ ] Multi-track IoU; per-member cooldown; crop-per-track
@@ -38,6 +46,7 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 - [ ] Nginx WS Upgrade intact if touching gateway
 - [ ] Rebuild `api` / `admin` / `nginx` as needed
 - [ ] Verify: queue-stats, kiosk shows stream connected, multi-face boxes
+- [ ] Leaving kiosk restores shell chrome (class removed)
 
 ## Debug
 

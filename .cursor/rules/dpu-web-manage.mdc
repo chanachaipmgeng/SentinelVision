@@ -1,6 +1,6 @@
 ---
-description: Admin Angular kiosk and Web-Manage UI patterns
-globs: Web-Manage/**/*.{ts,html,scss}
+description: Admin Angular kiosk, shared list UI kit, and Web-Manage shell patterns
+globs: Web-Manage/**/*.{ts,html,scss,css}
 alwaysApply: false
 ---
 
@@ -9,10 +9,36 @@ alwaysApply: false
 ## Kiosk
 
 - Route: `/company/timestamp-face` → `enroll-face` standalone component
+- Fullscreen chrome: `html.dpu-kiosk-mode` (set by `content-layout` + component) hides header/sidebar/footer — CSS in `assets/css/dpu-theme.css`
 - Multi-person: IoU tracks, smooth boxes, per-`memberId` cooldown
 - Prefer **WebSocket** `/face/ws/kiosk` for identify + walk-by check-in; HTTP fallback if WS down
 - Crop faces before send; do not upload full frames for multi-person
 - Cap concurrent check-ins / identifies; never global-lock the whole camera for one person
+- Do not change face WS / GPU / check-in logic when only polishing kiosk layout
+
+## Shared list UI kit
+
+Prefer these over inventing new list chrome:
+
+| Piece | Path |
+|-------|------|
+| Toolbar | `shared/components/page-toolbar/` |
+| Search | `shared/components/pill-search/` |
+| Stat chip | `shared/components/stat-chip/` |
+| Pager | `shared/components/simple-pager/` |
+| Empty/loading | `shared/components/empty-state/` |
+| Map | `shared/components/location-map/` (OSM fallback) |
+| List CSS | `shared/styles/dpu-list-page.css` |
+| Brand tokens | `assets/css/dpu-theme.css` (`--dpu-brand` teal `#0f766e`) |
+
+Patterns: `app-page-header` + toolbar (title/chips/search/actions) + table or cards + modal CRUD; client-side filter then paginate; `ng-select` with `[appendTo]="'body'"`; labeled buttons without `ti-btn-sm`.
+
+## Shell (header / sidebar / content)
+
+- Layout: `shared/layouts/content-layout/` — keep `<app-switcher class="dpu-hidden-switcher">` mounted
+- Header/sidebar: declutter only; preserve Ynex `data-toggled` / `data-nav-layout` behavior
+- Menus: `shared/services/nav.service.ts` — `getCommonMenu()` (admin) vs `getCompanyMenu()` (company)
+- Theme lock: `html.dpu-theme-lock` hides dark toggle + theme switcher UI
 
 ## Angular habits
 
@@ -25,3 +51,4 @@ alwaysApply: false
 
 - Keep kiosk overlay readable (name + confidence on box); avoid cluttering the first camera viewport
 - Toast + feed panel for results; soft-fail walk-by misses (toast, retry track) instead of spamming error feed
+- Thai UI copy is OK for kiosk and admin screens; keep code/comments in English unless the file already uses Thai

@@ -18,5 +18,7 @@ Carried forward from the original Sprint#1 notes (`Web-Manage/Sprint.txt`).
 
 ## Product polish
 
-- Strip unused ThemeForest demo modules from Angular apps
+- Admin ThemeForest demo strip + list UI standard — **done** (see [PLAN-CLEANUP-REDESIGN.md](PLAN-CLEANUP-REDESIGN.md) P1)
+- Align `Webview-Mobile` shell/tokens to the same teal design system — **open**
 - Finish mobile stub screens (working-plan, approval, e-document) or remove routes
+- Close remaining P2 gaps: employee profile fields + approval status on mobile history

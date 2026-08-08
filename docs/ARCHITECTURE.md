@@ -44,9 +44,18 @@ Start everything with `docker compose up --build`.
    - Prefer `WS /face/ws/kiosk` (identify + walk-by check-in via GPU queue)
    - Fallback `POST /face/members/check-in-walkby` (or secure `/check-in`)
    - Server dedupe (`CHECK_IN_DEDUPE_SECONDS`) + geofenced timestamp
+   - UI: fullscreen chrome via `html.dpu-kiosk-mode` (hides admin header/sidebar)
 4. Mobile may still upload a photo and `POST /timestamp/company/{id}` with GPS; server validates area via Haversine
 
 Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, FAISS / OpenCV pickle artifacts.
+
+## Admin UI (Web-Manage)
+
+- Brand tokens + shell: `Web-Manage/src/assets/css/dpu-theme.css`
+- Shared list kit: `Web-Manage/src/app/shared/components/` (`page-toolbar`, `pill-search`, `stat-chip`, `simple-pager`, `empty-state`, `location-map`)
+- List helpers: `Web-Manage/src/app/shared/styles/dpu-list-page.css`
+- Shell layout: `shared/layouts/content-layout/` + header/sidebar
+- Menus: `shared/services/nav.service.ts` (`getCommonMenu` / `getCompanyMenu`)
 
 ## Key source paths
 

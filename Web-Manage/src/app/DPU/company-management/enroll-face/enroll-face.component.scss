@@ -57,6 +57,39 @@ html.dpu-kiosk-mode .dpu-kiosk {
   margin-bottom: 0.75rem;
 }
 
+.dpu-kiosk__top-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.dpu-kiosk__home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--dpu-brand-deep, #0b4f4a);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.dpu-kiosk__home-btn:hover {
+  background: #fff;
+  transform: translateY(-1px);
+  color: var(--dpu-brand, #0f766e);
+}
+
+.dpu-kiosk__home-btn i {
+  font-size: 1.05rem;
+}
+
 .dpu-kiosk__eyebrow {
   margin: 0;
   font-size: 0.72rem;
@@ -201,6 +234,184 @@ html.dpu-kiosk-mode .dpu-kiosk {
 
 .dpu-kiosk__panel-head {
   margin-bottom: 0.75rem;
+}
+
+.dpu-kiosk__panel-head--row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dpu-kiosk__panel-head--spaced {
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed var(--dpu-border, #e2e8f0);
+}
+
+.dpu-kiosk__icon-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: #fff;
+  color: var(--dpu-brand-deep, #0b4f4a);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dpu-kiosk__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.dpu-kiosk__summary-card {
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: 0.7rem;
+  padding: 0.45rem 0.35rem;
+  text-align: center;
+}
+
+.dpu-kiosk__summary-card.is-warn {
+  background: rgba(194, 65, 12, 0.08);
+  border-color: rgba(194, 65, 12, 0.16);
+}
+
+.dpu-kiosk__summary-val {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dpu-brand-deep, #0b4f4a);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.dpu-kiosk__summary-card.is-warn .dpu-kiosk__summary-val {
+  color: #c2410c;
+}
+
+.dpu-kiosk__summary-label {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--dpu-muted, #64748b);
+}
+
+.dpu-kiosk__tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.dpu-kiosk__tab {
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: #f8fafc;
+  color: var(--dpu-muted, #64748b);
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dpu-kiosk__tab.is-active {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.35);
+  color: var(--dpu-brand-deep, #0b4f4a);
+}
+
+.dpu-kiosk__roster {
+  list-style: none;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.dpu-kiosk__roster-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.7rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.dpu-kiosk__roster-item.is-warn {
+  background: rgba(254, 243, 199, 0.45);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.dpu-kiosk__roster-avatar {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  object-fit: cover;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.dpu-kiosk__roster-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.dpu-kiosk__roster-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.dpu-kiosk__roster-row strong {
+  font-size: 0.84rem;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dpu-kiosk__roster-row time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dpu-brand-deep, #0b4f4a);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.dpu-kiosk__empty--sm {
+  padding: 0.85rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.dpu-kiosk__empty--sm p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 575.98px) {
+  .dpu-kiosk__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dpu-kiosk__home-btn span {
+    display: none;
+  }
+
+  .dpu-kiosk__home-btn {
+    padding: 0.5rem;
+  }
 }
 
 .dpu-kiosk__subtitle {

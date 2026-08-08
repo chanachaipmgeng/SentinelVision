@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import * as faceapi from 'face-api.js';
 
 import { environment } from '../../../../environments/environment';
@@ -32,6 +33,33 @@ export interface CheckInFeedItem {
   distance?: number | null;
 }
 
+export interface KioskRosterPerson {
+  company_employeeId: string;
+  employeeId: string;
+  employeeName: string;
+  picture?: string | null;
+  department?: string;
+  position?: string;
+  timestamp?: string | Date;
+  timestampType?: number;
+  locationName?: string;
+  photoTimestamp?: string | null;
+  approvalStatus?: string;
+}
+
+export interface KioskAttendance {
+  summary: {
+    totalEmployees: number;
+    checkedInCount: number;
+    notCheckedInCount: number;
+    inAreaCount: number;
+    outsideCount: number;
+    day?: string;
+  };
+  checkedIn: KioskRosterPerson[];
+  notCheckedIn: KioskRosterPerson[];
+}
+
 type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
 
 interface SmoothBox {
@@ -61,7 +89,7 @@ interface FaceTrack {
 @Component({
   selector: 'app-enroll-face',
   standalone: true,
-  imports: [CommonModule, SharedModule],
+  imports: [CommonModule, SharedModule, RouterModule],
   templateUrl: './enroll-face.component.html',
   styleUrl: './enroll-face.component.scss'
 })
@@ -91,10 +119,15 @@ export class EnrollFaceComponent implements OnDestroy {
   feed: CheckInFeedItem[] = [];
   latestResult: CheckInFeedItem | null = null;
 
+  attendance: KioskAttendance | null = null;
+  rosterTab: 'checked' | 'pending' = 'checked';
+  homeLink = '/company/dashboard';
+
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
   private videoStream: MediaStream | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private clockTimer: ReturnType<typeof setInterval> | null = null;
+  private attendanceTimer: ReturnType<typeof setInterval> | null = null;
   private detectBusy = false;
   private kioskWs: WebSocket | null = null;
   private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -133,6 +166,26 @@ export class EnrollFaceComponent implements OnDestroy {
     const company = this.tokenService.getSelectCompany();
     this.companyId = company.companyId;
     this.companyName = company.companyName || 'บริษัท';
+    this.homeLink = `/company/home/${this.companyId}`;
+  }
+
+  get checkedInCount(): number {
+    return this.attendance?.summary?.checkedInCount ?? 0;
+  }
+
+  get notCheckedInCount(): number {
+    return this.attendance?.summary?.notCheckedInCount ?? 0;
+  }
+
+  get totalEmployees(): number {
+    return this.attendance?.summary?.totalEmployees ?? 0;
+  }
+
+  get rosterList(): KioskRosterPerson[] {
+    if (!this.attendance) return [];
+    return this.rosterTab === 'checked'
+      ? this.attendance.checkedIn || []
+      : this.attendance.notCheckedIn || [];
   }
 
   get inArea(): boolean {
@@ -184,6 +237,8 @@ export class EnrollFaceComponent implements OnDestroy {
     this.startVideo();
     this.getCompanyLocation();
     this.connectKioskWs();
+    this.loadAttendance();
+    this.attendanceTimer = setInterval(() => this.loadAttendance(), 15000);
     this.clockTimer = setInterval(() => {
       this.clockNow = new Date();
       this.cdr.detectChanges();
@@ -205,6 +260,9 @@ export class EnrollFaceComponent implements OnDestroy {
     }
     if (this.clockTimer) {
       clearInterval(this.clockTimer);
+    }
+    if (this.attendanceTimer) {
+      clearInterval(this.attendanceTimer);
     }
     if (this.wsReconnectTimer) {
       clearTimeout(this.wsReconnectTimer);
@@ -1038,6 +1096,9 @@ export class EnrollFaceComponent implements OnDestroy {
     this.ngZone.run(() => {
       this.latestResult = { ...item };
       this.feed = [item, ...this.feed.filter((f) => f.id !== item.id)].slice(0, 30);
+      if (item.statusKind === 'success' || item.statusKind === 'warning' || item.statusKind === 'info') {
+        this.loadAttendance();
+      }
       this.cdr.detectChanges();
       // Mobile: bring result into view under the camera
       setTimeout(() => {
@@ -1045,6 +1106,39 @@ export class EnrollFaceComponent implements OnDestroy {
         el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 50);
     });
+  }
+
+  loadAttendance(): void {
+    if (!this.companyId) return;
+    this.http
+      .get<KioskAttendance>(`${environment.baseUrl}/face/kiosk-attendance/${this.companyId}`)
+      .subscribe({
+        next: (data) => {
+          this.ngZone.run(() => {
+            this.attendance = data;
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          console.warn('kiosk attendance load failed', err);
+        },
+      });
+  }
+
+  setRosterTab(tab: 'checked' | 'pending'): void {
+    this.rosterTab = tab;
+  }
+
+  personPhoto(person: KioskRosterPerson): string {
+    const file = person.photoTimestamp || person.picture;
+    if (file) {
+      return `${environment.baseUrl}/images/${file}`;
+    }
+    return './assets/images/faces/1.jpg';
+  }
+
+  isOutside(person: KioskRosterPerson): boolean {
+    return Number(person.timestampType) === 0;
   }
 
   private notify(message: string, kind: 'success' | 'warning' | 'error' | 'info') {

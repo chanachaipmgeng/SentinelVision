@@ -12,6 +12,7 @@ from ..controllers.face_controller import (
     delete_face_encoding,
     clear_member_face_encodings,
     verify_member_face,
+    get_kiosk_attendance,
 )
 from ..controllers.face_ws_controller import kiosk_websocket
 from ..utils.face_gpu_queue import face_gpu_queue_stats
@@ -29,6 +30,12 @@ async def face_kiosk_ws(websocket: WebSocket):
 @router.get("/queue-stats")
 async def face_queue_stats():
     return face_gpu_queue_stats()
+
+
+@router.get("/kiosk-attendance/{companyId}")
+async def kiosk_attendance_route(companyId: UUID, db: AsyncSession = Depends(get_db)):
+    """Today's checked-in / not-yet roster for the face kiosk panel."""
+    return await get_kiosk_attendance(companyId, db)
 
 
 @router.post("/members/{memberId}/add-face")

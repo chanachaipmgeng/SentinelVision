@@ -840,6 +840,39 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.65));
 }
 
+/* ---- Kiosk fullscreen (hide app chrome) ---- */
+html.dpu-kiosk-mode app-header,
+html.dpu-kiosk-mode app-sidebar,
+html.dpu-kiosk-mode app-footer,
+html.dpu-kiosk-mode app-tab-to-top,
+html.dpu-kiosk-mode app-switcher,
+html.dpu-kiosk-mode #responsive-overlay {
+  display: none !important;
+}
+
+html.dpu-kiosk-mode .page {
+  min-height: 100dvh;
+}
+
+html.dpu-kiosk-mode .content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 100dvh;
+}
+
+html.dpu-kiosk-mode .main-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  min-height: 100dvh;
+}
+
+html.dpu-kiosk-mode .app-content,
+html.dpu-kiosk-mode .main-content > * {
+  max-width: none;
+}
+
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -585,14 +585,21 @@
   <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-4xl">
     <div class="ti-modal-content">
       <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor">จัดการใบหน้าที่ลงทะเบียน</h6>
+        <div>
+          <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">จัดการใบหน้าที่ลงทะเบียน</h6>
+          <p class="mb-0 text-xs text-dpu-muted" *ngIf="selectedMemberName">{{ selectedMemberName }}</p>
+        </div>
         <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
           <span class="sr-only">Close</span>
           <i class="ri-close-line"></i>
         </button>
       </div>
       <div class="ti-modal-body px-4 max-h-[75vh] overflow-y-auto">
-        <app-face-management *ngIf="selectedMemberId" [memberId]="selectedMemberId"></app-face-management>
+        <app-face-management
+          *ngIf="selectedMemberId"
+          [memberId]="selectedMemberId"
+          [memberName]="selectedMemberName">
+        </app-face-management>
       </div>
       <div class="ti-modal-footer">
         <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">

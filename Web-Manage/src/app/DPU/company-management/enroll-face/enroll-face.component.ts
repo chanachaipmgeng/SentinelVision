@@ -177,6 +177,7 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   ngOnInit() {
+    document.documentElement.classList.add('dpu-kiosk-mode');
     this.getCurrentLocation();
     unlockBeepAudio();
     faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
@@ -190,6 +191,7 @@ export class EnrollFaceComponent implements OnDestroy {
   }
 
   ngOnDestroy() {
+    document.documentElement.classList.remove('dpu-kiosk-mode');
     this.destroyWs = true;
     if (this.geoWatchId != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(this.geoWatchId);

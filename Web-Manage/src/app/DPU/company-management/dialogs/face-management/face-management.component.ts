@@ -44,6 +44,7 @@ interface VerifyResult {
 })
 export class FaceManagementComponent implements OnInit, OnDestroy {
   @Input() memberId!: string;
+  @Input() memberName = '';
 
   @ViewChild('verifyVideo') verifyVideo?: ElementRef<HTMLVideoElement>;
   @ViewChild('verifyFileInput') verifyFileInput?: ElementRef<HTMLInputElement>;

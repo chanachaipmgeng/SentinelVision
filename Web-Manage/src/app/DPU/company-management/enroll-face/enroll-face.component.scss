@@ -1,9 +1,17 @@
 .dpu-kiosk {
   --kiosk-gap: 1rem;
   position: relative;
-  min-height: calc(100dvh - 7.5rem);
+  min-height: 100dvh;
   padding: 0.75rem 1rem 1.25rem;
   font-family: var(--dpu-font, "Noto Sans Thai", system-ui, sans-serif);
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(15, 118, 110, 0.1), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(15, 23, 42, 0.04), transparent 50%),
+    var(--dpu-surface, #eef2f6);
+}
+
+html.dpu-kiosk-mode .dpu-kiosk {
+  min-height: 100dvh;
 }
 
 @media (min-width: 768px) {
@@ -16,7 +24,7 @@
 /* ---- Toast ---- */
 .dpu-kiosk__toast {
   position: fixed;
-  top: 4.75rem;
+  top: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1100;
@@ -228,7 +236,17 @@
 
 @media (min-width: 992px) {
   .dpu-kiosk__viewport {
-    min-height: min(64dvh, 36rem);
+    min-height: min(72dvh, 42rem);
+  }
+}
+
+html.dpu-kiosk-mode .dpu-kiosk__viewport {
+  min-height: min(70dvh, 40rem);
+}
+
+@media (min-width: 992px) {
+  html.dpu-kiosk-mode .dpu-kiosk__viewport {
+    min-height: min(78dvh, 46rem);
   }
 }
 
@@ -272,10 +290,14 @@
 
 @media (min-width: 992px) {
   .dpu-kiosk__feed-panel {
-    max-height: calc(100dvh - 10rem);
+    max-height: calc(100dvh - 8rem);
     overflow: auto;
     position: sticky;
-    top: 5.5rem;
+    top: 1rem;
+  }
+
+  html.dpu-kiosk-mode .dpu-kiosk__feed-panel {
+    max-height: calc(100dvh - 6.5rem);
   }
 }
 

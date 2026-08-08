@@ -8,8 +8,8 @@
 ## สถานะงาน (อัปเดต)
 
 - **P0** เสร็จ: ตัด demo routes/โฟลเดอร์ Admin+Mobile, ย้าย reset-password Cover, เก็บเฉพาะ product routes
-- **P1** เริ่มแล้ว: design tokens (`dpu-theme.css` / mobile `:root`) โทน teal/slate
-- **P2** เริ่มแล้ว: API profile + approval fields, Admin คิวอนุมัติ, Mobile note นอกพื้นที่ + ฟิลด์โปรไฟล์
+- **P1** เสร็จส่วนใหญ่ (Admin): design tokens (`dpu-theme.css`), shared list UI kit, shell header/sidebar/content-layout, kiosk fullscreen (`dpu-kiosk-mode`), company/admin homes + dashboard
+- **P2** เริ่มแล้ว / บางส่วนเสร็จ: API profile + approval fields, Admin คิวอนุมัติ (`warning-timestamp-log`), Mobile note นอกพื้นที่ + ฟิลด์โปรไฟล์ (ตรวจ BACKLOG สำหรับช่องว่าง)
 
 ## แนวทาง
 
@@ -28,55 +28,44 @@ API-Fast                    — ขยาย schema
 ## เฟสงาน
 
 ### P0 — คลีน template
-**Mobile**
-- ลบ route `working-plan`, `doc-refer` (มาร์คยังไม่ใช้)
-- ถอด `/apps/*`, `/component/*` + ลบ demo layouts
-- เก็บ `/company`, `/general`, auth ที่ใช้จริง
-
-**Admin**
-- ตัด demo ออกจาก `content.routes.ts`
-- ลบ `src/app/components/` (Ynex demos)
-- ตัดลิงก์ demo ใน header / `prismData`
-
 **Done:** build ผ่าน; เมนูผลิตภัณฑ์ใช้ได้
 
-### P1 — สไตล์ / เทมเพลตใหม่
-- กำหนด tokens: สี, ฟอนต์, spacing, radius ใน SCSS/CSS variables (หลีกเลี่ยงโทนม่วง/ครีม AI-slop)
-- Admin: sidebar + topbar ใหม่ บางและชัด; การ์ดเฉพาะจุดที่ต้อง interact
-- Mobile: shell ล่าง/บนใหม่; หน้าแรกโฟกัส check-in
-- ไม่ดึง ThemeForest กลับมา; ใช้ asset เท่าที่จำเป็น
+### P1 — สไตล์ / เทมเพลตใหม่ (Admin)
 
-**Done:** ทั้งสองแอปดูเป็นระบบเดียวกัน ไม่เหลือหน้า demo
+**Done (Admin):**
+- Tokens teal/slate ใน `dpu-theme.css` (`--dpu-brand`, glass header, sidebar gradient)
+- Shared kit: `page-toolbar`, `pill-search`, `stat-chip`, `simple-pager`, `empty-state`, `location-map`, `dpu-list-page.css`
+- List/CRUD มาตรฐาน: emp, timestamp-log, warning queue, location, company-info, department, position, member/company/admin-manage
+- Shell: declutter header, slim company card sidebar, content padding; menus include dashboard + kiosk
+- Special: kiosk fullscreen chrome; face-management dialog; company hub (`home-installer`); admin home; dashboard shortcuts/KPI
+- Maps: OSM fallback เมื่อ Google Maps ถูกบล็อกบน localhost
+
+**ยังเปิด (Mobile P1):** shell/tokens ฝั่ง `Webview-Mobile` ให้เข้าชุดเดียวกัน
 
 ### P2 — Feature คู่กัน (API + UI)
 
-**2A Profile**
-- ตาราง/ฟิลด์: employeeCode, birthDate, address, emergencyContact, เอกสารแนบ
-- Admin: แก้ในหน้าพนักงาน
-- Mobile: ดู/แก้โปรไฟล์ตัวเองตามสิทธิ์
+**2A Profile** — กำลัง/บางส่วน
+- ฟิลด์โปรไฟล์พนักงาน (admin + mobile ตามสิทธิ์)
 
-**2B Timestamp approval**
-- ขยาย timestamp: `note`, `approvalStatus` (NONE/PENDING/APPROVED/REJECTED), `approvedBy`, `approvedAt`, `rejectReason`
-- นอกพื้นที่ → PENDING + บังคับ note
-- Admin: คิวอนุมัติ (แทน warning stub)
-- Mobile: กรอกเหตุผล + เห็นสถานะในประวัติ
-
-**Done:** enroll/check-in เดิมยังทำงาน; โปรไฟล์และอนุมัติครบ flow
+**2B Timestamp approval** — กำลัง/บางส่วน
+- Admin คิวอนุมัติ (`/company/warning-timestamp-log`) รีดีไซน์แล้ว
+- นอกพื้นที่ → PENDING + note; mobile history status
 
 ### P3 — Docs + commit
-- อัปเดต `docs/API.md`, `ARCHITECTURE.md`
+- อัปเดต `docs/API.md`, `ARCHITECTURE.md`, `CURSOR-AGENT.md`, rules/skills
 - Commit ตามช่วงงาน
 
-## ลำดับทำ
+## ลำดับทำ (ปัจจุบัน)
 
 ```
-1. P0 cleanup (mobile แล้ว admin)
-2. P1 design tokens + shells
-3. P2 API migration (profile + timestamp fields)
-4. P2 Admin UI (profile form + approval queue)
-5. P2 Mobile UI (note on check-in + profile + history status)
+1. P0 cleanup — done
+2. P1 Admin design tokens + list UI + shell + kiosk chrome — done
+3. P1 Mobile shell/tokens — open
+4. P2 ปิดช่องว่าง profile + approval (API/mobile)
+5. Docs/rules sync เมื่อ convention เปลี่ยน
 ```
 
 ## นอกขอบเขตรอบนี้
 - เปลี่ยนเป็น Next.js / Vite
 - Leave/OT, e-document จริง, audit/CSV (ยังอยู่ใน BACKLOG)
+- Auto-redirect company home → dashboard (hub ตั้งใจไว้)

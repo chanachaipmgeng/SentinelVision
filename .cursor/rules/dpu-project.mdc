@@ -12,10 +12,12 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack b
 | Path | Role |
 |------|------|
 | `API-Fast/` | FastAPI + InsightFace + GPU queue |
-| `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`) |
+| `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
 | `Webview-Mobile/` | Angular 15 employee app |
 | `docker/` | nginx gateway + DB init |
-| `docs/` | SETUP, ARCHITECTURE, API, agent guide |
+| `docs/` | SETUP, ARCHITECTURE, API, agent guide (`CURSOR-AGENT.md`) |
+| `.cursor/rules/` | Always-on + scoped agent rules |
+| `.cursor/skills/` | Task workflows (`dpu-face-kiosk`, `dpu-docker-rebuild`, `dpu-web-manage-ui`) |
 
 ## Runtime
 

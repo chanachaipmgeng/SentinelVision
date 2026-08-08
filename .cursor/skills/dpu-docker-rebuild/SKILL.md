@@ -36,6 +36,12 @@ curl -s -o NUL -w "%{http_code}" http://localhost/docs
 
 Expect `dpu-api` healthy, queue `"started": true`.
 
+After **admin** rebuild, also smoke SPA routes (expect `200`):
+
+- `/`, `/admin/home`, `/company/dashboard`, `/company/timestamp-face`
+
+Kiosk fullscreen is CSS-only (`dpu-kiosk-mode`); no API rebuild required for shell/UI-only changes.
+
 ## 502 after API recreate
 
 Nginx may hold a stale API IP. Rebuild/restart `dpu-nginx`; keep `resolver 127.0.0.11` + variable `proxy_pass` in `docker/nginx/default.conf`.

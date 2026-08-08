@@ -2,7 +2,9 @@
 
   <!-- Start::main-sidebar-header -->
   <div class="main-sidebar-header">
-    <a class="header-logo" routerLink="/admin/home" aria-label="DPU Home">
+    <a class="header-logo"
+      [routerLink]="isInstallerRoute ? '/company/dashboard' : '/admin/home'"
+      aria-label="DPU Home">
       <img src="./assets/images/brand-logos/logo.png" alt="DPU">
     </a>
   </div>
@@ -16,50 +18,24 @@
           </svg>
         </div>
         <ul class="main-menu">
-          <div class="box custom-box mx-2" *ngIf="isInstallerRoute">
-            <div class="box-body">
-              <div class="flex items-center flex-wrap gap-2">
-                <span
-                  class="avatar avatar-xl bg-white dark:bg-bodybg shadow-sm border dark:border-defaultborder/10 p-2 !rounded-full">
+          <div class="box custom-box dpu-company-card mx-2" *ngIf="isInstallerRoute">
+            <div class="box-body !p-3">
+              <div class="dpu-company-card__row">
+                <span class="avatar avatar-md !rounded-full bg-white/90 shadow-sm border border-white/20 p-1">
                   <img [src]="tokenService.getSelectCompany().getPicture()" alt="">
                 </span>
-                <div class="ms-2">
-                  <h5 class="font-semibold mb-0 flex items-center"><a>{{tokenService.getSelectCompany().companyName}} <i
-                        class="bi bi-check-circle-fill text-success text-base" title="Verified company"></i></a></h5>
-                  <div class="flex gap-2">
-                    <p class="mb-0 text-[#8c9097] dark:text-white/50">{{tokenService.getSelectCompany().companyCode}}
-                    </p>
-                  </div>
+                <div class="dpu-company-card__meta min-w-0">
+                  <h5 class="font-semibold mb-0 truncate" [title]="tokenService.getSelectCompany().companyName">
+                    {{ tokenService.getSelectCompany().companyName }}
+                  </h5>
+                  <p class="mb-0 truncate text-[0.75rem]">{{ tokenService.getSelectCompany().companyCode }}</p>
                 </div>
               </div>
-            </div>
-            <div class="box-footer">
-              <div class="flex items-center flex-wrap gap-2">
-                <!-- <div class="flex-grow">
-                  <a href="javascript:void(0);" class="badge badge-md !rounded-full bg-info/10 text-info me-2"
-                    title="No of employees"><i class="bi bi-people me-1"></i>No. of Emp : 345 //TODO</a>
-                </div> -->
-                <a routerLink="/company/company-info" class="ti-btn btn-wave ti-btn-primary-full">
-                  View Profile <i class="ri-arrow-right-line"></i>
-                </a>
-              </div>
+              <a routerLink="/company/company-info" class="dpu-company-card__link">
+                ข้อมูลบริษัท <i class="ri-arrow-right-line"></i>
+              </a>
             </div>
           </div>
-          <!-- <div class="box crm-highlight-card" *ngIf="isInstallerRoute">
-            <div class="box-body">
-                <div class="flex items-center w-full">
-                    <div class="me-2">
-                        <span class="avatar">
-                            <img src="./assets/images/faces/5.jpg" alt="img" class="!rounded-full">
-                        </span>
-                    </div>
-                    <div class="">
-                        <div class="text-[0.9375rem] font-semibold text-white">บริษัท A</div>
-                        <p class="mb-0 text-white opacity-[0.7] text-[0.75rem]"></p>
-                    </div>
-                </div>
-            </div>
-        </div> -->
           @for(menuItem of menuItems;track $index){
 
           <ng-container>
@@ -82,7 +58,7 @@
                 <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
                 }
                 <span class="side-menu__label">{{menuItem.title! | translate}}
-                  <span
+                  <span *ngIf="menuItem.badgeValue"
                     class="badge !bg-{{menuItem.badgeClass }}/10 !text-{{menuItem.badgeText}} !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-2">{{menuItem.badgeValue}}</span>
                 </span>
               </a>
@@ -95,10 +71,7 @@
 
                 <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
                 }
-                <span class="side-menu__label">{{menuItem.title! | translate}}
-                  <span
-                    class="badge !bg-warning/10 !text-warning !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-2">hot</span>
-                </span>
+                <span class="side-menu__label">{{menuItem.title! | translate}}</span>
               </a>
               }
               <!-- has-Sub -->
@@ -111,7 +84,7 @@
                 <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
                 }
                 <span class="side-menu__label">{{menuItem.title! | translate}}
-                  <span
+                  <span *ngIf="menuItem.badgeValue"
                     class="badge !bg-{{menuItem.badgeClass}}/10 !text-{{menuItem.badgeText}} !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-2">{{menuItem.badgeValue}}</span>
                 </span>
 

@@ -1,13 +1,11 @@
 <!-- Start::Header -->
 <header class="app-header">
   <nav class="main-header !h-[3.75rem]" aria-label="Global">
-    <div class="main-header-container ps-[0.725rem] pe-[1rem] ">
-
+    <div class="main-header-container ps-[0.725rem] pe-[1rem]">
       <div class="header-content-left">
-        <!-- Start::header-element -->
         <div class="header-element">
           <div class="horizontal-logo">
-            <a routerLink="/admin/home" class="header-logo">
+            <a routerLink="/admin/home" class="header-logo" aria-label="DPU Home">
               <img src="./assets/images/brand-logos/desktop-logo.png" alt="logo" class="desktop-logo">
               <img src="./assets/images/brand-logos/toggle-logo.png" alt="logo" class="toggle-logo">
               <img src="./assets/images/brand-logos/desktop-dark.png" alt="logo" class="desktop-dark">
@@ -17,526 +15,123 @@
             </a>
           </div>
         </div>
-        <!-- End::header-element -->
-        <!-- Start::header-element -->
         <div class="header-element md:px-[0.325rem] !items-center">
-          <!-- Start::header-link -->
           <a aria-label="Hide Sidebar"
-            class="sidemenu-toggle animated-arrow  hor-toggle horizontal-navtoggle inline-flex items-center"
+            class="sidemenu-toggle animated-arrow hor-toggle horizontal-navtoggle inline-flex items-center"
             href="javascript:void(0);" (click)="toggleSidebar()"><span></span></a>
-          <!-- End::header-link -->
         </div>
-        <!-- End::header-element -->
       </div>
 
-
-
       <div class="header-content-right">
-
-        <!-- <div class="header-element py-[1rem] md:px-[0.65rem] px-2 header-search">
-                <button aria-label="button" type="button" data-hs-overlay="#search-modal"
-                  class="inline-flex flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium focus:ring-offset-0 focus:ring-offset-white transition-all text-xs dark:bg-bgdark dark:hover:bg-black/20 dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10">
-                  <i class="bx bx-search-alt-2 header-link-icon"></i>
-                </button>
-              </div> -->
-
-        <!-- start header country -->
-
+        <!-- Language -->
         <div
-          class="header-element py-[1rem] md:px-[0.65rem] px-2  header-country hs-dropdown ti-dropdown  hidden sm:block [--placement:bottom-left]">
-
+          class="header-element py-[1rem] md:px-[0.5rem] px-2 header-country hs-dropdown ti-dropdown hidden sm:block [--placement:bottom-left]">
           <button id="dropdown-flag" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 flex-shrink-0  !border-0 !rounded-full !shadow-none">
-            <img src="./assets/images/flags/{{selectedLanguage}}.png" alt="flag-img"
+            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 flex-shrink-0 !border-0 !rounded-full !shadow-none"
+            aria-label="เปลี่ยนภาษา">
+            <img src="./assets/images/flags/{{selectedLanguage}}.png" alt=""
               class="h-[1.25rem] w-[1.25rem] rounded-full">
           </button>
-
           <div class="hs-dropdown-menu ti-dropdown-menu min-w-[10rem] hidden !-mt-3" aria-labelledby="dropdown-flag">
             <div class="ti-dropdown-divider divide-y divide-gray-200 dark:divide-white/10">
               <div class="py-2 first:pt-0 last:pb-0">
                 <div class="ti-dropdown-item !p-[0.65rem]" (click)="changeLanguage('en')">
                   <div class="flex items-center space-x-2 rtl:space-x-reverse w-full">
-                    <div class="h-[1.375rem] flex items-center w-[1.375rem] rounded-full">
-                      <img src="./assets/images/flags/en.png" alt="flag-img" class="h-[1rem] w-[1rem] rounded-full">
-                    </div>
-                    <div>
-                      <p class="!text-[0.8125rem] font-medium">
-                        English
-                      </p>
-                    </div>
+                    <img src="./assets/images/flags/en.png" alt="" class="h-[1rem] w-[1rem] rounded-full">
+                    <p class="!text-[0.8125rem] font-medium mb-0">English</p>
                   </div>
                 </div>
                 <div class="ti-dropdown-item !p-[0.65rem]" (click)="changeLanguage('th')">
                   <div class="flex items-center space-x-2 rtl:space-x-reverse w-full">
-                    <div class="h-[1.375rem] w-[1.375rem] flex items-center rounded-full">
-                      <img src="./assets/images/flags/th.png" alt="flag-img" class="h-[1rem] w-[1rem] rounded-full">
-                    </div>
-                    <div>
-                      <p class="!text-[0.8125rem] font-medium">
-                        ไทย
-                      </p>
-                    </div>
+                    <img src="./assets/images/flags/th.png" alt="" class="h-[1rem] w-[1rem] rounded-full">
+                    <p class="!text-[0.8125rem] font-medium mb-0">ไทย</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <!-- end header country -->
 
-        <!-- light and dark theme -->
-        <div class="header-element header-theme-mode hidden !items-center sm:block !py-[1rem] md:!px-[0.65rem] px-2">
-          <a aria-label="anchor"
-            class="hs-dark-mode-active:hidden flex hs-dark-mode group flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium transition-all text-xs dark:bg-bgdark dark:hover:bg-black/20 dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10"
-            href="javascript:void(0);" data-hs-theme-click-value="dark" (click)="themeChange('dark', 'dark','dark')">
+        <!-- Theme toggle kept for Ynex attrs; hidden via .dpu-theme-lock -->
+        <div class="header-element header-theme-mode hidden !items-center sm:block !py-[1rem] md:!px-[0.5rem] px-2">
+          <a aria-label="Dark mode"
+            class="hs-dark-mode-active:hidden flex hs-dark-mode group flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium transition-all text-xs"
+            href="javascript:void(0);" data-hs-theme-click-value="dark"
+            (click)="themeChange('dark', 'dark','dark')">
             <i class="bx bx-moon header-link-icon"></i>
           </a>
-          <a aria-label="anchor"
-            class="hs-dark-mode-active:flex hidden hs-dark-mode group flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium text-defaulttextcolor  transition-all text-xs dark:bg-bodybg dark:bg-bgdark dark:hover:bg-black/20 dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10"
-            href="javascript:void(0);" data-hs-theme-click-value="light" (click)="themeChange('light', 'light','dark')">
+          <a aria-label="Light mode"
+            class="hs-dark-mode-active:flex hidden hs-dark-mode group flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium transition-all text-xs"
+            href="javascript:void(0);" data-hs-theme-click-value="light"
+            (click)="themeChange('light', 'light','dark')">
             <i class="bx bx-sun header-link-icon"></i>
           </a>
         </div>
-        <!-- End light and dark theme -->
 
-
-
-        <!--Header Notifictaion -->
-        <!-- <div
-          class="header-element py-[1rem] md:px-[0.65rem] px-2 notifications-dropdown header-notification hs-dropdown ti-dropdown !hidden md:!block [--placement:bottom-left]">
-          <button id="dropdown-notification" type="button"
-            class="hs-dropdown-toggle relative ti-dropdown-toggle !p-0 !border-0 flex-shrink-0  !rounded-full !shadow-none align-middle text-xs">
-            <i class="bx bx-bell header-link-icon  text-[1.125rem]"></i>
-            <span class="flex absolute h-5 w-5 -top-[0.25rem] end-0  -me-[0.6rem]">
-              <span
-                class="animate-slow-ping absolute inline-flex -top-[2px] -start-[2px] h-full w-full rounded-full bg-secondary/40 opacity-75"></span>
-              <span
-                class="relative inline-flex justify-center items-center rounded-full  h-[14.7px] w-[14px] bg-secondary text-[0.625rem] text-white"
-                id="notification-icon-badge">{{ notificationCount }}</span>
-            </span>
-          </button>
-          <div
-            class="main-header-dropdown !-mt-3 !p-0 hs-dropdown-menu ti-dropdown-menu bg-white !w-[22rem] border-0 border-defaultborder hidden !m-0"
-            aria-labelledby="dropdown-notification">
-
-            <div class="ti-dropdown-header !m-0 !p-4 !bg-transparent flex justify-between items-center">
-              <p
-                class="mb-0 text-[1.0625rem] text-defaulttextcolor font-semibold dark:text-[#8c9097] dark:text-white/50">
-                Notifications</p>
-              <span
-                class="text-[0.75em] py-[0.25rem/2] px-[0.45rem] font-[600] rounded-sm bg-secondary/10 text-secondary"
-                id="notifiation-data">{{ notificationCount }} Unread</span>
-            </div>
-            <div class="dropdown-divider"></div>
-            <ul class="list-none !m-0 !p-0 end-0" id="header-notification-scroll" (click)="handleCardClick($event)">
-              <li class="ti-dropdown-item dropdown-item " id="not1">
-                <div class="flex items-start">
-                  <div class="pe-2">
-                    <span
-                      class="inline-flex text-primary justify-center items-center !w-[2.5rem] !h-[2.5rem] !leading-[2.5rem] !text-[0.8rem] !bg-primary/10 !rounded-[50%]"><i
-                        class="ti ti-gift text-[1.125rem]"></i></span>
-                  </div>
-                  <div class="grow flex items-center justify-between">
-                    <div>
-                      <p
-                        class="mb-0 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50 text-[0.8125rem] font-semibold">
-                        <a routerLink="/pages/notifications">Your Order Has Been Shipped</a></p>
-                      <span
-                        class="text-[#8c9097] dark:text-white/50 font-normal text-[0.75rem] header-notification-text">Order
-                        No: 123456
-                        Has Shipped To Your Delivery Address</span>
-                    </div>
-                    <div>
-                      <a aria-label="anchor" (click)="removeNotify('not1')"
-                        class="min-w-fit text-[#8c9097] dark:text-white/50 me-1 dropdown-item-close1"><i
-                          class="ti ti-x text-[1rem]"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </li>
-              <li class="ti-dropdown-item dropdown-item !flex-none" id="not2">
-                <div class="flex items-start">
-                  <div class="pe-2">
-                    <span
-                      class="inline-flex text-secondary justify-center items-center !w-[2.5rem] !h-[2.5rem] !leading-[2.5rem] !text-[0.8rem]  bg-secondary/10 rounded-[50%]"><i
-                        class="ti ti-discount-2 text-[1.125rem]"></i></span>
-                  </div>
-                  <div class="grow flex items-center justify-between">
-                    <div>
-                      <p
-                        class="mb-0 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50 text-[0.8125rem]  font-semibold">
-                        <a routerLink="/pages/notifications">Discount Available</a></p>
-                      <span
-                        class="text-[#8c9097] dark:text-white/50 font-normal text-[0.75rem] header-notification-text">Discount
-                        Available On Selected Products</span>
-                    </div>
-                    <div>
-                      <a aria-label="anchor" (click)="removeNotify('not2')"
-                        class="min-w-fit  text-[#8c9097] dark:text-white/50 me-1 dropdown-item-close1"><i
-                          class="ti ti-x text-[1rem]"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </li>
-              <li class="ti-dropdown-item dropdown-item" id="not3">
-                <div class="flex items-start">
-                  <div class="pe-2">
-                    <span
-                      class="inline-flex text-pink justify-center items-center !w-[2.5rem] !h-[2.5rem] !leading-[2.5rem] !text-[0.8rem]  bg-pink/10 rounded-[50%]"><i
-                        class="ti ti-user-check text-[1.125rem]"></i></span>
-                  </div>
-                  <div class="grow flex items-center justify-between">
-                    <div>
-                      <p
-                        class="mb-0 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50 text-[0.8125rem]  font-semibold">
-                        <a routerLink="/pages/notifications">Account Has Been Verified</a></p>
-                      <span
-                        class="text-[#8c9097] dark:text-white/50 font-normal text-[0.75rem] header-notification-text">Your
-                        Account Has
-                        Been Verified Sucessfully</span>
-                    </div>
-                    <div>
-                      <a aria-label="anchor" (click)="removeNotify('not3')"
-                        class="min-w-fit text-[#8c9097] dark:text-white/50 me-1 dropdown-item-close1"><i
-                          class="ti ti-x text-[1rem]"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </li>
-              <li class="ti-dropdown-item dropdown-item" id="not4">
-                <div class="flex items-start">
-                  <div class="pe-2">
-                    <span
-                      class="inline-flex text-warning justify-center items-center !w-[2.5rem] !h-[2.5rem] !leading-[2.5rem] !text-[0.8rem]  bg-warning/10 rounded-[50%]"><i
-                        class="ti ti-circle-check text-[1.125rem]"></i></span>
-                  </div>
-                  <div class="grow flex items-center justify-between">
-                    <div>
-                      <p
-                        class="mb-0 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50  text-[0.8125rem]  font-semibold">
-                        <a routerLink="/pages/notifications">Order Placed <span class="text-warning">ID:
-                            #1116773</span></a></p>
-                      <span
-                        class="text-[#8c9097] dark:text-white/50 font-normal text-[0.75rem] header-notification-text">Order
-                        Placed
-                        Successfully</span>
-                    </div>
-                    <div>
-                      <a aria-label="anchor" (click)="removeNotify('not4')"
-                        class="min-w-fit text-[#8c9097] dark:text-white/50 me-1 dropdown-item-close1"><i
-                          class="ti ti-x text-[1rem]"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </li>
-              <li class="ti-dropdown-item dropdown-item" id="not5">
-                <div class="flex items-start">
-                  <div class="pe-2">
-                    <span
-                      class="inline-flex text-success justify-center items-center !w-[2.5rem] !h-[2.5rem] !leading-[2.5rem] !text-[0.8rem]  bg-success/10 rounded-[50%]"><i
-                        class="ti ti-clock text-[1.125rem]"></i></span>
-                  </div>
-                  <div class="grow flex items-center justify-between">
-                    <div>
-                      <p
-                        class="mb-0 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50  text-[0.8125rem]  font-semibold">
-                        <a routerLink="/pages/notifications">Order Delayed <span class="text-success">ID:
-                            7731116</span></a></p>
-                      <span
-                        class="text-[#8c9097] dark:text-white/50 font-normal text-[0.75rem] header-notification-text">Order
-                        Delayed
-                        Unfortunately</span>
-                    </div>
-                    <div>
-                      <a aria-label="anchor" (click)="removeNotify('not5')"
-                        class="min-w-fit text-[#8c9097] dark:text-white/50 me-1 dropdown-item-close1"><i
-                          class="ti ti-x text-[1rem]"></i></a>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            </ul>
-            @if(!isNotifyEmpty){
-
-            <div class="p-4 empty-header-item1 border-t mt-2">
-              <div class="grid">
-                <a routerLink="/pages/notifications" class="ti-btn ti-btn-primary-full !m-0 w-full p-2">View All</a>
-              </div>
-            </div>
-            }
-            <div class="p-[3rem] empty-item1 " [class.hidden]="!isNotifyEmpty">
-              <div class="text-center">
-                <span
-                  class="!h-[4rem]  !w-[4rem] avatar !leading-[4rem] !rounded-full !bg-secondary/10 !text-secondary">
-                  <i class="ri-notification-off-line text-[2rem]  "></i>
-                </span>
-                <h6 class="font-semibold mt-3 text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50 text-[1rem]">
-                  No New Notifications</h6>
-              </div>
-            </div>
-          </div>
-        </div> -->
-        <!--End Header Notifictaion -->
-
-        <!-- Related Apps -->
+        <!-- Admin quick link -->
         <div *ngIf="adminRole"
-          class="header-element header-apps dark:text-[#8c9097] dark:text-white/50 py-[1rem] md:px-[0.65rem] px-2 hs-dropdown ti-dropdown md:!block !hidden [--placement:bottom-left]">
-
-          <button aria-label="button" id="dropdown-apps" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 !border-0 flex-shrink-0  !rounded-full !shadow-none text-xs">
+          class="header-element header-apps py-[1rem] md:px-[0.5rem] px-2 hs-dropdown ti-dropdown md:!block !hidden [--placement:bottom-left]">
+          <button aria-label="สิทธิ์การใช้งาน" id="dropdown-apps" type="button"
+            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 !border-0 flex-shrink-0 !rounded-full !shadow-none text-xs">
             <i class="bx bx-grid-alt header-link-icon text-[1.125rem]"></i>
           </button>
-
-          <div
-            class="p-4 main-header-dropdown !-mt-3 hs-dropdown-menu ti-dropdown-menu !w-[22rem] border-0 border-defaultborder   hidden"
+          <div class="p-3 main-header-dropdown !-mt-3 hs-dropdown-menu ti-dropdown-menu !w-[14rem] border-0 hidden"
             aria-labelledby="dropdown-apps">
-
-            <div class="p-4">
-              <div class="flex items-center justify-between">
-                <p
-                  class="mb-0 text-defaulttextcolor text-[1.0625rem] dark:text-[#8c9097] dark:text-white/50 font-semibold">
-                  สิทธิ์การใช้งาน</p>
-              </div>
-            </div>
-            <div class="dropdown-divider mb-0"></div>
-            <div class="ti-dropdown-divider divide-y divide-gray-200 dark:divide-white/10 main-header-shortcuts p-2"
-              id="header-shortcut-scroll">
-              <div class="grid grid-cols-3 gap-2">
-                <div class="">
-                  <a routerLink="/admin"
-                    class="p-4 items-center related-app block text-center rounded-sm hover:bg-gray-50 dark:hover:bg-black/20">
-                    <img src="./assets/images/apps/microsoft-powerpoint.png" alt="miscrosoft"
-                      class="leading-[1.75] text-2xl !h-[1.75rem] !w-[1.75rem] align-middle flex justify-center mx-auto">
-                    <div class="text-[0.75rem] text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50">ผู้ดูแลระบบ
-                    </div>
-                  </a>
-                </div>
-                <!-- <div class="">
-                  <a routerLink="/company"
-                    class="p-4 items-center related-app block text-center rounded-sm hover:bg-gray-50 dark:hover:bg-black/20">
-                    <img src="./assets/images/apps/microsoft-powerpoint.png" alt="miscrosoft"
-                      class="leading-[1.75] text-2xl !h-[1.75rem] !w-[1.75rem] align-middle flex justify-center mx-auto">
-                    <div class="text-[0.75rem] text-defaulttextcolor dark:text-[#8c9097] dark:text-white/50">บริษัท
-                    </div>
-                  </a>
-                </div> -->
-
-              </div>
-            </div>
-
-
+            <p class="mb-2 px-1 text-[0.8rem] font-semibold text-defaulttextcolor">สิทธิ์การใช้งาน</p>
+            <a routerLink="/admin/home"
+              class="dpu-header-app-link flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-primary/5">
+              <span class="dpu-header-app-icon"><i class="ri-shield-user-line"></i></span>
+              <span class="text-[0.82rem] font-semibold">ผู้ดูแลระบบ</span>
+            </a>
           </div>
         </div>
-        <!--End Related Apps -->
 
         <!-- Fullscreen -->
-        <div class="header-element header-fullscreen py-[1rem] md:px-[0.65rem] px-2">
-          <!-- Start::header-link -->
-          <a aria-label="anchor" appFullscreen (click)="toggleFullScreen()"
-            class="inline-flex flex-shrink-0 justify-center items-center gap-2" [ngClass]="{
-                  '!rounded-full': !isFullScreen,
-                  'font-medium': true,
-                  'dark:hover:bg-black/20 dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10': true
-                }">
+        <div class="header-element header-fullscreen py-[1rem] md:px-[0.5rem] px-2">
+          <a aria-label="Fullscreen" appFullscreen (click)="toggleFullScreen()"
+            class="inline-flex flex-shrink-0 justify-center items-center gap-2 !rounded-full">
             <i class="bx bx-fullscreen full-screen-open header-link-icon" [hidden]="!fullScreenIconVisible"></i>
             <i class="bx bx-exit-fullscreen full-screen-close header-link-icon"
               [hidden]="!exitFullScreenIconVisible"></i>
           </a>
-
-          <!-- End::header-link -->
         </div>
-        <!-- End Full screen -->
 
-        <!-- Header Profile -->
-        <div
-          class="header-element md:!px-[0.65rem] px-2 hs-dropdown !items-center ti-dropdown [--placement:bottom-left]">
-
+        <!-- Profile -->
+        <div class="header-element md:!px-[0.5rem] px-2 hs-dropdown !items-center ti-dropdown [--placement:bottom-left]">
           <button id="dropdown-profile" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !gap-2 !p-0 flex-shrink-0 sm:me-2 me-0 !rounded-full !shadow-none text-xs align-middle !border-0 !shadow-transparent ">
-            <img class="inline-block rounded-full " [src]="userModel.getPicture()" width="32" height="32"
-              alt="Image Description">
+            class="hs-dropdown-toggle ti-dropdown-toggle !gap-2 !p-0 flex-shrink-0 sm:me-2 me-0 !rounded-full !shadow-none text-xs align-middle !border-0">
+            <img class="inline-block rounded-full" [src]="userModel.getPicture()" width="32" height="32" alt="">
           </button>
           <div class="md:block hidden dropdown-profile">
-            <p class="font-semibold mb-0 leading-none text-[#536485] text-[0.813rem] ">{{userModel.firstName+" "+userModel.lastName}}</p>
-            <span class="opacity-[0.7] font-normal text-[#536485] block text-[0.6875rem] ">{{userModel.getRole()}}</span>
+            <p class="font-semibold mb-0 leading-none text-[#536485] text-[0.813rem]">
+              {{ userModel.firstName + ' ' + userModel.lastName }}
+            </p>
+            <span class="opacity-[0.7] font-normal text-[#536485] block text-[0.6875rem]">{{ userModel.getRole() }}</span>
           </div>
           <div
-            class="hs-dropdown-menu ti-dropdown-menu !-mt-3 border-0 w-[11rem] !p-0 border-defaultborder hidden main-header-dropdown  pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end"
+            class="hs-dropdown-menu ti-dropdown-menu !-mt-3 border-0 w-[11rem] !p-0 hidden main-header-dropdown pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end"
             aria-labelledby="dropdown-profile">
-
-            <ul class="text-defaulttextcolor font-medium dark:text-[#8c9097] dark:text-white/50">
-              <!-- <li>
-                <a class="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0  !p-[0.65rem] !inline-flex"
-                  routerLink="/pages/profile">
-                  <i class="ti ti-user-circle text-[1.125rem] me-2 opacity-[0.7]"></i>Profile
+            <ul class="text-defaulttextcolor font-medium">
+              <li>
+                <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
+                  (click)="logOut()">
+                  <i class="ti ti-logout text-[1.125rem] me-2 opacity-[0.7]"></i>Log Out
                 </a>
-              </li> -->
-              <!-- <li>
-                      <a class="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0  !p-[0.65rem] !inline-flex" routerLink="/pages/email/mailapp"><i
-                          class="ti ti-inbox text-[1.125rem] me-2 opacity-[0.7]"></i>Inbox <span
-                          class="!py-1 !px-[0.45rem] !font-semibold !rounded-sm text-success text-[0.75em] bg-success/10 ms-auto">25</span>
-                      </a>
-                    </li> -->
-              <!-- <li><a class="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem] !inline-flex" routerLink="/pages/todolist"><i
-                          class="ti ti-clipboard-check text-[1.125rem] me-2 opacity-[0.7]"></i>Task Manager</a></li> -->
-              <!-- <li><a class="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem] !inline-flex"
-                  routerLink="/pages/email/mailsettings"><i
-                    class="ti ti-adjustments-horizontal text-[1.125rem] me-2 opacity-[0.7]"></i>Settings</a></li> -->
-              <!-- <li><a class="w-full ti-dropdown-item !text-[0.8125rem] !gap-x-0 !p-[0.65rem] !inline-flex " href="javascript:void(0);"><i
-                          class="ti ti-wallet text-[1.125rem] me-2 opacity-[0.7]"></i>Bal: $7,12,950</a></li> -->
-              <!-- <li><a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex" routerLink="/pages/chat"><i
-                          class="ti ti-headset text-[1.125rem] me-2 opacity-[0.7]"></i>Support</a></li> -->
-              <li><a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
-                  (click)="logOut()"><i class="ti ti-logout text-[1.125rem] me-2 opacity-[0.7]"></i>Log Out</a></li>
+              </li>
             </ul>
           </div>
         </div>
-        <!-- End Header Profile -->
 
-        <!-- Switcher Icon ตั้งค่า-->
+        <!-- Switcher kept for Ynex mount; hidden via .dpu-theme-lock -->
         <div class="header-element md:px-[0.48rem]">
-          <button aria-label="button" type="button"
-            class="hs-dropdown-toggle switcher-icon inline-flex flex-shrink-0 justify-center items-center gap-2  rounded-full font-medium  align-middle transition-all text-xs dark:text-[#8c9097] dark:text-white/50 dark:hover:text-white dark:focus:ring-white/10 dark:focus:ring-offset-white/10"
+          <button aria-label="Theme switcher" type="button"
+            class="hs-dropdown-toggle switcher-icon inline-flex flex-shrink-0 justify-center items-center gap-2 rounded-full font-medium align-middle transition-all text-xs"
             data-hs-overlay="#hs-overlay-switcher">
             <i class="bx bx-cog header-link-icon animate-spin-slow"></i>
           </button>
         </div>
-        <!-- Switcher Icon -->
-
-        <!-- End::header-element -->
       </div>
     </div>
   </nav>
 </header>
 <!-- End::Header -->
-
-<!-- ========== Search Modal ========== -->
-<div id="search-modal" class="hs-overlay ti-modal hidden mt-[1.75rem]">
-  <div class="ti-modal-box">
-    <div class="ti-modal-content !border !border-defaultborder dark:!border-defaultborder/10 !rounded-[0.5rem]">
-      <div class="ti-modal-body">
-
-        <div class="input-group border-[2px] border-primary rounded-[0.25rem] w-full flex">
-          <a aria-label="anchor" href="javascript:void(0);"
-            class="input-group-text flex items-center bg-light border-e-[#dee2e6] !py-[0.375rem] !px-[0.75rem] !rounded-none !text-[0.875rem]"
-            id="Search-Grid"><i class="fe fe-search header-link-icon text-[0.875rem]"></i></a>
-
-          <input type="search" class="form-control border-0 px-2 !text-[0.8rem] w-full focus:ring-transparent"
-            placeholder="Search" aria-label="Username" [(ngModel)]="text" [ngModelOptions]="{standalone: true}"
-            (keyup)="Search(text)" autocomplete="off">
-
-          <a aria-label="anchor" href="javascript:void(0);"
-            class="flex items-center input-group-text bg-light !py-[0.375rem] !px-[0.75rem]" id="voice-search"><i
-              class="fe fe-mic header-link-icon"></i></a>
-          <div class="hs-dropdown ti-dropdown">
-            <a aria-label="anchor" href="javascript:void(0);"
-              class="flex items-center hs-dropdown-toggle ti-dropdown-toggle btn btn-light btn-icon !bg-light !py-[0.375rem] !rounded-none !px-[0.75rem] text-[0.95rem] h-[2.413rem] w-[2.313rem]">
-              <i class="fe fe-more-vertical"></i>
-            </a>
-
-            <ul class="absolute hs-dropdown-menu ti-dropdown-menu !-mt-2 !p-0 hidden">
-              <li><a
-                  class="ti-dropdown-item flex text-defaulttextcolor dark:text-defaulttextcolor/70 !py-[0.5rem] !px-[0.9375rem] !text-[0.8125rem] font-medium"
-                  href="javascript:void(0);">Action</a></li>
-              <li><a
-                  class="ti-dropdown-item flex text-defaulttextcolor dark:text-defaulttextcolor/70 !py-[0.5rem] !px-[0.9375rem] !text-[0.8125rem] font-medium"
-                  href="javascript:void(0);">Another action</a></li>
-              <li><a
-                  class="ti-dropdown-item flex text-defaulttextcolor dark:text-defaulttextcolor/70 !py-[0.5rem] !px-[0.9375rem] !text-[0.8125rem] font-medium"
-                  href="javascript:void(0);">Something else here</a></li>
-              <li>
-                <hr class="dropdown-divider">
-              </li>
-              <li><a
-                  class="ti-dropdown-item flex text-defaulttextcolor dark:text-defaulttextcolor/70 !py-[0.5rem] !px-[0.9375rem] !text-[0.8125rem] font-medium"
-                  href="javascript:void(0);">Separated link</a></li>
-            </ul>
-          </div>
-        </div>
-        <div class="mt-5">
-          <p class="font-normal  text-[#8c9097] dark:text-white/50 text-[0.813rem] dark:text-gray-200 mb-2">Are You
-            Looking For...</p>
-
-          <span class="search-tags text-[0.75rem] !py-[0rem] !px-[0.55rem] dark:border-defaultborder/10 !me-2"
-            id="tag1"><i class="fe fe-user me-2"></i>People<a (click)="removeTags('tag1')" href="javascript:void(0)"
-              class="tag-addon header-remove-btn"><span class="sr-only">Remove badge</span><i
-                class="fe fe-x"></i></a></span>
-          <span class="search-tags text-[0.75rem] !py-[0rem] !px-[0.55rem] dark:border-defaultborder/10 !me-2"
-            id="tag2"><i class="fe fe-file-text me-2"></i>Pages<a (click)="removeTags('tag2')" href="javascript:void(0)"
-              class="tag-addon header-remove-btn"><span class="sr-only">Remove badge</span><i
-                class="fe fe-x"></i></a></span>
-          <span class="search-tags text-[0.75rem] !py-[0rem] !px-[0.55rem] dark:border-defaultborder/10 !me-2"
-            id="tag3"><i class="fe fe-align-left me-2"></i>Articles<a (click)="removeTags('tag3')"
-              href="javascript:void(0)" class="tag-addon header-remove-btn"><span class="sr-only">Remove badge</span><i
-                class="fe fe-x"></i></a></span>
-          <span class="search-tags text-[0.75rem] !py-[0rem] !px-[0.55rem] dark:border-defaultborder/10 !me-2"
-            id="tag4"><i class="fe fe-server me-2"></i>Tags<a (click)="removeTags('tag4')" href="javascript:void(0)"
-              class="tag-addon header-remove-btn"><span class="sr-only">Remove badge</span><i
-                class="fe fe-x"></i></a></span>
-
-        </div>
-
-        @if("menuItems?.length>0"){
-
-        <div class="my-[1.5rem]">
-          <p class="font-normal  text-[#8c9097] dark:text-white/50 text-[0.813rem] mb-2">Recent Search :</p>
-          <ul class="list-group mb-3">
-            @for(menuItem of menuItems | slice:0:5;track $index){
-
-            <li [routerLink]="menuItem?.path" class="list-group-item header-list-group" (click)="clearSearch()">
-              <i class="fa fa-angle-double-right me-2" aria-hidden="true"></i>{{menuItem?.title}}
-            </li>
-            }
-          </ul>
-          <div id="dismiss-alert" role="alert" id="tag5"
-            class="!p-2 border dark:border-defaultborder/10 rounded-[0.3125rem] flex items-center text-defaulttextcolor dark:text-defaulttextcolor/70 !mb-2 !text-[0.8125rem] alert">
-            <a routerLink="/pages/notifications"><span>Notifications</span></a>
-            <a aria-label="anchor" class="ms-auto leading-none" href="javascript:void(0);"
-              data-hs-remove-element="#dismiss-alert" (click)="removeTags('tag5')"><i
-                class="fe fe-x !text-[0.8125rem] text-[#8c9097] dark:text-white/50"></i></a>
-          </div>
-
-          <div id="dismiss-alert1" role="alert" id="tag6"
-            class="!p-2 border dark:border-defaultborder/10 rounded-[0.3125rem] flex items-center text-defaulttextcolor dark:text-defaulttextcolor/70 !mb-2 !text-[0.8125rem] alert">
-            <a routerLink="/uielements/alerts"><span>Alerts</span></a>
-            <a aria-label="anchor" class="ms-auto leading-none" href="javascript:void(0);"
-              data-hs-remove-element="#dismiss-alert" (click)="removeTags('tag6')"><i
-                class="fe fe-x !text-[0.8125rem] text-[#8c9097] dark:text-white/50"></i></a>
-          </div>
-
-          <div id="dismiss-alert2" role="alert" id="tag7"
-            class="!p-2 border dark:border-defaultborder/10 rounded-[0.3125rem] flex items-center text-defaulttextcolor dark:text-defaulttextcolor/70 !mb-0 !text-[0.8125rem] alert">
-            <a routerLink="/pages/email/mailapp"><span>Mail</span></a>
-            <a aria-label="anchor" class="ms-auto lh-1" href="javascript:void(0);"
-              data-hs-remove-element="#dismiss-alert" (click)="removeTags('tag7')"><i
-                class="fe fe-x !text-[0.8125rem] text-[#8c9097] dark:text-white/50"></i></a>
-          </div>
-        </div>
-        }
-        @else{
-
-        <ng-template #elseBlockMd>
-          <ul class="list-group w-100 mt-1 serach-result-empty">
-            <li class="list-group-item no-result" [ngClass]="{'show':SearchResultEmpty}"><i
-                class="fa fa-frown-o text-primary me-2" aria-hidden="true"></i>No Search Result Found...</li>
-          </ul>
-        </ng-template>
-        }
-      </div>
-
-      <div class="ti-modal-footer !py-[1rem] !px-[1.25rem]">
-        <div class="inline-flex rounded-md  shadow-sm">
-          <button type="button"
-            class="ti-btn-group !px-[0.75rem] !py-[0.45rem]  rounded-s-[0.25rem] !rounded-e-none ti-btn-primary !text-[0.75rem] dark:border-white/10">
-            Search
-          </button>
-          <button type="button"
-            class="ti-btn-group  ti-btn-primary-full rounded-e-[0.25rem] dark:border-white/10 !text-[0.75rem] !rounded-s-none !px-[0.75rem] !py-[0.45rem]">
-            Clear Recents
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<!-- ========== END Search Modal ========== -->

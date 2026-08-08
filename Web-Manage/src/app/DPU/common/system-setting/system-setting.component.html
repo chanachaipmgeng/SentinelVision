@@ -1,0 +1,83 @@
+<app-page-header
+  [title]="'ตั้งค่าระบบ'"
+  [activeTitle]="'ผู้ดูแลระบบ'"
+  [title1]="'เสียงพูด (TTS)'">
+</app-page-header>
+
+<div class="sys-setting-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header sys-setting-toolbar">
+        <div>
+          <div class="box-title !mb-0">เสียงพูด (TTS)</div>
+          <p class="sys-setting-sub mb-0">ใช้ร่วมกันทุกบริษัท — kiosk ลงเวลาและเก็บหน้าใน Admin</p>
+        </div>
+        <div class="sys-setting-actions">
+          <button type="button" class="ti-btn ti-btn-light modern-btn sys-tool-btn"
+            [disabled]="loading || saving" (click)="load()">
+            <i class="ri-refresh-line"></i>
+            <span>รีเฟรช</span>
+          </button>
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn sys-tool-btn"
+            [disabled]="loading || saving" (click)="save()">
+            <i class="ri-save-line"></i>
+            <span>{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12" *ngIf="loading">
+    <div class="box modern-card glass">
+      <div class="sys-setting-empty">
+        <span class="ti-spinner animation-spin" role="status"></span>
+        <p>กำลังโหลดการตั้งค่า...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 xl:col-span-8" *ngIf="!loading">
+    <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+      <div class="box-body">
+        <p class="sys-setting-hint mb-0">
+          ใช้ตัวแปร <code>&#123;name&#125;</code> <code>&#123;firstName&#125;</code> <code>&#123;employeeId&#125;</code>
+          — ตัวอย่าง: ลงเวลาสำเร็จ คุณ&#123;name&#125;
+        </p>
+
+        <div class="sys-setting-controls">
+          <label class="sys-setting-switch">
+            <input type="checkbox" [(ngModel)]="ttsForm.enabled" name="tts-enabled">
+            <span>เปิดเสียงพูด</span>
+          </label>
+          <div class="sys-setting-rate">
+            <label class="form-label mb-0" for="tts-rate">ความเร็ว {{ ttsForm.rate | number:'1.1-1' }}</label>
+            <input id="tts-rate" type="range" min="0.8" max="1.2" step="0.05"
+              [(ngModel)]="ttsForm.rate" name="tts-rate">
+          </div>
+          <button type="button" class="ti-btn ti-btn-light modern-btn sys-tool-btn"
+            (click)="resetTtsDefaults()">
+            <i class="ri-refresh-line"></i>
+            <span>ค่าเริ่มต้นข้อความ</span>
+          </button>
+        </div>
+
+        <div class="sys-setting-templates">
+          <div class="sys-setting-row" *ngFor="let field of ttsTemplateFields">
+            <label class="form-label" [attr.for]="'tts-' + field.key">{{ field.label }}</label>
+            <div class="sys-setting-input-row">
+              <input [id]="'tts-' + field.key" type="text" class="form-control"
+                [(ngModel)]="ttsForm.templates[field.key]" [name]="'tts-' + field.key"
+                [placeholder]="field.label">
+              <button type="button" class="ti-btn ti-btn-outline-primary modern-btn sys-preview-btn"
+                (click)="previewTts(field.key)" title="ทดลองฟัง">
+                <i class="ri-play-circle-line"></i>
+                <span>ทดลองฟัง</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

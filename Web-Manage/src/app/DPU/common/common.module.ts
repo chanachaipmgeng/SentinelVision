@@ -24,6 +24,11 @@ export const admin: Routes = [
       loadComponent: () =>
         import('./admin-manage/admin-manage.component').then((m) => m.AdminManageComponent),
     },
+    {
+      path: 'system-setting',
+      loadComponent: () =>
+        import('./system-setting/system-setting.component').then((m) => m.SystemSettingComponent),
+    },
     //////////////emp/////////////////
     {
       path: 'emp/department',

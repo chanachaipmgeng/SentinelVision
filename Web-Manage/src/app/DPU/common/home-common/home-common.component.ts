@@ -24,6 +24,7 @@ export class HomeCommonComponent {
     { label: 'จัดการสมาชิก', icon: 'ri-team-line', route: '/admin/member-manage', hint: 'ผู้ใช้ในระบบ' },
     { label: 'จัดการบริษัท', icon: 'ri-building-line', route: '/admin/manage-companys', hint: 'บริษัทและสถานะ' },
     { label: 'ผู้ดูแลระบบ', icon: 'ri-shield-user-line', route: '/admin/admin-manage', hint: 'สิทธิ์แอดมิน' },
+    { label: 'ตั้งค่าระบบ / TTS', icon: 'ri-volume-up-line', route: '/admin/system-setting', hint: 'ข้อความพูดทุกบริษัท' },
     { label: 'แผนก', icon: 'ri-organization-chart', route: '/admin/emp/department', hint: 'โครงสร้างแผนก' },
     { label: 'ตำแหน่ง', icon: 'ri-briefcase-line', route: '/admin/emp/position', hint: 'ตำแหน่งงาน' },
   ];

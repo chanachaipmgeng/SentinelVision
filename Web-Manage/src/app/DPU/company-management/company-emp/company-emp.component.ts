@@ -24,6 +24,13 @@ import * as faceapi from 'face-api.js';
 import { FaceManagementComponent } from '../dialogs/face-management/face-management.component';
 import { firstValueFrom } from 'rxjs';
 import { playCaptureBeep, unlockBeepAudio } from '../../../shared/utils/beep';
+import { speakText, unlockSpeech } from '../../../shared/utils/tts';
+import {
+  TtsSettings,
+  buildSpeechText,
+  resolveTtsSettings,
+} from '../../../shared/utils/tts-templates';
+import { SystemSettingService } from '../../services/system-setting.service';
 
 interface SmoothBox {
   x: number;
@@ -107,12 +114,15 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('importPhotosInput') importPhotosInput?: ElementRef<HTMLInputElement>;
   private pendingImportExcel: File | null = null;
+  private ttsSettings: TtsSettings = resolveTtsSettings(null);
+
   constructor(
     private http: HttpClient,
     private employeeService: EmployeeService,
     public translate: TranslateService,
     private departmentService: DepartmentService,
     private positionService: PositionService,
+    private systemSettingService: SystemSettingService,
     private tokenService: TokenService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
@@ -219,6 +229,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   private async startCameraEnroll(): Promise<void> {
     try {
       unlockBeepAudio();
+      unlockSpeech();
       await this.ensureFaceModels();
       await this.startVideo();
       this.updateAngleStatus();
@@ -229,6 +240,48 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.faceStatus = err?.message || 'เปิดกล้องไม่สำเร็จ';
       this.cdr.detectChanges();
     }
+  }
+
+  private loadTtsSettings(): void {
+    this.systemSettingService.getTtsSettings().subscribe({
+      next: (settings) => {
+        this.ttsSettings = settings;
+      },
+      error: () => {
+        /* keep defaults */
+      },
+    });
+  }
+
+  private enrollSpeechVars(): { name: string; firstName: string; employeeId: string } {
+    const member = this.selectModel?.member;
+    const name =
+      (typeof this.selectModel?.getFullname === 'function'
+        ? this.selectModel.getFullname()
+        : ''
+      )?.trim() ||
+      `${member?.firstName || ''} ${member?.lastName || ''}`.trim() ||
+      'พนักงาน';
+    return {
+      name,
+      firstName: (member?.firstName || name.split(/\s+/)[0] || '').trim(),
+      employeeId: this.selectModel?.employeeId || '',
+    };
+  }
+
+  private speakEnroll(success: boolean): void {
+    const text = buildSpeechText(
+      this.ttsSettings,
+      success ? 'enrollSuccess' : 'enrollFailed',
+      this.enrollSpeechVars(),
+    );
+    if (!text) return;
+    speakText(text, {
+      lang: this.ttsSettings.lang,
+      rate: this.ttsSettings.rate,
+      pitch: this.ttsSettings.pitch,
+      cancelPrevious: true,
+    });
   }
 
   triggerFaceUploadPicker(): void {
@@ -318,6 +371,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.uploadStatus = 'Face uploaded successfully!';
       this.faceStatus = `บันทึกใบหน้า ${this.uploadFaceItems.length} รูปสำเร็จ`;
       this.cdr.detectChanges();
+      this.speakEnroll(true);
       swal('Save Success!!', `บันทึกใบหน้า ${this.uploadFaceItems.length} รูปสำเร็จ`, 'success');
       this.clearUploadFaceItems();
       this.childModalFace?.nativeElement.click();
@@ -328,6 +382,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.faceStatus = detail;
       this.cdr.detectChanges();
       console.error('Error:', error);
+      this.speakEnroll(false);
       swal('Upload Failed', detail, 'error');
     } finally {
       this.isUploadingFace = false;
@@ -643,6 +698,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.uploadStatus = 'Face uploaded successfully!';
       this.faceStatus = 'บันทึกใบหน้า 5 มุมสำเร็จ';
       this.cdr.detectChanges();
+      this.speakEnroll(true);
       swal('Save Success!!', 'บันทึกใบหน้า 5 มุมสำเร็จ', 'success');
       this.childModalFace?.nativeElement.click();
       this.stopFaceCamera();
@@ -652,6 +708,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.faceStatus = detail;
       this.cdr.detectChanges();
       console.error('Error:', error);
+      this.speakEnroll(false);
       swal('Upload Failed', detail, 'error');
     } finally {
       this.isUploadingFace = false;
@@ -875,6 +932,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.initListViewMode();
+    this.loadTtsSettings();
     this.getDepartment()
     this.getPosition()
 

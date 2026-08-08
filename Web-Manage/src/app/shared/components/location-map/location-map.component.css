@@ -1,0 +1,50 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loc-map {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  overflow: hidden;
+  background: #eef2f7;
+}
+
+.loc-map google-map,
+.loc-map .map-container {
+  display: block;
+  width: 100% !important;
+  height: 100%;
+}
+
+.loc-map-osm {
+  display: block;
+  width: 100%;
+  height: calc(100% - 2rem);
+  border: 0;
+}
+
+.loc-map-fallback-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #9a3412;
+  background: rgba(254, 243, 199, 0.95);
+}
+
+.loc-map-fallback-bar a {
+  color: #0f766e;
+  text-decoration: none;
+}
+
+.loc-map-fallback-bar a:hover {
+  text-decoration: underline;
+}

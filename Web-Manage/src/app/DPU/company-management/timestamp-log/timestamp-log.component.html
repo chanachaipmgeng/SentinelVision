@@ -1,234 +1,289 @@
-<app-page-header [title]="'ข้อมูลการลงเวลา'" [activeTitle]="'จัดการข้อมูลการลงเวลา'"
-  [title1]="'ข้อมูลการลงเวลา'"></app-page-header>
+<app-page-header
+  [title]="'ข้อมูลการลงเวลา'"
+  [activeTitle]="'จัดการบริษัท'"
+  [title1]="'ข้อมูลการลงเวลา'">
+</app-page-header>
 
+<div class="ts-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <!-- Toolbar -->
+  <div class="col-span-12">
+    <div class="box ts-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header ts-toolbar-header">
+        <div class="ts-toolbar-inner">
+          <div class="ts-toolbar-title">
+            <div class="box-title !mb-0">ประวัติการลงเวลา</div>
+            <span class="ts-stat-chip">ทั้งหมด {{ totalAll }}</span>
+            <span class="ts-stat-chip ts-stat-chip--success">ปกติ {{ completeCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--danger">Absent {{ absentCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
+          </div>
 
-<!-- Start::row-1 -->
-<div class="grid grid-cols-12 gap-6">
-  <div class="xl:col-span-12 col-span-12">
-
-    <div class="flex flex-wrap gap-2">
-      <a href="javascript:void(0);" class="hs-dropdown-toggle ti-btn ti-btn-primary-full me-2 modern-btn"
-        routerLink="/company/timestamp-face"><i class="ri-add-line font-semibold align-middle"></i>{{ 'ลงเวลาพนักงาน' |
-        translate}}
-      </a>
-      <!-- <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full !py-1 !px-2" aria-expanded="false">
-            เรียงตาม<i class="ri-arrow-down-s-line align-middle ms-1 inline-block"></i>
-          </a>
-          <ul class="hs-dropdown-menu ti-dropdown-menu hidden" role="menu">
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Posted Date</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Status</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Department</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Job Type</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Newest</a></li>
-            <li><a class="ti-dropdown-item" href="javascript:void(0);">Oldest</a></li>
-          </ul> -->
+          <div class="ts-toolbar-actions">
+            <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-warning-full modern-btn ts-tool-btn">
+              <i class="ri-error-warning-line"></i>
+              <span>คิวอนุมัติ</span>
+            </a>
+            <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn ts-tool-btn">
+              <i class="ri-camera-line"></i>
+              <span>ลงเวลาพนักงาน</span>
+            </a>
+            <button type="button" class="ti-btn ti-btn-light modern-btn ts-tool-btn" (click)="resetFilters()">
+              <i class="ri-filter-off-line"></i>
+              <span>ล้างตัวกรอง</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-
   </div>
-  <div class="xxl:col-span-12 xl:col-span-8 col-span-12">
-    <div class="grid grid-cols-12 gap-6 items-center mb-6">
-      <div class="lg:col-span-12 col-span-12">
-        <div class="inline-flex !w-full companies-search-input">
-          <input type="text" class="form-control !rounded-e-none border-e-0"
-            aria-label="Text input with segmented dropdown button" placeholder="ค้นหาจากข้อมูลพนักงาน"
-            [(ngModel)]="searchTerm">
 
-          <input class="form-control" id="daterange" [(ngModel)]="dateRange" placeholder="ช่วงวันที่" mwlFlatpickr
-            [altInput]="true" [convertModelValue]="true" mode="range" />
-          <ng-select class="form-control !rounded-none" name="choices-multiple-remove-button1"
-            id="choices-multiple-remove-button1" placeholder="พนักงาน" [(ngModel)]="empSelect">
+  <!-- Filters -->
+  <div class="col-span-12">
+    <div class="box ts-filters modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+      <div class="box-body ts-filters-body">
+        <div class="ts-filter-grid">
+          <div class="ts-search">
+            <i class="ri-search-line ts-search-icon" aria-hidden="true"></i>
+            <input
+              class="form-control ts-search-input"
+              type="search"
+              [(ngModel)]="searchTerm"
+              placeholder="ค้นหาชื่อ รหัส แผนก สถานที่ สถานะ..."
+              aria-label="ค้นหาประวัติลงเวลา">
+            <button *ngIf="searchTerm" type="button" class="ts-search-clear" (click)="clearSearch()" title="ล้างคำค้น">
+              <i class="ri-close-line"></i>
+            </button>
+          </div>
+
+          <input
+            class="form-control ts-filter-control"
+            id="ts-daterange"
+            [(ngModel)]="dateRange"
+            placeholder="ช่วงวันที่"
+            mwlFlatpickr
+            [altInput]="true"
+            [convertModelValue]="true"
+            mode="range">
+
+          <ng-select
+            class="ts-filter-select"
+            placeholder="พนักงานทั้งหมด"
+            [(ngModel)]="empSelect"
+            [clearable]="true"
+            [appendTo]="'body'"
+            notFoundText="ไม่พบพนักงาน">
             <ng-option value="">ทั้งหมด</ng-option>
-            @for(item of empList;track empList){
-            <ng-option [value]="item.company_employeeId">{{item.getFullname()}}</ng-option>
+            @for (item of empList; track item.company_employeeId) {
+              <ng-option [value]="item.company_employeeId">{{ item.getFullname() }}</ng-option>
             }
           </ng-select>
-          <ng-select class="form-control !rounded-none" name="choices-multiple-remove-button1"
-            id="choices-multiple-remove-button1" placeholder="สถานะ" [(ngModel)]="statusSelect">
+
+          <ng-select
+            class="ts-filter-select"
+            placeholder="สถานะทั้งหมด"
+            [(ngModel)]="statusSelect"
+            [clearable]="true"
+            [appendTo]="'body'">
             <ng-option value="">ทั้งหมด</ng-option>
-            <ng-option value="WARNING">Warning</ng-option>
-            <ng-option value="CHECK_IN">Complete</ng-option>
-            <ng-option value="DISAPPROVE">Absent</ng-option>
+            <ng-option value="1">Complete</ng-option>
+            <ng-option value="3">Absent</ng-option>
           </ng-select>
-          <button (click)="getTimestamp()" type="button" aria-label="button"
-            class="ti-btn ti-btn-primary-full !mb-0 !rounded-s-none"><i class="ri-search-line"></i></button>
+
+          <button
+            type="button"
+            class="ti-btn ti-btn-primary-full modern-btn ts-search-btn"
+            [disabled]="loading"
+            (click)="getTimestamp()">
+            <i class="ri-search-line" [class.ts-spin]="loading"></i>
+            <span>ค้นหา</span>
+          </button>
         </div>
       </div>
     </div>
   </div>
-  <div class="xxl:col-span-8 xl:col-span-8 col-span-12">
 
-    <div class="xxl:col-span-8 xl:col-span-12 lg:col-span-12 md:col-span-12 sm:col-span-12 col-span-12">
-      <ul class="list-none mb-0 notification-container">
-        @for(item of filterList;track filterList){
-        <li>
-          <div
-            class="box modern-card animate-in fade-in slide-in-from-bottom-4 duration-500 border-s-[0.25rem] {{item.timestampType==0?'border-warning':''}} {{item.timestampType==1||item.timestampType==2?'border-success':''}} {{item.timestampType==3?'border-danger':''}}"
-            (click)="view(item)">
-            <div class="box-body !p-4">
-              <a href="javascript:void(0);">
-                <div class="flex items-start mt-0 flex-wrap">
-                  <span class="avatar avatar-xl avatar-rounded">
-                    <img [src]="item.getPicture()" alt="">
-                  </span>
-                  <div class="flex-grow">
-                    <div class="sm:flex items-center">
-                      <div class="sm:mt-0 mt-2 mx-2">
-                        <p class="font-semibold mb-0 flex items-center text-primary">{{item.employee.member.firstName+ "
-                          "+item.employee.member.lastName}}</p>
-                        <p class="mb-0 text-secondary dark:text-white/50">{{item.getLocation()}}
-                        </p>
-                        <p class="mb-0 text-dpu-muted dark:text-white/50"><span
-                            class="badge {{item.timestampType==0?'bg-warning':''}} {{item.timestampType==1||item.timestampType==2?'bg-success':''}} {{item.timestampType==3?'bg-danger':''}} text-white">{{item.getStatus()}}</span>
-                        </p>
-                      </div>
-                      <div class="ms-auto">
-                        <h5
-                          class="ltr:float-right rtl:float-left badge bg-light font-semibold text-primary dark:text-white whitespace-nowrap">
-                          {{item.timestamp | date: "HH:mm"}} {{item.timestamp | date: "medium"}}
-                        </h5>
-                      </div>
-                    </div>
-                  </div>
+  <!-- List -->
+  <div class="col-span-12 xl:col-span-5">
+    <div class="box ts-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+      <div class="box-header ts-panel-header">
+        <div class="box-title !mb-0">รายการลงเวลา</div>
+        <span class="ts-muted-count" *ngIf="totalFiltered">
+          แสดง {{ pageFrom }}–{{ pageTo }} จาก {{ totalFiltered }}
+        </span>
+      </div>
+
+      <div class="box-body ts-list-body">
+        <div *ngIf="loading" class="ts-empty">
+          <span class="ti-spinner animation-spin ts-empty-spinner" role="status"></span>
+          <p>กำลังโหลดประวัติลงเวลา...</p>
+        </div>
+
+        <div *ngIf="!loading && pageItems.length === 0" class="ts-empty">
+          <i class="ri-time-line ts-empty-icon"></i>
+          <p *ngIf="!searchTerm">ไม่พบข้อมูลในช่วงที่เลือก</p>
+          <p *ngIf="searchTerm">ไม่พบผลลัพธ์สำหรับ “{{ searchTerm }}”</p>
+          <button *ngIf="searchTerm" type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearSearch()">
+            ล้างการค้นหา
+          </button>
+        </div>
+
+        <ul *ngIf="!loading && pageItems.length" class="ts-queue list-none mb-0">
+          <li *ngFor="let item of pageItems; let i = index">
+            <button
+              type="button"
+              class="ts-queue-item"
+              [class.active]="isSelected(item)"
+              [attr.data-tone]="statusTone(item)"
+              [style.animation-delay.ms]="itemEnterDelay(i)"
+              (click)="view(item)">
+              <div class="ts-queue-face" [attr.data-tone]="statusTone(item)">
+                <img [src]="item.getPicture()" alt="" loading="lazy">
+              </div>
+              <div class="ts-queue-meta">
+                <div class="ts-queue-name">{{ item.employee.getFullname() }}</div>
+                <div class="ts-queue-sub">
+                  <span>{{ item.employee.employeeId || '—' }}</span>
+                  <span class="ts-dot">·</span>
+                  <span>{{ item.getLocation() }}</span>
                 </div>
-              </a>
-            </div>
-          </div>
-        </li>
-        }
-      </ul>
-    </div>
-    <ul class="ti-pagination mb-4 justify-end">
-      <div class="flex items-center flex-wrap overflow-auto" *ngIf="filterList.length > 0">
-        <div class="mb-2 sm:mb-0">
-          <div>
-            {{'Showing' | translate}} {{filterList.length}} {{'entries'
-            | translate}} <i class="bi bi-arrow-right ms-2 font-semibold"></i>
-          </div>
-        </div>
-        <div class="ms-auto">
-          <nav aria-label="Page navigation">
-            <ul class="ti-pagination  mb-0">
-              <li *ngIf="pageIndex>0" class="page-item {{pageIndex==0 ? 'disabled' : ''}}"><a
-                  class="page-link px-3 py-[0.375rem]" (click)="pageIndex = pageIndex-1;updatePagedItems()">{{'Previous'
-                  | translate}}</a></li>
-              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  *ngIf="pageIndex-1>0" (click)="pageIndex = pageIndex-2;updatePagedItems()">{{pageIndex-1}}</a></li>
-              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  *ngIf="pageIndex>0 && ((pageIndex-1)*10 < (searchTerm == '' ? itemsList.length : filterList.length))"
-                  (click)="pageIndex = pageIndex-1;updatePagedItems()">{{pageIndex}}</a></li>
-
-              <li class="page-item"><a class="page-link active px-3 py-[0.375rem]"
-                  href="javascript:void(0);">{{pageIndex +1}}</a>
-              </li>
-              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                  (click)="pageIndex = pageIndex+1;updatePagedItems()">{{pageIndex +2}}</a></li>
-              <li class="page-item"><a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  *ngIf="(pageIndex+2)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                  (click)="pageIndex = pageIndex+2;updatePagedItems()">{{pageIndex +3}}</a></li>
-              <li *ngIf="(pageIndex+1)*10 < (searchTerm == '' ? itemsList.length : filterList.length)"
-                class="page-item"><a class="page-link px-3 py-[0.375rem]"
-                  (click)="pageIndex = pageIndex+1;updatePagedItems()">{{'Next' |
-                  translate}}</a>
-              </li>
-            </ul>
-          </nav>
-        </div>
+                <span class="ts-status-badge" [attr.data-tone]="statusTone(item)">{{ item.getStatus() }}</span>
+              </div>
+              <div class="ts-queue-side">
+                <span class="ts-time-badge">{{ item.timestamp | date: 'HH:mm' }}</span>
+                <span class="ts-date-label">{{ item.timestamp | date: 'dd/MM/yy' }}</span>
+              </div>
+            </button>
+          </li>
+        </ul>
       </div>
-    </ul>
+
+      <div class="box-footer ts-pager" *ngIf="!loading && totalFiltered > pageSize">
+        <button type="button" class="ts-page-btn" [disabled]="pageIndex === 0" (click)="prevPage()">
+          <i class="ri-arrow-left-s-line"></i>
+        </button>
+        <span class="ts-page-label">หน้า {{ pageIndex + 1 }} / {{ totalPages }}</span>
+        <button type="button" class="ts-page-btn" [disabled]="pageIndex >= totalPages - 1" (click)="nextPage()">
+          <i class="ri-arrow-right-s-line"></i>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="xxl:col-span-4 xl:col-span-4 col-span-12" *ngIf="selectModel">
-    <div class="box custom-box modern-card glass animate-in zoom-in duration-500 delay-200">
-      <div class="box-header justify-between">
-        <div class="box-title">
-          รายละเอียดการลงเวลา
-        </div>
+
+  <!-- Detail -->
+  <div class="col-span-12 xl:col-span-7">
+    <div
+      *ngIf="!selectModel && !loading"
+      class="box ts-detail-panel modern-card glass ts-detail-placeholder animate-in fade-in duration-500">
+      <div class="ts-empty">
+        <i class="ri-map-pin-user-line ts-empty-icon"></i>
+        <p>เลือกรายการเพื่อดูรูปใบหน้า รายละเอียด และแผนที่</p>
+      </div>
+    </div>
+
+    <div
+      *ngIf="selectModel as item"
+      class="box ts-detail-panel modern-card glass animate-in zoom-in duration-400">
+      <div class="box-header ts-panel-header">
         <div>
+          <div class="box-title !mb-0">รายละเอียดการลงเวลา</div>
+          <p class="ts-panel-sub mb-0">{{ item.timestamp | date: 'EEEE, dd MMMM yyyy HH:mm' }}</p>
         </div>
+        <span class="ts-status-pill" [attr.data-tone]="statusTone(item)">
+          <i class="ri-checkbox-circle-line" *ngIf="statusTone(item) === 'success'"></i>
+          <i class="ri-error-warning-line" *ngIf="statusTone(item) === 'warning'"></i>
+          <i class="ri-close-circle-line" *ngIf="statusTone(item) === 'danger'"></i>
+          {{ item.getStatus() }}
+        </span>
       </div>
-      <div class="box-body !p-0">
-        <!-- <div class="box-body p-6">
-          <div class="text-center">
-            <span class="avatar avatar-xl avatar-rounded">
-              <img src="./assets/images/faces/2.jpg" alt="">
-            </span>
-            <div class="mt-2">
-              <p class="mb-0 font-semibold">Samantha May</p>
-              <p class="text-[0.75rem] opacity-[0.7] mb-1 text-dpu-muted dark:text-white/50">
-                09:00</p>
-              <p class="mb-0 text-dpu-muted dark:text-white/50"><span
-                  class="badge bg-danger text-white">ลงเวลาผิดสถานที่</span></p>
+
+      <div class="box-body ts-detail-body">
+        <div class="ts-hero">
+          <div class="ts-hero-photos">
+            <figure class="ts-stamp-photo">
+              <img [src]="item.getPicture()" alt="รูปตอนลงเวลา">
+              <figcaption>รูปตอนลงเวลา</figcaption>
+            </figure>
+            <figure class="ts-profile-photo">
+              <img [src]="item.employee.getPicture()" alt="รูปโปรไฟล์">
+              <figcaption>โปรไฟล์</figcaption>
+            </figure>
+          </div>
+
+          <div class="ts-hero-info">
+            <h3 class="ts-emp-name">{{ item.employee.getFullname() }}</h3>
+            <div class="ts-chip-row">
+              <span class="ts-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
+              <span class="ts-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>
+              <span class="ts-info-chip"><i class="ri-briefcase-line"></i>{{ item.employee.position.getName() || '—' }}</span>
+            </div>
+
+            <dl class="ts-facts">
+              <div>
+                <dt>เวลาลง</dt>
+                <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+              </div>
+              <div>
+                <dt>สถานที่</dt>
+                <dd>
+                  <input
+                    *ngIf="item.timestampType === 0"
+                    type="text"
+                    class="form-control ts-location-input"
+                    [(ngModel)]="item.locationName"
+                    placeholder="ชื่อสถานที่">
+                  <span *ngIf="item.timestampType !== 0">{{ item.getLocation() }}</span>
+                </dd>
+              </div>
+              <div>
+                <dt>พิกัด</dt>
+                <dd class="ts-coords">
+                  {{ item.latitude }}, {{ item.longitude }}
+                  <a class="ts-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
+                    เปิดใน Maps <i class="ri-external-link-line"></i>
+                  </a>
+                </dd>
+              </div>
+              <div *ngIf="item.note">
+                <dt>หมายเหตุ</dt>
+                <dd class="ts-note-text">{{ item.note }}</dd>
+              </div>
+              <div *ngIf="item.approvalStatus && item.approvalStatus !== 'NONE'">
+                <dt>อนุมัติ</dt>
+                <dd>{{ item.approvalStatus }}<span *ngIf="item.rejectReason"> — {{ item.rejectReason }}</span></dd>
+              </div>
+            </dl>
+
+            <div class="ts-actions" *ngIf="item.timestampType === 0">
+              <button
+                type="button"
+                class="ti-btn ti-btn-success-full modern-btn ts-action-btn"
+                [disabled]="actionBusy"
+                (click)="approveTime(item)">
+                <i class="ri-check-line"></i>
+                อนุมัติ
+              </button>
+              <button
+                type="button"
+                class="ti-btn ti-btn-danger-full modern-btn ts-action-btn"
+                [disabled]="actionBusy"
+                (click)="disapproveTime(item)">
+                <i class="ri-close-line"></i>
+                ไม่อนุมัติ
+              </button>
             </div>
           </div>
         </div>
-        <div class="box-footer text-center">
-          <div class="btn-list">
-            <button type="button" class="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] me-2 ti-btn-light">อนุมัติ</button>
-            <button type="button"
-              class="ti-btn btn-sm !py-1 !px-2 !text-[0.75rem] text-white bg-primary">ไม่อนุมัติ</button>
+
+        <div class="ts-map-block">
+          <div class="ts-map-caption">
+            <span><i class="ri-map-pin-2-fill"></i> ตำแหน่งที่ลงเวลา</span>
+            <span class="ts-map-coords">{{ mapLat | number:'1.5-5' }}, {{ mapLng | number:'1.5-5' }}</span>
           </div>
-        </div> -->
-        <div class="box product-card">
-          <div class="box-body">
-            <div class="grid grid-cols-12 gap-6">
-              <div class="xxl:col-span-6 xl:col-span-6 col-span-12">
-                <!-- <span class="avatar avatar-xl avatar-rounded">
-                  <img [src]="item.getPicture()" alt="">
-                </span> -->
-                <img src="{{selectModel.getPicture()}}" class="card-img mb-3 avatar-rounded" alt="...">
-              </div>
-              <div class="xxl:col-span-6 xl:col-span-6 col-span-12">
-                <div class="flex-grow">
-                  <div class="sm:flex items-center">
-                    <div class="sm:mt-0 mt-2 mx-2">
-                      <p class="font-semibold mb-0 flex items-center text-primary">
-                        {{selectModel.employee.member.firstName+ "
-                        "+selectModel.employee.member.lastName}}</p>
-                      <p class="mb-0 text-secondary dark:text-white/50">{{selectModel.latitude}} ,
-                        {{selectModel.longitude}}
-                      </p>
-                      <p class="mb-0 text-dpu-muted dark:text-white/50"><span
-                          class="badge {{selectModel.timestampType==0?'bg-warning':''}} {{selectModel.timestampType==1||selectModel.timestampType==2?'bg-success':''}} {{selectModel.timestampType==3?'bg-danger':''}} text-white">{{selectModel.getStatus()}}</span>
-                      </p>
-                    </div>
-                    <div class="ms-auto">
-                      <h5
-                        class="ltr:float-right rtl:float-left badge bg-light font-semibold text-primary dark:text-white whitespace-nowrap">
-                        {{selectModel.timestamp | date: "HH:mm"}} {{selectModel.timestamp | date: "medium"}}
-                      </h5>
-                    </div>
-                  </div>
-                </div>
-                <input type="text" class="form-control !rounded-e-none border-e-0 mt-5"
-                  aria-label="Text input with segmented dropdown button" placeholder="ชื่อสถานที่"
-                  [(ngModel)]="selectModel.locationName" [disabled]="selectModel.timestampType!=0">
-                <a *ngIf="selectModel.timestampType==0" (click)="approveTime(selectModel)"
-                  class="ti-btn ti-btn-primary m-1 !me-2 !font-medium modern-btn"><i
-                    class="ri-check-line me-1 align-middle"></i>อนุมัติ</a>
-                <a *ngIf="selectModel.timestampType==0" (click)="disapproveTime(selectModel)"
-                  class="ti-btn ti-btn-success m-1 !font-medium modern-btn"><i
-                    class="ri-close-line me-1 align-middle"></i>ไม่อนุมัติ</a>
-              </div>
-              <div class="xxl:col-span-12 xl:col-span-12 col-span-12">
-                <google-map height="400px" [mapId]="mapId" [center]="mapCenter"
-                  [zoom]="12">
-
-                  <map-advanced-marker
-                    [position]="mapCenter"
-                    [options]="markerOptions" />
-
-                </google-map>
-              </div>
-
-
-            </div>
-
-
+          <div class="ts-map-frame">
+            <app-location-map [lat]="mapLat" [lng]="mapLng" [zoom]="15" height="280px"></app-location-map>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </div>
-<!--End::row-1 -->

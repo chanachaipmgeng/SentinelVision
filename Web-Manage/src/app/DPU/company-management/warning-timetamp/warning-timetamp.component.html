@@ -197,12 +197,10 @@
         <div class="warn-map-block">
           <div class="warn-map-caption">
             <span><i class="ri-map-pin-2-fill"></i> ตำแหน่งที่ลงเวลา</span>
-            <span class="warn-map-coords">{{ mapCenter.lat | number:'1.5-5' }}, {{ mapCenter.lng | number:'1.5-5' }}</span>
+            <span class="warn-map-coords">{{ mapLat | number:'1.5-5' }}, {{ mapLng | number:'1.5-5' }}</span>
           </div>
           <div class="warn-map-frame">
-            <google-map height="100%" width="100%" [mapId]="mapId" [center]="mapCenter" [zoom]="zoom">
-              <map-advanced-marker [position]="mapCenter" [options]="markerOptions" />
-            </google-map>
+            <app-location-map [lat]="mapLat" [lng]="mapLng" [zoom]="15" height="280px"></app-location-map>
           </div>
         </div>
       </div>

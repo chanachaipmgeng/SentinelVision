@@ -1,19 +1,18 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { GoogleMapsModule, MapAdvancedMarker } from '@angular/google-maps';
 import { SharedModule } from '../../../shared/shared.module';
+import { LocationMapComponent } from '../../../shared/components/location-map/location-map.component';
 import { TimestampService } from '../../services/timestamp.service';
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampModel } from '../../models/timestamp.model';
-import { environment } from '../../../../environments/environment';
 import swal from 'sweetalert';
 
 @Component({
   selector: 'app-warning-timetamp',
   templateUrl: './warning-timetamp.component.html',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, GoogleMapsModule, MapAdvancedMarker],
+  imports: [CommonModule, FormsModule, SharedModule, LocationMapComponent],
   styleUrls: ['./warning-timetamp.component.css'],
   encapsulation: ViewEncapsulation.None,
 })
@@ -25,10 +24,6 @@ export class WarningTimetampComponent implements OnInit {
   loading = false;
   actionBusy = false;
   private _searchTerm = '';
-
-  readonly mapId = environment.googleMapsMapId;
-  zoom = 15;
-  markerOptions: google.maps.marker.AdvancedMarkerElementOptions = { gmpDraggable: false };
 
   get searchTerm(): string {
     return this._searchTerm;
@@ -47,16 +42,16 @@ export class WarningTimetampComponent implements OnInit {
     return this.filteredItems.length;
   }
 
-  get mapCenter(): google.maps.LatLngLiteral {
-    return {
-      lat: this.toCoord(this.selected?.latitude, 13.7563),
-      lng: this.toCoord(this.selected?.longitude, 100.5018),
-    };
+  get mapLat(): number {
+    return this.toCoord(this.selected?.latitude, 13.7563);
+  }
+
+  get mapLng(): number {
+    return this.toCoord(this.selected?.longitude, 100.5018);
   }
 
   get mapsLink(): string {
-    const { lat, lng } = this.mapCenter;
-    return `https://www.google.com/maps?q=${lat},${lng}`;
+    return `https://www.google.com/maps?q=${this.mapLat},${this.mapLng}`;
   }
 
   constructor(

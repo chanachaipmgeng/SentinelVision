@@ -1,127 +1,184 @@
-<app-page-header [title]="'ข้อมูลบริษัท'" [activeTitle]="'จัดการบริษัท'" [title1]="'ข้อมูลบริษัท'"></app-page-header>
+<app-page-header
+  [title]="'ข้อมูลบริษัท'"
+  [activeTitle]="'จัดการบริษัท'"
+  [title1]="'ข้อมูลบริษัท'">
+</app-page-header>
 
-
-<!-- Start::row-1 -->
-<div class="grid grid-cols-12 gap-6">
-  <div class="xl:col-span-8 col-span-12">
-    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-      <div class="box-header justify-between flex">
-        <div class="box-title">
-          ข้อมูลบริษัท
-        </div>
-        <div>
-        </div>
-      </div>
-      <div class="box-body">
-        <div class="sm:p-4 p-0">
-          <h6 class="font-semibold mb-4 text-[1rem]">
-            รูปภาพ :
-          </h6>
-          <div class="mb-6 sm:flex items-center">
-            <div class="mb-0 me-[3rem]">
-              <span class="avatar avatar-xxl avatar-rounded">
-                <img [src]="companyModel.getPicture()" alt="" id="profile-img">
-                <a aria-label="anchor" href="javascript:void(0);" class="badge rounded-full bg-primary avatar-badge">
-                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
-                    class="absolute w-full h-full opacity-0" id="profile-image">
-                  <i class="fe fe-camera !text-[0.65rem]"></i>
-                </a>
-              </span>
-            </div>
-            <!-- <div class="inline-flex">
-              <button type="button" class="ti-btn bg-primary text-white !rounded-e-none !font-medium">แก้ไข</button>
-              <button type="button" class="ti-btn ti-btn-light !font-medium !rounded-s-none">ลบ</button>
-            </div> -->
+<div class="cinfo-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <!-- Toolbar -->
+  <div class="col-span-12">
+    <div class="box cinfo-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header cinfo-toolbar-header">
+        <div class="cinfo-toolbar-inner">
+          <div class="cinfo-toolbar-title">
+            <div class="box-title !mb-0">ข้อมูลบริษัท</div>
+            <span class="cinfo-stat-chip" *ngIf="companyModel.companyCode">รหัส {{ companyModel.companyCode }}</span>
+            <span class="cinfo-status-pill" [attr.data-tone]="statusTone">
+              {{ statusTone === 'ok' ? 'PUBLIC' : 'PENDING' }}
+            </span>
           </div>
-          <div class="sm:grid grid-cols-12 gap-6 mb-6">
-            <div class="xl:col-span-6 col-span-12">
-              <label for="first-name" class="form-label">ชื่อบริษัท</label>
-              <input type="text" class="form-control w-full !rounded-md" id="first-name"
-                [(ngModel)]="companyModel.companyName" placeholder="ชื่อบริษัท">
-            </div>
-            <div class="xl:col-span-6 col-span-12">
-              <label for="first-name" class="form-label">รหัสบริษัท</label>
-              <input type="text" class="form-control w-full !rounded-md" id="first-name" placeholder="CODE"
-                [(ngModel)]="companyModel.companyCode">
-            </div>
-            <div class="xl:col-span-6 col-span-12">
-              <label for="bio" class="form-label">เกี่ยวกับบริษัท :</label>
-              <textarea class="form-control w-full !rounded-md dark:!text-defaulttextcolor/70" id="bio" rows="5"
-                [(ngModel)]="companyModel.companyInfo"></textarea>
-            </div>
-
-            <div class="xl:col-span-6 col-span-12">
-              <label for="bio" class="form-label">ที่อยู่ :</label>
-              <textarea class="form-control w-full !rounded-md dark:!text-defaulttextcolor/70" id="bio" rows="5"
-                [(ngModel)]="companyModel.address"></textarea>
-            </div>
-
-          </div>
-          <h6 class="font-semibold mb-4 text-[1rem]">
-            ข้อมูลเจ้าของบริษัท :
-          </h6>
-          <div class="sm:grid grid-cols-12 gap-6 mb-6">
-            <div class="xl:col-span-6 col-span-12">
-              <label for="email-address" class="form-label">ชื่อ-สกุล :</label>
-              <input type="text" class="form-control w-full !rounded-md" id="email-address"
-                [(ngModel)]="companyModel.ownerName" placeholder="ชื่อ-สกุล">
-            </div>
-            <div class="xl:col-span-6 col-span-12">
-              <label for="Contact-Details" class="form-label">เบอร์ติดต่อ :</label>
-              <input type="text" class="form-control w-full !rounded-md" id="Contact-Details"
-                [(ngModel)]="companyModel.contact" placeholder="การติดต่อ">
-            </div>
-
-          </div>
-        </div>
-      </div>
-      <div class="box-footer">
-        <div class="ltr:float-right rtl:float-left">
-          <button type="button" class="ti-btn bg-primary text-white m-1 modern-btn" (click)="save()">
-            บันทึกการเปลี่ยนแปลง
-          </button>
-          <button type="button" class="ti-btn ti-btn-ghost-secondary ti-btn-wave modern-btn" (click)="reset()">ยกเลิก</button>
-
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="xl:col-span-4 col-span-12">
-    <div class="box custom-box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-      <div class="box-header justify-between">
-        <div class="box-title">แผนที่บริษัท</div>
-      </div>
-      <div class="box-body">
-        <div class="grid grid-cols-12 sm:gap-6">
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
-            <label for="input-label" class="form-label">{{"ละติจูด" | translate}}</label>
-            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="companyModel.latitude"
-              (ngModelChange)="changeMarker()">
-          </div>
-
-          <div class="xl:col-span-6 lg:col-span-6 md:col-span-6 sm:col-span-6 col-span-6">
-            <label for="input-label" class="form-label">{{"ลองจิจูด" | translate}}</label>
-            <input type="number" step="any" class="form-control" id="input" [(ngModel)]="companyModel.longitude"
-              (ngModelChange)="changeMarker()">
-          </div>
-          <div class="xl:col-span-12 col-span-12">
-            <div class="xl:col-span-12 col-span-12">
-              <div #placeAutocompleteHost class="w-full mb-3"></div>
-            </div>
-            <google-map class="xl:col-span-12 col-span-12" height="400px"
-              [mapId]="mapId"
-              [center]="mapCenter" [zoom]="12"
-              (mapClick)="addMarker($event)">
-
-              <map-advanced-marker
-                [position]="mapCenter" [options]="markerOptions" />
-
-            </google-map>
-
+          <div class="cinfo-toolbar-actions">
+            <button type="button" class="ti-btn ti-btn-light modern-btn cinfo-tool-btn"
+              [disabled]="loading || saving" (click)="reset()">
+              <i class="ri-refresh-line"></i>
+              <span>รีเซ็ต</span>
+            </button>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn cinfo-tool-btn"
+              [disabled]="loading || saving" (click)="save()">
+              <i class="ri-save-line"></i>
+              <span>{{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}</span>
+            </button>
           </div>
         </div>
       </div>
     </div>
   </div>
+
+  <div *ngIf="loading" class="col-span-12">
+    <div class="box cinfo-loading modern-card glass">
+      <div class="cinfo-empty">
+        <span class="ti-spinner animation-spin cinfo-empty-spinner" role="status"></span>
+        <p>กำลังโหลดข้อมูลบริษัท...</p>
+      </div>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <!-- Hero + company form -->
+    <div class="col-span-12 xl:col-span-7">
+      <div class="box cinfo-main modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+        <div class="box-body cinfo-main-body">
+          <div class="cinfo-hero">
+            <div class="cinfo-logo-wrap">
+              <img [src]="companyModel.getPicture()" alt="โลโก้บริษัท" class="cinfo-logo">
+              <label class="cinfo-logo-badge" for="profile-image" title="เปลี่ยนรูป">
+                <input
+                  ng2FileSelect
+                  [uploader]="uploaderProfile"
+                  type="file"
+                  accept="image/*"
+                  name="photo"
+                  class="absolute inset-0 opacity-0 cursor-pointer"
+                  id="profile-image">
+                <i class="ri-camera-line"></i>
+              </label>
+            </div>
+            <div class="cinfo-hero-text">
+              <h2 class="cinfo-company-name">{{ companyModel.companyName || 'ชื่อบริษัท' }}</h2>
+              <p class="cinfo-company-sub mb-0">
+                อัปเดตล่าสุด
+                {{ companyModel.updatedAt ? (companyModel.updatedAt | date: 'dd/MM/yyyy HH:mm') : '—' }}
+              </p>
+              <p class="cinfo-upload-hint mb-0" *ngIf="uploadErrorMsg">{{ uploadErrorMsg }}</p>
+            </div>
+          </div>
+
+          <section class="cinfo-section">
+            <div class="cinfo-section-head">
+              <i class="ri-building-4-line"></i>
+              <h3>ข้อมูลทั่วไป</h3>
+            </div>
+            <div class="cinfo-form-grid">
+              <div class="cinfo-field">
+                <label class="form-label" for="company-name">ชื่อบริษัท</label>
+                <input id="company-name" type="text" class="form-control"
+                  [(ngModel)]="companyModel.companyName" placeholder="ชื่อบริษัท">
+              </div>
+              <div class="cinfo-field">
+                <label class="form-label" for="company-code">รหัสบริษัท</label>
+                <input id="company-code" type="text" class="form-control"
+                  [(ngModel)]="companyModel.companyCode" placeholder="CODE">
+              </div>
+              <div class="cinfo-field cinfo-field--full">
+                <label class="form-label" for="company-info">เกี่ยวกับบริษัท</label>
+                <textarea id="company-info" class="form-control" rows="4"
+                  [(ngModel)]="companyModel.companyInfo"
+                  placeholder="รายละเอียดบริษัท"></textarea>
+              </div>
+              <div class="cinfo-field cinfo-field--full">
+                <label class="form-label" for="company-address">ที่อยู่</label>
+                <textarea id="company-address" class="form-control" rows="3"
+                  [(ngModel)]="companyModel.address"
+                  placeholder="ที่อยู่บริษัท"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="cinfo-section">
+            <div class="cinfo-section-head">
+              <i class="ri-user-star-line"></i>
+              <h3>เจ้าของ / ผู้ติดต่อ</h3>
+            </div>
+            <div class="cinfo-form-grid">
+              <div class="cinfo-field">
+                <label class="form-label" for="owner-name">ชื่อ-สกุล</label>
+                <input id="owner-name" type="text" class="form-control"
+                  [(ngModel)]="companyModel.ownerName" placeholder="ชื่อ-สกุล">
+              </div>
+              <div class="cinfo-field">
+                <label class="form-label" for="owner-contact">เบอร์ติดต่อ</label>
+                <input id="owner-contact" type="text" class="form-control"
+                  [(ngModel)]="companyModel.contact" placeholder="เบอร์โทร / อีเมล">
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map panel -->
+    <div class="col-span-12 xl:col-span-5">
+      <div class="box cinfo-map-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+        <div class="box-header cinfo-panel-header">
+          <div>
+            <div class="box-title !mb-0">ตำแหน่งบริษัท</div>
+            <p class="cinfo-panel-sub mb-0">ปักหมุดบนแผนที่หรือกรอกพิกัด</p>
+          </div>
+          <a class="cinfo-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
+            เปิด Maps <i class="ri-external-link-line"></i>
+          </a>
+        </div>
+
+        <div class="box-body cinfo-map-body">
+          <div class="cinfo-coord-grid">
+            <div>
+              <label class="form-label">ละติจูด</label>
+              <input type="number" step="any" class="form-control"
+                [(ngModel)]="companyModel.latitude" (ngModelChange)="changeMarker()">
+            </div>
+            <div>
+              <label class="form-label">ลองจิจูด</label>
+              <input type="number" step="any" class="form-control"
+                [(ngModel)]="companyModel.longitude" (ngModelChange)="changeMarker()">
+            </div>
+          </div>
+
+          <div *ngIf="mapsReady" class="mb-3">
+            <label class="form-label">ค้นหาที่อยู่</label>
+            <div #placeAutocompleteHost class="w-full"></div>
+          </div>
+          <div *ngIf="!mapsReady" class="cinfo-maps-hint mb-3">
+            Google Maps ยังใช้ไม่ได้บนโดเมนนี้ — ใช้ OpenStreetMap และกรอกพิกัดเองได้
+          </div>
+
+          <div class="cinfo-map-frame">
+            @if (mapsReady) {
+              <google-map height="100%" width="100%" [center]="mapCenter" [zoom]="zoom"
+                (mapClick)="addMarker($event)">
+                <map-marker [position]="mapCenter" [options]="markerOptions"></map-marker>
+              </google-map>
+            } @else {
+              <app-location-map
+                [lat]="mapCenter.lat"
+                [lng]="mapCenter.lng"
+                [zoom]="14"
+                height="320px">
+              </app-location-map>
+            }
+          </div>
+          <p class="cinfo-map-tip mb-0" *ngIf="mapsReady">คลิกบนแผนที่เพื่อปักหมุดตำแหน่งใหม่</p>
+        </div>
+      </div>
+    </div>
+  </ng-container>
 </div>
-<!--End::row-1 -->

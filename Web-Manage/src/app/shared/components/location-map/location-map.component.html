@@ -1,0 +1,19 @@
+<div class="loc-map" [style.height]="height">
+  @if (useGoogle) {
+    <google-map height="100%" width="100%" [center]="center" [zoom]="zoom">
+      <map-marker [position]="center"></map-marker>
+    </google-map>
+  } @else {
+    <iframe
+      class="loc-map-osm"
+      title="แผนที่ตำแหน่ง"
+      [src]="osmUrl"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+    <div class="loc-map-fallback-bar">
+      <span>แสดงด้วย OpenStreetMap (Google Maps API key ยังไม่อนุญาตโดเมนนี้)</span>
+      <a [href]="mapsLink" target="_blank" rel="noopener noreferrer">เปิดใน Google Maps</a>
+    </div>
+  }
+</div>

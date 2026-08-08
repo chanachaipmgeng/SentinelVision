@@ -2,25 +2,33 @@
 
 <div class="dpu-dashboard grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="ภาพรวมบริษัท">
+    <app-page-toolbar title="ภาพรวมการลงเวลา">
       <ng-container chips>
         <app-stat-chip tone="ok" *ngIf="stats">วันนี้ {{ stats.summary.checkInsToday }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="stats">7 วัน {{ weekTotal }}</app-stat-chip>
-        <app-stat-chip tone="warn" *ngIf="stats">นอกพื้นที่ {{ outsideAreaCount }}</app-stat-chip>
-        <app-stat-chip tone="danger" *ngIf="error">ผิดพลาด</app-stat-chip>
+        <app-stat-chip tone="warn" *ngIf="stats">นอกพื้นที่ {{ outsideToday }}</app-stat-chip>
+        <app-stat-chip tone="danger" *ngIf="stats && pendingApproval">รออนุมัติ {{ pendingApproval }}</app-stat-chip>
+        <app-stat-chip [tone]="liveOn ? 'ok' : 'soft'">
+          {{ liveOn ? 'Realtime เปิด' : 'Realtime ปิด' }}
+        </app-stat-chip>
       </ng-container>
       <ng-container controls>
-        <a routerLink="/company/company-emp" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-team-line"></i><span>พนักงาน</span>
-        </a>
-        <a routerLink="/company/timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-time-line"></i><span>ลงเวลา</span>
+        <span class="dpu-dash-updated" *ngIf="lastUpdated">
+          อัปเดต {{ lastUpdated | date:'HH:mm:ss' }}
+        </span>
+        <button type="button" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh" (click)="toggleLive()">
+          <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-broadcast-off-line'"></i>
+          <span>{{ liveOn ? 'หยุดสด' : 'เปิดสด' }}</span>
+        </button>
+        <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
+          <i class="ri-checkbox-circle-line"></i><span>อนุมัติ</span>
         </a>
         <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
           <i class="ri-camera-line"></i><span>Kiosk</span>
         </a>
-        <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh" (click)="loadStats()" [disabled]="isLoading">
-          <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i>
+        <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh"
+          (click)="loadStats(false)" [disabled]="isLoading || isRefreshing">
+          <i class="ri-refresh-line" [class.animate-spin]="isRefreshing"></i>
           <span>รีเฟรช</span>
         </button>
       </ng-container>
@@ -42,114 +50,129 @@
           <div class="font-semibold text-danger">โหลดไม่สำเร็จ</div>
           <div class="text-sm text-dpu-muted">{{ error }}</div>
         </div>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats()">ลองใหม่</button>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats(true)">ลองใหม่</button>
       </div>
     </div>
   </div>
 
   <ng-container *ngIf="stats && !isLoading">
-    <div class="xl:col-span-4 lg:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500">
+    <!-- KPI row -->
+    <div class="xl:col-span-3 md:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass">
         <div class="box-body">
-          <div class="flex items-start">
-            <div class="flex-grow">
-              <p class="mb-0 text-dpu-muted">ลงเวลาวันนี้</p>
-              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.summary.checkInsToday }}</div>
-            </div>
-            <div class="avatar bg-primary/10 !text-primary">
-              <i class="ri-calendar-check-line text-xl"></i>
-            </div>
-          </div>
+          <p class="mb-0 text-dpu-muted">ลงเวลาวันนี้</p>
+          <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.summary.checkInsToday }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="xl:col-span-3 md:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass">
+        <div class="box-body">
+          <p class="mb-0 text-dpu-muted">ในพื้นที่วันนี้</p>
+          <div class="text-2xl font-semibold text-dpu-brand-deep">{{ inAreaToday }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="xl:col-span-3 md:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass">
+        <div class="box-body">
+          <p class="mb-0 text-dpu-muted">นอกพื้นที่วันนี้</p>
+          <div class="text-2xl font-semibold" [class.text-danger]="outsideToday > 0">{{ outsideToday }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="xl:col-span-3 md:col-span-6 col-span-12">
+      <div class="box dpu-stat-card modern-card glass">
+        <div class="box-body">
+          <p class="mb-0 text-dpu-muted">รออนุมัติ</p>
+          <div class="text-2xl font-semibold" [class.text-warning]="pendingApproval > 0">{{ pendingApproval }}</div>
+          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link">ไปคิวอนุมัติ</a>
         </div>
       </div>
     </div>
 
-    <div class="xl:col-span-4 lg:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500 delay-75">
-        <div class="box-body">
-          <div class="flex items-start">
-            <div class="flex-grow">
-              <p class="mb-0 text-dpu-muted">รวม 7 วันล่าสุด</p>
-              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ weekTotal }}</div>
-            </div>
-            <div class="avatar bg-primary/10 !text-primary">
-              <i class="ri-line-chart-line text-xl"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="xl:col-span-4 lg:col-span-12 col-span-12">
-      <div class="box dpu-stat-card modern-card glass animate-in zoom-in duration-500 delay-100">
-        <div class="box-body">
-          <div class="flex items-start">
-            <div class="flex-grow">
-              <p class="mb-0 text-dpu-muted">นอกพื้นที่ (ล่าสุด)</p>
-              <div class="text-2xl font-semibold" [ngClass]="outsideAreaCount > 0 ? 'text-danger' : 'text-dpu-brand-deep'">
-                {{ outsideAreaCount }}
-              </div>
-            </div>
-            <div class="avatar" [ngClass]="outsideAreaCount > 0 ? 'bg-danger/10 text-danger' : 'bg-primary/10 !text-primary'">
-              <i class="ri-map-pin-user-line text-xl"></i>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-span-12">
-      <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+    <!-- Charts -->
+    <div class="xl:col-span-8 col-span-12">
+      <div class="box modern-card glass h-full">
         <div class="box-header">
-          <h5 class="box-title !mb-0">แนวโน้มการลงเวลา (7 วัน)</h5>
+          <h5 class="box-title !mb-0">แนวโน้ม 7 วัน</h5>
         </div>
         <div class="box-body">
-          <div *ngIf="chartOption" echarts [options]="chartOption" class="h-80"></div>
-          <app-empty-state *ngIf="!chartOption" icon="ri-bar-chart-2-line" message="ยังไม่มีข้อมูลกราฟ"></app-empty-state>
+          <div echarts [options]="trendChart" class="h-72"></div>
+        </div>
+      </div>
+    </div>
+    <div class="xl:col-span-4 col-span-12">
+      <div class="box modern-card glass h-full">
+        <div class="box-header">
+          <h5 class="box-title !mb-0">สัดส่วนวันนี้</h5>
+        </div>
+        <div class="box-body">
+          <div echarts [options]="mixChart" class="h-72"></div>
         </div>
       </div>
     </div>
 
-    <div class="col-span-12">
-      <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-        <div class="box-header flex items-center justify-between">
-          <h5 class="box-title !mb-0">กิจกรรมล่าสุด</h5>
-          <span class="dpu-muted-count" *ngIf="stats.recentActivity.length">{{ stats.recentActivity.length }} รายการ</span>
+    <!-- Map + realtime feed -->
+    <div class="xl:col-span-7 col-span-12">
+      <div class="box modern-card glass">
+        <div class="box-header flex items-center justify-between gap-2">
+          <div>
+            <h5 class="box-title !mb-0">แผนที่ลงเวลาวันนี้</h5>
+            <p class="mb-0 text-xs text-dpu-muted">
+              มุมมองเริ่มต้นที่บริษัท · จุดเข้ม = บริษัท · เขียว = ในพื้นที่ · ส้ม = นอกพื้นที่
+            </p>
+          </div>
+          <span class="dpu-muted-count">{{ mapPoints.length }} จุดลงเวลา</span>
+        </div>
+        <div class="box-body">
+          <app-checkin-map
+            [points]="mapPoints"
+            [companyLocations]="companyLocations"
+            height="420px">
+          </app-checkin-map>
+        </div>
+      </div>
+    </div>
+
+    <div class="xl:col-span-5 col-span-12">
+      <div class="box modern-card glass dpu-live-panel">
+        <div class="box-header flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="dpu-live-dot" [class.is-on]="liveOn"></span>
+            <h5 class="box-title !mb-0">ลงเวลาล่าสุด (Realtime)</h5>
+          </div>
+          <a routerLink="/company/timestamp-log" class="dpu-dash-link">ดูทั้งหมด</a>
         </div>
         <div class="box-body !p-0">
           <app-empty-state
-            *ngIf="stats.recentActivity.length === 0"
+            *ngIf="!stats.recentActivity?.length"
             icon="ri-time-line"
             message="ยังไม่มีกิจกรรมล่าสุด">
           </app-empty-state>
-          <div class="table-responsive" *ngIf="stats.recentActivity.length">
-            <table class="table whitespace-nowrap min-w-full dpu-list-table mb-0">
-              <thead>
-                <tr>
-                  <th>พนักงาน</th>
-                  <th>เวลา</th>
-                  <th>สถานที่</th>
-                  <th>ประเภท</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (activity of stats.recentActivity; track $index) {
-                  <tr>
-                    <td class="font-semibold">{{ activity.employeeName }}</td>
-                    <td>{{ activity.timestamp | date:'medium' }}</td>
-                    <td>{{ activity.locationName || '—' }}</td>
-                    <td>
-                      @if (activity.timestampType === 1) {
-                        <span class="badge bg-success/10 text-success">ในพื้นที่</span>
-                      } @else {
-                        <span class="badge bg-danger/10 text-danger">นอกพื้นที่</span>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+          <ul class="dpu-live-feed" *ngIf="stats.recentActivity?.length">
+            @for (activity of stats.recentActivity; track activity.timestampId || $index) {
+              <li class="dpu-live-item" [class.is-new]="isNew(activity)" [class.is-warn]="!isInArea(activity)">
+                <img class="dpu-live-avatar" [src]="photoUrl(activity)" alt="">
+                <div class="dpu-live-body">
+                  <div class="dpu-live-row">
+                    <strong>{{ activity.employeeName }}</strong>
+                    <time>{{ activity.timestamp | date:'HH:mm:ss' }}</time>
+                  </div>
+                  <div class="dpu-live-meta">
+                    <span *ngIf="activity.employeeId">รหัส {{ activity.employeeId }} · </span>
+                    {{ activity.locationName || (isInArea(activity) ? 'ในพื้นที่' : 'นอกพื้นที่') }}
+                  </div>
+                  <div class="dpu-live-tags">
+                    <span class="badge" [ngClass]="isInArea(activity) ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
+                      {{ isInArea(activity) ? 'ในพื้นที่' : 'นอกพื้นที่' }}
+                    </span>
+                    <span class="badge bg-warning/10 text-warning" *ngIf="activity.approvalStatus === 'PENDING'">PENDING</span>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
         </div>
       </div>
     </div>

@@ -52,10 +52,11 @@ Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, 
 ## Admin UI (Web-Manage)
 
 - Brand tokens + shell: `Web-Manage/src/assets/css/dpu-theme.css`
-- Shared list kit: `Web-Manage/src/app/shared/components/` (`page-toolbar`, `pill-search`, `stat-chip`, `simple-pager`, `empty-state`, `location-map`)
+- Shared list kit: `Web-Manage/src/app/shared/components/` (`page-toolbar`, `pill-search`, `stat-chip`, `simple-pager`, `empty-state`, `location-map`, `checkin-map`)
 - List helpers: `Web-Manage/src/app/shared/styles/dpu-list-page.css`
 - Shell layout: `shared/layouts/content-layout/` + header/sidebar
 - Menus: `shared/services/nav.service.ts` (`getCommonMenu` / `getCompanyMenu`)
+- Dashboard (`/company/dashboard`): charts + Leaflet check-in map + polled realtime feed via `GET /dashboard/stats/{companyId}` (`mapPoints`, `recentActivity`)
 
 ## Key source paths
 

@@ -379,13 +379,14 @@
   grid-template-columns: minmax(10rem, 14rem) 1fr;
   gap: 1rem 1.25rem;
   margin-bottom: 1rem;
+  align-items: start;
 }
 
 .warn-hero-photos {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 0.55rem;
-  align-items: end;
+  align-items: start;
 }
 
 .warn-stamp-photo,
@@ -405,7 +406,7 @@
 }
 
 .warn-profile-photo {
-  transform: translateY(0.35rem);
+  transform: none;
 }
 
 .warn-profile-photo img {

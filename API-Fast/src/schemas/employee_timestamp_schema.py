@@ -44,6 +44,9 @@ class MemberResponse(BaseModel):
     firstName: Optional[str]
     lastName: Optional[str]
     phoneNumber: Optional[str] = None
+    picture: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
     birthDate: Optional[datetime] = None
     address: Optional[str] = None
     emergencyContactName: Optional[str] = None

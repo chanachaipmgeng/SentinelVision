@@ -110,6 +110,9 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   faceAngleSteps: FaceAngleStep[] = [];
   currentAngleIndex = 0;
   uploadProgressLabel = '';
+  faceEnrollMode: 'camera' | 'upload' = 'camera';
+  uploadFaceItems: { file: File; preview: string }[] = [];
+  @ViewChild('faceUploadInput') faceUploadInput?: ElementRef<HTMLInputElement>;
   private modelsLoaded = false;
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
   private videoStream: MediaStream | null = null;
@@ -145,7 +148,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
-    this.stopFaceCamera();
+    this.closeFaceEnrollModal();
     this.movedModalNodes.forEach((el) => el.remove());
     this.movedModalNodes = [];
   }
@@ -153,6 +156,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   async openFaceEnroll(item: EmployeeModel): Promise<void> {
     this.view(item);
     this.resetFaceAngles();
+    this.clearUploadFaceItems();
+    this.faceEnrollMode = 'camera';
     this.checkMatch = false;
     this.isFaceDetected = false;
     this.capturingAngle = false;
@@ -161,7 +166,26 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.uploadProgressLabel = '';
     this.faceStatus = 'กำลังโหลดโมเดลและกล้อง...';
     this.cdr.detectChanges();
+    await this.startCameraEnroll();
+  }
 
+  async setFaceEnrollMode(mode: 'camera' | 'upload'): Promise<void> {
+    if (this.isUploadingFace || this.faceEnrollMode === mode) {
+      return;
+    }
+    this.faceEnrollMode = mode;
+    if (mode === 'upload') {
+      this.stopFaceCamera();
+      this.faceStatus = 'เลือกไฟล์รูปใบหน้าเพื่อลงทะเบียน';
+      this.cdr.detectChanges();
+      return;
+    }
+    this.faceStatus = 'กำลังโหลดโมเดลและกล้อง...';
+    this.cdr.detectChanges();
+    await this.startCameraEnroll();
+  }
+
+  private async startCameraEnroll(): Promise<void> {
     try {
       unlockBeepAudio();
       await this.ensureFaceModels();
@@ -172,6 +196,111 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     } catch (err: any) {
       console.error(err);
       this.faceStatus = err?.message || 'เปิดกล้องไม่สำเร็จ';
+      this.cdr.detectChanges();
+    }
+  }
+
+  triggerFaceUploadPicker(): void {
+    if (this.isUploadingFace) {
+      return;
+    }
+    if (this.faceUploadInput?.nativeElement) {
+      this.faceUploadInput.nativeElement.value = '';
+      this.faceUploadInput.nativeElement.click();
+    }
+  }
+
+  onFaceUploadSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files || []);
+    input.value = '';
+    if (!files.length) {
+      return;
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    for (const file of files) {
+      const okType =
+        allowed.includes((file.type || '').toLowerCase()) ||
+        /\.(jpe?g|png|webp)$/i.test(file.name || '');
+      if (!okType) {
+        swal('ไฟล์ไม่ถูกต้อง', `รองรับเฉพาะ JPG / PNG / WEBP\n(${file.name})`, 'warning');
+        continue;
+      }
+      this.uploadFaceItems.push({
+        file,
+        preview: URL.createObjectURL(file),
+      });
+    }
+    this.faceStatus =
+      this.uploadFaceItems.length > 0
+        ? `เลือกแล้ว ${this.uploadFaceItems.length} รูป — กดบันทึกเพื่อลงทะเบียน`
+        : 'เลือกไฟล์รูปใบหน้าเพื่อลงทะเบียน';
+    this.cdr.detectChanges();
+  }
+
+  removeUploadFaceItem(index: number): void {
+    const item = this.uploadFaceItems[index];
+    if (item?.preview) {
+      URL.revokeObjectURL(item.preview);
+    }
+    this.uploadFaceItems.splice(index, 1);
+    this.faceStatus =
+      this.uploadFaceItems.length > 0
+        ? `เลือกแล้ว ${this.uploadFaceItems.length} รูป — กดบันทึกเพื่อลงทะเบียน`
+        : 'เลือกไฟล์รูปใบหน้าเพื่อลงทะเบียน';
+    this.cdr.detectChanges();
+  }
+
+  private clearUploadFaceItems(): void {
+    this.uploadFaceItems.forEach((item) => {
+      if (item.preview) {
+        URL.revokeObjectURL(item.preview);
+      }
+    });
+    this.uploadFaceItems = [];
+  }
+
+  async uploadFacePhotos(): Promise<void> {
+    if (!this.selectModel?.member?.memberId) {
+      swal('Error', 'ไม่พบข้อมูลพนักงาน', 'error');
+      return;
+    }
+    if (!this.uploadFaceItems.length) {
+      swal('ยังไม่มีรูป', 'กรุณาเลือกรูปใบหน้าอย่างน้อย 1 รูป', 'info');
+      return;
+    }
+
+    this.isUploadingFace = true;
+    const memberId = this.selectModel.member.memberId;
+    try {
+      for (let i = 0; i < this.uploadFaceItems.length; i++) {
+        const item = this.uploadFaceItems[i];
+        this.uploadProgressLabel = `กำลังอัปโหลด ${i + 1}/${this.uploadFaceItems.length}...`;
+        this.faceStatus = this.uploadProgressLabel;
+        this.cdr.detectChanges();
+        const formData = new FormData();
+        formData.append('file', item.file, item.file.name || `face-${i + 1}.jpg`);
+        await firstValueFrom(
+          this.http.post(environment.baseUrl + `/face/members/${memberId}/add-face`, formData),
+        );
+      }
+      this.uploadStatus = 'Face uploaded successfully!';
+      this.faceStatus = `บันทึกใบหน้า ${this.uploadFaceItems.length} รูปสำเร็จ`;
+      this.cdr.detectChanges();
+      swal('Save Success!!', `บันทึกใบหน้า ${this.uploadFaceItems.length} รูปสำเร็จ`, 'success');
+      this.clearUploadFaceItems();
+      this.childModalFace?.nativeElement.click();
+      this.stopFaceCamera();
+    } catch (error: any) {
+      const detail = error?.error?.detail || 'บันทึกใบหน้าไม่สำเร็จ';
+      this.uploadStatus = 'Error uploading face!';
+      this.faceStatus = detail;
+      this.cdr.detectChanges();
+      console.error('Error:', error);
+      swal('Upload Failed', detail, 'error');
+    } finally {
+      this.isUploadingFace = false;
+      this.uploadProgressLabel = '';
       this.cdr.detectChanges();
     }
   }
@@ -237,6 +366,13 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       this.video.nativeElement.srcObject = null;
     }
     this.smoothedBox = null;
+  }
+
+  closeFaceEnrollModal(): void {
+    this.stopFaceCamera();
+    this.clearUploadFaceItems();
+    this.isUploadingFace = false;
+    this.uploadProgressLabel = '';
   }
 
   async detectFace() {
@@ -338,6 +474,10 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
 
   captureImage(): void {
     if (this.isUploadingFace || this.capturingAngle) {
+      return;
+    }
+    if (this.faceEnrollMode === 'upload') {
+      void this.uploadFacePhotos();
       return;
     }
     if (!this.selectModel?.member?.memberId) {

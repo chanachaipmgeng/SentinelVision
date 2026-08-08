@@ -170,8 +170,9 @@ export class FaceScanComponent implements OnDestroy {
       const file = this.dataURLtoFile(dataUrl, `frame_${index}.jpg`);
       formData.append('files', file);
     });
+    formData.append('companyId', this.companyId);
 
-    // *** IMPORTANT: Using the new endpoint for 1:N check with liveness ***
+    // 1:N check with liveness — match only within selected company
     this.http.post(environment.baseUrl + `/face/members/check-face-emp`, formData).subscribe({
       next: (response: any) => {
         this.memberId = response.memberId; // Get the memberId from the successful response

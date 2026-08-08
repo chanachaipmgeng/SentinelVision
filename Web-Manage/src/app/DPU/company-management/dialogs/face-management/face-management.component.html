@@ -1,46 +1,150 @@
-<div class="face-management-container p-4">
+<div class="face-management-container p-2 sm:p-4 space-y-5">
 
-  <!-- Loading Indicator -->
-  @if (isLoading) {
-    <div class="flex justify-center items-center h-48">
-      <div class="ti-spinner" role="status">
-        <span class="sr-only">Loading...</span>
+  <!-- Test scan (no check-in) -->
+  <section class="rounded-lg border border-defaultborder dark:border-defaultborder/10 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div>
+        <h6 class="mb-0 font-semibold text-defaulttextcolor">ทดสอบสแกนใบหน้า</h6>
+        <p class="mb-0 text-xs text-textmuted">เทียบกับใบหน้าที่ลงทะเบียนของพนักงานคนนี้ · ไม่ลงเวลาจริง</p>
       </div>
     </div>
-  }
 
-  <!-- Error Message -->
-  @if (error) {
-    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-      <span class="font-medium">Error!</span> {{ error }}
-    </div>
-  }
-
-  <!-- No Encodings Found -->
-  @if (!isLoading && !error && encodings.length === 0) {
-    <div class="text-center text-gray-500">
-      <p>No enrolled faces found for this user.</p>
-    </div>
-  }
-
-  <!-- Encodings Grid -->
-  @if (!isLoading && !error && encodings.length > 0) {
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      @for (encoding of encodings; track encoding.faceEncodingId) {
-        <div class="box relative group">
-          <img class="w-full h-auto rounded-md" [src]="getFullImageUrl(encoding.imageUrl)" alt="Enrolled face">
-          <div class="absolute top-2 right-2">
-            <button (click)="deleteEncoding(encoding.faceEncodingId)" class="ti-btn ti-btn-sm ti-btn-danger opacity-0 group-hover:opacity-100 transition-opacity">
-              <i class="ri-delete-bin-line"></i>
-            </button>
-          </div>
-          <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-md">
-            <p class="truncate">ID: {{ encoding.faceEncodingId }}</p>
-            <p>{{ encoding.createdAt | date:'short' }}</p>
-          </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <div class="relative w-full overflow-hidden rounded-md bg-black/5 min-h-[200px] flex items-center justify-center">
+          @if (cameraOn) {
+            <video #verifyVideo playsinline autoplay muted
+              class="w-full h-auto max-h-[280px] object-cover block"></video>
+          } @else if (verifyPreview) {
+            <img [src]="verifyPreview" alt="preview" class="w-full h-auto max-h-[280px] object-contain">
+          } @else {
+            <span class="text-sm text-textmuted p-6 text-center">เปิดกล้องหรืออัปโหลดรูปเพื่อทดสอบ</span>
+          }
         </div>
-      }
-    </div>
-  }
+        <div class="flex flex-wrap gap-2 mt-3">
+          @if (!cameraOn) {
+            <button type="button" class="ti-btn ti-btn-sm ti-btn-primary-full" [disabled]="isVerifying"
+              (click)="startCamera()">
+              <i class="ri-camera-line align-middle me-1"></i>เปิดกล้อง
+            </button>
+          } @else {
+            <button type="button" class="ti-btn ti-btn-sm ti-btn-success-full" [disabled]="isVerifying"
+              (click)="captureFromCamera()">
+              <i class="ri-camera-lens-line align-middle me-1"></i>ถ่ายรูป
+            </button>
+            <button type="button" class="ti-btn ti-btn-sm ti-btn-light" [disabled]="isVerifying"
+              (click)="stopCamera()">
+              ปิดกล้อง
+            </button>
+          }
+          <button type="button" class="ti-btn ti-btn-sm ti-btn-info-full" [disabled]="isVerifying"
+            (click)="triggerVerifyFile()">
+            <i class="ri-image-add-line align-middle me-1"></i>อัปโหลดรูป
+          </button>
+          <input #verifyFileInput type="file" class="hidden"
+            accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+            (change)="onVerifyFileSelected($event)">
+          <button type="button" class="ti-btn ti-btn-sm bg-primary text-white"
+            [disabled]="isVerifying || (!verifyPreview && !cameraOn)"
+            (click)="runVerify()">
+            @if (isVerifying) {
+              <span class="ti-spinner animation-spin !w-4 !h-4 align-middle me-1"></span>
+              กำลังทดสอบ...
+            } @else {
+              <i class="ri-scan-2-line align-middle me-1"></i>ทดสอบสแกน
+            }
+          </button>
+        </div>
+      </div>
 
+      <div class="flex flex-col justify-center">
+        @if (verifyError) {
+          <div class="p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+            {{ verifyError }}
+          </div>
+        }
+        @if (verifyResult) {
+          <div class="rounded-lg p-4 text-center"
+            [ngClass]="verifyResult.matched ? 'bg-success/10' : 'bg-danger/10'">
+            <div class="text-4xl font-bold mb-1"
+              [ngClass]="verifyResult.matched ? 'text-success' : 'text-danger'">
+              {{ verifyResult.confidencePercent | number:'1.0-1' }}%
+            </div>
+            <div class="font-semibold mb-2"
+              [ngClass]="verifyResult.matched ? 'text-success' : 'text-danger'">
+              {{ verifyResult.matched ? 'ตรงกับพนักงานคนนี้' : 'ไม่ผ่านเกณฑ์ / ไม่ตรง' }}
+            </div>
+            <div class="text-xs text-textmuted space-y-1">
+              <div>คุณภาพการจับคู่: {{ qualityLabel(verifyResult.matchQuality) }}</div>
+              <div>distance: {{ verifyResult.distance | number:'1.0-4' }}
+                · threshold: {{ verifyResult.threshold | number:'1.0-2' }}</div>
+              <div>โหมดทดสอบเท่านั้น — ไม่ได้ลงเวลา</div>
+            </div>
+          </div>
+        } @else if (!verifyError) {
+          <div class="rounded-lg border border-dashed border-defaultborder p-6 text-center text-sm text-textmuted">
+            ผลทดสอบจะแสดงเปอร์เซ็นความคล้ายที่นี่
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Enrolled list -->
+  <section>
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div>
+        <h6 class="mb-0 font-semibold text-defaulttextcolor">ใบหน้าที่ลงทะเบียน
+          <span class="badge bg-light text-default rounded-full ms-1 text-[0.75rem]">{{ encodings.length }}</span>
+        </h6>
+      </div>
+      <button type="button" class="ti-btn ti-btn-sm ti-btn-danger"
+        [disabled]="isLoading || !encodings.length"
+        (click)="clearAllEncodings()">
+        <i class="ri-delete-bin-2-line align-middle me-1"></i>ล้างทั้งหมด
+      </button>
+    </div>
+
+    @if (isLoading) {
+      <div class="flex justify-center items-center h-40">
+        <div class="ti-spinner" role="status">
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    }
+
+    @if (error) {
+      <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+        <span class="font-medium">Error!</span> {{ error }}
+      </div>
+    }
+
+    @if (!isLoading && !error && encodings.length === 0) {
+      <div class="text-center text-textmuted py-8">
+        <p class="mb-0">ยังไม่มีใบหน้าที่ลงทะเบียนของพนักงานคนนี้</p>
+      </div>
+    }
+
+    @if (!isLoading && !error && encodings.length > 0) {
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        @for (encoding of encodings; track encoding.faceEncodingId) {
+          <div class="box relative group !mb-0">
+            <img class="w-full aspect-square object-cover rounded-md"
+              [src]="getFullImageUrl(encoding.imageUrl)" alt="Enrolled face">
+            <div class="absolute top-2 right-2">
+              <button type="button" (click)="deleteEncoding(encoding.faceEncodingId)"
+                class="ti-btn ti-btn-sm ti-btn-danger !p-1.5"
+                title="ลบใบหน้านี้">
+                <i class="ri-delete-bin-line"></i>
+              </button>
+            </div>
+            <div class="absolute bottom-0 left-0 right-0 bg-black/55 text-white text-xs p-1.5 rounded-b-md">
+              <p class="truncate mb-0">{{ encoding.faceEncodingId }}</p>
+              <p class="mb-0 opacity-80">{{ encoding.createdAt | date:'short' }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </section>
 </div>

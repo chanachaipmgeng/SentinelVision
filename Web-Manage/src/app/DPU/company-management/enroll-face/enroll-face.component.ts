@@ -762,9 +762,10 @@ export class EnrollFaceComponent implements OnDestroy {
       return;
     }
 
-    // HTTP fallback
+    // HTTP fallback — scoped to selected company
     const formData = new FormData();
     formData.append('file', this.dataURLtoFile(dataUrl, `live_${trackId}.jpg`));
+    formData.append('companyId', this.companyId);
     this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
       next: (response: any) => {
         const t = this.tracks.find((x) => x.id === trackId);

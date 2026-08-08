@@ -10,6 +10,8 @@ from ..controllers.face_controller import (
     check_in_face_walkby,
     get_encodings_for_member,
     delete_face_encoding,
+    clear_member_face_encodings,
+    verify_member_face,
 )
 from ..controllers.face_ws_controller import kiosk_websocket
 from ..utils.face_gpu_queue import face_gpu_queue_stats
@@ -38,17 +40,22 @@ async def add_face_route(
 
 @router.post("/members/check-face-emp")
 async def check_face_emp_route(
-    files: List[UploadFile] = File(...), db: AsyncSession = Depends(get_db)
+    files: List[UploadFile] = File(...),
+    companyId: UUID = Form(...),
+    db: AsyncSession = Depends(get_db),
 ):
-    return await check_face_emp(files, db)
+    """1:N match within company only (no timestamp)."""
+    return await check_face_emp(files, companyId, db)
 
 
 @router.post("/members/identify")
 async def identify_face_route(
-    file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    file: UploadFile = File(...),
+    companyId: UUID = Form(...),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Single-frame identify for live name overlay (no liveness / no timestamp)."""
-    return await identify_face(file, db)
+    """Single-frame identify within company for live name overlay (no timestamp)."""
+    return await identify_face(file, companyId, db)
 
 
 @router.post("/members/check-in")
@@ -86,6 +93,24 @@ async def get_encodings_route(
     memberId: UUID, db: AsyncSession = Depends(get_db)
 ):
     return await get_encodings_for_member(memberId, db)
+
+
+@router.post("/members/{memberId}/verify")
+async def verify_member_face_route(
+    memberId: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Test-scan vs this member only — returns confidence %, no timestamp."""
+    return await verify_member_face(memberId, file, db)
+
+
+@router.delete("/members/{memberId}/encodings")
+async def clear_member_encodings_route(
+    memberId: UUID, db: AsyncSession = Depends(get_db)
+):
+    """Clear all enrolled faces for one member."""
+    return await clear_member_face_encodings(memberId, db)
 
 
 @router.delete("/encodings/{faceEncodingId}")

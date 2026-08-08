@@ -17,17 +17,18 @@ alwaysApply: false
 | Path | Mode |
 |------|------|
 | `POST /face/members/{id}/add-face` | enroll |
-| `POST /face/members/check-face-emp` | multi-frame + liveness match |
-| `POST /face/members/identify` | 1 frame, label only |
+| `POST /face/members/check-face-emp` | multi-frame + liveness match (**companyId** required) |
+| `POST /face/members/identify` | 1 frame, label only (**companyId** required) |
 | `POST /face/members/check-in` | secure: liveness + timestamp |
 | `POST /face/members/check-in-walkby` | 1–2 frames, no motion liveness |
 | `WS /face/ws/kiosk` | stream identify/checkin via GPU queue |
 | `GET /face/queue-stats` | queue health |
 
-Shared finalize: `_finalize_check_in` (match → company employee → dedupe → photo → timestamp).
+Shared finalize: `_finalize_check_in` (match **within company** → company employee → dedupe → photo → timestamp).
 
 ## Rules
 
+- Face 1:N search must be company-scoped (`companyId`) — never match across companies
 - Prefer extending `face_controller` / `face_engine` / `face_gpu_queue` over new parallel pipelines
 - Walk-by / WS: no head-motion liveness; still require a detectable face (+ same-person if 2+ frames)
 - Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true`, do not double-insert

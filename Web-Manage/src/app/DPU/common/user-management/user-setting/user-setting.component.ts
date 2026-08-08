@@ -1,18 +1,20 @@
-import { CommonModule } from "@angular/common";
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
-import { NgSelectModule } from "@ng-select/ng-select";
-import { TranslateModule, TranslateService } from "@ngx-translate/core";
-import { SharedModule } from "../../../../shared/shared.module";
-import { UserService } from "../../../services/user.service";
-import { UserProfileModel } from "../../../models/user.model";
-import { FormsModule } from "@angular/forms";
+import { CommonModule } from '@angular/common';
+import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { NgSelectModule } from '@ng-select/ng-select';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { FileItem, FileUploader, FileUploadModule, ParsedResponseHeaders } from 'ng2-file-upload';
+import { SharedModule } from '../../../../shared/shared.module';
+import { PageToolbarComponent } from '../../../../shared/components/page-toolbar/page-toolbar.component';
+import { PillSearchComponent } from '../../../../shared/components/pill-search/pill-search.component';
+import { StatChipComponent } from '../../../../shared/components/stat-chip/stat-chip.component';
+import { SimplePagerComponent } from '../../../../shared/components/simple-pager/simple-pager.component';
+import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { UserService } from '../../../services/user.service';
+import { UserProfileModel } from '../../../models/user.model';
+import { TokenService } from '../../../../shared/services/token.service';
+import { environment } from '../../../../../environments/environment';
 import swal from 'sweetalert';
-import { MatPaginator, PageEvent } from "@angular/material/paginator";
-import { UserRoleModel } from "../../../models/user-role-model";
-import { FileUploadModule } from 'ng2-file-upload';
-import { FileItem, FileUploader, ParsedResponseHeaders } from "ng2-file-upload";
-import { environment } from "../../../../../environments/environment";
-import { TokenService } from "../../../../shared/services/token.service";
 
 @Component({
   selector: 'app-user-setting',
@@ -23,282 +25,298 @@ import { TokenService } from "../../../../shared/services/token.service";
     TranslateModule,
     NgSelectModule,
     FormsModule,
-    MatPaginator,
-    FileUploadModule
+    FileUploadModule,
+    PageToolbarComponent,
+    PillSearchComponent,
+    StatChipComponent,
+    SimplePagerComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './user-setting.component.html',
-  styleUrl: './user-setting.component.css'
+  styleUrls: [
+    '../../../../shared/styles/dpu-list-page.css',
+    './user-setting.component.css',
+  ],
+  encapsulation: ViewEncapsulation.None,
 })
-export class UserSettingComponent {
+export class UserSettingComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
-  @ViewChild('modalDetail') public modalDetail?: ElementRef;
-  action = "new";
+
+  readonly pageSize = 10;
+  readonly adminRole = 99;
+
+  action: 'add' | 'edit' = 'add';
+  loading = false;
   allSelected = false;
   someSelected = false;
-  confirmPassword = ""
-  itemsList: UserProfileModel[] = []
-  filterList: UserProfileModel[] = []
-  selectModel: UserProfileModel = new UserProfileModel()
-  selectedItems = new Map<string, boolean>();
-  roleList: UserRoleModel[] = []
-  empList: UserProfileModel[] = []
-  descName = 'engName'
+  confirmPassword = '';
   pageIndex = 0;
-  uploaderProfile: FileUploader | undefined;
-  uploadErrorMsg: string = "";
+  uploadErrorMsg = '';
+  uploaderProfile?: FileUploader;
+
+  itemsList: UserProfileModel[] = [];
+  filteredSource: UserProfileModel[] = [];
+  pageItems: UserProfileModel[] = [];
+  selectModel: UserProfileModel = new UserProfileModel();
+  selectedItems = new Map<string, boolean>();
+  private _searchTerm = '';
+
   get searchTerm(): string {
     return this._searchTerm;
   }
   set searchTerm(val: string) {
-    this.pageIndex = 0;
-    this.allSelected = false
     this._searchTerm = val;
-    if (val != '') {
-      this.filterList = this.filter(val);
-    } else {
-      this.updatePagedItems()
-    }
+    this.pageIndex = 0;
+    this.applyFilter();
+  }
+  get totalFiltered(): number {
+    return this.filteredSource.length;
+  }
+  get activeCount(): number {
+    return this.itemsList.filter((x) => x.status === 1).length;
   }
 
-  _searchTerm = "";
-  constructor(private userService: UserService, public translate: TranslateService, private tokenService: TokenService) {
-    this.uploadConfig()
+  constructor(
+    private userService: UserService,
+    public translate: TranslateService,
+    private tokenService: TokenService
+  ) {
+    this.uploadConfig();
+  }
+
+  ngOnInit(): void {
+    this.load();
+  }
+
+  load() {
+    this.loading = true;
+    this.userService.getLists().subscribe({
+      next: (result) => {
+        this.itemsList = (result || []).filter((e) => e.role != this.adminRole);
+        this.selectedItems.clear();
+        this.allSelected = false;
+        this.someSelected = false;
+        this.applyFilter();
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        swal('Error', 'โหลดสมาชิกไม่สำเร็จ', 'error');
+      },
+    });
+  }
+
+  applyFilter() {
+    const q = (this._searchTerm || '').trim().toLowerCase();
+    this.filteredSource = !q
+      ? [...this.itemsList]
+      : this.itemsList.filter((x) =>
+          [
+            x.memberId,
+            x.username,
+            x.email,
+            x.phoneNumber,
+            x.getRole?.(),
+            x.getStatus?.(),
+            x.getFullname?.(),
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(q)
+        );
+    const maxPage = Math.max(0, Math.ceil(this.filteredSource.length / this.pageSize) - 1);
+    if (this.pageIndex > maxPage) this.pageIndex = maxPage;
+    this.updatePagedItems();
+  }
+
+  updatePagedItems() {
+    const start = this.pageIndex * this.pageSize;
+    this.pageItems = this.filteredSource.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number) {
+    this.pageIndex = page;
+    this.updatePagedItems();
+  }
+
+  clearSearch() {
+    this.searchTerm = '';
   }
 
   uploadConfig() {
     this.uploaderProfile = new FileUploader({
-      url: environment.baseUrl + "/api/upload-image",
+      url: environment.baseUrl + '/api/upload-image',
       isHTML5: true,
       authToken: this.tokenService.getToken()!,
     });
-
     this.uploaderProfile.onAfterAddingFile = (fileItem: FileItem) => {
       fileItem.withCredentials = false;
-      this.uploadErrorMsg = "";
-
-      while (this.uploaderProfile!.queue.length > 1) {
-        this.uploaderProfile!.queue[0].remove();
-      }
-
+      this.uploadErrorMsg = '';
+      while (this.uploaderProfile!.queue.length > 1) this.uploaderProfile!.queue[0].remove();
       if (fileItem.file.size > 5000000) {
-        this.uploadErrorMsg = "maximum file size 5mb.";
-        swal("Opp!!", "ไม่สามารถอัพโหลดได้", "info");
+        swal('ไฟล์ใหญ่เกินไป', 'ขนาดสูงสุด 5MB', 'info');
         fileItem.isCancel = true;
         return;
       }
-
-      if (fileItem.file.type!.indexOf("image") === -1) {
-        this.uploadErrorMsg = "please upload image only.";
-        swal("Opp!!", "ไม่สามารถอัพโหลดได้", "info");
+      if (fileItem.file.type!.indexOf('image') === -1) {
+        swal('ไฟล์ไม่ถูกต้อง', 'อัปโหลดรูปภาพเท่านั้น', 'info');
         fileItem.isCancel = true;
         return;
       }
-
       fileItem.upload();
     };
-
     this.uploaderProfile.onCompleteItem = (
       item: FileItem,
       response: string,
-      status: number,
-      headers: ParsedResponseHeaders
+      _status: number,
+      _headers: ParsedResponseHeaders
     ) => {
       if (item.isSuccess) {
         const res = JSON.parse(response);
-        console.log("res", res);
-        this.selectModel.picture = res.filename
-        swal(res.message, "บันทึกสำเร็จ", "success");
-
+        this.selectModel.picture = res.filename;
+        swal('สำเร็จ', res.message || 'อัปโหลดแล้ว', 'success');
       } else {
-        this.uploadErrorMsg = "cannot upload file.";
-        swal("Opp!!", "ไม่สามารถอัพโหลดได้", "info");
+        swal('อัปโหลดไม่สำเร็จ', '', 'error');
       }
     };
   }
 
-
-  ngOnInit(): void {
-    this.userService.getLists().subscribe(result => {
-      this.itemsList = result.filter(e => e.role != 99)
-      this.updatePagedItems()
-    })
+  new() {
+    this.action = 'add';
+    this.confirmPassword = '';
+    this.selectModel = new UserProfileModel();
   }
 
-  filter(v: string) {
-    return this.itemsList?.filter(
-      (x) =>
-        x.memberId?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.username?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.email?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.phoneNumber?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.getRole()?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.getStatus()?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.getFullname()?.toLowerCase().indexOf(v.toLowerCase()) !== -1
-    );
+  view(item: UserProfileModel) {
+    this.action = 'edit';
+    this.confirmPassword = '';
+    this.selectModel = new UserProfileModel(item);
+  }
+
+  save() {
+    if (this.action === 'add' && this.confirmPassword !== this.selectModel.password) {
+      swal('รหัสผ่านไม่ตรงกัน', '', 'warning');
+      return;
+    }
+    swal({
+      title: 'ยืนยันการบันทึก?',
+      text: this.selectModel.username || '',
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'บันทึก'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      const req$ =
+        this.action === 'edit'
+          ? this.userService.update(this.selectModel)
+          : this.userService.save(this.selectModel);
+      req$.subscribe({
+        next: () => {
+          swal('สำเร็จ', 'บันทึกข้อมูลสมาชิก', 'success');
+          this.load();
+          this.childModal?.nativeElement.click();
+        },
+        error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
+      });
+    });
   }
 
   delete(item: UserProfileModel) {
     swal({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-
+      title: 'ลบสมาชิกนี้?',
+      text: item.getFullname?.() || item.username,
+      icon: 'warning',
       dangerMode: true,
-      buttons: ["Cancel", "Yes,Delete it!"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.userService.delete(item).subscribe(result => {
-            swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-            this.ngOnInit()
-          })
-        }
-
+      buttons: ['ยกเลิก', 'ลบ'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      this.userService.delete(item).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'ลบแล้ว', 'success');
+          this.load();
+        },
+        error: () => swal('Error', 'ลบไม่สำเร็จ', 'error'),
       });
-  }
-
-  new() {
-    this.action = 'add'
-    this.selectModel = new UserProfileModel()
-  }
-
-  view(item: UserProfileModel) {
-    this.action = 'edit'
-    this.confirmPassword = ''
-    this.selectModel = new UserProfileModel(item)
-    console.log(this.selectModel)
-
-  }
-
-  save() {
-    swal({
-      title: "Are you sure?",
-      text: "คุณต้องการบันทึกหรือไม่",
-      icon: "warning",
-      dangerMode: false,
-      buttons: ["Cancel", "Confirm"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          if (this.action == 'add') {
-            this.userService.save(this.selectModel).subscribe(result => {
-              console.log(result)
-              swal("Save Success!!", "บันทึกข้อมูลสมาชิก", "success");
-              this.ngOnInit()
-              this.childModal?.nativeElement.click()
-            })
-          } else if (this.action == 'edit') {
-            this.userService.update(this.selectModel).subscribe(result => {
-              console.log(result)
-              swal("Update Success!!", "บันทึกข้อมูลสมาชิก", "success");
-              this.ngOnInit()
-              this.childModal?.nativeElement.click()
-            })
-          }
-
-        }
-
-      });
-
-
-  }
-
-  updatePagedItems() {
-    const startIndex = this.pageIndex * 10;
-    const endIndex = startIndex + 10;
-    this.filterList = this.itemsList.slice(startIndex, endIndex);
-  }
-
-  toggleAll(event: any) {
-    this.allSelected = event.target.checked;
-    this.selectedItems.clear();
-    this.itemsList.forEach(item => {
-      this.selectedItems.set(item.memberId, this.allSelected);
     });
-    this.someSelected = this.itemsList.some(item => this.selectedItems.get(item.memberId));
   }
 
-  onCheckboxChange(memberId: string) {
-    const isSelected = this.selectedItems.get(memberId) || false;
-    this.selectedItems.set(memberId, !isSelected);
-    this.allSelected = this.itemsList.every(item => this.selectedItems.get(item.memberId));
-    this.someSelected = this.itemsList.some(item => this.selectedItems.get(item.memberId));
+  toggleAll(event: Event) {
+    const checked = !!(event.target as HTMLInputElement)?.checked;
+    this.allSelected = checked;
+    this.selectedItems.clear();
+    this.filteredSource.forEach((item) => this.selectedItems.set(item.memberId, checked));
+    this.someSelected = checked && this.filteredSource.length > 0;
+  }
+
+  onCheckboxChange(memberId: string, event: Event) {
+    const checked = !!(event.target as HTMLInputElement)?.checked;
+    this.selectedItems.set(memberId, checked);
+    this.allSelected =
+      this.filteredSource.length > 0 &&
+      this.filteredSource.every((item) => this.selectedItems.get(item.memberId));
+    this.someSelected = this.filteredSource.some((item) => this.selectedItems.get(item.memberId));
+  }
+
+  selectedTargets(): UserProfileModel[] {
+    return this.filteredSource.filter((item) => this.selectedItems.get(item.memberId));
   }
 
   deleteSelect() {
-    let employeeInfo = '';
-    this.selectedItems.forEach((isSelected, memberId) => {
-      if (isSelected) {
-        const user = this.itemsList.find(user => user.memberId === memberId);
-        if (user) {
-          employeeInfo += `${this.translate.instant('Fullname')}: ${user.getFullname()}\n`;
-        }
-      }
-    });
-
+    const targets = this.selectedTargets();
+    if (!targets.length) return;
     swal({
-      title: "Are you sure?",
-      text: employeeInfo,
-      icon: "warning",
+      title: `ลบ ${targets.length} สมาชิก?`,
+      text: targets.map((t) => t.getFullname?.() || t.username).join('\n'),
+      icon: 'warning',
       dangerMode: true,
-      buttons: ["Cancel", "Yes, Delete it!"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.selectedItems.forEach((isSelected, memberId) => {
-            if (isSelected) {
-              const user = this.itemsList.find(user => user.memberId === memberId);
-              if (user) {
-                this.userService.delete(user).subscribe(result => {
-                  swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-                  this.ngOnInit();
-                });
-              }
+      buttons: ['ยกเลิก', 'ลบ'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      let pending = targets.length;
+      targets.forEach((user) => {
+        this.userService.delete(user).subscribe({
+          next: () => {
+            pending -= 1;
+            if (pending <= 0) {
+              swal('สำเร็จ', 'ลบแล้ว', 'success');
+              this.load();
             }
-          });
-        }
+          },
+          error: () => {
+            pending -= 1;
+            if (pending <= 0) this.load();
+          },
+        });
       });
+    });
   }
 
   adjustSelect(status: number) {
-    let title = "Are you sure?"
-    let employeeInfo = ''; // ตัวแปรสำหรับเก็บข้อมูลพนักงาน
-    this.selectedItems.forEach((isSelected, memberId) => {
-      if (isSelected) {
-        const user = this.itemsList.find(user => user.memberId === memberId);
-        if (user) {
-          employeeInfo += `${this.translate.instant('Fullname')}: ${user.getFullname()}\n`;
-        }
-      }
-    });
+    const targets = this.selectedTargets();
+    if (!targets.length) return;
     swal({
-      title: title,
-      text: employeeInfo,
-      icon: "warning",
-      dangerMode: false,
-      buttons: ["Cancel", "Confirm"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.selectedItems.forEach((isSelected, memberId) => {
-            if (isSelected) {
-              const user = this.itemsList.find(user => user.memberId === memberId);
-              if (user) {
-                user.status = status
-                this.userService.update(user).subscribe(result => {
-                  swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-                  this.ngOnInit();
-                });
-              }
+      title: status === 1 ? 'เปิดใช้งานที่เลือก?' : 'ปิดใช้งานที่เลือก?',
+      text: targets.map((t) => t.getFullname?.() || t.username).join('\n'),
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'ยืนยัน'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      let pending = targets.length;
+      targets.forEach((user) => {
+        user.status = status;
+        this.userService.update(user).subscribe({
+          next: () => {
+            pending -= 1;
+            if (pending <= 0) {
+              swal('สำเร็จ', 'อัปเดตแล้ว', 'success');
+              this.load();
             }
-          });
-        }
-
+          },
+          error: () => {
+            pending -= 1;
+            if (pending <= 0) this.load();
+          },
+        });
       });
+    });
   }
-
-  filterEmp(empId: string) {
-    this.selectModel = this.empList.filter(e => e.memberId == empId)[0]
-  }
-
 }

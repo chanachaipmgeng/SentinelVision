@@ -1,15 +1,18 @@
-import { CommonModule } from "@angular/common";
-import { ChangeDetectionStrategy, Component, ElementRef, ViewChild } from '@angular/core';
-import { NgSelectModule } from "@ng-select/ng-select";
-import { TranslateModule, TranslateService } from "@ngx-translate/core";
-import { SharedModule } from "../../../../shared/shared.module";
-import { PositionService } from "../../../services/position.service";
-import { PositionModel } from "../../../models/position.model";
-import { FormsModule } from "@angular/forms";
+import { CommonModule } from '@angular/common';
+import { Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { SharedModule } from '../../../../shared/shared.module';
+import { PageToolbarComponent } from '../../../../shared/components/page-toolbar/page-toolbar.component';
+import { PillSearchComponent } from '../../../../shared/components/pill-search/pill-search.component';
+import { StatChipComponent } from '../../../../shared/components/stat-chip/stat-chip.component';
+import { SimplePagerComponent } from '../../../../shared/components/simple-pager/simple-pager.component';
+import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
+import { PositionService } from '../../../services/position.service';
+import { PositionModel } from '../../../models/position.model';
+import { TokenService } from '../../../../shared/services/token.service';
 import swal from 'sweetalert';
-import { MatPaginator, PageEvent } from "@angular/material/paginator";
-import { ActivatedRoute } from "@angular/router";
-import { TokenService } from "../../../../shared/services/token.service";
+
 @Component({
   selector: 'app-position',
   standalone: true,
@@ -17,184 +20,218 @@ import { TokenService } from "../../../../shared/services/token.service";
     CommonModule,
     SharedModule,
     TranslateModule,
-    NgSelectModule,
     FormsModule,
-    MatPaginator
+    PageToolbarComponent,
+    PillSearchComponent,
+    StatChipComponent,
+    SimplePagerComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './position.component.html',
-  styleUrl: './position.component.css'
+  styleUrls: [
+    '../../../../shared/styles/dpu-list-page.css',
+    './position.component.css',
+  ],
+  encapsulation: ViewEncapsulation.None,
 })
 export class PositionComponent {
   @ViewChild('closeModal') public childModal?: ElementRef;
-  @ViewChild('modalDetail') public modalDetail?: ElementRef;
+
+  readonly pageSize = 10;
+  companyId = '';
+  loading = false;
   allSelected = false;
   someSelected = false;
-  companyId = ""
-  itemsList: PositionModel[] = []
-  filterList: PositionModel[] = [];
-  selectModel: PositionModel = new PositionModel()
-  selectedItems = new Map<string, boolean>();
-  pageIndex = 0;
   isEdit = false;
+  pageIndex = 0;
+
+  itemsList: PositionModel[] = [];
+  filteredSource: PositionModel[] = [];
+  pageItems: PositionModel[] = [];
+  selectModel: PositionModel = new PositionModel();
+  selectedItems = new Map<string, boolean>();
+  private _searchTerm = '';
+
   get searchTerm(): string {
     return this._searchTerm;
   }
+
   set searchTerm(val: string) {
-    this.pageIndex = 0;
-    this.allSelected = false
     this._searchTerm = val;
-    if (val != '') {
-      this.filterList = this.filter(val);
-    } else {
-      this.updatePagedItems()
-    }
+    this.pageIndex = 0;
+    this.applyFilter();
   }
 
-  _searchTerm = "";
-  constructor(private positionService: PositionService, private tokenService: TokenService, public translate: TranslateService) {
-    this.companyId = this.tokenService.getSelectCompany().companyId;;
-    this.getPosition()
+  get totalFiltered(): number {
+    return this.filteredSource.length;
   }
 
-  ngOnInit(): void {
+  constructor(
+    private positionService: PositionService,
+    private tokenService: TokenService,
+    public translate: TranslateService
+  ) {
+    this.companyId = this.tokenService.getSelectCompany().companyId;
+    this.getPosition();
   }
 
   getPosition() {
-    this.positionService.getLists(this.companyId).subscribe(result => {
-      this.itemsList = result
-      this.updatePagedItems()
-    })
+    this.loading = true;
+    this.positionService.getLists(this.companyId).subscribe({
+      next: (result) => {
+        this.itemsList = result || [];
+        this.selectedItems.clear();
+        this.allSelected = false;
+        this.someSelected = false;
+        this.applyFilter();
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        swal('Error', 'โหลดตำแหน่งไม่สำเร็จ', 'error');
+      },
+    });
   }
 
-  filter(v: string) {
-    this.pageIndex = 0;
-    return this.itemsList?.filter(
-      (x) =>
-        x.positionId?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.thName?.toLowerCase().indexOf(v.toLowerCase()) !== -1 ||
-        x.engName?.toLowerCase().indexOf(v.toLowerCase()) !== -1
+  applyFilter() {
+    const q = (this._searchTerm || '').trim().toLowerCase();
+    this.filteredSource = !q
+      ? [...this.itemsList]
+      : this.itemsList.filter(
+          (x) =>
+            (x.positionId || '').toLowerCase().includes(q) ||
+            (x.thName || '').toLowerCase().includes(q) ||
+            (x.engName || '').toLowerCase().includes(q)
+        );
+    const maxPage = Math.max(
+      0,
+      Math.ceil(this.filteredSource.length / this.pageSize) - 1
     );
+    if (this.pageIndex > maxPage) this.pageIndex = maxPage;
+    this.updatePagedItems();
+  }
+
+  updatePagedItems() {
+    const start = this.pageIndex * this.pageSize;
+    this.pageItems = this.filteredSource.slice(start, start + this.pageSize);
+  }
+
+  onPageChange(page: number) {
+    this.pageIndex = page;
+    this.updatePagedItems();
+  }
+
+  clearSearch() {
+    this.searchTerm = '';
   }
 
   delete(item: PositionModel) {
     swal({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
-      icon: "warning",
-      timer: 1000,
+      title: 'ลบตำแหน่งนี้?',
+      text: item.thName || '',
+      icon: 'warning',
       dangerMode: true,
-      buttons: ["Cancel", "Yes,Delete it!"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.positionService.delete(item).subscribe(result => {
-            swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-            this.getPosition()
-          })
-        }
-
+      buttons: ['ยกเลิก', 'ลบ'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      this.positionService.delete(item).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'ลบแล้ว', 'success');
+          this.getPosition();
+        },
+        error: () => swal('Error', 'ลบไม่สำเร็จ', 'error'),
       });
+    });
   }
 
   new() {
-    this.isEdit = false
-    this.selectModel = new PositionModel()
+    this.isEdit = false;
+    this.selectModel = new PositionModel();
   }
 
   view(item: PositionModel) {
     this.isEdit = true;
-    this.selectModel = new PositionModel(item)
+    this.selectModel = new PositionModel(item);
   }
 
   save() {
+    if (!(this.selectModel.thName || '').trim() || !(this.selectModel.engName || '').trim()) {
+      swal('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อภาษาไทยและอังกฤษ', 'warning');
+      return;
+    }
     swal({
-      title: "Are you sure?",
-      text: "คุณต้องการบันทึกหรือไม่",
-      icon: "warning",
-      dangerMode: false,
-      buttons: ["Cancel", "Confirm"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.selectModel.companyId = this.companyId
-          if (!this.isEdit) {
-            this.positionService.save(this.selectModel).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.getPosition()
-              this.getPosition()
-              this.childModal?.nativeElement.click()
-            })
-          } else {
-            this.positionService.update(this.selectModel).subscribe(result => {
-              swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-              this.getPosition()
-              this.getPosition()
-              this.childModal?.nativeElement.click()
-            })
-          }
-
-        }
-
+      title: 'ยืนยันการบันทึก?',
+      text: this.selectModel.thName,
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'บันทึก'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      this.selectModel.companyId = this.companyId;
+      const req$ = this.isEdit
+        ? this.positionService.update(this.selectModel)
+        : this.positionService.save(this.selectModel);
+      req$.subscribe({
+        next: () => {
+          swal('สำเร็จ', 'บันทึกข้อมูลสำเร็จ', 'success');
+          this.getPosition();
+          this.childModal?.nativeElement.click();
+        },
+        error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
       });
-
-
-  }
-
-  updatePagedItems() {
-    const startIndex = this.pageIndex * 10;
-    const endIndex = startIndex + 10;
-    this.filterList = this.itemsList.slice(startIndex, endIndex);
-  }
-
-  toggleAll(event: any) {
-    this.allSelected = event.target.checked;
-    this.selectedItems.clear();
-    this.itemsList.forEach(item => {
-      this.selectedItems.set(item.positionId, this.allSelected);
     });
-    this.someSelected = this.itemsList.some(item => this.selectedItems.get(item.positionId));
   }
 
-  onCheckboxChange(positionId: string) {
-    const isSelected = this.selectedItems.get(positionId) || false;
-    this.selectedItems.set(positionId, !isSelected);
-    this.allSelected = this.itemsList.every(item => this.selectedItems.get(item.positionId));
-    this.someSelected = this.itemsList.some(item => this.selectedItems.get(item.positionId));
+  toggleAll(event: Event) {
+    const checked = !!(event.target as HTMLInputElement)?.checked;
+    this.allSelected = checked;
+    this.selectedItems.clear();
+    this.filteredSource.forEach((item) => {
+      this.selectedItems.set(item.positionId, checked);
+    });
+    this.someSelected = checked && this.filteredSource.length > 0;
+  }
+
+  onCheckboxChange(positionId: string, event: Event) {
+    const checked = !!(event.target as HTMLInputElement)?.checked;
+    this.selectedItems.set(positionId, checked);
+    this.allSelected =
+      this.filteredSource.length > 0 &&
+      this.filteredSource.every((item) => this.selectedItems.get(item.positionId));
+    this.someSelected = this.filteredSource.some((item) =>
+      this.selectedItems.get(item.positionId)
+    );
   }
 
   deleteSelect() {
-    let employeeInfo = '';
-    this.selectedItems.forEach((isSelected, positionId) => {
-      if (isSelected) {
-        const item = this.itemsList.find(item => item.positionId === positionId);
-        if (item) {
-          employeeInfo += `${this.translate.instant('ชื่อตำแหน่ง')}: ${item.getName()}\n`;
-        }
-      }
-    });
-
+    const targets = this.filteredSource.filter((item) =>
+      this.selectedItems.get(item.positionId)
+    );
+    if (!targets.length) return;
+    const names = targets.map((t) => t.thName).join('\n');
     swal({
-      title: "Are you sure?",
-      text: employeeInfo,
-      icon: "warning",
+      title: `ลบ ${targets.length} ตำแหน่ง?`,
+      text: names,
+      icon: 'warning',
       dangerMode: true,
-      buttons: ["Cancel", "Yes, Delete it!"],
-    })
-      .then((willDelete: any) => {
-        if (willDelete) {
-          this.selectedItems.forEach((isSelected, positionId) => {
-            if (isSelected) {
-              const item = this.itemsList.find(item => item.positionId === positionId);
-              if (item) {
-                this.positionService.delete(item).subscribe(result => {
-                  swal("Save Success!!", "บันทึกข้อมูลสำเร็จ", "success");
-                  this.getPosition();
-                });
-              }
+      buttons: ['ยกเลิก', 'ลบ'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      let pending = targets.length;
+      targets.forEach((item) => {
+        this.positionService.delete(item).subscribe({
+          next: () => {
+            pending -= 1;
+            if (pending <= 0) {
+              swal('สำเร็จ', 'ลบแล้ว', 'success');
+              this.getPosition();
             }
-          });
-        }
+          },
+          error: () => {
+            pending -= 1;
+            if (pending <= 0) this.getPosition();
+          },
+        });
       });
+    });
   }
-
 }

@@ -1,0 +1,83 @@
+/* Shared list-page helpers for CRUD screens */
+.dpu-list-page {
+  margin-top: 0.25rem;
+}
+
+.dpu-list-panel {
+  min-height: 22rem;
+}
+
+.dpu-list-panel .box-header {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem !important;
+}
+
+.dpu-list-body {
+  padding: 0 !important;
+}
+
+.dpu-list-table {
+  margin-bottom: 0;
+}
+
+.dpu-list-table thead th {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dpu-muted, #64748b);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.dpu-list-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.dpu-list-table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.dpu-tool-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.35rem;
+  width: auto !important;
+  height: 2.4rem !important;
+  padding: 0.45rem 0.9rem !important;
+  white-space: nowrap;
+}
+
+.dpu-icon-btn {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--dpu-brand, #0f766e);
+}
+
+.dpu-icon-btn--danger {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.dpu-muted-count {
+  font-size: 0.78rem;
+  color: var(--dpu-muted, #64748b);
+  font-weight: 600;
+}
+
+.ng-dropdown-panel {
+  z-index: 1200 !important;
+}
+
+@media (max-width: 639.98px) {
+  .dpu-tool-btn span {
+    display: none;
+  }
+}

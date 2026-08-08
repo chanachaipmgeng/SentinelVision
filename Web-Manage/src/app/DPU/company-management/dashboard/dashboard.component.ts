@@ -1,25 +1,40 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import { DashboardService, DashboardStats } from '../../services/dashboard.service';
 import { SharedModule } from '../../../shared/shared.module';
+import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
+import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, NgxEchartsModule, SharedModule],
+  imports: [
+    CommonModule,
+    NgxEchartsModule,
+    SharedModule,
+    PageToolbarComponent,
+    StatChipComponent,
+    EmptyStateComponent,
+  ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  styleUrls: ['./dashboard.component.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class DashboardComponent implements OnInit {
-
   stats: DashboardStats | null = null;
   isLoading = true;
   error: string | null = null;
   chartOption!: EChartsOption;
 
-  constructor(private dashboardService: DashboardService) { }
+  get weekTotal(): number {
+    if (!this.stats?.chartData?.checkInsLast7Days) return 0;
+    return this.stats.chartData.checkInsLast7Days.reduce((sum, d) => sum + (d.count || 0), 0);
+  }
+
+  constructor(private dashboardService: DashboardService) {}
 
   ngOnInit(): void {
     this.loadStats();
@@ -35,10 +50,10 @@ export class DashboardComponent implements OnInit {
         this.isLoading = false;
       },
       error: (err) => {
-        this.error = "Failed to load dashboard data.";
+        this.error = 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
         console.error(err);
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -46,29 +61,54 @@ export class DashboardComponent implements OnInit {
     if (!this.stats) return;
 
     const chartData = this.stats.chartData.checkInsLast7Days;
+    const brand = '#0f766e';
 
     this.chartOption = {
       tooltip: {
-        trigger: 'axis'
+        trigger: 'axis',
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderColor: 'rgba(15,118,110,0.2)',
+        textStyle: { color: '#0f172a' },
       },
+      grid: { left: 36, right: 16, top: 24, bottom: 28 },
       xAxis: {
         type: 'category',
-        data: chartData.map(d => d.date),
+        data: chartData.map((d) => d.date),
         boundaryGap: false,
+        axisLine: { lineStyle: { color: '#cbd5e1' } },
+        axisLabel: { color: '#64748b' },
       },
       yAxis: {
-        type: 'value'
+        type: 'value',
+        minInterval: 1,
+        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
+        axisLabel: { color: '#64748b' },
       },
       series: [
         {
-          name: 'Check-ins',
+          name: 'ลงเวลา',
           type: 'line',
-          data: chartData.map(d => d.count),
+          data: chartData.map((d) => d.count),
           smooth: true,
-          areaStyle: {},
-          color: '#4f46e5' // Example color
-        }
-      ]
+          symbol: 'circle',
+          symbolSize: 7,
+          lineStyle: { width: 3, color: brand },
+          itemStyle: { color: brand },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(15,118,110,0.28)' },
+                { offset: 1, color: 'rgba(15,118,110,0.02)' },
+              ],
+            },
+          },
+        },
+      ],
     };
   }
 }

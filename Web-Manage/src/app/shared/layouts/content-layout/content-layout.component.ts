@@ -1,8 +1,13 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Renderer2 } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, Renderer2 } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { Menu, NavService } from '../../services/nav.service';
 import { routeAnimations } from '../../services/animations/route.animations';
 import { UserService } from '../../../DPU/services/user.service';
 import { TokenService } from '../../services/token.service';
+
+const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
+
 @Component({
   selector: 'app-content-layout',
   templateUrl: './content-layout.component.html',
@@ -10,16 +15,18 @@ import { TokenService } from '../../services/token.service';
   animations: [routeAnimations],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ContentLayoutComponent {
+export class ContentLayoutComponent implements OnDestroy {
   public menuItems!: Menu[];
+  private routerSub?: Subscription;
 
   constructor(
     public navServices: NavService,
     private elementRef: ElementRef,
     private renderer: Renderer2,
     private ref: ChangeDetectorRef,
-    private userService : UserService,
-    private tokenService : TokenService
+    private userService: UserService,
+    private tokenService: TokenService,
+    private router: Router
   ) {
     this.navServices.items.subscribe((menuItems: any) => {
       this.menuItems = menuItems;
@@ -28,6 +35,31 @@ export class ContentLayoutComponent {
       // require view to be updated
       this.ref.markForCheck();
     }, 100);
+
+    this.syncKioskMode(this.router.url);
+    this.routerSub = this.router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe((e) => this.syncKioskMode(e.urlAfterRedirects || e.url));
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
+    this.setKioskMode(false);
+  }
+
+  private syncKioskMode(url: string): void {
+    const path = (url || '').split('?')[0];
+    this.setKioskMode(path.includes('/company/timestamp-face'));
+  }
+
+  private setKioskMode(on: boolean): void {
+    const html = this.elementRef.nativeElement.ownerDocument.documentElement as HTMLElement;
+    if (!html) return;
+    if (on) {
+      this.renderer.addClass(html, KIOSK_MODE_CLASS);
+    } else {
+      this.renderer.removeClass(html, KIOSK_MODE_CLASS);
+    }
   }
   clearToggle() {
     let html = this.elementRef.nativeElement.ownerDocument.documentElement;

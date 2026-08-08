@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import { DashboardService, DashboardStats } from '../../services/dashboard.service';
@@ -13,6 +14,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     NgxEchartsModule,
     SharedModule,
     PageToolbarComponent,
@@ -20,7 +22,10 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
     EmptyStateComponent,
   ],
   templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.css'],
+  styleUrls: [
+    '../../../shared/styles/dpu-list-page.css',
+    './dashboard.component.css',
+  ],
   encapsulation: ViewEncapsulation.None,
 })
 export class DashboardComponent implements OnInit {
@@ -32,6 +37,11 @@ export class DashboardComponent implements OnInit {
   get weekTotal(): number {
     if (!this.stats?.chartData?.checkInsLast7Days) return 0;
     return this.stats.chartData.checkInsLast7Days.reduce((sum, d) => sum + (d.count || 0), 0);
+  }
+
+  get outsideAreaCount(): number {
+    if (!this.stats?.recentActivity?.length) return 0;
+    return this.stats.recentActivity.filter((a) => a.timestampType !== 1).length;
   }
 
   constructor(private dashboardService: DashboardService) {}

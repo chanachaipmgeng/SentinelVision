@@ -6,10 +6,20 @@
       <ng-container chips>
         <app-stat-chip tone="ok" *ngIf="stats">วันนี้ {{ stats.summary.checkInsToday }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="stats">7 วัน {{ weekTotal }}</app-stat-chip>
+        <app-stat-chip tone="warn" *ngIf="stats">นอกพื้นที่ {{ outsideAreaCount }}</app-stat-chip>
         <app-stat-chip tone="danger" *ngIf="error">ผิดพลาด</app-stat-chip>
       </ng-container>
       <ng-container controls>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh" (click)="loadStats()" [disabled]="isLoading">
+        <a routerLink="/company/company-emp" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
+          <i class="ri-team-line"></i><span>พนักงาน</span>
+        </a>
+        <a routerLink="/company/timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
+          <i class="ri-time-line"></i><span>ลงเวลา</span>
+        </a>
+        <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
+          <i class="ri-camera-line"></i><span>Kiosk</span>
+        </a>
+        <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh" (click)="loadStats()" [disabled]="isLoading">
           <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i>
           <span>รีเฟรช</span>
         </button>
@@ -75,11 +85,13 @@
         <div class="box-body">
           <div class="flex items-start">
             <div class="flex-grow">
-              <p class="mb-0 text-dpu-muted">กิจกรรมล่าสุด</p>
-              <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.recentActivity.length }}</div>
+              <p class="mb-0 text-dpu-muted">นอกพื้นที่ (ล่าสุด)</p>
+              <div class="text-2xl font-semibold" [ngClass]="outsideAreaCount > 0 ? 'text-danger' : 'text-dpu-brand-deep'">
+                {{ outsideAreaCount }}
+              </div>
             </div>
-            <div class="avatar bg-primary/10 !text-primary">
-              <i class="ri-history-line text-xl"></i>
+            <div class="avatar" [ngClass]="outsideAreaCount > 0 ? 'bg-danger/10 text-danger' : 'bg-primary/10 !text-primary'">
+              <i class="ri-map-pin-user-line text-xl"></i>
             </div>
           </div>
         </div>

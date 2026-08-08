@@ -74,6 +74,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   listViewMode: 'table' | 'cards' = 'table';
   private readonly listViewStorageKey = 'dpu.companyEmp.listView';
   public selectedMemberId: string | null = null;
+  public selectedMemberName = '';
   get searchTerm(): string {
     return this._searchTerm;
   }
@@ -1190,8 +1191,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   openFaceManagementModal(item: any): void {
     if (item && item.member && item.member.memberId) {
       this.selectedMemberId = item.member.memberId;
+      const first = item.member.firstName || item.firstName || '';
+      const last = item.member.lastName || item.lastName || '';
+      this.selectedMemberName =
+        [first, last].filter(Boolean).join(' ').trim() ||
+        item.employeeCode ||
+        item.member.memberId;
     } else {
-      console.error("Could not get memberId from the selected item.");
+      console.error('Could not get memberId from the selected item.');
     }
   }
 

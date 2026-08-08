@@ -3,7 +3,6 @@
     {{ toastMessage }}
   </div>
 
-  <!-- Top bar: brand + clock + live metrics -->
   <header class="dpu-kiosk__top">
     <div class="dpu-kiosk__brand">
       <p class="dpu-kiosk__eyebrow">{{ companyName }}</p>
@@ -15,11 +14,10 @@
     </div>
   </header>
 
-  <!-- Status chips -->
   <div class="dpu-kiosk__chips" aria-label="สถานะระบบ">
     <span class="dpu-kiosk__chip" [class.is-on]="wsConnected" [class.is-off]="!wsConnected">
       <i class="ri-wifi-line"></i>
-      {{ wsConnected ? 'Stream เชื่อมแล้ว' : 'กำลังเชื่อม…' }}
+      {{ wsConnected ? 'Stream พร้อม' : 'กำลังเชื่อม…' }}
     </span>
     <span class="dpu-kiosk__chip" [class.is-ok]="inArea" [class.is-warn]="!inArea">
       <i class="ri-map-pin-line"></i>
@@ -38,7 +36,7 @@
       คิว GPU {{ queuePending }}
     </span>
     <span class="dpu-kiosk__chip dpu-kiosk__chip--stat">
-      วันนี้ในรอบนี้ {{ sessionTotal }}
+      รอบนี้ {{ sessionTotal }}
       <span class="dpu-kiosk__chip-split">
         <em class="is-ok">{{ successCount }}</em>
         <em class="is-warn">{{ warningCount }}</em>
@@ -48,7 +46,6 @@
   </div>
 
   <div class="dpu-kiosk__layout">
-    <!-- Camera -->
     <section class="dpu-kiosk__camera-panel">
       <div class="dpu-camera-overlay dpu-kiosk__viewport">
         <video #video width="640" height="480" class="dpu-camera-overlay__video" autoplay muted playsinline
@@ -57,7 +54,13 @@
         <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
 
         <div class="dpu-kiosk__hud">
-          <p class="dpu-kiosk__hud-msg">{{ captureMessage }}</p>
+          <p class="dpu-kiosk__hud-msg" *ngIf="!wsConnected || !locationReady; else readyHud">
+            <span *ngIf="!wsConnected">กำลังเชื่อม stream…</span>
+            <span *ngIf="wsConnected && !locationReady">{{ errorMessage || 'รอพิกัด GPS…' }}</span>
+          </p>
+          <ng-template #readyHud>
+            <p class="dpu-kiosk__hud-msg">{{ captureMessage }}</p>
+          </ng-template>
         </div>
       </div>
 
@@ -65,7 +68,7 @@
         <i class="ri-error-warning-line"></i> {{ errorMessage }}
       </p>
 
-      <!-- Compact latest under camera (always visible after check-in) -->
+      <!-- Compact latest: mobile/tablet only (desktop uses side panel) -->
       <div *ngIf="latestResult" id="dpu-kiosk-latest" class="dpu-kiosk__latest dpu-kiosk__latest--compact"
         [ngClass]="'is-' + latestResult.statusKind">
         <div class="dpu-kiosk__latest-photo">
@@ -97,10 +100,9 @@
       </div>
     </section>
 
-    <!-- Results -->
     <aside class="dpu-kiosk__feed-panel">
       <header class="dpu-kiosk__panel-head">
-        <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">รายละเอียดผลล่าสุด</h2>
+        <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">ผลล่าสุด</h2>
         <p class="dpu-kiosk__subtitle">อัปเดตทันทีเมื่อลงเวลาสำเร็จ / Warning / ซ้ำ</p>
       </header>
 

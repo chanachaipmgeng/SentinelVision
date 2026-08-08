@@ -1,42 +1,211 @@
-<div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-  <div class="box-header flex items-center justify-between">
-    <div>
-      <h5 class="box-title mb-0">คิวอนุมัติลงเวลานอกพื้นที่</h5>
-      <p class="text-dpu-muted text-[0.8rem] mb-0 mt-1">รายการสถานะ PENDING ที่รออนุมัติ</p>
-    </div>
-    <button type="button" class="ti-btn ti-btn-primary-full !py-1 modern-btn" (click)="loadPending()">รีเฟรช</button>
-  </div>
-  <div class="box-body">
-    <div *ngIf="loading" class="text-center py-8 text-dpu-muted">กำลังโหลด...</div>
-    <div *ngIf="!loading && items.length === 0" class="text-center py-8 text-dpu-muted">ไม่มีรายการรออนุมัติ</div>
+<app-page-header
+  [title]="'อนุมัติการลงเวลา'"
+  [activeTitle]="'จัดการบริษัท'"
+  [title1]="'อนุมัติการลงเวลานอกพื้นที่'">
+</app-page-header>
 
-    <div class="table-responsive" *ngIf="!loading && items.length">
-      <table class="table whitespace-nowrap table-hover min-w-full">
-        <thead>
-          <tr>
-            <th>พนักงาน</th>
-            <th>เวลา</th>
-            <th>สถานที่</th>
-            <th>หมายเหตุ</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of items">
-            <td>
-              <div class="font-medium">{{ item.employee.getFullname() }}</div>
-              <div class="text-[0.75rem] text-dpu-muted">{{ item.employee.employeeId }}</div>
-            </td>
-            <td>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm' }}</td>
-            <td>{{ item.getLocation() }}</td>
-            <td class="max-w-[240px] whitespace-normal">{{ item.note || '-' }}</td>
-            <td class="text-end">
-              <button type="button" class="ti-btn ti-btn-success-full !py-1 !px-2 me-1 modern-btn" (click)="approve(item)">อนุมัติ</button>
-              <button type="button" class="ti-btn ti-btn-danger-full !py-1 !px-2 modern-btn" (click)="reject(item)">ปฏิเสธ</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+<div class="warn-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <!-- Toolbar -->
+  <div class="col-span-12">
+    <div class="box warn-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div class="box-header warn-toolbar-header">
+        <div class="warn-toolbar-inner">
+          <div class="warn-toolbar-title">
+            <div class="box-title !mb-0">คิวอนุมัติลงเวลานอกพื้นที่</div>
+            <span class="warn-stat-chip warn-stat-chip--alert">รออนุมัติ {{ pendingCount }}</span>
+            <span class="warn-stat-chip warn-stat-chip--soft" *ngIf="searchTerm">พบ {{ shownCount }}</span>
+          </div>
+
+          <div class="warn-toolbar-controls">
+            <div class="warn-search">
+              <i class="ri-search-line warn-search-icon" aria-hidden="true"></i>
+              <input
+                class="form-control warn-search-input"
+                type="search"
+                [(ngModel)]="searchTerm"
+                placeholder="ค้นหาชื่อ รหัส แผนก สถานที่ หมายเหตุ..."
+                aria-label="ค้นหารายการรออนุมัติ">
+              <button
+                *ngIf="searchTerm"
+                type="button"
+                class="warn-search-clear"
+                (click)="clearSearch()"
+                title="ล้างคำค้น">
+                <i class="ri-close-line"></i>
+              </button>
+            </div>
+            <button
+              type="button"
+              class="ti-btn ti-btn-primary-full modern-btn warn-refresh-btn"
+              [disabled]="loading"
+              (click)="loadPending()">
+              <i class="ri-refresh-line" [class.warn-spin]="loading"></i>
+              <span>รีเฟรช</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="col-span-12 xl:col-span-5">
+    <div class="box warn-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+      <div class="box-header warn-panel-header">
+        <div class="box-title !mb-0">รายการรอตรวจ</div>
+        <span class="warn-muted-count">{{ shownCount }} รายการ</span>
+      </div>
+
+      <div class="box-body warn-list-body">
+        <div *ngIf="loading" class="warn-empty">
+          <span class="ti-spinner animation-spin warn-empty-spinner" role="status"></span>
+          <p>กำลังโหลดคิวอนุมัติ...</p>
+        </div>
+
+        <div *ngIf="!loading && filteredItems.length === 0" class="warn-empty">
+          <i class="ri-checkbox-circle-line warn-empty-icon"></i>
+          <p *ngIf="!searchTerm">ไม่มีรายการรออนุมัติ</p>
+          <p *ngIf="searchTerm">ไม่พบผลลัพธ์สำหรับ “{{ searchTerm }}”</p>
+          <button *ngIf="searchTerm" type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearSearch()">
+            ล้างการค้นหา
+          </button>
+        </div>
+
+        <ul *ngIf="!loading && filteredItems.length" class="warn-queue list-none mb-0">
+          <li *ngFor="let item of filteredItems; let i = index" class="warn-queue-item-wrap">
+            <button
+              type="button"
+              class="warn-queue-item"
+              [class.active]="isSelected(item)"
+              [style.animation-delay.ms]="itemEnterDelay(i)"
+              (click)="selectItem(item)">
+              <div class="warn-queue-face">
+                <img [src]="item.getPicture()" alt="" loading="lazy">
+                <span class="warn-queue-pulse" aria-hidden="true"></span>
+              </div>
+              <div class="warn-queue-meta">
+                <div class="warn-queue-name">{{ item.employee.getFullname() }}</div>
+                <div class="warn-queue-sub">
+                  <span>{{ item.employee.employeeId || '—' }}</span>
+                  <span class="warn-dot">·</span>
+                  <span>{{ item.getLocation() }}</span>
+                </div>
+                <div class="warn-queue-note" *ngIf="item.note">{{ item.note }}</div>
+              </div>
+              <div class="warn-queue-side">
+                <span class="warn-time-badge">{{ item.timestamp | date: 'HH:mm' }}</span>
+                <span class="warn-date-label">{{ item.timestamp | date: 'dd/MM/yy' }}</span>
+              </div>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail -->
+  <div class="col-span-12 xl:col-span-7">
+    <div
+      *ngIf="!selected && !loading"
+      class="box warn-detail-panel modern-card glass warn-detail-placeholder animate-in fade-in duration-500">
+      <div class="warn-empty">
+        <i class="ri-map-pin-user-line warn-empty-icon"></i>
+        <p>เลือกรายการจากคิวเพื่อดูรายละเอียด แผนที่ และอนุมัติ</p>
+      </div>
+    </div>
+
+    <div
+      *ngIf="selected as item"
+      class="box warn-detail-panel modern-card glass animate-in zoom-in duration-400">
+      <div class="box-header warn-panel-header">
+        <div>
+          <div class="box-title !mb-0">รายละเอียดการลงเวลา</div>
+          <p class="warn-panel-sub mb-0">นอกพื้นที่ / รออนุมัติ</p>
+        </div>
+        <span class="warn-status-pill">
+          <i class="ri-error-warning-line"></i>
+          PENDING
+        </span>
+      </div>
+
+      <div class="box-body warn-detail-body">
+        <div class="warn-hero">
+          <div class="warn-hero-photos">
+            <figure class="warn-stamp-photo">
+              <img [src]="item.getPicture()" alt="รูปตอนลงเวลา">
+              <figcaption>รูปตอนลงเวลา</figcaption>
+            </figure>
+            <figure class="warn-profile-photo">
+              <img [src]="item.employee.getPicture()" alt="รูปโปรไฟล์">
+              <figcaption>โปรไฟล์</figcaption>
+            </figure>
+          </div>
+
+          <div class="warn-hero-info">
+            <h3 class="warn-emp-name">{{ item.employee.getFullname() }}</h3>
+            <div class="warn-chip-row">
+              <span class="warn-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
+              <span class="warn-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>
+              <span class="warn-info-chip"><i class="ri-briefcase-line"></i>{{ item.employee.position.getName() || '—' }}</span>
+            </div>
+
+            <dl class="warn-facts">
+              <div>
+                <dt>เวลาลง</dt>
+                <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+              </div>
+              <div>
+                <dt>สถานที่</dt>
+                <dd>{{ item.getLocation() }}</dd>
+              </div>
+              <div>
+                <dt>พิกัด</dt>
+                <dd class="warn-coords">
+                  {{ item.latitude }}, {{ item.longitude }}
+                  <a class="warn-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
+                    เปิดใน Maps <i class="ri-external-link-line"></i>
+                  </a>
+                </dd>
+              </div>
+              <div *ngIf="item.note">
+                <dt>หมายเหตุ</dt>
+                <dd class="warn-note-text">{{ item.note }}</dd>
+              </div>
+            </dl>
+
+            <div class="warn-actions">
+              <button
+                type="button"
+                class="ti-btn ti-btn-success-full modern-btn warn-action-btn"
+                [disabled]="actionBusy"
+                (click)="approve(item)">
+                <i class="ri-check-line"></i>
+                อนุมัติ
+              </button>
+              <button
+                type="button"
+                class="ti-btn ti-btn-danger-full modern-btn warn-action-btn"
+                [disabled]="actionBusy"
+                (click)="reject(item)">
+                <i class="ri-close-line"></i>
+                ปฏิเสธ
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="warn-map-block">
+          <div class="warn-map-caption">
+            <span><i class="ri-map-pin-2-fill"></i> ตำแหน่งที่ลงเวลา</span>
+            <span class="warn-map-coords">{{ mapCenter.lat | number:'1.5-5' }}, {{ mapCenter.lng | number:'1.5-5' }}</span>
+          </div>
+          <div class="warn-map-frame">
+            <google-map height="100%" width="100%" [mapId]="mapId" [center]="mapCenter" [zoom]="zoom">
+              <map-advanced-marker [position]="mapCenter" [options]="markerOptions" />
+            </google-map>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

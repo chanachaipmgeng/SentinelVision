@@ -1,4 +1,32 @@
 <div class="dpu-kiosk">
+  <div class="dpu-kiosk__scene" aria-hidden="true">
+    <div class="dpu-kiosk__mesh"></div>
+    <div class="dpu-kiosk__orbit dpu-kiosk__orbit--a"></div>
+    <div class="dpu-kiosk__orbit dpu-kiosk__orbit--b"></div>
+    <div class="dpu-kiosk__orbit dpu-kiosk__orbit--c"></div>
+
+    <div class="dpu-kiosk__decor-clock">
+      <div class="dpu-kiosk__decor-glow"></div>
+      <div class="dpu-kiosk__decor-face">
+        <span
+          *ngFor="let tick of clockTicks"
+          class="dpu-kiosk__decor-tick"
+          [class.dpu-kiosk__decor-tick--hour]="tick % 5 === 0"
+          [style.--tick]="tick * 6 + 'deg'">
+        </span>
+        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--hour" [style.transform]="'rotate(' + hourDeg + 'deg)'"></div>
+        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--minute" [style.transform]="'rotate(' + minuteDeg + 'deg)'"></div>
+        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--second" [style.transform]="'rotate(' + secondDeg + 'deg)'"></div>
+        <div class="dpu-kiosk__decor-hub"></div>
+      </div>
+    </div>
+
+    <span class="dpu-kiosk__float dpu-kiosk__float--1">FACE ID</span>
+    <span class="dpu-kiosk__float dpu-kiosk__float--2">CHECK-IN</span>
+    <span class="dpu-kiosk__float dpu-kiosk__float--3">LIVE</span>
+  </div>
+
+  <div class="dpu-kiosk__stage">
   <div *ngIf="showToast" class="dpu-kiosk__toast" [ngClass]="'is-' + toastKind" role="status">
     {{ toastMessage }}
   </div>
@@ -284,5 +312,6 @@
         </li>
       </ul>
     </aside>
+  </div>
   </div>
 </div>

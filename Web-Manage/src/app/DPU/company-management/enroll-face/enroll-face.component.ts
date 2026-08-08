@@ -123,6 +123,10 @@ export class EnrollFaceComponent implements OnDestroy {
   showToast = false;
   companyName = '';
   clockNow = new Date();
+  readonly clockTicks = Array.from({ length: 60 }, (_, i) => i);
+  hourDeg = 0;
+  minuteDeg = 0;
+  secondDeg = 0;
   private ttsSettings: TtsSettings = resolveTtsSettings(null);
 
   feed: CheckInFeedItem[] = [];
@@ -254,10 +258,23 @@ export class EnrollFaceComponent implements OnDestroy {
       this.loadAttendance();
       this.loadTtsSettings();
     }, 15000);
+    this.tickSceneClock();
     this.clockTimer = setInterval(() => {
-      this.clockNow = new Date();
+      this.tickSceneClock();
       this.cdr.detectChanges();
-    }, 1000);
+    }, 250);
+  }
+
+  private tickSceneClock(): void {
+    const now = new Date();
+    this.clockNow = now;
+    const h = now.getHours() % 12;
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+    const ms = now.getMilliseconds();
+    this.hourDeg = h * 30 + m * 0.5;
+    this.minuteDeg = m * 6 + s * 0.1;
+    this.secondDeg = s * 6 + ms * 0.006;
   }
 
   private loadTtsSettings(): void {

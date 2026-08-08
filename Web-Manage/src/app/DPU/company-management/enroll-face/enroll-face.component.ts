@@ -250,7 +250,10 @@ export class EnrollFaceComponent implements OnDestroy {
     this.getCompanyLocation();
     this.connectKioskWs();
     this.loadAttendance();
-    this.attendanceTimer = setInterval(() => this.loadAttendance(), 15000);
+    this.attendanceTimer = setInterval(() => {
+      this.loadAttendance();
+      this.loadTtsSettings();
+    }, 15000);
     this.clockTimer = setInterval(() => {
       this.clockNow = new Date();
       this.cdr.detectChanges();
@@ -263,7 +266,7 @@ export class EnrollFaceComponent implements OnDestroy {
         this.ttsSettings = settings;
       },
       error: () => {
-        /* keep defaults */
+        /* keep defaults / last known */
       },
     });
   }
@@ -272,6 +275,7 @@ export class EnrollFaceComponent implements OnDestroy {
     key: TtsTemplateKey,
     vars: { name?: string; firstName?: string; employeeId?: string },
   ): void {
+    // Use cached settings (loaded on init + refreshed with attendance poll).
     const text = buildSpeechText(this.ttsSettings, key, vars);
     if (!text) return;
     speakText(text, {

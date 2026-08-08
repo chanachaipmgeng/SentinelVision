@@ -84,19 +84,28 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
 
 
 async def _search_face_pgvector(
-    db: AsyncSession, target_encoding: List[float], threshold: float
+    db: AsyncSession,
+    target_encoding: List[float],
+    threshold: float,
+    *,
+    companyId: Optional[UUID] = None,
 ):
-    """Nearest neighbor by cosine distance; return (faceEncodingId, memberId, distance) or None."""
+    """
+    Nearest neighbor by cosine distance within optional company scope.
+    When companyId is set, only encodings of that company's employees are searched.
+    """
     distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
-    stmt = (
-        select(
-            FaceEncoding.faceEncodingId,
-            FaceEncoding.memberId,
-            distance_expr.label("distance"),
-        )
-        .order_by(distance_expr)
-        .limit(1)
+    stmt = select(
+        FaceEncoding.faceEncodingId,
+        FaceEncoding.memberId,
+        distance_expr.label("distance"),
     )
+    if companyId is not None:
+        company_member_ids = select(CompanyEmployee.memberId).where(
+            CompanyEmployee.companyId == companyId
+        )
+        stmt = stmt.where(FaceEncoding.memberId.in_(company_member_ids))
+    stmt = stmt.order_by(distance_expr).limit(1)
     result = await db.execute(stmt)
     row = result.first()
     if row is None:
@@ -172,13 +181,20 @@ async def _resolve_match_response(
     target_encoding: List[float],
     *,
     liveness_passed: bool,
+    companyId: Optional[UUID] = None,
 ) -> dict:
     threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
-    match = await _search_face_pgvector(db, target_encoding, threshold=threshold)
+    match = await _search_face_pgvector(
+        db, target_encoding, threshold=threshold, companyId=companyId
+    )
     if not match:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Face does not match any record.",
+            detail=(
+                "Face does not match any employee in this company."
+                if companyId is not None
+                else "Face does not match any record."
+            ),
         )
 
     face_encoding_id, matched_member_id, distance = match
@@ -230,8 +246,10 @@ def _cleanup_paths(paths: List[str]) -> None:
             p.unlink()
 
 
-async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
-    """Liveness check + 1:N match via pgvector cosine distance."""
+async def check_face_emp(
+    image_files: List[UploadFile], companyId: UUID, db: AsyncSession
+):
+    """Liveness check + 1:N match within company via pgvector cosine distance."""
     if not image_files:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -243,7 +261,10 @@ async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
         temp_image_paths = await _save_temp_frames(image_files)
         target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
         return await _resolve_match_response(
-            db, target_encoding, liveness_passed=True
+            db,
+            target_encoding,
+            liveness_passed=True,
+            companyId=companyId,
         )
     except HTTPException:
         raise
@@ -257,8 +278,10 @@ async def check_face_emp(image_files: List[UploadFile], db: AsyncSession):
         _cleanup_paths(temp_image_paths)
 
 
-async def identify_face(image_file: UploadFile, db: AsyncSession):
-    """Fast 1:N identify from a single frame (no liveness) for live overlay labels."""
+async def identify_face(
+    image_file: UploadFile, companyId: UUID, db: AsyncSession
+):
+    """Fast 1:N identify within company from a single frame (no liveness)."""
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames([image_file])
@@ -272,7 +295,10 @@ async def identify_face(image_file: UploadFile, db: AsyncSession):
             )
         target_encoding, _bbox = features
         return await _resolve_match_response(
-            db, target_encoding, liveness_passed=False
+            db,
+            target_encoding,
+            liveness_passed=False,
+            companyId=companyId,
         )
     except HTTPException:
         raise
@@ -327,7 +353,10 @@ async def _finalize_check_in(
     default_note: str,
 ) -> dict:
     match_payload = await _resolve_match_response(
-        db, target_encoding, liveness_passed=liveness_passed
+        db,
+        target_encoding,
+        liveness_passed=liveness_passed,
+        companyId=companyId,
     )
 
     member_id = UUID(match_payload["memberId"])
@@ -583,3 +612,115 @@ async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
         print(f"Error deleting image file {image_path}: {e}")
 
     return {"message": "Face encoding deleted successfully"}
+
+
+async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
+    """Delete all enrolled face encodings for one member (no check-in side effects)."""
+    member = await db.get(Member, memberId)
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    result = await db.execute(
+        select(FaceEncoding).where(FaceEncoding.memberId == memberId)
+    )
+    encodings = list(result.scalars().all())
+    deleted_ids: List[str] = []
+    for enc in encodings:
+        deleted_ids.append(str(enc.faceEncodingId))
+        await db.delete(enc)
+    await db.commit()
+
+    for enc_id in deleted_ids:
+        try:
+            image_path = Path(f"enrolled_images/{enc_id}.jpg")
+            if image_path.exists():
+                image_path.unlink()
+        except Exception as e:
+            print(f"Error deleting image file enrolled_images/{enc_id}.jpg: {e}")
+
+    return {
+        "message": "All face encodings cleared",
+        "deleted": len(deleted_ids),
+        "faceEncodingIds": deleted_ids,
+    }
+
+
+async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
+    """
+    Test-scan against this member's enrolled faces only.
+    Returns confidence percent without creating a timestamp / check-in.
+    """
+    member = await db.get(Member, memberId)
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    count_result = await db.execute(
+        select(FaceEncoding.faceEncodingId).where(FaceEncoding.memberId == memberId).limit(1)
+    )
+    if count_result.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="พนักงานคนนี้ยังไม่มีใบหน้าที่ลงทะเบียน",
+        )
+
+    temp_image_paths: List[str] = []
+    try:
+        temp_image_paths = await _save_temp_frames([image_file])
+        features = await run_on_face_gpu(
+            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
+        )
+        if features is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ไม่พบใบหน้าในรูป",
+            )
+        target_encoding, _bbox = features
+
+        threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+        distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
+        stmt = (
+            select(
+                FaceEncoding.faceEncodingId,
+                distance_expr.label("distance"),
+            )
+            .where(FaceEncoding.memberId == memberId)
+            .order_by(distance_expr)
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        row = result.first()
+        if row is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="พนักงานคนนี้ยังไม่มีใบหน้าที่ลงทะเบียน",
+            )
+
+        face_encoding_id, distance = row
+        distance_f = float(distance)
+        matched = distance_f < threshold
+        score = _score_payload(
+            face_encoding_id,
+            memberId,
+            distance_f,
+            threshold,
+            liveness_passed=False,
+        )
+        score.update(
+            {
+                "message": "Face verify completed (no check-in)",
+                "matched": matched,
+                "isTestOnly": True,
+                "member": _member_payload(member),
+            }
+        )
+        return score
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
+    finally:
+        _cleanup_paths(temp_image_paths)

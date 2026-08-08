@@ -66,6 +66,7 @@ async def _handle_identify(
     track_id: Any,
     request_id: Any,
     image_b64: str,
+    company_id: UUID,
 ) -> None:
     paths: List[str] = []
     try:
@@ -89,7 +90,10 @@ async def _handle_identify(
         encoding, _bbox = features
         async with async_session() as db:
             payload = await _resolve_match_response(
-                db, encoding, liveness_passed=False
+                db,
+                encoding,
+                liveness_passed=False,
+                companyId=company_id,
             )
         await _send(
             websocket,
@@ -267,11 +271,24 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 continue
 
             if msg_type == "identify":
+                if company_id is None:
+                    await _send(
+                        websocket,
+                        {
+                            "type": "error",
+                            "intent": "identify",
+                            "trackId": data.get("trackId"),
+                            "requestId": data.get("requestId"),
+                            "detail": "Session not started",
+                        },
+                    )
+                    continue
                 await _handle_identify(
                     websocket,
                     track_id=data.get("trackId"),
                     request_id=data.get("requestId"),
                     image_b64=str(data.get("image") or ""),
+                    company_id=company_id,
                 )
                 continue
 

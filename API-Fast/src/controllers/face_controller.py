@@ -752,7 +752,7 @@ def _ts_type_int(ts_type) -> int:
 
 
 async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
-    """Today's check-in roster for the face kiosk side panel (Bangkok day)."""
+    """Today's checked-in roster only — no full-company / not-yet scan."""
     try:
         try:
             from zoneinfo import ZoneInfo
@@ -764,26 +764,6 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
         now_local = datetime.now(tz)
         today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
         tomorrow = today_start + timedelta(days=1)
-
-        emp_result = await db.execute(
-            select(CompanyEmployee)
-            .where(CompanyEmployee.companyId == companyId)
-            .options(
-                selectinload(CompanyEmployee.member),
-                selectinload(CompanyEmployee.position),
-                selectinload(CompanyEmployee.department),
-            )
-        )
-        employees = emp_result.scalars().all()
-
-        active_emps = []
-        for emp in employees:
-            member = emp.member
-            if not member:
-                continue
-            if _member_status_value(member.status) != int(MemberStatus.ENABLE.value):
-                continue
-            active_emps.append(emp)
 
         ts_result = await db.execute(
             select(EmployeeTimestamp)
@@ -798,60 +778,68 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
 
         latest_by_emp: dict = {}
         for ts in timestamps:
-            emp_id = str(ts.company_employeeId)
+            emp_id = ts.company_employeeId
             if emp_id not in latest_by_emp:
                 latest_by_emp[emp_id] = ts
 
-        checked_in = []
-        not_checked_in = []
-        for emp in active_emps:
-            member = emp.member
-            emp_key = str(emp.company_employeeId)
-            name = f"{member.firstName or ''} {member.lastName or ''}".strip() or "ไม่ทราบชื่อ"
-            brief = {
-                "company_employeeId": emp_key,
-                "employeeId": emp.employeeId or "",
-                "employeeName": name,
-                "picture": getattr(member, "picture", None),
-                "department": emp.department.thName if emp.department else "",
-                "position": emp.position.thName if emp.position else "",
-            }
-            ts = latest_by_emp.get(emp_key)
-            if ts:
-                ttype = _ts_type_int(ts.timestampType)
-                brief.update(
-                    {
-                        "timestamp": ts.timestamp,
-                        "timestampType": ttype,
-                        "locationName": ts.locationName or "",
-                        "photoTimestamp": ts.photoTimestamp,
-                        "approvalStatus": ts.approvalStatus,
-                    }
+        emp_ids = list(latest_by_emp.keys())
+        employees_by_id: dict = {}
+        if emp_ids:
+            emp_result = await db.execute(
+                select(CompanyEmployee)
+                .where(CompanyEmployee.company_employeeId.in_(emp_ids))
+                .options(
+                    selectinload(CompanyEmployee.member),
+                    selectinload(CompanyEmployee.position),
+                    selectinload(CompanyEmployee.department),
                 )
-                checked_in.append(brief)
-            else:
-                not_checked_in.append(brief)
+            )
+            employees_by_id = {
+                emp.company_employeeId: emp for emp in emp_result.scalars().all()
+            }
+
+        checked_in = []
+        for emp_id, ts in latest_by_emp.items():
+            emp = employees_by_id.get(emp_id)
+            member = emp.member if emp else None
+            name = (
+                f"{getattr(member, 'firstName', '') or ''} {getattr(member, 'lastName', '') or ''}".strip()
+                if member
+                else "ไม่ทราบชื่อ"
+            ) or "ไม่ทราบชื่อ"
+            ttype = _ts_type_int(ts.timestampType)
+            checked_in.append(
+                {
+                    "company_employeeId": str(emp_id),
+                    "employeeId": (emp.employeeId if emp else "") or "",
+                    "employeeName": name,
+                    "picture": getattr(member, "picture", None) if member else None,
+                    "department": emp.department.thName if emp and emp.department else "",
+                    "position": emp.position.thName if emp and emp.position else "",
+                    "timestamp": ts.timestamp,
+                    "timestampType": ttype,
+                    "locationName": ts.locationName or "",
+                    "photoTimestamp": ts.photoTimestamp,
+                    "approvalStatus": ts.approvalStatus,
+                }
+            )
 
         checked_in.sort(
             key=lambda x: x.get("timestamp") or datetime.min.replace(tzinfo=tz),
             reverse=True,
         )
-        not_checked_in.sort(key=lambda x: x.get("employeeName") or "")
 
         in_area_count = sum(1 for row in checked_in if row.get("timestampType") == 1)
         outside_count = sum(1 for row in checked_in if row.get("timestampType") == 0)
         return {
             "summary": {
-                "totalEmployees": len(active_emps),
                 "checkedInCount": len(checked_in),
-                "notCheckedInCount": len(not_checked_in),
                 "inAreaCount": in_area_count,
                 "outsideCount": outside_count,
                 "asOf": now_local.isoformat(),
                 "day": today_start.date().isoformat(),
             },
             "checkedIn": checked_in,
-            "notCheckedIn": not_checked_in,
         }
     except Exception as e:
         raise HTTPException(

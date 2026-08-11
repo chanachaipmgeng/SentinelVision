@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import * as faceapi from 'face-api.js';
 
@@ -57,15 +57,12 @@ export interface KioskRosterPerson {
 
 export interface KioskAttendance {
   summary: {
-    totalEmployees: number;
     checkedInCount: number;
-    notCheckedInCount: number;
     inAreaCount: number;
     outsideCount: number;
     day?: string;
   };
   checkedIn: KioskRosterPerson[];
-  notCheckedIn: KioskRosterPerson[];
 }
 
 type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
@@ -101,9 +98,14 @@ interface FaceTrack {
   templateUrl: './enroll-face.component.html',
   styleUrl: './enroll-face.component.scss'
 })
-export class EnrollFaceComponent implements OnDestroy {
+export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   @ViewChild('video') video: ElementRef;
   @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
+  @ViewChild('clockDate') clockDateEl?: ElementRef<HTMLElement>;
+  @ViewChild('decorHour') decorHourEl?: ElementRef<HTMLElement>;
+  @ViewChild('decorMinute') decorMinuteEl?: ElementRef<HTMLElement>;
+  @ViewChild('decorSecond') decorSecondEl?: ElementRef<HTMLElement>;
   locationList: CompanyLocationModel[] = [];
   locationArea: CompanyLocationModel[] = [];
   companyId = '';
@@ -122,18 +124,13 @@ export class EnrollFaceComponent implements OnDestroy {
   toastKind: 'success' | 'warning' | 'error' | 'info' = 'info';
   showToast = false;
   companyName = '';
-  clockNow = new Date();
   readonly clockTicks = Array.from({ length: 60 }, (_, i) => i);
-  hourDeg = 0;
-  minuteDeg = 0;
-  secondDeg = 0;
   private ttsSettings: TtsSettings = resolveTtsSettings(null);
 
   feed: CheckInFeedItem[] = [];
   latestResult: CheckInFeedItem | null = null;
 
   attendance: KioskAttendance | null = null;
-  rosterTab: 'checked' | 'pending' = 'checked';
   homeLink = '/company/dashboard';
 
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
@@ -187,19 +184,8 @@ export class EnrollFaceComponent implements OnDestroy {
     return this.attendance?.summary?.checkedInCount ?? 0;
   }
 
-  get notCheckedInCount(): number {
-    return this.attendance?.summary?.notCheckedInCount ?? 0;
-  }
-
-  get totalEmployees(): number {
-    return this.attendance?.summary?.totalEmployees ?? 0;
-  }
-
   get rosterList(): KioskRosterPerson[] {
-    if (!this.attendance) return [];
-    return this.rosterTab === 'checked'
-      ? this.attendance.checkedIn || []
-      : this.attendance.notCheckedIn || [];
+    return this.attendance?.checkedIn || [];
   }
 
   get inArea(): boolean {
@@ -254,27 +240,55 @@ export class EnrollFaceComponent implements OnDestroy {
     this.getCompanyLocation();
     this.connectKioskWs();
     this.loadAttendance();
-    this.attendanceTimer = setInterval(() => {
-      this.loadAttendance();
-      this.loadTtsSettings();
-    }, 15000);
+    this.ngZone.runOutsideAngular(() => {
+      this.attendanceTimer = setInterval(() => {
+        this.loadAttendance();
+        this.loadTtsSettings();
+      }, 15000);
+    });
+  }
+
+  ngAfterViewInit(): void {
+    this.startSceneClock();
+  }
+
+  /** Decorative + header clock only — never trigger component CD (face/WS work). */
+  private startSceneClock(): void {
     this.tickSceneClock();
-    this.clockTimer = setInterval(() => {
-      this.tickSceneClock();
-      this.cdr.detectChanges();
-    }, 250);
+    this.ngZone.runOutsideAngular(() => {
+      this.clockTimer = setInterval(() => this.tickSceneClock(), 1000);
+    });
   }
 
   private tickSceneClock(): void {
     const now = new Date();
-    this.clockNow = now;
-    const h = now.getHours() % 12;
-    const m = now.getMinutes();
-    const s = now.getSeconds();
-    const ms = now.getMilliseconds();
-    this.hourDeg = h * 30 + m * 0.5;
-    this.minuteDeg = m * 6 + s * 0.1;
-    this.secondDeg = s * 6 + ms * 0.006;
+    const hh = now.getHours();
+    const mm = now.getMinutes();
+    const ss = now.getSeconds();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timeEl = this.clockTimeEl?.nativeElement;
+    const dateEl = this.clockDateEl?.nativeElement;
+    if (timeEl) {
+      timeEl.textContent = `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+    }
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    }
+
+    const hourDeg = (hh % 12) * 30 + mm * 0.5;
+    const minuteDeg = mm * 6 + ss * 0.1;
+    const secondDeg = ss * 6;
+    const hourHand = this.decorHourEl?.nativeElement;
+    const minuteHand = this.decorMinuteEl?.nativeElement;
+    const secondHand = this.decorSecondEl?.nativeElement;
+    if (hourHand) hourHand.style.transform = `rotate(${hourDeg}deg)`;
+    if (minuteHand) minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
+    if (secondHand) secondHand.style.transform = `rotate(${secondDeg}deg)`;
   }
 
   private loadTtsSettings(): void {
@@ -374,60 +388,66 @@ export class EnrollFaceComponent implements OnDestroy {
       clearInterval(this.faceDetectionInterval);
     }
 
-    this.faceDetectionInterval = setInterval(async () => {
-      if (this.detectBusy || !videoEl.srcObject || videoEl.readyState < 2) {
-        return;
-      }
-      this.detectBusy = true;
+    const detector = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
 
-      try {
-        const detections = await faceapi.detectAllFaces(
-          videoEl,
-          new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 }),
-        );
-        const resized = faceapi.resizeResults(detections, displaySize);
-        const now = Date.now();
-        const boxes: SmoothBox[] = resized.map((d) => ({
-          x: d.box.x,
-          y: d.box.y,
-          width: d.box.width,
-          height: d.box.height,
-        }));
-
-        this.updateTracks(boxes, now);
-        this.drawAllTracks(displaySize);
-
-        let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
-        for (const track of this.tracks) {
-          if (identifySlots <= 0) {
-            break;
-          }
-          if (this.shouldIdentify(track, now)) {
-            identifySlots -= 1;
-            this.runTrackIdentify(track);
-          }
+    this.ngZone.runOutsideAngular(() => {
+      this.faceDetectionInterval = setInterval(async () => {
+        if (this.detectBusy || !videoEl.srcObject || videoEl.readyState < 2) {
+          return;
         }
+        this.detectBusy = true;
 
-        for (const track of this.tracks) {
-          if (this.shouldStartCheckIn(track, now)) {
-            this.startTrackCapture(track);
+        try {
+          const detections = await faceapi.detectAllFaces(videoEl, detector);
+          const resized = faceapi.resizeResults(detections, displaySize);
+          const now = Date.now();
+          const boxes: SmoothBox[] = resized.map((d) => ({
+            x: d.box.x,
+            y: d.box.y,
+            width: d.box.width,
+            height: d.box.height,
+          }));
+
+          this.updateTracks(boxes, now);
+          this.drawAllTracks(displaySize);
+
+          let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
+          for (const track of this.tracks) {
+            if (identifySlots <= 0) {
+              break;
+            }
+            if (this.shouldIdentify(track, now)) {
+              identifySlots -= 1;
+              this.runTrackIdentify(track);
+            }
           }
-        }
 
-        this.ngZone.run(() => {
-          this.activeFaceCount = this.tracks.length;
-          this.checkingInCount = this.tracks.filter(
+          for (const track of this.tracks) {
+            if (this.shouldStartCheckIn(track, now)) {
+              this.startTrackCapture(track);
+            }
+          }
+
+          const faceCount = this.tracks.length;
+          const busyCount = this.tracks.filter(
             (t) => t.phase === 'capturing' || t.phase === 'checking_in',
           ).length;
-          this.captureMessage = this.buildStatusMessage();
-          this.cdr.detectChanges();
-        });
-      } catch (e) {
-        console.error('detectFace error', e);
-      } finally {
-        this.detectBusy = false;
-      }
-    }, 90);
+          this.activeFaceCount = faceCount;
+          this.checkingInCount = busyCount;
+          const status = this.buildStatusMessage();
+          if (status !== this.captureMessage) {
+            this.ngZone.run(() => {
+              this.captureMessage = status;
+              this.cdr.detectChanges();
+            });
+          }
+        } catch (e) {
+          console.error('detectFace error', e);
+        } finally {
+          this.detectBusy = false;
+        }
+      }, 140);
+    });
   }
 
   private buildStatusMessage(): string {
@@ -1198,8 +1218,12 @@ export class EnrollFaceComponent implements OnDestroy {
       });
   }
 
-  setRosterTab(tab: 'checked' | 'pending'): void {
-    this.rosterTab = tab;
+  trackByRosterId(_index: number, person: KioskRosterPerson): string {
+    return person.company_employeeId || person.employeeId || String(_index);
+  }
+
+  trackByFeedId(_index: number, item: CheckInFeedItem): string {
+    return item.id;
   }
 
   personPhoto(person: KioskRosterPerson): string {

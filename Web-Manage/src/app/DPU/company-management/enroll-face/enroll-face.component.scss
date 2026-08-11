@@ -35,6 +35,7 @@ html.dpu-kiosk-mode .dpu-kiosk {
   pointer-events: none;
   overflow: hidden;
   z-index: 0;
+  contain: strict;
 }
 
 .dpu-kiosk__stage {
@@ -51,8 +52,7 @@ html.dpu-kiosk-mode .dpu-kiosk {
     linear-gradient(90deg, rgba(94, 234, 212, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 18%, transparent 78%);
-  animation: dpu-kiosk-mesh 28s linear infinite;
-  opacity: 0.65;
+  opacity: 0.55;
 }
 
 .dpu-kiosk__orbit {
@@ -505,7 +505,7 @@ html.dpu-kiosk-mode .dpu-kiosk {
 
 .dpu-kiosk__summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem;
   margin-bottom: 0.75rem;
 }

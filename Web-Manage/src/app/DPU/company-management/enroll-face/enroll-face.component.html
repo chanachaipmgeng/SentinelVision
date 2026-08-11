@@ -14,9 +14,9 @@
           [class.dpu-kiosk__decor-tick--hour]="tick % 5 === 0"
           [style.--tick]="tick * 6 + 'deg'">
         </span>
-        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--hour" [style.transform]="'rotate(' + hourDeg + 'deg)'"></div>
-        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--minute" [style.transform]="'rotate(' + minuteDeg + 'deg)'"></div>
-        <div class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--second" [style.transform]="'rotate(' + secondDeg + 'deg)'"></div>
+        <div #decorHour class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--hour"></div>
+        <div #decorMinute class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--minute"></div>
+        <div #decorSecond class="dpu-kiosk__decor-hand dpu-kiosk__decor-hand--second"></div>
         <div class="dpu-kiosk__decor-hub"></div>
       </div>
     </div>
@@ -42,8 +42,8 @@
         <span>หน้าหลัก</span>
       </a>
       <div class="dpu-kiosk__clock" aria-live="polite">
-        <span class="dpu-kiosk__clock-time">{{ clockNow | date: 'HH:mm:ss' }}</span>
-        <span class="dpu-kiosk__clock-date">{{ clockNow | date: 'EEE d MMM yyyy' }}</span>
+        <span #clockTime class="dpu-kiosk__clock-time"></span>
+        <span #clockDate class="dpu-kiosk__clock-date"></span>
       </div>
     </div>
   </header>
@@ -79,11 +79,7 @@
     </span>
     <span class="dpu-kiosk__chip is-ok" *ngIf="attendance">
       <i class="ri-checkbox-circle-line"></i>
-      วันนี้ {{ checkedInCount }}/{{ totalEmployees }}
-    </span>
-    <span class="dpu-kiosk__chip is-warn" *ngIf="attendance && notCheckedInCount > 0">
-      <i class="ri-time-line"></i>
-      ยังไม่ลง {{ notCheckedInCount }}
+      วันนี้ {{ checkedInCount }}
     </span>
   </div>
 
@@ -146,7 +142,7 @@
       <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
         <div>
           <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">วันนี้</h2>
-          <p class="dpu-kiosk__subtitle">สรุปการลงเวลา + รายชื่อที่ยังไม่ลง</p>
+          <p class="dpu-kiosk__subtitle">รายชื่อที่ลงเวลาแล้ว</p>
         </div>
         <button type="button" class="dpu-kiosk__icon-btn" (click)="loadAttendance()" title="รีเฟรช">
           <i class="ri-refresh-line"></i>
@@ -158,10 +154,6 @@
           <span class="dpu-kiosk__summary-val">{{ att.summary.checkedInCount }}</span>
           <span class="dpu-kiosk__summary-label">ลงแล้ว</span>
         </div>
-        <div class="dpu-kiosk__summary-card is-warn">
-          <span class="dpu-kiosk__summary-val">{{ att.summary.notCheckedInCount }}</span>
-          <span class="dpu-kiosk__summary-label">ยังไม่ลง</span>
-        </div>
         <div class="dpu-kiosk__summary-card">
           <span class="dpu-kiosk__summary-val">{{ att.summary.inAreaCount }}</span>
           <span class="dpu-kiosk__summary-label">ในพื้นที่</span>
@@ -172,27 +164,11 @@
         </div>
       </div>
 
-      <div class="dpu-kiosk__tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          class="dpu-kiosk__tab"
-          [class.is-active]="rosterTab === 'checked'"
-          (click)="setRosterTab('checked')">
-          ลงเวลาแล้ว ({{ checkedInCount }})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          class="dpu-kiosk__tab"
-          [class.is-active]="rosterTab === 'pending'"
-          (click)="setRosterTab('pending')">
-          ยังไม่ลง ({{ notCheckedInCount }})
-        </button>
-      </div>
-
       <ul class="dpu-kiosk__roster" *ngIf="rosterList.length">
-        <li *ngFor="let person of rosterList" class="dpu-kiosk__roster-item" [class.is-warn]="isOutside(person)">
+        <li
+          *ngFor="let person of rosterList; trackBy: trackByRosterId"
+          class="dpu-kiosk__roster-item"
+          [class.is-warn]="isOutside(person)">
           <img class="dpu-kiosk__roster-avatar" [src]="personPhoto(person)" alt="" loading="lazy" />
           <div class="dpu-kiosk__roster-body">
             <div class="dpu-kiosk__roster-row">
@@ -203,21 +179,17 @@
               {{ person.employeeId || '—' }}
               · {{ person.department || '—' }}
             </p>
-            <p class="dpu-kiosk__meta mb-0" *ngIf="rosterTab === 'checked'">
+            <p class="dpu-kiosk__meta mb-0">
               <span *ngIf="isOutside(person)">นอกพื้นที่</span>
               <span *ngIf="!isOutside(person)">ในพื้นที่</span>
               <span *ngIf="person.locationName"> · {{ person.locationName }}</span>
-            </p>
-            <p class="dpu-kiosk__meta mb-0" *ngIf="rosterTab === 'pending'">
-              {{ person.position || '—' }}
             </p>
           </div>
         </li>
       </ul>
 
       <div class="dpu-kiosk__empty dpu-kiosk__empty--sm" *ngIf="attendance && !rosterList.length">
-        <p *ngIf="rosterTab === 'checked'">ยังไม่มีใครลงเวลาวันนี้</p>
-        <p *ngIf="rosterTab === 'pending'">พนักงานลงเวลาครบแล้ว</p>
+        <p>ยังไม่มีใครลงเวลาวันนี้</p>
       </div>
 
       <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--spaced">
@@ -284,7 +256,7 @@
       </div>
 
       <ul class="dpu-kiosk__feed" *ngIf="feed.length > 0">
-        <li *ngFor="let item of feed" class="dpu-kiosk__feed-item" [ngClass]="'is-' + item.statusKind">
+        <li *ngFor="let item of feed; trackBy: trackByFeedId" class="dpu-kiosk__feed-item" [ngClass]="'is-' + item.statusKind">
           <img *ngIf="item.photoUrl" class="dpu-kiosk__feed-avatar" [src]="item.photoUrl" alt="" />
           <div *ngIf="!item.photoUrl" class="dpu-kiosk__feed-avatar dpu-kiosk__feed-avatar--empty">
             <i class="ri-user-line"></i>

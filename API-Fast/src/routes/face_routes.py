@@ -34,7 +34,7 @@ async def face_queue_stats():
 
 @router.get("/kiosk-attendance/{companyId}")
 async def kiosk_attendance_route(companyId: UUID, db: AsyncSession = Depends(get_db)):
-    """Today's checked-in / not-yet roster for the face kiosk panel."""
+    """Today's checked-in roster for the face kiosk panel."""
     return await get_kiosk_attendance(companyId, db)
 
 

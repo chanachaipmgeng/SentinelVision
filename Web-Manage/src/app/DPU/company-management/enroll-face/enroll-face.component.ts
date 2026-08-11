@@ -187,18 +187,19 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private readonly trackMissTtlMs = 550;
   private readonly nmsIou = 0.35;
   private readonly trackMergeIou = 0.4;
-  /** Shorter hold for walk-by (no head-motion wait). */
-  private readonly autoStartHoldMs = 320;
+  /** Short hold before walk-by check-in (face must stay briefly). */
+  private readonly autoStartHoldMs = 150;
   private readonly memberCooldownMs = 5 * 60 * 1000;
   private readonly identifyEveryMs = 1200;
-  /** Walk-by / stream: 1–2 quality crops. */
-  private readonly frameCount = 2;
+  /** Stream walk-by: single crop for lower latency (server still encodes once). */
+  private readonly frameCount = 1;
   private readonly captureIntervalMs = 90;
   private readonly maxConcurrentCheckIn = 3;
   private readonly maxConcurrentIdentify = 2;
   private readonly minFaceWidth = 48;
   private readonly cropPad = 0.4;
-  private readonly retryFailMs = 1800;
+  /** Backoff after a failed crop/check-in — keep short so walk-by can retry quickly. */
+  private readonly retryFailMs = 900;
   private readonly checkInEndpoint = '/face/members/check-in-walkby';
 
   constructor(
@@ -1092,70 +1093,70 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     done: boolean,
     busy: boolean,
   ) {
-    const pad = 6;
+    const pad = 5;
     const x = box.x - pad;
     const y = box.y - pad;
     const w = box.width + pad * 2;
     const h = box.height + pad * 2;
-    const radius = 14;
+    const radius = 18;
 
-    let stroke = 'rgba(148, 163, 184, 0.9)';
-    let corner = '#94a3b8';
-    let labelBg = 'rgba(51, 65, 85, 0.92)';
+    // Neon blue scan frame — single rounded stroke (no corner brackets / double border).
+    let stroke = '#38bdf8';
+    let glow = 'rgba(56, 189, 248, 0.85)';
+    let labelBg = 'rgba(8, 47, 73, 0.88)';
+    let labelFg = '#e0f2fe';
     if (done) {
-      stroke = 'rgba(52, 211, 153, 0.95)';
-      corner = '#34d399';
-      labelBg = 'rgba(6, 95, 70, 0.92)';
+      stroke = '#67e8f9';
+      glow = 'rgba(103, 232, 249, 0.95)';
+      labelBg = 'rgba(8, 47, 73, 0.92)';
+      labelFg = '#ecfeff';
     } else if (busy) {
-      stroke = 'rgba(251, 191, 36, 0.95)';
-      corner = '#fbbf24';
-      labelBg = 'rgba(146, 64, 14, 0.92)';
+      stroke = '#7dd3fc';
+      glow = 'rgba(125, 211, 252, 0.9)';
+      labelBg = 'rgba(12, 74, 110, 0.9)';
+      labelFg = '#f0f9ff';
     } else if (label) {
-      stroke = 'rgba(45, 212, 191, 0.95)';
-      corner = '#5eead4';
-      labelBg = 'rgba(15, 118, 110, 0.92)';
+      stroke = '#22d3ee';
+      glow = 'rgba(34, 211, 238, 0.95)';
+      labelBg = 'rgba(8, 47, 73, 0.9)';
+      labelFg = '#ecfeff';
     }
 
     ctx.save();
-    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    // One rounded neon stroke + soft glow (no corner brackets / double border).
     ctx.strokeStyle = stroke;
+    ctx.lineWidth = 2.75;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 16;
     this.roundRect(ctx, x, y, w, h, radius);
     ctx.stroke();
-
-    const c = Math.min(28, w * 0.22, h * 0.22);
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = corner;
-    ctx.beginPath();
-    ctx.moveTo(x, y + c);
-    ctx.lineTo(x, y);
-    ctx.lineTo(x + c, y);
-    ctx.moveTo(x + w - c, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w, y + c);
-    ctx.moveTo(x + w, y + h - c);
-    ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x + w - c, y + h);
-    ctx.moveTo(x + c, y + h);
-    ctx.lineTo(x, y + h);
-    ctx.lineTo(x, y + h - c);
-    ctx.stroke();
+    ctx.shadowBlur = 0;
 
     if (label) {
       const text = confidence != null && !busy && !done
         ? `${label}  ${confidence.toFixed(0)}%`
         : label;
-      ctx.font = '600 15px "Segoe UI", system-ui, sans-serif';
+      ctx.font = '600 14px "Segoe UI", system-ui, sans-serif';
       const metrics = ctx.measureText(text);
       const labelPadX = 10;
-      const labelH = 26;
+      const labelH = 24;
       const labelW = metrics.width + labelPadX * 2;
       const labelX = x;
-      const labelY = Math.max(8, y - labelH - 6);
+      const labelY = Math.max(8, y - labelH - 8);
 
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 10;
       ctx.fillStyle = labelBg;
-      this.roundRect(ctx, labelX, labelY, labelW, labelH, 8);
+      this.roundRect(ctx, labelX, labelY, labelW, labelH, 10);
       ctx.fill();
-      ctx.fillStyle = '#ecfdf5';
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1;
+      this.roundRect(ctx, labelX, labelY, labelW, labelH, 10);
+      ctx.stroke();
+      ctx.fillStyle = labelFg;
       ctx.textBaseline = 'middle';
       ctx.fillText(text, labelX + labelPadX, labelY + labelH / 2 + 1);
     }
@@ -1291,10 +1292,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     track.captureFrames = [];
     track.statusText = 'walkby';
 
-    // Grab first crop immediately, then 1 more shortly after
+    // Grab first crop immediately; with frameCount=1 send check-in without waiting.
     const first = this.captureFaceCrop(track.box);
     if (first) {
       track.captureFrames.push(first);
+    }
+    if (track.captureFrames.length >= this.frameCount) {
+      this.sendTrackCheckIn(track);
+      return;
     }
 
     track.captureTimer = setInterval(() => {

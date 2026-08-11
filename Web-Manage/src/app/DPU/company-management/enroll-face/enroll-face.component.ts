@@ -24,6 +24,12 @@ import {
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
 
+// pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
+// drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
+// readyState against these literals, never against `WebSocket.*`.
+const WS_CONNECTING = 0;
+const WS_OPEN = 1;
+
 export interface CheckInFeedItem {
   id: string;
   employeeName: string;
@@ -150,6 +156,19 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private nextTrackId = 1;
   private renderRafId: number | null = null;
   private canvasDirty = false;
+
+  // Server-side detection (WS `detect`) — falls back to local face-api
+  private wsDetectInFlight = false;
+  private lastWsDetectAt = 0;
+  private wsDetectMisses = 0;
+  private serverDetectFailures = 0;
+  private serverDetectPausedUntil = 0;
+  private detectFrameCanvas: HTMLCanvasElement | null = null;
+  private lastDetectionsAt = 0;
+
+  // Local face-api fallback health (devices without WebGL crash tfjs)
+  private localDetectReady = false;
+  private localDetectErrors = 0;
   private readonly memberCooldownUntil = new Map<string, number>();
   private checkInInFlight = 0;
 
@@ -240,10 +259,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     unlockBeepAudio();
     unlockSpeech();
     this.loadTtsSettings();
-    faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
+    this.prepareLocalDetector();
     this.startVideo();
     this.getCompanyLocation();
-    this.connectKioskWs();
+    this.ngZone.runOutsideAngular(() => this.connectKioskWs());
     this.loadAttendance();
     this.ngZone.runOutsideAngular(() => {
       this.attendanceTimer = setInterval(() => {
@@ -255,6 +274,40 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     this.startSceneClock();
+  }
+
+  /**
+   * Local face-api is only a fallback (server GPU is primary).
+   * Kiosk devices without WebGL crash the tfjs webgl backend — try cpu, else disable.
+   */
+  private async prepareLocalDetector(): Promise<void> {
+    const tf: any = (faceapi as any).tf;
+    let backendOk = false;
+    try {
+      backendOk = await tf.setBackend('webgl');
+      if (backendOk) await tf.ready();
+    } catch {
+      backendOk = false;
+    }
+    if (!backendOk) {
+      try {
+        backendOk = await tf.setBackend('cpu');
+        if (backendOk) await tf.ready();
+        console.warn('kiosk: WebGL unavailable — local fallback uses CPU backend');
+      } catch {
+        backendOk = false;
+      }
+    }
+    if (!backendOk) {
+      console.warn('kiosk: local face detection disabled (no usable tfjs backend) — server detect only');
+      return;
+    }
+    try {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
+      this.localDetectReady = true;
+    } catch (e) {
+      console.warn('kiosk: local detector model load failed — server detect only', e);
+    }
   }
 
   /** Decorative + header clock only — never trigger component CD (face/WS work). */
@@ -401,55 +454,44 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
     this.ngZone.runOutsideAngular(() => {
       this.faceDetectionInterval = setInterval(async () => {
-        if (this.detectBusy || !videoEl.srcObject || videoEl.readyState < 2) {
+        if (!videoEl.srcObject || videoEl.readyState < 2) {
+          return;
+        }
+        const nowMs = Date.now();
+
+        // Detection stalled (WS dead / server slow) — expire boxes instead of freezing them.
+        if (this.tracks.length > 0 && this.lastDetectionsAt > 0 && nowMs - this.lastDetectionsAt > 1600) {
+          this.updateTracks([], nowMs);
+        }
+
+        // Prefer server-side detection (InsightFace GPU) when the stream is up.
+        if (this.wsConnected && nowMs >= this.serverDetectPausedUntil) {
+          this.sendDetectFrame(videoEl);
+          return;
+        }
+
+        // Fallback: local face-api detection (skip if tfjs unusable on this device)
+        if (this.detectBusy || !this.localDetectReady) {
           return;
         }
         this.detectBusy = true;
-
         try {
           const detections = await faceapi.detectAllFaces(videoEl, detector);
           const resized = faceapi.resizeResults(detections, displaySize);
-          const now = Date.now();
           const boxes: SmoothBox[] = resized.map((d) => ({
             x: d.box.x,
             y: d.box.y,
             width: d.box.width,
             height: d.box.height,
           }));
-
-          this.updateTracks(boxes, now);
-
-          let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
-          for (const track of this.tracks) {
-            if (identifySlots <= 0) {
-              break;
-            }
-            if (this.shouldIdentify(track, now)) {
-              identifySlots -= 1;
-              this.runTrackIdentify(track);
-            }
-          }
-
-          for (const track of this.tracks) {
-            if (this.shouldStartCheckIn(track, now)) {
-              this.startTrackCapture(track);
-            }
-          }
-
-          const faceCount = this.tracks.length;
-          const busyCount = this.tracks.filter(
-            (t) => t.phase === 'capturing' || t.phase === 'checking_in',
-          ).length;
-          this.activeFaceCount = faceCount;
-          this.checkingInCount = busyCount;
-          const status = this.buildStatusMessage();
-          if (status !== this.captureMessage) {
-            this.ngZone.run(() => {
-              this.captureMessage = status;
-              this.cdr.detectChanges();
-            });
-          }
+          this.localDetectErrors = 0;
+          this.processDetections(boxes, Date.now());
         } catch (e) {
+          this.localDetectErrors += 1;
+          if (this.localDetectErrors >= 5) {
+            this.localDetectReady = false;
+            console.warn('kiosk: local detection keeps failing — disabled, server detect only');
+          }
           console.error('detectFace error', e);
         } finally {
           this.detectBusy = false;
@@ -458,6 +500,144 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
       this.startRenderLoop(displaySize);
     });
+  }
+
+  /** Shared post-detection pipeline: tracks, identify slots, check-in, HUD status. */
+  private processDetections(boxes: SmoothBox[], now: number): void {
+    this.lastDetectionsAt = now;
+    this.updateTracks(boxes, now);
+
+    let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
+    for (const track of this.tracks) {
+      if (identifySlots <= 0) {
+        break;
+      }
+      if (this.shouldIdentify(track, now)) {
+        identifySlots -= 1;
+        this.runTrackIdentify(track);
+      }
+    }
+
+    for (const track of this.tracks) {
+      if (this.shouldStartCheckIn(track, now)) {
+        this.startTrackCapture(track);
+      }
+    }
+
+    this.activeFaceCount = this.tracks.length;
+    this.checkingInCount = this.tracks.filter(
+      (t) => t.phase === 'capturing' || t.phase === 'checking_in',
+    ).length;
+    const status = this.buildStatusMessage();
+    if (status !== this.captureMessage) {
+      this.ngZone.run(() => {
+        this.captureMessage = status;
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  /** Send one downscaled frame for server-side detection (paced, one in flight). */
+  private sendDetectFrame(videoEl: HTMLVideoElement): void {
+    const now = Date.now();
+    if (this.wsDetectInFlight) {
+      if (now - this.lastWsDetectAt < 1500) {
+        return; // wait for response
+      }
+      // Response never arrived — count a miss; repeated misses = rest + reconnect.
+      this.wsDetectInFlight = false;
+      this.wsDetectMisses += 1;
+      if (this.wsDetectMisses >= 2) {
+        this.wsDetectMisses = 0;
+        this.serverDetectPausedUntil = now + 15000;
+        try {
+          this.kioskWs?.close();
+        } catch {
+          /* onclose triggers reconnect */
+        }
+        return;
+      }
+    }
+    if (now - this.lastWsDetectAt < 110) {
+      return;
+    }
+
+    const vw = videoEl.videoWidth || 640;
+    const vh = videoEl.videoHeight || 480;
+    const targetW = 480;
+    const scale = Math.min(1, targetW / vw);
+    const w = Math.round(vw * scale);
+    const h = Math.round(vh * scale);
+
+    if (!this.detectFrameCanvas) {
+      this.detectFrameCanvas = document.createElement('canvas');
+    }
+    const canvas = this.detectFrameCanvas;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+    ctx.drawImage(videoEl, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+    if (this.wsSend({ type: 'detect', requestId: `d-${now}`, image: dataUrl })) {
+      this.wsDetectInFlight = true;
+      this.lastWsDetectAt = now;
+      return;
+    }
+
+    // Send failed — the connected flag is stale (socket died without onclose).
+    // Resync so the local fallback takes over next tick, and force a reconnect.
+    if (!this.kioskWs || this.kioskWs.readyState !== WS_OPEN) {
+      this.ngZone.run(() => {
+        this.wsConnected = false;
+        this.cdr.detectChanges();
+      });
+      this.connectKioskWs();
+    }
+  }
+
+  /** Server detection result → display-space boxes → shared pipeline. */
+  private onServerDetected(msg: any): void {
+    this.wsDetectInFlight = false;
+    this.wsDetectMisses = 0;
+    this.serverDetectFailures = 0;
+    if (msg?.queue?.pending != null) {
+      this.queuePending = Number(msg.queue.pending) || 0;
+    }
+
+    const videoEl = this.video?.nativeElement as HTMLVideoElement | undefined;
+    if (!videoEl) {
+      return;
+    }
+    const frameW = Number(msg.frameWidth) || 1;
+    const frameH = Number(msg.frameHeight) || 1;
+    const displayW = videoEl.width || 640;
+    const displayH = videoEl.height || 480;
+    const sx = displayW / frameW;
+    const sy = displayH / frameH;
+
+    const boxes: SmoothBox[] = (Array.isArray(msg.faces) ? msg.faces : []).map((f: any) => ({
+      x: Number(f.x) * sx,
+      y: Number(f.y) * sy,
+      width: Number(f.width) * sx,
+      height: Number(f.height) * sy,
+    }));
+    this.processDetections(boxes, Date.now());
+  }
+
+  private onServerDetectError(): void {
+    this.wsDetectInFlight = false;
+    this.serverDetectFailures += 1;
+    if (this.serverDetectFailures >= 3) {
+      // Give the server a break; local face-api takes over meanwhile.
+      this.serverDetectPausedUntil = Date.now() + 30000;
+      this.serverDetectFailures = 0;
+    }
   }
 
   /** 60fps canvas loop (outside Angular): ease boxes toward latest detection and draw. */
@@ -489,7 +669,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่ลงเวลาจนกว่าได้ GPS';
     }
     if (this.tracks.length === 0) {
-      const link = this.wsConnected ? 'stream เชื่อมแล้ว' : 'stream กำลังเชื่อม...';
+      const serverDetect = this.wsConnected && Date.now() >= this.serverDetectPausedUntil;
+      const link = this.wsConnected
+        ? serverDetect
+          ? 'ตรวจจับด้วย GPU เซิร์ฟเวอร์'
+          : 'stream เชื่อมแล้ว'
+        : 'stream กำลังเชื่อม...';
       return `โหมด stream (${link}) — เดินผ่านกล้องได้หลายคน`;
     }
     const names = this.tracks
@@ -526,8 +711,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
     if (
       this.kioskWs &&
-      (this.kioskWs.readyState === WebSocket.OPEN ||
-        this.kioskWs.readyState === WebSocket.CONNECTING)
+      (this.kioskWs.readyState === WS_OPEN ||
+        this.kioskWs.readyState === WS_CONNECTING)
     ) {
       return;
     }
@@ -547,6 +732,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data);
+          if (msg?.type === 'detected') {
+            // High-frequency detection frames: handle outside Angular
+            this.onServerDetected(msg);
+            return;
+          }
+          if (msg?.type === 'error' && msg?.intent === 'detect') {
+            this.onServerDetectError();
+            return;
+          }
           this.ngZone.run(() => this.onKioskWsMessage(msg));
         } catch (e) {
           console.error('WS parse error', e);
@@ -554,6 +748,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       };
 
       ws.onclose = () => {
+        this.wsDetectInFlight = false;
         this.ngZone.run(() => {
           this.wsConnected = false;
           this.cdr.detectChanges();
@@ -576,7 +771,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private wsSend(payload: Record<string, unknown>): boolean {
-    if (!this.kioskWs || this.kioskWs.readyState !== WebSocket.OPEN) {
+    if (!this.kioskWs || this.kioskWs.readyState !== WS_OPEN) {
       return false;
     }
     this.kioskWs.send(JSON.stringify(payload));

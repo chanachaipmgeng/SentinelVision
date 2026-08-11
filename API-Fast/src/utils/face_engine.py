@@ -121,6 +121,39 @@ def _read_bgr(image_path: str) -> np.ndarray:
     return image
 
 
+def detect_faces_bytes(image_bytes: bytes) -> dict:
+    """
+    Fast detection-only pass for the kiosk stream (no embeddings).
+    Returns frame size + face boxes [{x, y, width, height, score}].
+    """
+    arr = np.frombuffer(image_bytes, dtype=np.uint8)
+    image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if image is None:
+        raise ValueError("Could not decode frame")
+    height, width = image.shape[:2]
+
+    app = get_face_app()
+    bboxes, _kpss = app.det_model.detect(image, max_num=0, metric="default")
+
+    faces = []
+    if bboxes is not None:
+        for box in bboxes:
+            x1, y1, x2, y2, score = (float(v) for v in box[:5])
+            x1 = max(0.0, x1)
+            y1 = max(0.0, y1)
+            faces.append(
+                {
+                    "x": x1,
+                    "y": y1,
+                    "width": max(0.0, x2 - x1),
+                    "height": max(0.0, y2 - y1),
+                    "score": score,
+                }
+            )
+
+    return {"frameWidth": width, "frameHeight": height, "faces": faces}
+
+
 def extract_face_features(
     image_path: str, *, require_quality: bool = True
 ) -> Optional[Tuple[List[float], np.ndarray]]:

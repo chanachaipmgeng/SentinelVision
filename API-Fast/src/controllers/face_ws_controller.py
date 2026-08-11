@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -17,7 +18,11 @@ from fastapi.exceptions import HTTPException
 
 from ..config.database import async_session
 from ..controllers.face_controller import _finalize_check_in, _resolve_match_response
-from ..utils.face_engine import extract_face_features, get_walkby_encoding
+from ..utils.face_engine import (
+    detect_faces_bytes,
+    extract_face_features,
+    get_walkby_encoding,
+)
 from ..utils.face_gpu_queue import face_gpu_queue_stats, run_on_face_gpu
 
 logger = logging.getLogger(__name__)
@@ -57,6 +62,41 @@ def _cleanup(paths: List[str]) -> None:
         try:
             Path(p).unlink(missing_ok=True)
         except OSError:
+            pass
+
+
+async def _handle_detect(
+    websocket: WebSocket,
+    *,
+    request_id: Any,
+    image_b64: str,
+) -> None:
+    """Detection-only pass for kiosk face boxes (no temp files, no DB)."""
+    try:
+        content = _decode_image_b64(image_b64)
+        result = await run_on_face_gpu(lambda c=content: detect_faces_bytes(c))
+        await _send(
+            websocket,
+            {
+                "type": "detected",
+                "requestId": request_id,
+                "queue": face_gpu_queue_stats(),
+                **result,
+            },
+        )
+    except Exception as exc:
+        logger.warning("WS detect failed: %s", exc)
+        try:
+            await _send(
+                websocket,
+                {
+                    "type": "error",
+                    "intent": "detect",
+                    "requestId": request_id,
+                    "detail": str(exc),
+                },
+            )
+        except Exception:
             pass
 
 
@@ -267,6 +307,18 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         "companyId": str(company_id),
                         "queue": face_gpu_queue_stats(),
                     },
+                )
+                continue
+
+            if msg_type == "detect":
+                # Run as a task so identify/checkin/session are never blocked
+                # behind a slow (CPU) detection pass.
+                asyncio.create_task(
+                    _handle_detect(
+                        websocket,
+                        request_id=data.get("requestId"),
+                        image_b64=str(data.get("image") or ""),
+                    )
                 )
                 continue
 

@@ -172,11 +172,17 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private readonly memberCooldownUntil = new Map<string, number>();
   private checkInInFlight = 0;
 
-  /** Per-frame easing factor for the 60fps render loop. */
-  private readonly boxLerp = 0.35;
-  /** Faster ease (not hard snap) when detection jumps farther than this (px). */
-  private readonly boxFastLerpCenterPx = 120;
-  private readonly boxFastLerp = 0.7;
+  /**
+   * 60fps easing toward latest detection.
+   * Position and size use separate factors so zoom in/out feels snappy
+   * while still smooth (lerp is applied around the box center).
+   */
+  private readonly boxPosLerp = 0.48;
+  private readonly boxSizeLerp = 0.62;
+  private readonly boxFastPosLerp = 0.78;
+  private readonly boxFastSizeLerp = 0.85;
+  private readonly boxFastCenterPx = 70;
+  private readonly boxFastSizePx = 36;
   private readonly iouMatchMin = 0.12;
   /** Match by center distance as fraction of avg box diagonal (motion-tolerant). */
   private readonly centerMatchMax = 0.65;
@@ -574,7 +580,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         return;
       }
     }
-    if (now - this.lastWsDetectAt < 110) {
+    // Slightly faster detect pace so size/position targets refresh sooner.
+    if (now - this.lastWsDetectAt < 75) {
       return;
     }
 
@@ -665,9 +672,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       if (this.tracks.length > 0) {
         for (const track of this.tracks) {
           const jump = this.boxCenterDist(track.box, track.targetBox);
-          // Large jumps: catch up faster without hard snap (hard snap looks like flicker).
-          const t = jump > this.boxFastLerpCenterPx ? this.boxFastLerp : this.boxLerp;
-          track.box = this.lerpBox(track.box, track.targetBox, t);
+          const sizeDelta =
+            Math.abs(track.box.width - track.targetBox.width) +
+            Math.abs(track.box.height - track.targetBox.height);
+          const posT = jump > this.boxFastCenterPx ? this.boxFastPosLerp : this.boxPosLerp;
+          const sizeT = sizeDelta > this.boxFastSizePx ? this.boxFastSizeLerp : this.boxSizeLerp;
+          track.box = this.lerpBox(track.box, track.targetBox, posT, sizeT);
         }
         this.drawAllTracks(displaySize);
         this.canvasDirty = true;
@@ -1054,12 +1064,24 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     return Math.hypot(b.width, b.height);
   }
 
-  private lerpBox(prev: SmoothBox, next: SmoothBox, t: number): SmoothBox {
+  /**
+   * Ease toward the target around the face center so expand/shrink
+   * stays locked on the subject instead of sliding from the top-left.
+   */
+  private lerpBox(prev: SmoothBox, next: SmoothBox, posT: number, sizeT: number): SmoothBox {
+    const pcx = prev.x + prev.width * 0.5;
+    const pcy = prev.y + prev.height * 0.5;
+    const ncx = next.x + next.width * 0.5;
+    const ncy = next.y + next.height * 0.5;
+    const cx = pcx + (ncx - pcx) * posT;
+    const cy = pcy + (ncy - pcy) * posT;
+    const width = prev.width + (next.width - prev.width) * sizeT;
+    const height = prev.height + (next.height - prev.height) * sizeT;
     return {
-      x: prev.x + (next.x - prev.x) * t,
-      y: prev.y + (next.y - prev.y) * t,
-      width: prev.width + (next.width - prev.width) * t,
-      height: prev.height + (next.height - prev.height) * t,
+      x: cx - width * 0.5,
+      y: cy - height * 0.5,
+      width,
+      height,
     };
   }
 

@@ -77,6 +77,8 @@ interface SmoothBox {
 interface FaceTrack {
   id: number;
   box: SmoothBox;
+  /** Latest raw detection; render loop eases `box` toward this each frame. */
+  targetBox: SmoothBox;
   firstSeenAt: number;
   lastSeenAt: number;
   label: string | null;
@@ -146,10 +148,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   private tracks: FaceTrack[] = [];
   private nextTrackId = 1;
+  private renderRafId: number | null = null;
+  private canvasDirty = false;
   private readonly memberCooldownUntil = new Map<string, number>();
   private checkInInFlight = 0;
 
-  private readonly boxLerp = 0.4;
+  /** Per-frame easing factor for the 60fps render loop. */
+  private readonly boxLerp = 0.25;
   private readonly iouMatchMin = 0.28;
   private readonly trackMissTtlMs = 450;
   /** Shorter hold for walk-by (no head-motion wait). */
@@ -327,6 +332,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
     }
+    if (this.renderRafId != null) {
+      cancelAnimationFrame(this.renderRafId);
+      this.renderRafId = null;
+    }
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
     }
@@ -409,7 +418,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           }));
 
           this.updateTracks(boxes, now);
-          this.drawAllTracks(displaySize);
 
           let identifySlots = this.maxConcurrentIdentify - this.tracks.filter((t) => t.identifyInFlight).length;
           for (const track of this.tracks) {
@@ -447,7 +455,31 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           this.detectBusy = false;
         }
       }, 140);
+
+      this.startRenderLoop(displaySize);
     });
+  }
+
+  /** 60fps canvas loop (outside Angular): ease boxes toward latest detection and draw. */
+  private startRenderLoop(displaySize: { width: number; height: number }): void {
+    if (this.renderRafId != null) {
+      cancelAnimationFrame(this.renderRafId);
+    }
+    const step = () => {
+      if (this.tracks.length > 0) {
+        for (const track of this.tracks) {
+          track.box = this.lerpBox(track.box, track.targetBox, this.boxLerp);
+        }
+        this.drawAllTracks(displaySize);
+        this.canvasDirty = true;
+      } else if (this.canvasDirty) {
+        const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
+        ctx.clearRect(0, 0, displaySize.width, displaySize.height);
+        this.canvasDirty = false;
+      }
+      this.renderRafId = requestAnimationFrame(step);
+    };
+    this.renderRafId = requestAnimationFrame(step);
   }
 
   private buildStatusMessage(): string {
@@ -642,7 +674,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       if (bestIdx >= 0) {
         usedDet.add(bestIdx);
         matchedTrackIds.add(track.id);
-        track.box = this.lerpBox(track.box, detections[bestIdx], this.boxLerp);
+        track.targetBox = { ...detections[bestIdx] };
         track.lastSeenAt = now;
       }
     }
@@ -672,6 +704,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.tracks.push({
         id: this.nextTrackId++,
         box: { ...detections[i] },
+        targetBox: { ...detections[i] },
         firstSeenAt: now,
         lastSeenAt: now,
         label: null,
@@ -764,11 +797,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     ctx.save();
     ctx.lineWidth = 3;
     ctx.strokeStyle = stroke;
-    ctx.shadowColor = stroke;
-    ctx.shadowBlur = 8;
     this.roundRect(ctx, x, y, w, h, radius);
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
     const c = Math.min(28, w * 0.22, h * 0.22);
     ctx.lineWidth = 4;

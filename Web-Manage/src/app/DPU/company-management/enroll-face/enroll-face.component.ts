@@ -173,14 +173,18 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private checkInInFlight = 0;
 
   /** Per-frame easing factor for the 60fps render loop. */
-  private readonly boxLerp = 0.42;
-  /** Snap render box when detection jumps farther than this (px, centers). */
-  private readonly boxSnapCenterPx = 90;
+  private readonly boxLerp = 0.35;
+  /** Faster ease (not hard snap) when detection jumps farther than this (px). */
+  private readonly boxFastLerpCenterPx = 120;
+  private readonly boxFastLerp = 0.7;
   private readonly iouMatchMin = 0.12;
   /** Match by center distance as fraction of avg box diagonal (motion-tolerant). */
   private readonly centerMatchMax = 0.65;
-  /** Drop unmatched tracks quickly so stale boxes don't stack while moving. */
-  private readonly trackMissTtlMs = 220;
+  /**
+   * Keep tracks across server-detect gaps (~110ms pace + GPU latency).
+   * Too low → flicker; too high → stacked ghosts when walking.
+   */
+  private readonly trackMissTtlMs = 550;
   private readonly nmsIou = 0.35;
   private readonly trackMergeIou = 0.4;
   /** Shorter hold for walk-by (no head-motion wait). */
@@ -511,6 +515,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   /** Shared post-detection pipeline: tracks, identify slots, check-in, HUD status. */
   private processDetections(boxes: SmoothBox[], now: number): void {
+    // Empty frame between GPU detects: keep last boxes (avoids blink) until miss TTL.
+    if (boxes.length === 0 && this.tracks.length > 0) {
+      return;
+    }
     this.lastDetectionsAt = now;
     this.updateTracks(boxes, now);
 
@@ -656,8 +664,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       if (this.tracks.length > 0) {
         for (const track of this.tracks) {
           const jump = this.boxCenterDist(track.box, track.targetBox);
-          // Large jumps (walk-by): snap instead of leaving a ghost trail of boxes.
-          const t = jump > this.boxSnapCenterPx ? 1 : this.boxLerp;
+          // Large jumps: catch up faster without hard snap (hard snap looks like flicker).
+          const t = jump > this.boxFastLerpCenterPx ? this.boxFastLerp : this.boxLerp;
           track.box = this.lerpBox(track.box, track.targetBox, t);
         }
         this.drawAllTracks(displaySize);
@@ -1057,16 +1065,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private drawAllTracks(displaySize: { width: number; height: number }) {
     const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, displaySize.width, displaySize.height);
-    const now = Date.now();
     for (const track of this.tracks) {
-      // Skip stale unmatched boxes so motion never paints stacked ghosts.
-      if (
-        track.phase !== 'capturing' &&
-        track.phase !== 'checking_in' &&
-        now - track.lastSeenAt > 80
-      ) {
-        continue;
-      }
       const onCooldown = track.memberId ? this.isMemberOnCooldown(track.memberId) : false;
       const label =
         track.phase === 'checking_in' || track.phase === 'capturing'

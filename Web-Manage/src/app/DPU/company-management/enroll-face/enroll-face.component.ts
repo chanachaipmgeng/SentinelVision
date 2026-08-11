@@ -173,9 +173,16 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private checkInInFlight = 0;
 
   /** Per-frame easing factor for the 60fps render loop. */
-  private readonly boxLerp = 0.25;
-  private readonly iouMatchMin = 0.28;
-  private readonly trackMissTtlMs = 450;
+  private readonly boxLerp = 0.42;
+  /** Snap render box when detection jumps farther than this (px, centers). */
+  private readonly boxSnapCenterPx = 90;
+  private readonly iouMatchMin = 0.12;
+  /** Match by center distance as fraction of avg box diagonal (motion-tolerant). */
+  private readonly centerMatchMax = 0.65;
+  /** Drop unmatched tracks quickly so stale boxes don't stack while moving. */
+  private readonly trackMissTtlMs = 220;
+  private readonly nmsIou = 0.35;
+  private readonly trackMergeIou = 0.4;
   /** Shorter hold for walk-by (no head-motion wait). */
   private readonly autoStartHoldMs = 320;
   private readonly memberCooldownMs = 5 * 60 * 1000;
@@ -648,7 +655,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const step = () => {
       if (this.tracks.length > 0) {
         for (const track of this.tracks) {
-          track.box = this.lerpBox(track.box, track.targetBox, this.boxLerp);
+          const jump = this.boxCenterDist(track.box, track.targetBox);
+          // Large jumps (walk-by): snap instead of leaving a ghost trail of boxes.
+          const t = jump > this.boxSnapCenterPx ? 1 : this.boxLerp;
+          track.box = this.lerpBox(track.box, track.targetBox, t);
         }
         this.drawAllTracks(displaySize);
         this.canvasDirty = true;
@@ -850,23 +860,36 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private updateTracks(detections: SmoothBox[], now: number) {
+    detections = this.nmsBoxes(detections, this.nmsIou);
     const usedDet = new Set<number>();
     const matchedTrackIds = new Set<number>();
 
-    for (const track of this.tracks) {
+    // Prefer older / identified tracks so a fleeting new box cannot steal identity.
+    const ordered = [...this.tracks].sort((a, b) => {
+      const aId = a.memberId ? 1 : 0;
+      const bId = b.memberId ? 1 : 0;
+      if (aId !== bId) {
+        return bId - aId;
+      }
+      return a.firstSeenAt - b.firstSeenAt;
+    });
+
+    for (const track of ordered) {
       let bestIdx = -1;
-      let bestIou = this.iouMatchMin;
+      let bestScore = 0;
+      // Match against last detection (target), not the lagging render box.
+      const anchor = track.targetBox;
       for (let i = 0; i < detections.length; i++) {
         if (usedDet.has(i)) {
           continue;
         }
-        const score = this.iou(track.box, detections[i]);
-        if (score > bestIou) {
-          bestIou = score;
+        const score = this.matchScore(anchor, detections[i]);
+        if (score > bestScore) {
+          bestScore = score;
           bestIdx = i;
         }
       }
-      if (bestIdx >= 0) {
+      if (bestIdx >= 0 && bestScore > 0) {
         usedDet.add(bestIdx);
         matchedTrackIds.add(track.id);
         track.targetBox = { ...detections[bestIdx] };
@@ -914,6 +937,90 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         statusText: null,
       });
     }
+
+    this.mergeOverlappingTracks();
+  }
+
+  /** Drop overlapping detections so one face cannot spawn multiple tracks. */
+  private nmsBoxes(boxes: SmoothBox[], iouThresh: number): SmoothBox[] {
+    if (boxes.length <= 1) {
+      return boxes;
+    }
+    const sorted = [...boxes].sort((a, b) => b.width * b.height - a.width * a.height);
+    const kept: SmoothBox[] = [];
+    for (const box of sorted) {
+      if (kept.every((k) => this.iou(k, box) < iouThresh)) {
+        kept.push(box);
+      }
+    }
+    return kept;
+  }
+
+  /**
+   * Combined IoU + center proximity. Returns 0 when neither criterion matches.
+   * Higher is better; used only for ranking among candidates that pass thresholds.
+   */
+  private matchScore(a: SmoothBox, b: SmoothBox): number {
+    const iou = this.iou(a, b);
+    if (iou >= this.iouMatchMin) {
+      return 1 + iou;
+    }
+    const diag = (this.boxDiagonal(a) + this.boxDiagonal(b)) / 2;
+    if (diag <= 1) {
+      return 0;
+    }
+    const norm = this.boxCenterDist(a, b) / diag;
+    if (norm <= this.centerMatchMax) {
+      return 0.5 + (1 - norm / this.centerMatchMax) * 0.5;
+    }
+    return 0;
+  }
+
+  /** Collapse ghost tracks that still overlap after a motion miss. */
+  private mergeOverlappingTracks(): void {
+    if (this.tracks.length <= 1) {
+      return;
+    }
+    const drop = new Set<number>();
+    for (let i = 0; i < this.tracks.length; i++) {
+      if (drop.has(this.tracks[i].id)) {
+        continue;
+      }
+      for (let j = i + 1; j < this.tracks.length; j++) {
+        if (drop.has(this.tracks[j].id)) {
+          continue;
+        }
+        const a = this.tracks[i];
+        const b = this.tracks[j];
+        if (this.iou(a.targetBox, b.targetBox) < this.trackMergeIou && this.iou(a.box, b.box) < this.trackMergeIou) {
+          continue;
+        }
+        // Keep the richer / older track.
+        const keepA =
+          (a.memberId ? 1 : 0) !== (b.memberId ? 1 : 0)
+            ? !!a.memberId
+            : a.firstSeenAt <= b.firstSeenAt;
+        const keep = keepA ? a : b;
+        const lose = keepA ? b : a;
+        if (!keep.memberId && lose.memberId) {
+          keep.memberId = lose.memberId;
+          keep.label = lose.label;
+          keep.confidence = lose.confidence;
+          keep.phase = lose.phase;
+        } else if (!keep.label && lose.label) {
+          keep.label = lose.label;
+          keep.confidence = lose.confidence ?? keep.confidence;
+        }
+        if (lose.captureTimer) {
+          clearInterval(lose.captureTimer);
+          lose.captureTimer = null;
+        }
+        drop.add(lose.id);
+      }
+    }
+    if (drop.size > 0) {
+      this.tracks = this.tracks.filter((t) => !drop.has(t.id));
+    }
   }
 
   private iou(a: SmoothBox, b: SmoothBox): number {
@@ -924,6 +1031,18 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
     const union = a.width * a.height + b.width * b.height - inter;
     return union > 0 ? inter / union : 0;
+  }
+
+  private boxCenterDist(a: SmoothBox, b: SmoothBox): number {
+    const ax = a.x + a.width / 2;
+    const ay = a.y + a.height / 2;
+    const bx = b.x + b.width / 2;
+    const by = b.y + b.height / 2;
+    return Math.hypot(ax - bx, ay - by);
+  }
+
+  private boxDiagonal(b: SmoothBox): number {
+    return Math.hypot(b.width, b.height);
   }
 
   private lerpBox(prev: SmoothBox, next: SmoothBox, t: number): SmoothBox {
@@ -938,7 +1057,16 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private drawAllTracks(displaySize: { width: number; height: number }) {
     const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, displaySize.width, displaySize.height);
+    const now = Date.now();
     for (const track of this.tracks) {
+      // Skip stale unmatched boxes so motion never paints stacked ghosts.
+      if (
+        track.phase !== 'capturing' &&
+        track.phase !== 'checking_in' &&
+        now - track.lastSeenAt > 80
+      ) {
+        continue;
+      }
       const onCooldown = track.memberId ? this.isMemberOnCooldown(track.memberId) : false;
       const label =
         track.phase === 'checking_in' || track.phase === 'capturing'

@@ -2,6 +2,8 @@
 
 สำหรับติดตั้งบนเซิร์ฟเวอร์จริง (clone จาก GitLab + seed mock) ดูคู่มือเต็มที่ [DEPLOY-SERVER.md](DEPLOY-SERVER.md)
 
+**คู่มือ HTML (dev stack + integration test):** [BFF-DEV-GUIDE.html](BFF-DEV-GUIDE.html)
+
 ## Requirements
 
 - Docker Desktop (Compose v2)

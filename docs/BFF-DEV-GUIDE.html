@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Core + DPU BFF — คู่มือ Dev &amp; Integration Test</title>
+  <style>
+    :root {
+      --brand: #0f766e;
+      --brand-deep: #0b4f4a;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --surface: #f8fafc;
+      --pass: #15803d;
+      --pass-bg: #dcfce7;
+      --fail: #b91c1c;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(15, 23, 42, .08), 0 8px 24px rgba(15, 23, 42, .06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Noto Sans Thai", system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--surface);
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, var(--brand-deep), var(--brand));
+      color: #fff;
+      padding: 2.5rem 1.5rem;
+    }
+    header h1 { margin: 0 0 .5rem; font-size: 1.75rem; font-weight: 700; }
+    header p { margin: 0; opacity: .92; max-width: 52rem; }
+    .meta { margin-top: 1rem; font-size: .875rem; opacity: .85; }
+    nav {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff; border-bottom: 1px solid var(--border);
+      padding: .75rem 1.5rem; overflow-x: auto;
+    }
+    nav a {
+      color: var(--brand); text-decoration: none; margin-right: 1.25rem;
+      font-size: .9rem; white-space: nowrap;
+    }
+    nav a:hover { text-decoration: underline; }
+    main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+    section { margin-bottom: 2.5rem; }
+    h2 {
+      font-size: 1.35rem; color: var(--brand-deep);
+      border-bottom: 2px solid var(--brand);
+      padding-bottom: .35rem; margin: 0 0 1rem;
+    }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+    p, li { color: #334155; }
+    .card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem;
+      box-shadow: var(--shadow); margin-bottom: 1rem;
+    }
+    table {
+      width: 100%; border-collapse: collapse; font-size: .925rem;
+      background: #fff; border-radius: var(--radius); overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    th, td { padding: .65rem .85rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #f1f5f9; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    code, pre {
+      font-family: Consolas, "Cascadia Code", monospace;
+      font-size: .85rem;
+    }
+    pre {
+      background: #0f172a; color: #e2e8f0;
+      padding: 1rem 1.15rem; border-radius: var(--radius);
+      overflow-x: auto; margin: .75rem 0;
+    }
+    .badge {
+      display: inline-block; padding: .15rem .55rem; border-radius: 999px;
+      font-size: .75rem; font-weight: 600;
+    }
+    .badge-pass { background: var(--pass-bg); color: var(--pass); }
+    .badge-info { background: #e0f2fe; color: #0369a1; }
+    .diagram {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem;
+      font-family: monospace; font-size: .78rem; line-height: 1.45;
+      overflow-x: auto; white-space: pre;
+    }
+    .grid-2 { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .summary-box {
+      text-align: center; padding: 1.5rem;
+      background: var(--pass-bg); border: 1px solid #86efac;
+      border-radius: var(--radius);
+    }
+    .summary-box strong { font-size: 2rem; color: var(--pass); display: block; }
+    ul.checklist { list-style: none; padding: 0; }
+    ul.checklist li { padding: .35rem 0 .35rem 1.5rem; position: relative; }
+    ul.checklist li::before {
+      content: "✓"; position: absolute; left: 0;
+      color: var(--pass); font-weight: bold;
+    }
+    .warn {
+      background: #fffbeb; border-left: 4px solid #f59e0b;
+      padding: .85rem 1rem; border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 1rem 0; font-size: .925rem;
+    }
+    footer {
+      text-align: center; color: var(--muted); font-size: .85rem;
+      padding: 2rem 1rem; border-top: 1px solid var(--border);
+    }
+    @media print {
+      nav { position: static; }
+      pre { white-space: pre-wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Face Core + DPU Attendance BFF</h1>
+    <p>คู่มือติดตั้ง stack คู่บนเครื่อง dev, ทดสอบ integration เต็มรูปแบบ และ smoke scripts สำหรับ CI/local</p>
+    <div class="meta">อัปเดต: 28 ส.ค. 2026 · ผลทดสอบล่าสุด: <strong>52/52 PASS</strong></div>
+  </header>
+
+  <nav>
+    <a href="#overview">ภาพรวม</a>
+    <a href="#ports">พอร์ต</a>
+    <a href="#setup">ติดตั้ง</a>
+    <a href="#tests">ทดสอบ</a>
+    <a href="#manual">Manual UI</a>
+    <a href="#troubleshoot">แก้ปัญหา</a>
+    <a href="#refs">เอกสาร</a>
+  </nav>
+
+  <main>
+    <section id="overview">
+      <h2>ภาพรวมสถาปัตยกรรม</h2>
+      <div class="card">
+        <p><strong>Face Core</strong> เป็น hub กลาง — enroll, identify, verify, GPU queue, pgvector (512-d InsightFace <code>buffalo_l</code>).
+        <strong>DPU</strong> เป็น BFF — คง URL เดิม (<code>/face/*</code>, kiosk WS) แต่ delegate vision ไป Face Core ผ่าน Docker network <code>face-net</code>.
+        Check-in, GPS, HR ยังอยู่ที่ DPU</p>
+      </div>
+      <div class="diagram">Browser / Admin UI
+    │
+    ▼  http://localhost:8880  (nginx)
+┌─────────────────┐     face-net      ┌──────────────────┐
+│  dpu-api :8000  │ ─────────────────►│ face-core-api    │
+│  (BFF mode)     │  face-core-api:8000│ :8000 + Redis GPU│
+└────────┬────────┘                   └────────┬─────────┘
+         │                                     │
+    dpu-db :5434                         face-db :5435
+    (HR, timestamps)                     (gallery, vectors)
+
+Host direct API: http://localhost:8081/v1/…</div>
+      <h3>ID mapping</h3>
+      <table>
+        <thead><tr><th>DPU</th><th>Face Core</th></tr></thead>
+        <tbody>
+          <tr><td><code>companyId</code> (UUID)</td><td><code>companyCode = str(companyId)</code></td></tr>
+          <tr><td><code>memberId</code></td><td><code>subjectId</code></td></tr>
+          <tr><td><code>faceEncodingId</code></td><td><code>faceId</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="ports">
+      <h2>ตารางพอร์ต (รันคู่กันบน host เดียว)</h2>
+      <table>
+        <thead>
+          <tr><th>บริการ</th><th>Face Core</th><th>DPU</th><th>หมายเหตุ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>HTTP</td><td><strong>8081</strong></td><td><strong>8880</strong> (nginx)</td><td>ตั้งใน <code>.env</code> แต่ละ repo</td></tr>
+          <tr><td>PostgreSQL</td><td><strong>5435</strong></td><td><strong>5434</strong></td><td>หลีกเลี่ยงชนกัน</td></tr>
+          <tr><td>Redis</td><td><strong>6380</strong></td><td>—</td><td>scale overlay เท่านั้น</td></tr>
+          <tr><td>Container → FC</td><td colspan="2"><code>http://face-core-api:8000</code></td><td>DNS บน <code>face-net</code> (ไม่ใช่ host port)</td></tr>
+        </tbody>
+      </table>
+      <div class="warn">
+        <strong>สำคัญ:</strong> อย่าตั้ง <code>$env:POSTGRES_PORT</code> / <code>$env:HTTP_PORT</code> ใน shell — Docker Compose จะ override ค่าใน <code>.env</code>.
+        ใช้ terminal ใหม่หรือ <code>Remove-Item Env:POSTGRES_PORT</code> ก่อน <code>docker compose up</code>
+      </div>
+      <p><span class="badge badge-info">Standalone DPU</span> ไม่มี Face Core: ใช้ <code>POSTGRES_PORT=5432</code>, <code>HTTP_PORT=80</code></p>
+    </section>
+
+    <section id="setup">
+      <h2>ติดตั้ง stack</h2>
+      <h3>1. เตรียม env</h3>
+      <pre># face-core
+cp .env.example .env   # POSTGRES_PORT=5435, REDIS_PORT=6380, HTTP_PORT=8081
+
+# dpu-project
+cp .env.example .env   # POSTGRES_PORT=5434, HTTP_PORT=8880</pre>
+
+      <h3>2. สร้าง network (ครั้งเดียว)</h3>
+      <pre>docker network create face-net</pre>
+
+      <h3>3. Terminal 1 — Face Core (CPU + Redis scale)</h3>
+      <pre>cd face-core
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build</pre>
+
+      <h3>4. Terminal 2 — DPU BFF</h3>
+      <pre>cd dpu-project
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build</pre>
+
+      <h3>5. ตรวจสอบเร็ว</h3>
+      <pre>curl -s http://localhost:8081/v1/health
+curl -s http://localhost:8880/docs</pre>
+
+      <div class="grid-2">
+        <div class="card">
+          <strong>Face Core API Key (dev)</strong><br>
+          <code>dev-face-core-key-change-me</code>
+        </div>
+        <div class="card">
+          <strong>DPU login (seed)</strong><br>
+          admin / <code>Password123!</code>
+        </div>
+      </div>
+    </section>
+
+    <section id="tests">
+      <h2>ทดสอบเต็มรูปแบบ — ผลล่าสุด</h2>
+      <div class="summary-box">
+        <strong>52 / 52</strong>
+        การตรวจสอบอัตโนมัติผ่านทั้งหมด · 28 ส.ค. 2026
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>ชุดทดสอบ</th><th>คำสั่ง</th><th>ผล</th><th>รายละเอียด</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Face Core unit</td>
+            <td><code>pytest -q</code></td>
+            <td><span class="badge badge-pass">15/15</span></td>
+            <td>isolation, companyCode, middleware</td>
+          </tr>
+          <tr>
+            <td>Batch identify + Redis</td>
+            <td><code>python scripts/smoke_batch_identify.py</code></td>
+            <td><span class="badge badge-pass">7/7</span></td>
+            <td>health, metrics, enroll, sync/async batch, job poll</td>
+          </tr>
+          <tr>
+            <td>DPU core API</td>
+            <td><code>docker exec dpu-api python scripts/smoke_test_api.py …</code></td>
+            <td><span class="badge badge-pass">15/15</span></td>
+            <td>auth, companies, employees, timestamps, approval</td>
+          </tr>
+          <tr>
+            <td>Face Core BFF</td>
+            <td><code>docker exec dpu-api python scripts/smoke_face_core_bff.py</code></td>
+            <td><span class="badge badge-pass">8/8</span></td>
+            <td>enroll, identify, cross-company, walk-by, verify, gallery</td>
+          </tr>
+          <tr>
+            <td>WS kiosk</td>
+            <td><code>docker exec dpu-api python scripts/smoke_ws_kiosk.py</code></td>
+            <td><span class="badge badge-pass">7/7</span></td>
+            <td>session, detect, identify, checkin, ping/pong</td>
+          </tr>
+          <tr>
+            <td>face-net DNS</td>
+            <td>dpu-api → face-core-api:8000</td>
+            <td><span class="badge badge-pass">200</span></td>
+            <td><code>queue.backend=redis</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>รันครบชุด (PowerShell)</h3>
+      <pre>cd face-core
+.\scripts\run_full_integration_smoke.ps1</pre>
+
+      <h3>รันทีละส่วน</h3>
+      <pre># Face Core (จาก host)
+FACE_CORE_BASE=http://localhost:8081 python scripts/smoke_batch_identify.py
+
+# DPU (ใน container — ต้องอยู่ compose network)
+docker exec dpu-api python scripts/smoke_test_api.py --base-url http://api:8000
+docker exec dpu-api python scripts/smoke_face_core_bff.py
+docker exec dpu-api python scripts/smoke_ws_kiosk.py</pre>
+
+      <h3>รายการตรวจ BFF smoke</h3>
+      <ul class="checklist">
+        <li>GET / — โหมด Face Core BFF</li>
+        <li>GET /face/queue-stats — proxy ไป Face Core</li>
+        <li>POST add-face → faceEncodingId</li>
+        <li>POST identify company A — match ถูกต้อง</li>
+        <li>POST identify company B — reject (isolation)</li>
+        <li>POST check-in-walkby + GPS</li>
+        <li>GET kiosk-attendance roster</li>
+        <li>POST verify + GET encodings</li>
+      </ul>
+    </section>
+
+    <section id="manual">
+      <h2>ทดสอบ Manual (UI)</h2>
+      <ol>
+        <li>เปิด <a href="http://localhost:8880/">http://localhost:8880/</a> — Admin UI</li>
+        <li>Login: <code>admin</code> / <code>Password123!</code></li>
+        <li>เลือก Company A → หน้า <strong>timestamp-face</strong> (kiosk)</li>
+        <li>อนุญาตกล้อง + GPS (localhost ใช้ได้)</li>
+        <li>ตรวจ walk-by identify + check-in บันทึก timestamp</li>
+        <li>Face Core Swagger: <a href="http://localhost:8081/docs">http://localhost:8081/docs</a></li>
+        <li>DPU OpenAPI: <a href="http://localhost:8880/docs">http://localhost:8880/docs</a></li>
+      </ol>
+    </section>
+
+    <section id="troubleshoot">
+      <h2>แก้ปัญหาที่พบบ่อย</h2>
+      <table>
+        <thead><tr><th>อาการ</th><th>สาเหตุ</th><th>แก้</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>bind: 5435 already allocated</code></td>
+            <td>พอร์ต Postgres ชน</td>
+            <td>Face Core 5435, DPU 5434 ใน <code>.env</code>; ลบ shell env override</td>
+          </tr>
+          <tr>
+            <td>dpu-api ไม่ resolve <code>face-core-api</code></td>
+            <td>ไม่ได้ join <code>face-net</code></td>
+            <td>ใช้ <code>docker-compose.scale.yml</code> + <code>docker-compose.face-core.yml</code></td>
+          </tr>
+          <tr>
+            <td>identify ไม่ match</td>
+            <td>ยังไม่ enroll หรือ company ผิด</td>
+            <td>enroll ผ่าน Admin หรือ smoke add-face ก่อน</td>
+          </tr>
+          <tr>
+            <td>queue.backend=memory</td>
+            <td>ไม่ได้รัน scale overlay</td>
+            <td>เพิ่ม <code>-f docker-compose.scale.yml</code></td>
+          </tr>
+          <tr>
+            <td>เปลี่ยน code แล้วไม่มีผล</td>
+            <td>image เก่า</td>
+            <td><code>docker compose … up -d --build face-api</code> (หรือ api)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="refs">
+      <h2>เอกสาร Markdown</h2>
+      <div class="grid-2">
+        <div class="card">
+          <strong>face-core</strong>
+          <ul>
+            <li><code>docs/SETUP.md</code></li>
+            <li><code>docs/SCALE.md</code></li>
+            <li><code>docs/INTEGRATION.md</code></li>
+            <li><code>docs/WEBSOCKET.md</code></li>
+            <li><code>docs/API.md</code></li>
+          </ul>
+        </div>
+        <div class="card">
+          <strong>dpu-project</strong>
+          <ul>
+            <li><code>docs/SETUP.md</code></li>
+            <li><code>docs/ARCHITECTURE.md</code></li>
+            <li><code>docker-compose.face-core.yml</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Face Core enterprise hub · DPU BFF integration guide · เปิดไฟล์นี้ใน browser โดย double-click หรือ <code>start docs/BFF-DEV-GUIDE.html</code>
+  </footer>
+</body>
+</html>

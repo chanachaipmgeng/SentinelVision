@@ -58,8 +58,13 @@ def _json_default(obj: Any):
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
-async def _send(ws: WebSocket, payload: dict) -> None:
-    await ws.send_text(json.dumps(payload, default=_json_default))
+async def _send(ws: WebSocket, payload: dict, *, lock: Optional[asyncio.Lock] = None) -> None:
+    text = json.dumps(payload, default=_json_default)
+    if lock is None:
+        await ws.send_text(text)
+        return
+    async with lock:
+        await ws.send_text(text)
 
 
 def _decode_image_b64(raw: str) -> bytes:
@@ -89,6 +94,7 @@ async def _handle_detect(
     *,
     request_id: Any,
     image_b64: str,
+    send_lock: asyncio.Lock,
 ) -> None:
     """Detection-only pass for kiosk face boxes (no temp files, no DB)."""
     try:
@@ -108,6 +114,7 @@ async def _handle_detect(
                 "queue": queue,
                 **result,
             },
+            lock=send_lock,
         )
     except Exception as exc:
         logger.warning("WS detect failed: %s", exc)
@@ -120,6 +127,7 @@ async def _handle_detect(
                     "requestId": request_id,
                     "detail": str(exc),
                 },
+                lock=send_lock,
             )
         except Exception:
             pass
@@ -132,6 +140,7 @@ async def _handle_identify(
     request_id: Any,
     image_b64: str,
     company_id: UUID,
+    send_lock: asyncio.Lock,
 ) -> None:
     paths: List[str] = []
     try:
@@ -155,6 +164,7 @@ async def _handle_identify(
                             "requestId": request_id,
                             "detail": "No face detected in the image.",
                         },
+                        lock=send_lock,
                     )
                     return
 
@@ -175,6 +185,7 @@ async def _handle_identify(
                 "queue": queue,
                 **payload,
             },
+            lock=send_lock,
         )
     except HTTPException as he:
         await _send(
@@ -187,6 +198,7 @@ async def _handle_identify(
                 "detail": he.detail,
                 "status": he.status_code,
             },
+            lock=send_lock,
         )
     except Exception as exc:
         logger.exception("WS identify failed")
@@ -199,6 +211,7 @@ async def _handle_identify(
                 "requestId": request_id,
                 "detail": str(exc),
             },
+            lock=send_lock,
         )
     finally:
         _cleanup(paths)
@@ -214,6 +227,7 @@ async def _handle_checkin(
     latitude: float,
     longitude: float,
     note: Optional[str],
+    send_lock: asyncio.Lock,
 ) -> None:
     paths: List[str] = []
     try:
@@ -227,6 +241,7 @@ async def _handle_checkin(
                     "requestId": request_id,
                     "detail": "No images provided",
                 },
+                lock=send_lock,
             )
             return
 
@@ -279,6 +294,7 @@ async def _handle_checkin(
                 "queue": queue,
                 **result,
             },
+            lock=send_lock,
         )
     except HTTPException as he:
         await _send(
@@ -291,6 +307,7 @@ async def _handle_checkin(
                 "detail": he.detail,
                 "status": he.status_code,
             },
+            lock=send_lock,
         )
     except Exception as exc:
         logger.exception("WS checkin failed")
@@ -303,6 +320,7 @@ async def _handle_checkin(
                 "requestId": request_id,
                 "detail": str(exc),
             },
+            lock=send_lock,
         )
     finally:
         _cleanup(paths)
@@ -313,6 +331,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     company_id: Optional[UUID] = None
     latitude = 0.0
     longitude = 0.0
+    send_lock = asyncio.Lock()
 
     await _send(
         websocket,
@@ -322,6 +341,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
             "faceCoreEnabled": face_core_enabled(),
             "queue": await _face_core_queue_stats(),
         },
+        lock=send_lock,
     )
 
     try:
@@ -368,13 +388,12 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 continue
 
             if msg_type == "detect":
-                # Run as a task so identify/checkin/session are never blocked
-                # behind a slow (CPU) detection pass.
                 asyncio.create_task(
                     _handle_detect(
                         websocket,
                         request_id=data.get("requestId"),
                         image_b64=str(data.get("image") or ""),
+                        send_lock=send_lock,
                     )
                 )
                 continue
@@ -390,14 +409,18 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             "requestId": data.get("requestId"),
                             "detail": "Session not started",
                         },
+                        lock=send_lock,
                     )
                     continue
-                await _handle_identify(
-                    websocket,
-                    track_id=data.get("trackId"),
-                    request_id=data.get("requestId"),
-                    image_b64=str(data.get("image") or ""),
-                    company_id=company_id,
+                asyncio.create_task(
+                    _handle_identify(
+                        websocket,
+                        track_id=data.get("trackId"),
+                        request_id=data.get("requestId"),
+                        image_b64=str(data.get("image") or ""),
+                        company_id=company_id,
+                        send_lock=send_lock,
+                    )
                 )
                 continue
 
@@ -412,12 +435,12 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             "requestId": data.get("requestId"),
                             "detail": "Session not started",
                         },
+                        lock=send_lock,
                     )
                     continue
                 images = data.get("images") or []
                 if not images and data.get("image"):
                     images = [data.get("image")]
-                # Refresh geo from message if provided
                 if data.get("latitude") is not None:
                     latitude = float(data.get("latitude") or 0)
                 if data.get("longitude") is not None:
@@ -432,17 +455,21 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             "requestId": data.get("requestId"),
                             "detail": "Invalid GPS (0,0). Enable location / use HTTPS before check-in.",
                         },
+                        lock=send_lock,
                     )
                     continue
-                await _handle_checkin(
-                    websocket,
-                    track_id=data.get("trackId"),
-                    request_id=data.get("requestId"),
-                    images_b64=[str(x) for x in images],
-                    company_id=company_id,
-                    latitude=latitude,
-                    longitude=longitude,
-                    note=data.get("note"),
+                asyncio.create_task(
+                    _handle_checkin(
+                        websocket,
+                        track_id=data.get("trackId"),
+                        request_id=data.get("requestId"),
+                        images_b64=[str(x) for x in images],
+                        company_id=company_id,
+                        latitude=latitude,
+                        longitude=longitude,
+                        note=data.get("note"),
+                        send_lock=send_lock,
+                    )
                 )
                 continue
 

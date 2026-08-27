@@ -14,8 +14,7 @@ from ..controllers.face_controller import (
     verify_member_face,
     get_kiosk_attendance,
 )
-from ..controllers.face_ws_controller import kiosk_websocket
-from ..utils.face_gpu_queue import face_gpu_queue_stats
+from ..controllers.face_ws_controller import kiosk_websocket, face_core_queue_stats_route
 from uuid import UUID
 
 router = APIRouter()
@@ -28,8 +27,8 @@ async def face_kiosk_ws(websocket: WebSocket):
 
 
 @router.get("/queue-stats")
-async def face_queue_stats():
-    return face_gpu_queue_stats()
+async def face_queue_stats(companyId: Optional[UUID] = None):
+    return await face_core_queue_stats_route(companyId)
 
 
 @router.get("/kiosk-attendance/{companyId}")

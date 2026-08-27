@@ -14,6 +14,7 @@ python-dotenv
 openpyxl
 pgvector
 numpy
+httpx
 insightface==0.7.3
 # GPU ONNX Runtime (AI_VISION worker pattern). Do not install onnxruntime alongside this.
 # 1.20.1 was removed from PyPI (~2026-07); pin a version that still has wheels.

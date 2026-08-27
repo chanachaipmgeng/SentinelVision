@@ -1,12 +1,14 @@
 # Project docs
 
-- [SETUP](SETUP.md) — run the stack (local / Docker Desktop)
+- [SETUP](SETUP.md) — run the stack (local / Docker Desktop) + optional Face Core BFF
 - [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
-- [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, admin UI kit paths
-- [API](API.md) — endpoint summary
+- [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology
+- [API](API.md) — endpoint summary (`/face/*` URLs unchanged under BFF)
 - [CURSOR-AGENT](CURSOR-AGENT.md) — Cursor rules & skills for agents
 - [BACKLOG](BACKLOG.md) — unfinished Sprint#1 and hardening
 - [PLAN-CLEANUP-REDESIGN](PLAN-CLEANUP-REDESIGN.md) — clean templates, redesign status, remaining work
+
+Sibling vision hub: [`../face-core`](../face-core) — enable with `docker-compose.face-core.yml`.
 
 ## Agent entrypoints
 

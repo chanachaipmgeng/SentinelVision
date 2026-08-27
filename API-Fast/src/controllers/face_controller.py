@@ -22,8 +22,100 @@ from ..utils.face_engine import (
 from ..utils.face_gpu_queue import run_on_face_gpu
 from ..config.settings import settings
 from ..controllers.employee_timestamp_controller import create_timestamp
+from ..clients.face_core_client import face_core_enabled, get_face_core_client
 
 UPLOAD_DIR = Path("./uploaded_images")
+
+
+def _company_code(company_id: UUID) -> str:
+    return str(company_id)
+
+
+async def _member_company_ids(db: AsyncSession, member_id: UUID) -> List[UUID]:
+    result = await db.execute(
+        select(CompanyEmployee.companyId).where(CompanyEmployee.memberId == member_id)
+    )
+    return [row[0] for row in result.all()]
+
+
+async def _face_core_identify(
+    company_id: UUID,
+    file_paths: List[str],
+    mode: str,
+) -> dict:
+    client = get_face_core_client()
+    code = _company_code(company_id)
+    await client.ensure_company(code)
+    try:
+        return await client.identify(code, file_paths, mode=mode)  # type: ignore[arg-type]
+    except HTTPException as he:
+        if he.status_code == status.HTTP_404_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Face does not match any employee in this company.",
+            ) from he
+        raise
+
+
+async def _enrich_face_core_match(
+    db: AsyncSession,
+    company_id: UUID,
+    fc: dict,
+    *,
+    message: str = "Face match found!",
+) -> dict:
+    if not fc.get("matched"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Face does not match any employee in this company.",
+        )
+
+    subject_id = fc.get("subjectId")
+    if not subject_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Face does not match any employee in this company.",
+        )
+
+    member_id = UUID(str(subject_id))
+    member = await db.get(Member, member_id)
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Matched member not found",
+        )
+
+    emp_row = await db.execute(
+        select(CompanyEmployee.company_employeeId)
+        .where(
+            CompanyEmployee.memberId == member_id,
+            CompanyEmployee.companyId == company_id,
+        )
+        .limit(1)
+    )
+    if emp_row.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Face does not match any employee in this company.",
+        )
+
+    face_id = fc.get("faceId")
+    return {
+        "memberId": str(member_id),
+        "faceEncodingId": str(face_id) if face_id else None,
+        "distance": fc.get("distance"),
+        "threshold": fc.get("threshold", settings.FACE_RECOGNITION_THRESHOLD),
+        "confidence": fc.get("confidence"),
+        "confidencePercent": fc.get("confidencePercent"),
+        "matchMargin": fc.get("matchMargin"),
+        "matchQuality": fc.get("matchQuality"),
+        "livenessPassed": fc.get("livenessPassed", False),
+        "enrolledImageUrl": fc.get("enrolledImageUrl")
+        or (f"/enrolled_images/{face_id}.jpg" if face_id else None),
+        "message": message,
+        "matched": True,
+        "member": _member_payload(member),
+    }
 
 
 async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
@@ -40,6 +132,27 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
     try:
         with temp_file_path.open("wb") as buffer:
             shutil.copyfileobj(image_file.file, buffer)
+
+        if face_core_enabled():
+            company_ids = await _member_company_ids(db, memberId)
+            if not company_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Member is not linked to any company; cannot enroll face.",
+                )
+            client = get_face_core_client()
+            subject_id = str(memberId)
+            first_face_id: Optional[str] = None
+            for company_id in company_ids:
+                code = _company_code(company_id)
+                await client.ensure_company(code)
+                enrolled = await client.enroll(code, subject_id, temp_file_path)
+                if first_face_id is None:
+                    first_face_id = enrolled.get("faceId")
+            return {
+                "message": "New face encoding added successfully",
+                "faceEncodingId": first_face_id,
+            }
 
         encoding = generate_face_encoding(str(temp_file_path))
         if encoding is None:
@@ -259,6 +372,9 @@ async def check_face_emp(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames(image_files)
+        if face_core_enabled():
+            fc = await _face_core_identify(companyId, temp_image_paths, "secure")
+            return await _enrich_face_core_match(db, companyId, fc)
         target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
         return await _resolve_match_response(
             db,
@@ -285,6 +401,9 @@ async def identify_face(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames([image_file])
+        if face_core_enabled():
+            fc = await _face_core_identify(companyId, temp_image_paths, "fast")
+            return await _enrich_face_core_match(db, companyId, fc)
         features = await run_on_face_gpu(
             lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
         )
@@ -346,18 +465,22 @@ async def _finalize_check_in(
     latitude: float,
     longitude: float,
     note: Optional[str],
-    target_encoding: List[float],
     photo_source_path: str,
     liveness_passed: bool,
     mode: str,
     default_note: str,
+    target_encoding: Optional[List[float]] = None,
+    match_payload: Optional[dict] = None,
 ) -> dict:
-    match_payload = await _resolve_match_response(
-        db,
-        target_encoding,
-        liveness_passed=liveness_passed,
-        companyId=companyId,
-    )
+    if match_payload is None:
+        if target_encoding is None:
+            raise ValueError("target_encoding or match_payload is required")
+        match_payload = await _resolve_match_response(
+            db,
+            target_encoding,
+            liveness_passed=liveness_passed,
+            companyId=companyId,
+        )
 
     member_id = UUID(match_payload["memberId"])
     result = await db.execute(
@@ -498,10 +621,25 @@ async def check_in_face(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames(image_files)
+        mid_path = temp_image_paths[len(temp_image_paths) // 2]
+        if face_core_enabled():
+            fc = await _face_core_identify(companyId, temp_image_paths, "secure")
+            match_payload = await _enrich_face_core_match(db, companyId, fc)
+            return await _finalize_check_in(
+                db=db,
+                companyId=companyId,
+                latitude=latitude,
+                longitude=longitude,
+                note=note,
+                match_payload=match_payload,
+                photo_source_path=mid_path,
+                liveness_passed=True,
+                mode="secure",
+                default_note="Face kiosk auto check-in",
+            )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps)
         )
-        mid_path = temp_image_paths[len(temp_image_paths) // 2]
         return await _finalize_check_in(
             db=db,
             companyId=companyId,
@@ -548,10 +686,25 @@ async def check_in_face_walkby(
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames(image_files)
+        mid_path = temp_image_paths[len(temp_image_paths) // 2]
+        if face_core_enabled():
+            fc = await _face_core_identify(companyId, temp_image_paths, "walkby")
+            match_payload = await _enrich_face_core_match(db, companyId, fc)
+            return await _finalize_check_in(
+                db=db,
+                companyId=companyId,
+                latitude=latitude,
+                longitude=longitude,
+                note=note,
+                match_payload=match_payload,
+                photo_source_path=mid_path,
+                liveness_passed=False,
+                mode="walkby",
+                default_note="Face kiosk walk-by check-in",
+            )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): get_walkby_encoding(ps)
         )
-        mid_path = temp_image_paths[len(temp_image_paths) // 2]
         return await _finalize_check_in(
             db=db,
             companyId=companyId,
@@ -578,6 +731,33 @@ async def check_in_face_walkby(
 
 async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
     """List enrolled encodings for a member (metadata + image URL)."""
+    if face_core_enabled():
+        company_ids = await _member_company_ids(db, memberId)
+        if not company_ids:
+            return []
+        client = get_face_core_client()
+        subject_id = str(memberId)
+        seen: set = set()
+        rows: List[dict] = []
+        for company_id in company_ids:
+            code = _company_code(company_id)
+            faces = await client.list_faces(code, subject_id)
+            for face in faces:
+                face_id = face.get("faceId")
+                if not face_id or face_id in seen:
+                    continue
+                seen.add(face_id)
+                rows.append(
+                    {
+                        "faceEncodingId": face_id,
+                        "memberId": str(memberId),
+                        "createdAt": face.get("createdAt"),
+                        "imageUrl": face.get("imageUrl")
+                        or f"/enrolled_images/{face_id}.jpg",
+                    }
+                )
+        return rows
+
     stmt = select(FaceEncoding).where(FaceEncoding.memberId == memberId)
     result = await db.execute(stmt)
     encodings = result.scalars().all()
@@ -595,6 +775,11 @@ async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
 
 async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
     """Delete one face encoding row and its enrolled image."""
+    if face_core_enabled():
+        client = get_face_core_client()
+        await client.delete_face(str(faceEncodingId))
+        return {"message": "Face encoding deleted successfully"}
+
     encoding_record = await db.get(FaceEncoding, faceEncodingId)
     if not encoding_record:
         raise HTTPException(
@@ -619,6 +804,21 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
     member = await db.get(Member, memberId)
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if face_core_enabled():
+        company_ids = await _member_company_ids(db, memberId)
+        client = get_face_core_client()
+        subject_id = str(memberId)
+        deleted_ids: List[str] = []
+        for company_id in company_ids:
+            code = _company_code(company_id)
+            result = await client.clear_subject_faces(code, subject_id)
+            deleted_ids.extend(result.get("faceIds") or [])
+        return {
+            "message": "All face encodings cleared",
+            "deleted": len(deleted_ids),
+            "faceEncodingIds": deleted_ids,
+        }
 
     result = await db.execute(
         select(FaceEncoding).where(FaceEncoding.memberId == memberId)
@@ -666,6 +866,45 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames([image_file])
+        if face_core_enabled():
+            company_ids = await _member_company_ids(db, memberId)
+            if not company_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="พนักงานคนนี้ยังไม่มีใบหน้าที่ลงทะเบียน",
+                )
+            client = get_face_core_client()
+            subject_id = str(memberId)
+            code = _company_code(company_ids[0])
+            await client.ensure_company(code)
+            enrolled = await client.list_faces(code, subject_id)
+            if not enrolled:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="พนักงานคนนี้ยังไม่มีใบหน้าที่ลงทะเบียน",
+                )
+            fc = await client.verify(code, subject_id, temp_image_paths[0])
+            matched = bool(fc.get("matched"))
+            face_id = fc.get("faceId")
+            score = {
+                "memberId": str(memberId),
+                "faceEncodingId": str(face_id) if face_id else None,
+                "distance": fc.get("distance"),
+                "threshold": fc.get("threshold", settings.FACE_RECOGNITION_THRESHOLD),
+                "confidence": fc.get("confidence"),
+                "confidencePercent": fc.get("confidencePercent"),
+                "matchMargin": fc.get("matchMargin"),
+                "matchQuality": fc.get("matchQuality"),
+                "livenessPassed": fc.get("livenessPassed", False),
+                "enrolledImageUrl": fc.get("enrolledImageUrl")
+                or (f"/enrolled_images/{face_id}.jpg" if face_id else None),
+                "message": "Face verify completed (no check-in)",
+                "matched": matched,
+                "isTestOnly": True,
+                "member": _member_payload(member),
+            }
+            return score
+
         features = await run_on_face_gpu(
             lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
         )

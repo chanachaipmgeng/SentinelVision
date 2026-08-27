@@ -3,11 +3,12 @@
 # One-time setup:
 #   docker network create face-net
 #
-# Terminal 1 — Face Core (sibling repo):
+# Terminal 1 — Face Core (sibling repo, scale + shared network for DPU):
 #   cd ../face-core
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.face-net.yml up -d
+#   docker network create face-net   # one-time
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
 #
-# Terminal 2 — DPU (CPU api, no local InsightFace GPU):
+# Terminal 2 — DPU (CPU api, BFF → face-core-api:8000 on face-net):
 #   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
 services:
   api:

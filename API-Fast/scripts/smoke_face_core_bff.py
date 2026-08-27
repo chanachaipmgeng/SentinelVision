@@ -99,7 +99,18 @@ def main() -> int:
     )
     if not identified.get("matched") or identified.get("memberId") != MEMBER_EMP1:
         raise Fail(f"identify company A failed: {identified}")
+    img_url = identified.get("enrolledImageUrl") or ""
+    if not img_url.startswith("/face/enrolled-images/"):
+        raise Fail(f"identify missing BFF proxy enrolledImageUrl: {identified}")
     ok(f"POST identify company A -> {identified.get('member', {}).get('fullName')}")
+
+    proxy_path = img_url if img_url.startswith("/") else f"/{img_url}"
+    with urllib.request.urlopen(f"{BASE}{proxy_path}", timeout=60) as resp:
+        body = resp.read()
+        ctype = resp.headers.get("Content-Type", "")
+    if len(body) < 500 or "image" not in ctype:
+        raise Fail(f"enrolled-image proxy failed: {len(body)} bytes, {ctype}")
+    ok(f"GET enrolled-image proxy ({len(body)} bytes, {ctype})")
 
     # Cross-company isolation: same face should NOT match in company B
     try:
@@ -152,7 +163,7 @@ def main() -> int:
         raise Fail("GET encodings empty")
     ok(f"GET encodings ({len(encodings)} face(s) from Face Core)")
 
-    print(f"\nAll {8} Face Core BFF smoke checks passed.")
+    print(f"\nAll {9} Face Core BFF smoke checks passed.")
     return 0
 
 

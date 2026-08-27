@@ -20,6 +20,9 @@ services:
       FACE_CORE_API_KEY: ${FACE_CORE_API_KEY:-dev-face-core-key-change-me}
       FACE_DEVICE: cpu
       NVIDIA_VISIBLE_DEVICES: ""
+      PYTHONPATH: /opt/face-core-sdk
+    volumes:
+      - ../face-core/sdk/python:/opt/face-core-sdk:ro
     networks:
       - default
       - face-net

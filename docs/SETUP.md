@@ -42,18 +42,18 @@ Frontends in Docker use `baseUrl: ''` (same origin through nginx).
 Keep Web-Manage URLs (`/face/*`, `/face/ws/kiosk`). Vision + gallery run in sibling **face-core**; check-in / GPS / HR stay in DPU.
 
 ```bash
-docker network create face-net
+docker network create face-net   # one-time
 
-# Terminal 1 — Face Core (GPU)
+# Terminal 1 — Face Core (CPU + Redis scale stack, on face-net)
 cd ../face-core
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.face-net.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
 
-# Terminal 2 — DPU API (CPU image, no local InsightFace GPU)
+# Terminal 2 — DPU API (CPU image, BFF → face-core-api:8000)
 cd ../dpu-project
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
 ```
 
-Overlay sets `FACE_CORE_ENABLED=true` and `FACE_CORE_URL=http://face-core-api:8000`. Set `FACE_CORE_ENABLED=false` to fall back to local InsightFace + pgvector.
+Overlay sets `FACE_CORE_ENABLED=true` and `FACE_CORE_URL=http://face-core-api:8000` (Docker DNS on `face-net` — not host port 8081). Set `FACE_CORE_ENABLED=false` to fall back to local InsightFace + pgvector.
 
 **Migrate existing enrollments** (does not delete local `face_encoding`):
 

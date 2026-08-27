@@ -9,7 +9,8 @@
 #   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
 #
 # Terminal 2 — DPU (CPU api, BFF → face-core-api:8000 on face-net):
-#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
+#   Set POSTGRES_PORT=5434 and HTTP_PORT=8880 in dpu-project/.env (face-core uses 5435/8081)
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build
 services:
   api:
     build:

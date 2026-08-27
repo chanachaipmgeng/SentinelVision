@@ -16,19 +16,21 @@ docker compose up --build
 
 | URL | Service |
 |-----|---------|
-| http://localhost/ | Admin |
-| http://localhost/company/timestamp-face | Face kiosk |
-| http://localhost/docs | OpenAPI |
-| localhost:5432 | PostgreSQL |
+| http://localhost:8880/ | Admin (when `HTTP_PORT=8880` in `.env`) |
+| http://localhost:8880/company/timestamp-face | Face kiosk |
+| http://localhost:8880/docs | OpenAPI |
+| localhost:5434 | PostgreSQL (BFF dev alongside face-core) |
 
 Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them before any shared deployment.
+
+**Standalone** (no Face Core on same host): use `POSTGRES_PORT=5432` and `HTTP_PORT=80` in `.env`.
 
 ## Environment
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `HTTP_PORT` | `80` | nginx host port |
-| `POSTGRES_*` | see `.env.example` | database |
+| `HTTP_PORT` | `8880` (BFF dev) / `80` standalone | nginx host port |
+| `POSTGRES_PORT` | `5434` (BFF dev) / `5432` standalone | database host port |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | cosine **distance** cutoff (lower = stricter; local mode) |
 | `SECRET_KEY` | change-me… | rotate for real use |
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
@@ -41,6 +43,8 @@ Frontends in Docker use `baseUrl: ''` (same origin through nginx).
 
 Keep Web-Manage URLs (`/face/*`, `/face/ws/kiosk`). Vision + gallery run in sibling **face-core**; check-in / GPS / HR stay in DPU.
 
+**Ports:** copy `.env.example` → `.env` (defaults `POSTGRES_PORT=5434`, `HTTP_PORT=8880` so Postgres does not clash with face-core on `5435`).
+
 ```bash
 docker network create face-net   # one-time
 
@@ -48,9 +52,9 @@ docker network create face-net   # one-time
 cd ../face-core
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
 
-# Terminal 2 — DPU API (CPU image, BFF → face-core-api:8000)
+# Terminal 2 — DPU (full stack or api only)
 cd ../dpu-project
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build
 ```
 
 Overlay sets `FACE_CORE_ENABLED=true` and `FACE_CORE_URL=http://face-core-api:8000` (Docker DNS on `face-net` — not host port 8081). Set `FACE_CORE_ENABLED=false` to fall back to local InsightFace + pgvector.

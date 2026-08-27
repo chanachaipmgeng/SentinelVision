@@ -13,11 +13,14 @@ from ..controllers.face_controller import (
     clear_member_face_encodings,
     verify_member_face,
     get_kiosk_attendance,
+    proxy_enrolled_image,
 )
 from ..controllers.face_ws_controller import kiosk_websocket, face_core_queue_stats_route
+from ..middlewares.face_auth import face_route_auth
 from uuid import UUID
 
 router = APIRouter()
+_face_auth = Depends(face_route_auth)
 
 
 @router.websocket("/ws/kiosk")
@@ -26,20 +29,35 @@ async def face_kiosk_ws(websocket: WebSocket):
     await kiosk_websocket(websocket)
 
 
+@router.get("/enrolled-images/{faceEncodingId}")
+async def enrolled_image_proxy_route(
+    faceEncodingId: UUID,
+    companyId: UUID,
+    _auth=Depends(face_route_auth),
+):
+    """Proxy Face Core gated images for Web-Manage / kiosk preview."""
+    return await proxy_enrolled_image(faceEncodingId, companyId)
+
+
 @router.get("/queue-stats")
-async def face_queue_stats(companyId: Optional[UUID] = None):
+async def face_queue_stats(companyId: Optional[UUID] = None, _auth=_face_auth):
     return await face_core_queue_stats_route(companyId)
 
 
 @router.get("/kiosk-attendance/{companyId}")
-async def kiosk_attendance_route(companyId: UUID, db: AsyncSession = Depends(get_db)):
+async def kiosk_attendance_route(
+    companyId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
+):
     """Today's checked-in roster for the face kiosk panel."""
     return await get_kiosk_attendance(companyId, db)
 
 
 @router.post("/members/{memberId}/add-face")
 async def add_face_route(
-    memberId: UUID, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    memberId: UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     return await add_face(memberId, file, db)
 
@@ -49,6 +67,7 @@ async def check_face_emp_route(
     files: List[UploadFile] = File(...),
     companyId: UUID = Form(...),
     db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """1:N match within company only (no timestamp)."""
     return await check_face_emp(files, companyId, db)
@@ -59,6 +78,7 @@ async def identify_face_route(
     file: UploadFile = File(...),
     companyId: UUID = Form(...),
     db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Single-frame identify within company for live name overlay (no timestamp)."""
     return await identify_face(file, companyId, db)
@@ -72,6 +92,7 @@ async def check_in_face_route(
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Secure mode: multi-frame liveness + match + timestamp."""
     return await check_in_face(
@@ -87,6 +108,7 @@ async def check_in_face_walkby_route(
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Walk-by mode: 1–2 frames, no motion liveness (multi-person pass-through)."""
     return await check_in_face_walkby(
@@ -96,7 +118,7 @@ async def check_in_face_walkby_route(
 
 @router.get("/members/{memberId}/encodings", response_model=List[dict])
 async def get_encodings_route(
-    memberId: UUID, db: AsyncSession = Depends(get_db)
+    memberId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
 ):
     return await get_encodings_for_member(memberId, db)
 
@@ -106,6 +128,7 @@ async def verify_member_face_route(
     memberId: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Test-scan vs this member only — returns confidence %, no timestamp."""
     return await verify_member_face(memberId, file, db)
@@ -113,7 +136,7 @@ async def verify_member_face_route(
 
 @router.delete("/members/{memberId}/encodings")
 async def clear_member_encodings_route(
-    memberId: UUID, db: AsyncSession = Depends(get_db)
+    memberId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
 ):
     """Clear all enrolled faces for one member."""
     return await clear_member_face_encodings(memberId, db)
@@ -121,7 +144,6 @@ async def clear_member_encodings_route(
 
 @router.delete("/encodings/{faceEncodingId}")
 async def delete_encoding_route(
-    faceEncodingId: UUID, db: AsyncSession = Depends(get_db)
+    faceEncodingId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
 ):
     return await delete_face_encoding(faceEncodingId, db)
-

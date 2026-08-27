@@ -1,66 +1,67 @@
-"""Async HTTP client for Face Core microservice."""
+"""Thin FastAPI adapter over face-core SDK (install sdk/python or sibling path)."""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
-from typing import Any, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 import httpx
-from fastapi import HTTPException, UploadFile, status
+from fastapi import HTTPException, status
 
 from ..config.settings import settings
 
 IdentifyMode = Literal["fast", "walkby", "secure"]
 
+_sdk_root = Path(__file__).resolve().parents[4] / "face-core" / "sdk" / "python"
+if _sdk_root.is_dir() and str(_sdk_root) not in sys.path:
+    sys.path.insert(0, str(_sdk_root))
+
+try:
+    from face_core.client import FaceCoreClient as _SdkClient
+    from face_core.client import FaceCoreError, IdentifyMode as _SdkIdentifyMode
+except ImportError as _import_err:
+    raise ImportError(
+        "face_core SDK not found. pip install ../../../face-core/sdk/python "
+        "or set PYTHONPATH to face-core/sdk/python"
+    ) from _import_err
+
+IdentifyMode = _SdkIdentifyMode  # noqa: F811
+
 _client: Optional["FaceCoreClient"] = None
 
 
+def _raise_http(exc: FaceCoreError) -> None:
+    code = exc.status_code
+    detail = exc.detail
+    if code == 401:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+    if code == 403:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    if code == 404:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+    if code == 429:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=detail)
+    if code == 504:
+        raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=detail)
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=f"Face Core error ({code}): {detail}",
+    )
+
+
 class FaceCoreClient:
+    """Wraps SDK client; maps FaceCoreError → HTTPException for FastAPI routes."""
+
     def __init__(self, base_url: str, api_key: str, *, timeout: float = 120.0):
-        self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
-        self.timeout = timeout
-
-    def _headers(self) -> dict:
-        return {"Authorization": f"Bearer {self.api_key}"}
-
-    def _raise_for_status(self, response: httpx.Response) -> None:
-        if response.is_success:
-            return
-        detail = response.text
-        try:
-            body = response.json()
-            detail = body.get("detail", detail)
-        except Exception:
-            pass
-        code = response.status_code
-        if code == 401:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
-        if code == 403:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
-        if code == 404:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-        if code == 429:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=detail)
-        if code == 504:
-            raise HTTPException(status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=detail)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Face Core error ({code}): {detail}",
-        )
+        self._inner = _SdkClient(base_url, api_key, timeout=timeout)
 
     async def ensure_company(self, company_code: str, display_name: Optional[str] = None) -> dict:
-        params = {}
-        if display_name:
-            params["displayName"] = display_name
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.put(
-                f"{self.base_url}/v1/companies/{company_code}",
-                headers=self._headers(),
-                params=params,
-            )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.ensure_company(company_code, display_name=display_name)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def enroll(
         self,
@@ -70,16 +71,13 @@ class FaceCoreClient:
         *,
         filename: str = "face.jpg",
     ) -> dict:
-        path = Path(file_path)
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            with path.open("rb") as fh:
-                r = await client.post(
-                    f"{self.base_url}/v1/companies/{company_code}/subjects/{subject_id}/faces",
-                    headers=self._headers(),
-                    files={"file": (filename, fh, "image/jpeg")},
-                )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.enroll(
+                company_code, subject_id, file_path, filename=filename
+            )
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def identify(
         self,
@@ -87,26 +85,11 @@ class FaceCoreClient:
         file_paths: List[Union[str, Path]],
         mode: IdentifyMode = "fast",
     ) -> dict:
-        files = []
-        handles = []
         try:
-            for i, p in enumerate(file_paths):
-                fh = open(p, "rb")
-                handles.append(fh)
-                files.append(("files", (f"frame{i}.jpg", fh, "image/jpeg")))
-            data = {"companyCode": company_code, "mode": mode}
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                r = await client.post(
-                    f"{self.base_url}/v1/identify",
-                    headers=self._headers(),
-                    data=data,
-                    files=files,
-                )
-                self._raise_for_status(r)
-                return r.json()
-        finally:
-            for h in handles:
-                h.close()
+            return await self._inner.identify(company_code, file_paths, mode=mode)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def verify(
         self,
@@ -114,69 +97,53 @@ class FaceCoreClient:
         subject_id: str,
         file_path: Union[str, Path],
     ) -> dict:
-        path = Path(file_path)
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            with path.open("rb") as fh:
-                r = await client.post(
-                    f"{self.base_url}/v1/verify",
-                    headers=self._headers(),
-                    data={"companyCode": company_code, "subjectId": subject_id},
-                    files={"file": ("probe.jpg", fh, "image/jpeg")},
-                )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.verify(company_code, subject_id, file_path)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
-    async def list_faces(
-        self, company_code: str, subject_id: str
-    ) -> List[dict]:
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.get(
-                f"{self.base_url}/v1/companies/{company_code}/subjects/{subject_id}/faces",
-                headers=self._headers(),
-            )
-            self._raise_for_status(r)
-            return r.json()
+    async def list_faces(self, company_code: str, subject_id: str) -> List[dict]:
+        try:
+            return await self._inner.list_faces(company_code, subject_id)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
+
+    async def fetch_face_image(self, company_code: str, face_id: str) -> bytes:
+        try:
+            return await self._inner.fetch_face_image(company_code, face_id)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def delete_face(self, face_id: str) -> dict:
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.delete(
-                f"{self.base_url}/v1/faces/{face_id}",
-                headers=self._headers(),
-            )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.delete_face(face_id)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def clear_subject_faces(self, company_code: str, subject_id: str) -> dict:
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.delete(
-                f"{self.base_url}/v1/companies/{company_code}/subjects/{subject_id}/faces",
-                headers=self._headers(),
-            )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.clear_subject_faces(company_code, subject_id)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def detect(self, image_bytes: bytes) -> dict:
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.post(
-                f"{self.base_url}/v1/detect",
-                headers=self._headers(),
-                files={"file": ("frame.jpg", image_bytes, "image/jpeg")},
-            )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.detect(image_bytes)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
     async def queue_stats(self, company_code: Optional[str] = None) -> dict:
-        params = {}
-        if company_code:
-            params["companyCode"] = company_code
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            r = await client.get(
-                f"{self.base_url}/v1/queue-stats",
-                headers=self._headers(),
-                params=params,
-            )
-            self._raise_for_status(r)
-            return r.json()
+        try:
+            return await self._inner.queue_stats(company_code=company_code)
+        except FaceCoreError as exc:
+            _raise_http(exc)
+            raise
 
 
 def get_face_core_client() -> FaceCoreClient:
@@ -197,3 +164,8 @@ def get_face_core_client() -> FaceCoreClient:
 
 def face_core_enabled() -> bool:
     return bool(settings.FACE_CORE_ENABLED and settings.FACE_CORE_API_KEY)
+
+
+def bff_enrolled_image_url(face_id: str, company_id) -> str:
+    """Browser-safe proxy path when Face Core stores enrolled JPEGs."""
+    return f"/face/enrolled-images/{face_id}?companyId={company_id}"

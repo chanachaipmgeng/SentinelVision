@@ -22,7 +22,7 @@ from ..utils.face_engine import (
 from ..utils.face_gpu_queue import run_on_face_gpu
 from ..config.settings import settings
 from ..controllers.employee_timestamp_controller import create_timestamp
-from ..clients.face_core_client import face_core_enabled, get_face_core_client
+from ..clients.face_core_client import face_core_enabled, get_face_core_client, bff_enrolled_image_url
 
 UPLOAD_DIR = Path("./uploaded_images")
 
@@ -110,8 +110,9 @@ async def _enrich_face_core_match(
         "matchMargin": fc.get("matchMargin"),
         "matchQuality": fc.get("matchQuality"),
         "livenessPassed": fc.get("livenessPassed", False),
-        "enrolledImageUrl": fc.get("enrolledImageUrl")
-        or (f"/enrolled_images/{face_id}.jpg" if face_id else None),
+        "enrolledImageUrl": bff_enrolled_image_url(str(face_id), company_id)
+        if face_id
+        else fc.get("enrolledImageUrl"),
         "message": message,
         "matched": True,
         "member": _member_payload(member),
@@ -752,8 +753,7 @@ async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
                         "faceEncodingId": face_id,
                         "memberId": str(memberId),
                         "createdAt": face.get("createdAt"),
-                        "imageUrl": face.get("imageUrl")
-                        or f"/enrolled_images/{face_id}.jpg",
+                        "imageUrl": bff_enrolled_image_url(str(face_id), company_id),
                     }
                 )
         return rows
@@ -857,7 +857,7 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
     count_result = await db.execute(
         select(FaceEncoding.faceEncodingId).where(FaceEncoding.memberId == memberId).limit(1)
     )
-    if count_result.first() is None:
+    if not face_core_enabled() and count_result.first() is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="พนักงานคนนี้ยังไม่มีใบหน้าที่ลงทะเบียน",
@@ -896,8 +896,9 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
                 "matchMargin": fc.get("matchMargin"),
                 "matchQuality": fc.get("matchQuality"),
                 "livenessPassed": fc.get("livenessPassed", False),
-                "enrolledImageUrl": fc.get("enrolledImageUrl")
-                or (f"/enrolled_images/{face_id}.jpg" if face_id else None),
+                "enrolledImageUrl": bff_enrolled_image_url(str(face_id), company_ids[0])
+                if face_id
+                else fc.get("enrolledImageUrl"),
                 "message": "Face verify completed (no check-in)",
                 "matched": matched,
                 "isTestOnly": True,
@@ -1085,3 +1086,22 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load kiosk attendance: {str(e)}",
         )
+
+
+async def proxy_enrolled_image(faceEncodingId: UUID, companyId: UUID):
+    """Stream enrolled JPEG — from Face Core when BFF mode, else local disk."""
+    if face_core_enabled():
+        client = get_face_core_client()
+        from fastapi.responses import Response
+
+        data = await client.fetch_face_image(
+            _company_code(companyId), str(faceEncodingId)
+        )
+        return Response(content=data, media_type="image/jpeg")
+
+    from fastapi.responses import FileResponse
+
+    image_path = Path(f"enrolled_images/{faceEncodingId}.jpg")
+    if not image_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    return FileResponse(image_path, media_type="image/jpeg")

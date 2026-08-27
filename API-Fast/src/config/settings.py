@@ -37,5 +37,8 @@ class Settings(BaseSettings):
     FACE_CORE_API_KEY: str = ""
     FACE_CORE_TIMEOUT_SECONDS: float = 120.0
 
+    # When true, /face/* HTTP routes require JWT (WS /face/ws/kiosk unchanged)
+    FACE_ROUTES_REQUIRE_JWT: bool = False
+
 
 settings = Settings()

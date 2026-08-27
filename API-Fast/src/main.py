@@ -68,12 +68,13 @@ async def startup():
         await ensure_profile_and_approval_columns(conn)
 
     from .config.settings import settings
-    from .utils.face_gpu_queue import start_face_gpu_workers
+    if not settings.FACE_CORE_ENABLED:
+        from .utils.face_gpu_queue import start_face_gpu_workers
 
-    await start_face_gpu_workers(
-        workers=settings.FACE_GPU_WORKERS,
-        queue_size=settings.FACE_GPU_QUEUE_SIZE,
-    )
+        await start_face_gpu_workers(
+            workers=settings.FACE_GPU_WORKERS,
+            queue_size=settings.FACE_GPU_QUEUE_SIZE,
+        )
 
 
 UPLOAD_DIR = "./uploaded_images"
@@ -106,7 +107,13 @@ app.include_router(dashboard_routes.router, prefix="/dashboard")
 
 @app.get("/")
 async def root():
+    from .config.settings import settings
+
     return {
         "message": "Welcome to the API",
-        "face": "InsightFace buffalo_l + pgvector",
+        "face": (
+            "Face Core BFF"
+            if settings.FACE_CORE_ENABLED
+            else "InsightFace buffalo_l + pgvector"
+        ),
     }

@@ -17,7 +17,13 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.exceptions import HTTPException
 
 from ..config.database import async_session
-from ..controllers.face_controller import _finalize_check_in, _resolve_match_response
+from ..controllers.face_controller import (
+    _enrich_face_core_match,
+    _face_core_identify,
+    _finalize_check_in,
+    _resolve_match_response,
+)
+from ..clients.face_core_client import face_core_enabled, get_face_core_client
 from ..utils.face_engine import (
     detect_faces_bytes,
     extract_face_features,
@@ -27,6 +33,19 @@ from ..utils.face_gpu_queue import face_gpu_queue_stats, run_on_face_gpu
 
 logger = logging.getLogger(__name__)
 TEMP_DIR = Path("temp_images")
+
+
+async def _face_core_queue_stats(company_id: Optional[UUID] = None) -> dict:
+    if not face_core_enabled():
+        return face_gpu_queue_stats()
+    client = get_face_core_client()
+    code = str(company_id) if company_id else None
+    stats = await client.queue_stats(code)
+    return {"source": "face-core", **stats}
+
+
+async def face_core_queue_stats_route(company_id: Optional[UUID] = None) -> dict:
+    return await _face_core_queue_stats(company_id)
 
 
 def _json_default(obj: Any):
@@ -74,13 +93,19 @@ async def _handle_detect(
     """Detection-only pass for kiosk face boxes (no temp files, no DB)."""
     try:
         content = _decode_image_b64(image_b64)
-        result = await run_on_face_gpu(lambda c=content: detect_faces_bytes(c))
+        if face_core_enabled():
+            client = get_face_core_client()
+            result = await client.detect(content)
+            queue = await _face_core_queue_stats()
+        else:
+            result = await run_on_face_gpu(lambda c=content: detect_faces_bytes(c))
+            queue = face_gpu_queue_stats()
         await _send(
             websocket,
             {
                 "type": "detected",
                 "requestId": request_id,
-                "queue": face_gpu_queue_stats(),
+                "queue": queue,
                 **result,
             },
         )
@@ -111,37 +136,43 @@ async def _handle_identify(
     paths: List[str] = []
     try:
         paths.append(_write_temp_bytes(_decode_image_b64(image_b64)))
-        features = await run_on_face_gpu(
-            lambda p=paths[0]: extract_face_features(p, require_quality=False)
-        )
-        if features is None:
-            await _send(
-                websocket,
-                {
-                    "type": "error",
-                    "intent": "identify",
-                    "trackId": track_id,
-                    "requestId": request_id,
-                    "detail": "No face detected in the image.",
-                },
-            )
-            return
-
-        encoding, _bbox = features
         async with async_session() as db:
-            payload = await _resolve_match_response(
-                db,
-                encoding,
-                liveness_passed=False,
-                companyId=company_id,
-            )
+            if face_core_enabled():
+                fc = await _face_core_identify(company_id, paths, "fast")
+                payload = await _enrich_face_core_match(db, company_id, fc)
+                queue = await _face_core_queue_stats(company_id)
+            else:
+                features = await run_on_face_gpu(
+                    lambda p=paths[0]: extract_face_features(p, require_quality=False)
+                )
+                if features is None:
+                    await _send(
+                        websocket,
+                        {
+                            "type": "error",
+                            "intent": "identify",
+                            "trackId": track_id,
+                            "requestId": request_id,
+                            "detail": "No face detected in the image.",
+                        },
+                    )
+                    return
+
+                encoding, _bbox = features
+                payload = await _resolve_match_response(
+                    db,
+                    encoding,
+                    liveness_passed=False,
+                    companyId=company_id,
+                )
+                queue = face_gpu_queue_stats()
         await _send(
             websocket,
             {
                 "type": "identified",
                 "trackId": track_id,
                 "requestId": request_id,
-                "queue": face_gpu_queue_stats(),
+                "queue": queue,
                 **payload,
             },
         )
@@ -202,22 +233,42 @@ async def _handle_checkin(
         for raw in images_b64[:3]:
             paths.append(_write_temp_bytes(_decode_image_b64(raw)))
 
-        encoding = await run_on_face_gpu(lambda ps=list(paths): get_walkby_encoding(ps))
         mid_path = paths[len(paths) // 2]
 
         async with async_session() as db:
-            result = await _finalize_check_in(
-                db=db,
-                companyId=company_id,
-                latitude=latitude,
-                longitude=longitude,
-                note=note,
-                target_encoding=encoding,
-                photo_source_path=mid_path,
-                liveness_passed=False,
-                mode="walkby-ws",
-                default_note="Face kiosk websocket walk-by",
-            )
+            if face_core_enabled():
+                fc = await _face_core_identify(company_id, paths, "walkby")
+                match_payload = await _enrich_face_core_match(db, company_id, fc)
+                result = await _finalize_check_in(
+                    db=db,
+                    companyId=company_id,
+                    latitude=latitude,
+                    longitude=longitude,
+                    note=note,
+                    match_payload=match_payload,
+                    photo_source_path=mid_path,
+                    liveness_passed=False,
+                    mode="walkby-ws",
+                    default_note="Face kiosk websocket walk-by",
+                )
+                queue = await _face_core_queue_stats(company_id)
+            else:
+                encoding = await run_on_face_gpu(
+                    lambda ps=list(paths): get_walkby_encoding(ps)
+                )
+                result = await _finalize_check_in(
+                    db=db,
+                    companyId=company_id,
+                    latitude=latitude,
+                    longitude=longitude,
+                    note=note,
+                    target_encoding=encoding,
+                    photo_source_path=mid_path,
+                    liveness_passed=False,
+                    mode="walkby-ws",
+                    default_note="Face kiosk websocket walk-by",
+                )
+                queue = face_gpu_queue_stats()
 
         await _send(
             websocket,
@@ -225,7 +276,7 @@ async def _handle_checkin(
                 "type": "checked_in",
                 "trackId": track_id,
                 "requestId": request_id,
-                "queue": face_gpu_queue_stats(),
+                "queue": queue,
                 **result,
             },
         )
@@ -268,7 +319,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
         {
             "type": "ready",
             "message": "Send session then identify/checkin frames",
-            "queue": face_gpu_queue_stats(),
+            "faceCoreEnabled": face_core_enabled(),
+            "queue": await _face_core_queue_stats(),
         },
     )
 
@@ -285,7 +337,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
 
             if msg_type == "ping":
                 await _send(
-                    websocket, {"type": "pong", "queue": face_gpu_queue_stats()}
+                    websocket,
+                    {
+                        "type": "pong",
+                        "queue": await _face_core_queue_stats(company_id),
+                    },
                 )
                 continue
 
@@ -305,7 +361,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     {
                         "type": "session_ok",
                         "companyId": str(company_id),
-                        "queue": face_gpu_queue_stats(),
+                        "companyCode": str(company_id),
+                        "queue": await _face_core_queue_stats(company_id),
                     },
                 )
                 continue

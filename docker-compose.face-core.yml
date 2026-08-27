@@ -1,0 +1,30 @@
+# DPU API linked to sibling Face Core service (shared Docker network `face-net`).
+#
+# One-time setup:
+#   docker network create face-net
+#
+# Terminal 1 — Face Core (sibling repo):
+#   cd ../face-core
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.face-net.yml up -d
+#
+# Terminal 2 — DPU (CPU api, no local InsightFace GPU):
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
+services:
+  api:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile.cpu
+    environment:
+      FACE_CORE_ENABLED: "true"
+      FACE_CORE_URL: http://face-core-api:8000
+      FACE_CORE_API_KEY: ${FACE_CORE_API_KEY:-dev-face-core-key-change-me}
+      FACE_DEVICE: cpu
+      NVIDIA_VISIBLE_DEVICES: ""
+    networks:
+      - default
+      - face-net
+
+networks:
+  face-net:
+    external: true
+    name: face-net

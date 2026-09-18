@@ -9,7 +9,12 @@ from ..controllers.company_controller import (
     delete_company
 )
 from ..schemas.company_schema import CompanyUpdate, CompanyResponse , CompanyBase
-from typing import List
+from typing import List, Optional
+from datetime import datetime
+
+from sqlalchemy import select
+from ..services.audit_service import AuditLog
+from ..services.notification_service import enqueue
 
 router = APIRouter()
 
@@ -31,6 +36,30 @@ async def update_company_route(
 ):
     return await update_company(companyId, company_update.dict(exclude_unset=True), db)
 
-@router.delete("/{companyId}")
-async def delete_company_route(companyId: str, db: AsyncSession = Depends(get_db)):
-    return await delete_company(companyId, db)
+@router.get("/{companyId}/audit-logs")
+async def list_audit_logs(
+    companyId: str,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+):
+    rows = (
+        await db.execute(
+            select(AuditLog)
+            .where(AuditLog.companyId == companyId)
+            .order_by(AuditLog.occurredAt.desc())
+            .limit(min(max(limit, 1), 500))
+        )
+    ).scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "occurredAt": r.occurredAt.isoformat() if r.occurredAt else None,
+            "actorMemberId": str(r.actorMemberId) if r.actorMemberId else None,
+            "actorRole": r.actorRole,
+            "action": r.action,
+            "path": r.path,
+            "statusCode": r.statusCode,
+            "ip": r.ip,
+        }
+        for r in rows
+    ]

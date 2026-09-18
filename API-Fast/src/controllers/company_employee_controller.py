@@ -32,8 +32,8 @@ def _member_dict(member: Member) -> dict:
     }
 
 # ดึงข้อมูล CompanyEmployee ทั้งหมดตาม companyId
-async def get_all_companyEmployees(companyId: str, db: AsyncSession):
-    result = await db.execute(
+async def get_all_companyEmployees(companyId: str, db: AsyncSession, limit: int | None = None, offset: int = 0):
+    stmt = (
         select(CompanyEmployee)
         .where(CompanyEmployee.companyId == companyId)
         .options(
@@ -42,6 +42,9 @@ async def get_all_companyEmployees(companyId: str, db: AsyncSession):
             selectinload(CompanyEmployee.department)
         )
     )
+    if limit:
+        stmt = stmt.offset(max(0, offset)).limit(min(int(limit), 500))
+    result = await db.execute(stmt)
     employees = result.scalars().all()
 
     # จัดรูปแบบ response
@@ -176,6 +179,7 @@ async def register_member(
     )
     member = result.scalar_one_or_none()
 
+    temporary_password = None
     if not member:
         # ถ้าไม่มี Member สร้างใหม่
         member = Member(
@@ -193,7 +197,8 @@ async def register_member(
             role=RoleType.MEMBER,
             status=StatusType.ENABLE,
         )
-        member.hash_password("1234")
+        from ..security.passwords import apply_temp_password
+        temporary_password = apply_temp_password(member)
         db.add(member)
         await db.commit()
         await db.refresh(member)
@@ -254,6 +259,7 @@ async def register_member(
         "companyRoleType": new_employee.companyRoleType,
         "empType": new_employee.empType,
         "startDate": new_employee.startDate,
+        "temporaryPassword": temporary_password,
     }
     
 async def update_company_employee(

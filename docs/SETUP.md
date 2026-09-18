@@ -13,14 +13,19 @@
 
 ```bash
 cp .env.example .env
+# set SECRET_KEY to a random string of at least 32 characters, e.g.
+#   python -c "import secrets; print(secrets.token_urlsafe(48))"
 docker compose up --build
 ```
+
+The API refuses to start while `SECRET_KEY` is the placeholder (`AUTH_FAIL_FAST=true`).
 
 | URL | Service |
 |-----|---------|
 | http://localhost:8880/ | Admin (when `HTTP_PORT=8880` in `.env`) |
 | http://localhost:8880/company/timestamp-face | Face kiosk |
-| http://localhost:8880/docs | OpenAPI |
+| http://localhost:8880/health, /ready | liveness / readiness |
+| http://localhost:8880/docs | OpenAPI — 404 unless `EXPOSE_API_DOCS=true` and the nginx `/docs` block is re-enabled |
 | localhost:5434 | PostgreSQL (BFF dev alongside face-core) |
 
 Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them before any shared deployment.
@@ -36,7 +41,14 @@ Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | cosine **distance** cutoff (lower = stricter; local mode) |
 | `IMAGE_BLUR_THRESHOLD` | `20.0` | reject blurry kiosk / add-face enroll |
 | `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | Excel+ZIP import blur gate; `0` = do not reject blurry photos (face still required) |
-| `SECRET_KEY` | change-me… | rotate for real use |
+| `SECRET_KEY` | (placeholder) | **required**, ≥ 32 chars; startup fails otherwise |
+| `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | `60` / `14` | JWT lifetimes |
+| `FACE_ROUTES_REQUIRE_JWT` | `true` | face HTTP + kiosk WS need a token |
+| `FACE_DEVICES` | `cuda:0` | comma list; one GPU worker per device |
+| `EXPOSE_API_DOCS` | `false` | Swagger/ReDoc |
+| `SMTP_*`, `LINE_CHANNEL_ACCESS_TOKEN` | (empty) | notification channels; empty = skipped |
+| `IMAGE_RETENTION_DAYS` | `90` | punch-photo retention |
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
 | `FACE_CORE_URL` | `http://host.docker.internal:8081` | Face Core base URL |
 | `FACE_CORE_API_KEY` | (empty) | Bearer key for Face Core tenant |

@@ -175,7 +175,9 @@
   <tr><th>เส้นทาง</th><th>หน้าที่</th></tr>
   <tr><td>/</td><td>เว็บแอดมิน</td></tr>
   <tr><td>/company/timestamp-face</td><td>คีออสลงเวลา</td></tr>
-  <tr><td>/docs</td><td>OpenAPI</td></tr>
+  <tr><td>/health</td><td>liveness</td></tr>
+  <tr><td>/ready</td><td>readiness (DB + queue)</td></tr>
+  <tr><td>/company/audit-log</td><td>ประวัติการใช้งานและการแจ้งเตือน</td></tr>
   <tr><td>/face/queue-stats</td><td>สุขภาพคิว GPU</td></tr>
 </table>
 
@@ -185,7 +187,11 @@
   <li>ไดรเวอร์ NVIDIA หลังอัปเดตต้องรีบูต ให้เคอร์เนลโมดูลตรงกับ NVML</li>
   <li>อัปโหลดผ่าน HTTPS ต้องตั้งขนาดบอดี้ที่ nginx ฝั่ง TLS ไม่ใช่แค่ใน Docker</li>
   <li>หลังแก้โค้ด API/UI/nginx ต้อง rebuild image ที่เกี่ยวข้อง</li>
+  <li>SECRET_KEY ต้องยาวอย่างน้อย 32 ตัวอักษร ไม่งั้น API ไม่สตาร์ท (AUTH_FAIL_FAST)</li>
+  <li>คีออสต้องส่ง token ในข้อความ session ของ WebSocket</li>
 </ul>
+
+<p class="muted">รายละเอียดสถาปัตยกรรมหลังยกระดับอยู่ใน docs/ARCHITECTURE.md, docs/API.md และ docs/RUNBOOK.md</p>
 
 <p class="muted">เอกสารนี้อ้างอิงโค้ดใน repo facescan-timeattendance (DPU Attendance) และการตรวจบนเซิร์ฟเวอร์ production ณ วันที่ระบุ</p>
 

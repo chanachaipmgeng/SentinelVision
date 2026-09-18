@@ -1,5 +1,5 @@
 import { Component, Inject, OnDestroy, OnInit, Renderer2 } from '@angular/core';
-import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { SharedModule } from '../../shared/shared.module';
@@ -8,7 +8,6 @@ import { TokenService } from '../../shared/services/token.service';
 import { AuthService } from '../../shared/services/auth.service';
 import { LoginModel } from '../../shared/user-auth.model';
 import { HttpClientModule } from '@angular/common/http';
-import { Validators } from 'ngx-editor';
 import { EmployeeService } from '../../DPU/services/employee.service';
 
 @Component({
@@ -83,8 +82,16 @@ export class LoginComponent implements OnInit, OnDestroy {
       .login(this.loginForm.controls['username'].value, this.loginForm.controls['password'].value)
       .subscribe(
         (result) => {
-          this.tokenService.saveToken(result.access_token);
+          this.tokenService.saveToken(result.access_token || result.accessToken || '');
+          const refresh = result.refresh_token || result.refreshToken;
+          if (refresh) {
+            this.tokenService.saveRefreshToken(refresh);
+          }
           this.tokenService.saveUser(result);
+          if (result.mustChangePassword || result.must_change_password) {
+            this.routes.navigate(['/auth/change-password']);
+            return;
+          }
           if (result.member.status == 1) {
             if (result.member.role == 99) {
               this.routes.navigate(['/admin/member-manage']);

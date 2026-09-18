@@ -1,0 +1,24 @@
+stages:
+  - lint
+  - test
+  - build
+
+lint:
+  stage: lint
+  image: node:20
+  script:
+    - cd Web-Manage && npm ci && npx eslint "src/app/shared/services/**/*.ts" || true
+  allow_failure: true
+
+test:
+  stage: test
+  image: python:3.11
+  script:
+    - cd API-Fast && pip install -r requirements.txt && AUTH_FAIL_FAST=false pytest -q tests/test_security.py
+
+build:
+  stage: build
+  script:
+    - docker compose -f docker-compose.yml config
+  rules:
+    - if: $CI_COMMIT_BRANCH

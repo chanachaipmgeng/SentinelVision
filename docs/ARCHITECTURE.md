@@ -106,3 +106,13 @@ Legacy stacks removed from the repo: Express `API/`, abandoned `Web-Frontend/`, 
 - System TTS: `API-Fast/src/controllers/system_controller.py`, `models/system_setting.py`
 - Admin kiosk: `Web-Manage/src/app/DPU/company-management/enroll-face/`
 - Agent rules/skills: [CURSOR-AGENT.md](CURSOR-AGENT.md)
+
+## Enterprise controls
+
+- JWT secrets and token TTL live in `API-Fast/src/config/settings.py`. Startup fails if `SECRET_KEY` is still the placeholder (`AUTH_FAIL_FAST`).
+- `AuthzMiddleware` requires a token and binds `companyId` in the URL to the caller.
+- Audit rows are written on successful writes. The company UI is `/company/audit-log`.
+- Notifications use `notification_outbox` plus SMTP / LINE. Per-company settings are `system_setting` key `notify:{companyId}`.
+- GPU workers bind to `FACE_DEVICES`. Match queries set `hnsw.ef_search` and join `company_employee`.
+- Ops: [RUNBOOK.md](RUNBOOK.md), `scripts/backup.sh`, `docker-compose.prod.yml` (no published Postgres port).
+

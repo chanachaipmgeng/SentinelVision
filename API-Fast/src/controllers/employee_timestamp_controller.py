@@ -273,6 +273,17 @@ async def approve_or_reject_timestamp(
     timestamp.approvedAt = datetime.utcnow()
     await db.commit()
     await db.refresh(timestamp)
+    try:
+        from ..services.notification_service import enqueue
+
+        await enqueue(
+            "approval.decided",
+            "line",
+            {"body": f"Timestamp {timestampId} {'approved' if action.approve else 'rejected'}"},
+            company_id=str(companyId),
+        )
+    except Exception:
+        pass
     return _timestamp_payload(timestamp)
 
 

@@ -22,3 +22,4 @@ class CompanyLocation(Base):
     endDate = Column(DateTime(timezone=True), server_default=func.now())
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
     updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)

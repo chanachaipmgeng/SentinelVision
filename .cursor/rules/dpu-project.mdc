@@ -14,7 +14,9 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack b
 | `API-Fast/` | FastAPI + InsightFace + GPU queue |
 | `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
 | `docker/` | nginx gateway + DB init |
-| `docs/` | SETUP, ARCHITECTURE, API, agent guide (`CURSOR-AGENT.md`) |
+| `docs/` | SETUP, ARCHITECTURE, API, RUNBOOK, agent guide (`CURSOR-AGENT.md`) |
+| `API-Fast/src/security/` | JWT, authz middleware, tenancy deps, passwords/lockout |
+| `API-Fast/src/services/` | audit, notification outbox, storage retention, observability, face match |
 | `.cursor/rules/` | Always-on + scoped agent rules |
 | `.cursor/skills/` | Task workflows (`dpu-face-kiosk`, `dpu-docker-rebuild`, `dpu-web-manage-ui`) |
 
@@ -30,10 +32,20 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 Code is **baked into images** — rebuild the service after source changes (`api`, `admin`, `nginx` as needed).
 
+## Security baseline (enterprise upgrade)
+
+- `SECRET_KEY` ≥ 32 chars from env; API refuses the placeholder when `AUTH_FAIL_FAST=true`
+- Every route except `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/` requires a Bearer JWT (`src/security/middleware.py` `AuthzMiddleware`)
+- `companyId` in a path, form, or body must be bound to the caller: use `assert_request_company_access(request, db, companyId)` from `src/security/deps.py`
+- New members get a random temporary password + `mustChangePassword`; never write `1234`
+- Kiosk WebSocket `session` carries `token`; `<img>` for `/images/*` appends `?token=`
+- Writes are audited (`audit_log`); notifications go through `notification_outbox`
+
 ## Agent defaults
 
 - Prefer existing patterns; do not invent a second face stack
 - Check-in UX is the **admin kiosk** (`/company/timestamp-face`); there is no separate mobile app
 - Do not commit unless asked; do not put secrets in rules/docs
-- After API/UI/nginx changes: rebuild and verify health / queue-stats
+- After API/UI/nginx changes: rebuild and verify `/health`, `/ready`, queue-stats (with a token)
+- Local `.env` must have a real `SECRET_KEY` before `docker compose up`, or `api` exits at import
 - Thai UI copy is OK for kiosk; keep code/comments in English unless the file already uses Thai

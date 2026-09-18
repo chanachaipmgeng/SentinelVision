@@ -23,9 +23,9 @@ export class HttpRequestInterceptor {
     } else {
       let authReq = req;
       const fullUrl = req.url.startsWith("http") ? req.url : environment.baseUrl + req.url;
-      const token = "Bearer "+this.tokenService.getToken()
-      console.log(fullUrl)
-      if (token != null) {
+      const raw = this.tokenService.getToken();
+      const token = raw ? (raw.startsWith("Bearer ") ? raw : "Bearer " + raw) : null;
+      if (token) {
         authReq = this.addTokenHeader(req, token ,fullUrl);
       }else{
         const overideReq = {
@@ -33,14 +33,16 @@ export class HttpRequestInterceptor {
         };
         authReq = req.clone(overideReq);
       }
-      console.log("full url : ",fullUrl)
       return next.handle(authReq).pipe(catchError(error => {
-        console.log("error",error)
-        if (error instanceof HttpErrorResponse && error.status === 403 && !fullUrl.includes("login")) {
-          console.log("error",403)
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 401 || error.status === 403) &&
+          !fullUrl.includes("/auth/login") &&
+          !fullUrl.includes("/auth/refresh")
+        ) {
           return this.handle403Error(authReq, next ,fullUrl);
         }
-        return throwError(error);
+        return throwError(() => error);
       }));
     }
 

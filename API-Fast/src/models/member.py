@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Date, Text, Enum
+from sqlalchemy import Column, String, Integer, DateTime, Date, Text, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from ..config.database import Base
@@ -35,6 +35,10 @@ class Member(Base):
     emergencyContactName = Column("emergency_contact_name", String, nullable=True)
     emergencyContactPhone = Column("emergency_contact_phone", String, nullable=True)
     attachmentUrls = Column("attachment_urls", Text, nullable=True)  # comma-separated filenames
+    mustChangePassword = Column("must_change_password", Boolean, nullable=False, default=False, server_default="false")
+    failedLoginCount = Column("failed_login_count", Integer, nullable=False, default=0, server_default="0")
+    lockedUntil = Column("locked_until", DateTime(timezone=True), nullable=True)
+    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     

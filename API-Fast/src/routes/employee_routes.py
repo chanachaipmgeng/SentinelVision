@@ -31,8 +31,13 @@ router = APIRouter()
 
 # ดึงข้อมูลพนักงานในบริษัททั้งหมดตาม companyId
 @router.get("/company/{companyId}", response_model=List[CompanyEmployeeResponse])
-async def get_companyEmployees_route(companyId: str, db: AsyncSession = Depends(get_db)):
-    return await get_all_companyEmployees(companyId, db)
+async def get_companyEmployees_route(
+    companyId: str,
+    limit: int | None = None,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_all_companyEmployees(companyId, db, limit=limit, offset=offset)
 
 
 # Excel import template (must be registered before /{company_employeeId})
@@ -102,3 +107,99 @@ async def get_companies_by_member_route(memberId: str, db: AsyncSession = Depend
 @router.get("/member/{memberId}/companies-admin", response_model=List[CompanyResponse])
 async def get_companies_by_admin_route(memberId: str, db: AsyncSession = Depends(get_db)):
     return await get_companies_admin(memberId, db)
+
+
+class _BytesUpload:
+    def __init__(self, name: str, data: bytes):
+        self.filename = name
+        self._data = data
+
+    async def read(self) -> bytes:
+        return self._data
+
+
+async def _run_import_job(job_id, company_id: str, filename: str, data: bytes, photos_name, photos_data):
+    from uuid import UUID
+    from datetime import datetime, timezone
+
+    from ..config.database import async_session
+    from ..services.notification_service import ImportJob, enqueue
+
+    async with async_session() as db:
+        job = await db.get(ImportJob, job_id)
+        if job:
+            job.status = "running"
+            await db.commit()
+        try:
+            result = await import_employees_from_excel(
+                company_id,
+                _BytesUpload(filename, data),
+                db,
+                photos=_BytesUpload(photos_name, photos_data) if photos_data else None,
+            )
+            job = await db.get(ImportJob, job_id)
+            if job:
+                job.status = "done"
+                job.result = result if isinstance(result, dict) else {"ok": True}
+                job.finishedAt = datetime.now(timezone.utc)
+            await db.commit()
+            await enqueue(
+                "import.finished",
+                "line",
+                {"body": f"Import finished for company {company_id}"},
+                company_id=company_id,
+            )
+        except Exception as exc:
+            job = await db.get(ImportJob, job_id)
+            if job:
+                job.status = "failed"
+                job.error = str(exc)[:500]
+                job.finishedAt = datetime.now(timezone.utc)
+                await db.commit()
+
+
+@router.post("/company/{companyId}/import-jobs")
+async def start_import_job(
+    companyId: str,
+    file: UploadFile = File(...),
+    photos: UploadFile | None = File(None),
+):
+    import asyncio
+    from uuid import uuid4
+
+    from ..config.database import async_session
+    from ..services.notification_service import ImportJob
+
+    data = await file.read()
+    photos_data = await photos.read() if photos else None
+    job_id = uuid4()
+    async with async_session() as db:
+        db.add(
+            ImportJob(
+                id=job_id,
+                companyId=companyId,
+                status="pending",
+            )
+        )
+        await db.commit()
+    asyncio.create_task(
+        _run_import_job(job_id, companyId, file.filename or "import.xlsx", data, getattr(photos, "filename", None), photos_data)
+    )
+    return {"jobId": str(job_id), "status": "pending"}
+
+
+@router.get("/company/{companyId}/import-jobs/{jobId}")
+async def get_import_job(companyId: str, jobId: str, db: AsyncSession = Depends(get_db)):
+    from ..services.notification_service import ImportJob
+
+    job = await db.get(ImportJob, jobId)
+    if not job or str(job.companyId) != companyId:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Import job not found")
+    return {
+        "jobId": str(job.id),
+        "status": job.status,
+        "result": job.result,
+        "error": job.error,
+    }

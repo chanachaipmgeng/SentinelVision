@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status, UploadFile
 from pathlib import Path
@@ -204,31 +204,11 @@ async def _search_face_pgvector(
     *,
     companyId: Optional[UUID] = None,
 ):
-    """
-    Nearest neighbor by cosine distance within optional company scope.
-    When companyId is set, only encodings of that company's employees are searched.
-    """
-    distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
-    stmt = select(
-        FaceEncoding.faceEncodingId,
-        FaceEncoding.memberId,
-        distance_expr.label("distance"),
-    )
-    if companyId is not None:
-        company_member_ids = select(CompanyEmployee.memberId).where(
-            CompanyEmployee.companyId == companyId
-        )
-        stmt = stmt.where(FaceEncoding.memberId.in_(company_member_ids))
-    stmt = stmt.order_by(distance_expr).limit(1)
-    result = await db.execute(stmt)
-    row = result.first()
-    if row is None:
-        return None
+    from ..services.face_match_service import search_face_pgvector
 
-    face_encoding_id, member_id, distance = row
-    if distance is None or float(distance) >= threshold:
-        return None
-    return face_encoding_id, member_id, float(distance)
+    return await search_face_pgvector(
+        db, target_encoding, threshold, companyId=companyId
+    )
 
 
 def _match_quality(distance: float, threshold: float) -> str:

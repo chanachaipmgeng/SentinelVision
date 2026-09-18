@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, WebSocket
+from fastapi import APIRouter, Depends, Request, UploadFile, File, Form, WebSocket
+from ..security.deps import assert_request_company_access
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from ..config.database import get_db
@@ -31,11 +32,14 @@ async def face_kiosk_ws(websocket: WebSocket):
 
 @router.get("/enrolled-images/{faceEncodingId}")
 async def enrolled_image_proxy_route(
+    request: Request,
     faceEncodingId: UUID,
     companyId: UUID,
+    db: AsyncSession = Depends(get_db),
     _auth=Depends(face_route_auth),
 ):
     """Proxy Face Core gated images for Web-Manage / kiosk preview."""
+    await assert_request_company_access(request, db, companyId)
     return await proxy_enrolled_image(faceEncodingId, companyId)
 
 
@@ -64,28 +68,33 @@ async def add_face_route(
 
 @router.post("/members/check-face-emp")
 async def check_face_emp_route(
+    request: Request,
     files: List[UploadFile] = File(...),
     companyId: UUID = Form(...),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """1:N match within company only (no timestamp)."""
+    await assert_request_company_access(request, db, companyId)
     return await check_face_emp(files, companyId, db)
 
 
 @router.post("/members/identify")
 async def identify_face_route(
+    request: Request,
     file: UploadFile = File(...),
     companyId: UUID = Form(...),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Single-frame identify within company for live name overlay (no timestamp)."""
+    await assert_request_company_access(request, db, companyId)
     return await identify_face(file, companyId, db)
 
 
 @router.post("/members/check-in")
 async def check_in_face_route(
+    request: Request,
     files: List[UploadFile] = File(...),
     companyId: UUID = Form(...),
     latitude: float = Form(...),
@@ -95,6 +104,7 @@ async def check_in_face_route(
     _auth=_face_auth,
 ):
     """Secure mode: multi-frame liveness + match + timestamp."""
+    await assert_request_company_access(request, db, companyId)
     return await check_in_face(
         files, companyId, latitude, longitude, db, note=note
     )
@@ -102,6 +112,7 @@ async def check_in_face_route(
 
 @router.post("/members/check-in-walkby")
 async def check_in_face_walkby_route(
+    request: Request,
     files: List[UploadFile] = File(...),
     companyId: UUID = Form(...),
     latitude: float = Form(...),
@@ -111,6 +122,7 @@ async def check_in_face_walkby_route(
     _auth=_face_auth,
 ):
     """Walk-by mode: 1–2 frames, no motion liveness (multi-person pass-through)."""
+    await assert_request_company_access(request, db, companyId)
     return await check_in_face_walkby(
         files, companyId, latitude, longitude, db, note=note
     )

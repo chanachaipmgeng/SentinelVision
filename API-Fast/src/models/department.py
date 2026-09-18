@@ -14,6 +14,7 @@ class Department(Base):
     companyId = Column(UUID(as_uuid=True), ForeignKey('company.companyId', ondelete="CASCADE"), nullable=False)
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
     updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
     # ความสัมพันธ์กับ Company
     company = relationship("Company", back_populates="departments")

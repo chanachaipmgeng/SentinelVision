@@ -654,6 +654,7 @@ async def import_employees_from_excel(
                     "employeeId": result.get("employeeId") or "",
                     "faceEnrolled": face_enrolled,
                     "faceWarning": face_warning,
+                    "temporaryPassword": result.get("temporaryPassword"),
                 }
             )
             boss_by_email[email] = member_id

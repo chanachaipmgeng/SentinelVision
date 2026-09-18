@@ -21,14 +21,39 @@ _completed = 0
 @dataclass
 class _Job:
     fn: Callable[[], Any]
+    device: str = "cpu"
     future: asyncio.Future = field(default_factory=lambda: asyncio.get_running_loop().create_future())
 
 
-async def start_face_gpu_workers(*, workers: int = 1, queue_size: int = 64) -> None:
-    global _queue, _started, _worker_count
+def _call_on_device(fn: Callable[[], Any], device: str) -> Any:
+    from .face_engine import set_thread_device
+
+    set_thread_device(device)
+    return fn()
+
+
+_devices: list[str] = ["cpu"]
+_rr = 0
+
+
+def _next_device() -> str:
+    global _rr
+    if not _devices:
+        return "cpu"
+    device = _devices[_rr % len(_devices)]
+    _rr += 1
+    return device
+
+
+async def start_face_gpu_workers(*, workers: int = 1, queue_size: int = 64, devices: Optional[list] = None) -> None:
+    global _queue, _started, _worker_count, _devices, _executor
     if _started:
         return
     workers = max(1, int(workers))
+    _devices = list(devices or ["cpu"])
+    if len(_devices) > 1 and workers < len(_devices):
+        workers = len(_devices)
+    _executor = ThreadPoolExecutor(max_workers=max(workers, 2), thread_name_prefix="face-gpu")
     _queue = asyncio.Queue(maxsize=max(8, int(queue_size)))
     _worker_count = workers
     for i in range(workers):
@@ -43,9 +68,12 @@ async def _worker_loop(worker_id: int) -> None:
     loop = asyncio.get_running_loop()
     while True:
         job: _Job = await _queue.get()
+        device = job.device or _devices[worker_id % len(_devices)]
         _active += 1
         try:
-            result = await loop.run_in_executor(_executor, job.fn)
+            result = await loop.run_in_executor(
+                _executor, lambda fn=job.fn, device=device: _call_on_device(fn, device)
+            )
             if not job.future.done():
                 job.future.set_result(result)
         except Exception as exc:
@@ -68,7 +96,7 @@ async def run_on_face_gpu(fn: Callable[[], Any]) -> Any:
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(_executor, fn)
 
-    job = _Job(fn=fn)
+    job = _Job(fn=fn, device=_next_device())
     await _queue.put(job)
     return await job.future
 
@@ -81,4 +109,5 @@ def face_gpu_queue_stats() -> dict:
         "active": _active,
         "completed": _completed,
         "maxsize": _queue.maxsize if _queue is not None else 0,
+        "devices": list(_devices),
     }

@@ -1,4 +1,5 @@
-import { Component, ElementRef } from '@angular/core';
+import { Component, ElementRef, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -17,17 +18,18 @@ interface Item {
   styleUrls: ['./header.component.scss']
 })
 
-export class HeaderComponent {
+export class HeaderComponent implements OnInit {
   userModel : UserProfileModel = new UserProfileModel(this.tokenService.getUser().member,this.translate)
   adminRole = false
-  cartItemCount: number = 5;
-  notificationCount: number = 5;
+  cartItemCount: number = 0;
+  notificationCount: number = 0;
   public isCollapsed = true;
   public selectedLanguage = "";
   constructor(public navServices: NavService,
     private elementRef: ElementRef,
     private tokenService: TokenService,
-    private translate: TranslateService) {
+    private translate: TranslateService,
+    private http: HttpClient) {
 
     this.translate.use(
       sessionStorage.getItem("Lang") != null
@@ -39,6 +41,22 @@ export class HeaderComponent {
       sessionStorage.getItem("Lang") != null
         ? sessionStorage.getItem("Lang")!
         : "th";
+  }
+
+  private loadPendingBadge(): void {
+    if (!this.tokenService.getToken()) {
+      return;
+    }
+    this.http.get<{ pending: number }>('/notifications/pending-count').subscribe({
+      next: (res) => {
+        this.notificationCount = res?.pending || 0;
+        this.cartItemCount = this.notificationCount;
+      },
+      error: () => {
+        this.notificationCount = 0;
+        this.cartItemCount = 0;
+      },
+    });
   }
   isFullScreen = false;
   fullScreenIconVisible = true;
@@ -94,7 +112,7 @@ export class HeaderComponent {
   public SearchResultEmpty: boolean = false;
   ngOnInit() {
     this.adminRole = this.tokenService.getUser().member.role == 99 ? true : false
-    console.log("Admin",this.adminRole)
+    this.loadPendingBadge();
     this.navServices.items.subscribe((menuItems) => {
       this.items = menuItems;
     });

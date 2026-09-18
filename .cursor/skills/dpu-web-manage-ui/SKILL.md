@@ -30,6 +30,13 @@ Admin CRUD lists, homes, dashboard polish, header/sidebar shell, face-management
 5. `app-empty-state` for loading / empty / no search hits
 6. Modal CRUD — keep existing save/delete APIs
 
+## Auth-aware pages
+
+- New company page → add under `companyRoutes[0].children` in `company-management.module.ts` (guarded by `RoleGuard`, `data.area='company'`); admin page → `admin[0].children` in `common.module.ts`
+- Do not add HTTP calls that bypass `HttpRequestInterceptor` (no raw `fetch`); `<img src>` for API images must use `?token=`
+- Header badge is `GET /notifications/pending-count`; do not hard-code counts
+- Reference for a lightweight standalone page with CSV export: `company-management/audit-log/`
+
 ## Shell rules
 
 - Keep Ynex attrs (`data-toggled`, `data-nav-layout`); do not remove mounted `app-switcher`
@@ -41,7 +48,9 @@ Admin CRUD lists, homes, dashboard polish, header/sidebar shell, face-management
 - [ ] Reuse shared kit; avoid duplicate toolbar/search CSS per page
 - [ ] `ng-select` → `[appendTo]="'body'"`
 - [ ] Labeled buttons: no `ti-btn-sm`
-- [ ] Filter full list, then slice for pager
+- [ ] Filter full list, then slice for pager (employees list also accepts `?limit=&offset=` server-side for large companies)
+- [ ] No new heavy deps (chart/map/editor); initial bundle warns at 2 MB
+- [ ] `Validators` from `@angular/forms`, never from `ngx-editor`
 - [ ] Rebuild admin: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build admin`
 - [ ] Smoke-check touched routes return 200
 

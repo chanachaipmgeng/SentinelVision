@@ -10,6 +10,11 @@ export class LoginModel {
 
 export class UserModel {
   public access_token: string = "";
+  public accessToken?: string;
+  public refresh_token?: string;
+  public refreshToken?: string;
+  public mustChangePassword?: boolean;
+  public must_change_password?: boolean;
   public token_type: string = "";
   public member : UserProfileModel = new UserProfileModel()
 }

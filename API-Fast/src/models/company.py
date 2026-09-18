@@ -24,6 +24,7 @@ class Company(Base):
     status = Column(Enum(PublicType), nullable=False, default=PublicType.PUBLIC)  # Default as Enum instance
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
     ownerName = Column(String, default="")
     contact = Column(String, default="")
 

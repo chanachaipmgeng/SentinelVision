@@ -20,8 +20,9 @@ https://mygitplus.myhr.co.th/chanachai.o/facescan-timeattendance.git
 4. [Build และเปิดระบบ](#4-build-และเปิดระบบ)
 5. [Seed mock / demo data](#5-seed-mock--demo-data)
 6. [เข้าใช้งานและบัญชีทดสอบ](#6-เข้าใช้งานและบัญชีทดสอบ)
-7. [อัปเดตโค้ด / คำสั่งใช้บ่อย](#7-อัปเดตโค้ด--คำสั่งใช้บ่อย)
-8. [แก้ปัญหาเบื้องต้น](#8-แก้ปัญหาเบื้องต้น)
+7. [นำเข้าพนักงาน (Excel + รูป)](#7-นำเข้าพนักงาน-excel--รูป)
+8. [อัปเดตโค้ด / คำสั่งใช้บ่อย](#8-อัปเดตโค้ด--คำสั่งใช้บ่อย)
+9. [แก้ปัญหาเบื้องต้น](#9-แก้ปัญหาเบื้องต้น)
 
 ---
 
@@ -83,7 +84,8 @@ nano .env
 | `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
 | `CHECK_IN_DEDUPE_SECONDS` | `300` | กันลงเวลาซ้ำ (วินาที) · `0` = ปิด |
-| `IMAGE_BLUR_THRESHOLD` | `20.0` | เกณฑ์ blur ตอน enroll |
+| `IMAGE_BLUR_THRESHOLD` | `20.0` | เกณฑ์ blur ตอน enroll ที่คีออส / เพิ่มใบหน้า |
+| `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | เกณฑ์ blur ตอน import Excel+ZIP · **`0` = ไม่ตัดรูปเบลอจากระบบอื่น** (ยังต้องเจอใบหน้า) |
 
 ตัวอย่าง `.env` สำหรับ production เบื้องต้น:
 
@@ -96,6 +98,7 @@ SECRET_KEY=ใส่ค่าสุ่มยาวอย่างน้อย-32
 FACE_DEVICE=cuda:0
 FACE_RECOGNITION_THRESHOLD=0.40
 IMAGE_BLUR_THRESHOLD=20.0
+IMAGE_BLUR_THRESHOLD_IMPORT=0
 IMAGE_BRIGHTNESS_MIN=40
 IMAGE_BRIGHTNESS_MAX=220
 ```
@@ -223,7 +226,65 @@ http://<SERVER_IP>/#/company/company-emp
 
 ---
 
-## 7. อัปเดตโค้ด / คำสั่งใช้บ่อย
+## 7. นำเข้าพนักงาน (Excel + รูป)
+
+หน้าพนักงานบริษัท → ดาวน์โหลดเทมเพลต → กรอกชีต `Employees` → อัปโหลด `.xlsx` และถ้ามีรูปให้แนบ ZIP
+
+API:
+
+- `GET /employees/company/{companyId}/import-template`
+- `POST /employees/company/{companyId}/import` (multipart `file` = Excel, `photos` = ZIP)
+
+### เกณฑ์รูปใบหน้า
+
+| ทาง | ตัวแปร | ค่าเริ่มต้น | ความหมาย |
+|-----|--------|-------------|----------|
+| คีออส / เพิ่มใบหน้าทีละคน | `IMAGE_BLUR_THRESHOLD` | `20.0` | ตัดรูปเบลอ |
+| Import Excel+ZIP จากระบบอื่น | `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | **`0` = ไม่ตัดรูปเบลอ** (ยังต้องเจอใบหน้า) |
+
+บนเซิร์ฟเวอร์หลัง `git pull` ให้มีใน `.env`:
+
+```env
+IMAGE_BLUR_THRESHOLD=20.0
+IMAGE_BLUR_THRESHOLD_IMPORT=0
+```
+
+แล้ว rebuild:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api nginx
+```
+
+ตรวจค่าใน container:
+
+```bash
+docker exec dpu-api python -c "from src.config.settings import settings; print(settings.IMAGE_BLUR_THRESHOLD, settings.IMAGE_BLUR_THRESHOLD_IMPORT)"
+```
+
+ต้องได้ `20.0 0.0`
+
+### Import ซ้ำไฟล์เดิม
+
+- อีเมลที่**ยังไม่มีในบริษัท** → สร้างใหม่ และลงทะเบียนใบหน้าได้
+- อีเมลที่**มีอยู่แล้ว** → แถวนั้นเป็น error `Member is already registered in this company` ไม่แก้ข้อมูลเดิม และไม่ลองลงใบหน้าใหม่อีก
+- แถวที่ fail จะไม่ทำให้แถวถัดไปพังทั้งไฟล์
+
+### ไฟล์ใหญ่ (413 Request Entity Too Large)
+
+`dpu-nginx` รับได้ถึง 500MB และ `/employees/.../import` timeout 1 ชั่วโมง
+
+ถ้าเข้าผ่าน **HTTPS** (เช่น `https://face-in.myhr.co.th`) nginx ฝั่ง TLS ด้านนอกมักยังเป็น 1MB — วางไฟล์นี้แล้ว reload:
+
+```bash
+sudo cp docker/nginx/host-upload-limit.conf /etc/nginx/conf.d/dpu-upload-limit.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+ตัวอย่าง site TLS ทั้งไฟล์อยู่ที่ `docker/nginx/tls-edge.example.conf`
+
+---
+
+## 8. อัปเดตโค้ด / คำสั่งใช้บ่อย
 
 ### อัปเดตจาก Git แล้ว rebuild
 
@@ -272,15 +333,16 @@ docker compose run --rm \
 
 ---
 
-## 8. แก้ปัญหาเบื้องต้น
+## 9. แก้ปัญหาเบื้องต้น
 
 | อาการ | แนวทางตรวจ |
 |-------|------------|
 | เปิดเว็บไม่ได้ | `docker compose ps` ดูว่า `nginx` / `admin` Up หรือยัง · ตรวจ firewall พอร์ต `HTTP_PORT` |
 | API 502 | `docker compose logs api` · restart nginx หลัง recreate api: `docker compose up -d --build nginx` |
-| Upload ได้ 413 Request Entity Too Large | เพิ่ม `client_max_body_size 100m;` ใน **nginx ฝั่ง TLS ด้านนอก** (ค่าเริ่มต้นมักเป็น 1m) แล้ว `nginx -s reload` · rebuild `dpu-nginx` ด้วย |
+| Upload / import พนักงานได้ 413 Request Entity Too Large | nginx ค่าเริ่มต้นรับได้แค่ 1m · วาง `docker/nginx/host-upload-limit.conf` เป็น `/etc/nginx/conf.d/dpu-upload-limit.conf` บน **nginx ฝั่ง TLS ด้านนอก** แล้ว `nginx -t && nginx -s reload` · rebuild `dpu-nginx` ด้วย (`client_max_body_size 500m`) |
 | Seed ไม่ติด | API ต้อง healthy ก่อน · ดู log จากคำสั่ง `docker compose run ... seed_demo_data.py` |
-| Face / enroll บอก blur | แสงสว่างพอ · เกณฑ์อยู่ใน `.env` (`IMAGE_BLUR_THRESHOLD`) |
+| Face / enroll ที่คีออสบอก blur | แสงสว่างพอ · เกณฑ์คีออสคือ `IMAGE_BLUR_THRESHOLD` (ค่าเริ่มต้น 20) |
+| Import พนักงานรูปจากระบบอื่นถูกตัด blur / แถวถัดไปพัง `greenlet_spawn` | ตั้ง `IMAGE_BLUR_THRESHOLD_IMPORT=0` ใน `.env` แล้ว rebuild `api` (+ `nginx` ถ้าอัปเดต timeout) · คีออสยังใช้เกณฑ์ 20 อยู่ |
 | Build API ล้มเหลว `onnxruntime-gpu` No matching distribution | ดึงโค้ดล่าสุด (`git pull`) — โปรเจกต์ใช้ `onnxruntime-gpu==1.21.0` แล้ว (1.20.1 ถูกลบจาก PyPI) |
 | ไม่มี GPU / CUDA error | ใช้ `docker-compose.cpu.yml` และ `FACE_DEVICE=cpu` |
 | Login ไม่ได้หลัง seed | ใช้ username ในตารางด้านบน + รหัส `Password123!` |

@@ -34,6 +34,8 @@ Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them
 | `HTTP_PORT` | `8880` (BFF dev) / `80` standalone | nginx host port |
 | `POSTGRES_PORT` | `5434` (BFF dev) / `5432` standalone | database host port |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | cosine **distance** cutoff (lower = stricter; local mode) |
+| `IMAGE_BLUR_THRESHOLD` | `20.0` | reject blurry kiosk / add-face enroll |
+| `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | Excel+ZIP import blur gate; `0` = do not reject blurry photos (face still required) |
 | `SECRET_KEY` | change-me… | rotate for real use |
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
 | `FACE_CORE_URL` | `http://host.docker.internal:8081` | Face Core base URL |

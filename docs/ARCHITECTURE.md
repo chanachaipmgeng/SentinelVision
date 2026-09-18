@@ -61,7 +61,7 @@ Env on `dpu-api`: `FACE_CORE_ENABLED`, `FACE_CORE_URL`, `FACE_CORE_API_KEY`. Set
 
 | Component | Path | Role |
 |-----------|------|------|
-| Gateway | `docker/nginx/` | Reverse proxy |
+| Gateway | `docker/nginx/` | Reverse proxy (`client_max_body_size 500m`; import timeout 1h). Host TLS nginx must match or uploads return 413 — see `host-upload-limit.conf`. |
 | API | `API-Fast/` | Auth, CRUD, face, timestamps, dashboard, system TTS settings |
 | Admin UI | `Web-Manage/` | Angular 17 company/admin console + face kiosk |
 | Database | `pgvector/pgvector:pg16` | Relational data + `vector(512)` embeddings |

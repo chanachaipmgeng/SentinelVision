@@ -26,6 +26,8 @@ API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only â
 
 - Resolve API via Docker DNS `127.0.0.11` + variable `proxy_pass` (avoid stale IP 502)
 - Face WS: `location ^~ /face/ws/` with Upgrade + long timeouts **before** the general `/face` regex
+- Uploads: `client_max_body_size 500m` (http + `/employees/.../import`); import `proxy_read_timeout 3600s`
+- HTTPS 413: drop `docker/nginx/host-upload-limit.conf` onto the **host** TLS nginx (`/etc/nginx/conf.d/`)
 - Proxy prefixes: auth, members, face, timestamp, system, dashboard, images, enrolled_images, â€¦
 
 ## Health

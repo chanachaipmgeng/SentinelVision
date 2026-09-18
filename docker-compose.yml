@@ -31,6 +31,8 @@ services:
       # Soft dedupe window for face check-in (seconds). 0 = disable.
       CHECK_IN_DEDUPE_SECONDS: ${CHECK_IN_DEDUPE_SECONDS:-300}
       IMAGE_BLUR_THRESHOLD: ${IMAGE_BLUR_THRESHOLD:-20.0}
+      # Excel import from other HR systems. 0 = accept blurry photos (face still required).
+      IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}

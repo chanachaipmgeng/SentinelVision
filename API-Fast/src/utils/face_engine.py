@@ -155,7 +155,10 @@ def detect_faces_bytes(image_bytes: bytes) -> dict:
 
 
 def extract_face_features(
-    image_path: str, *, require_quality: bool = True
+    image_path: str,
+    *,
+    require_quality: bool = True,
+    blur_threshold: Optional[float] = None,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
     """
     Detect the largest face and return (normed_embedding list, bbox).
@@ -171,7 +174,9 @@ def extract_face_features(
         return None
 
     if require_quality:
-        is_good, message = check_image_quality(image_path, face.bbox)
+        is_good, message = check_image_quality(
+            image_path, face.bbox, blur_threshold=blur_threshold
+        )
         if not is_good:
             raise ValueError(message)
 
@@ -182,10 +187,19 @@ def extract_face_features(
     return embedding.astype(np.float32).tolist(), face.bbox.astype(np.float32)
 
 
-def generate_face_encoding(image_path: str) -> Optional[List[float]]:
+def generate_face_encoding(
+    image_path: str,
+    *,
+    require_quality: bool = True,
+    blur_threshold: Optional[float] = None,
+) -> Optional[List[float]]:
     """Quality-check + InsightFace 512-d embedding for enrollment."""
     try:
-        result = extract_face_features(image_path, require_quality=True)
+        result = extract_face_features(
+            image_path,
+            require_quality=require_quality,
+            blur_threshold=blur_threshold,
+        )
         if result is None:
             return None
         return result[0]

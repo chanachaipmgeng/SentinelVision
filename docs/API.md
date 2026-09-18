@@ -20,6 +20,8 @@ Interactive docs: http://localhost/docs
 | CRUD | `/company-locations/company/{companyId}` | open | Geofence sites |
 | CRUD | `/departments/`, `/positions/` | open | |
 | CRUD | `/employees/company/{companyId}` | open | |
+| GET | `/employees/company/{companyId}/import-template` | open | Excel template |
+| POST | `/employees/company/{companyId}/import` | open | multipart `file` (.xlsx) + optional `photos` (.zip). Duplicate email in the same company → error, other rows continue. Import blur uses `IMAGE_BLUR_THRESHOLD_IMPORT` (`0` = allow blurry HR photos). |
 
 ## Face
 

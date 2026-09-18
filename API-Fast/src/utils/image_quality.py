@@ -8,12 +8,17 @@ from ..config.settings import settings
 def check_image_quality(
     image_path: str,
     bbox: Optional[Union[np.ndarray, list]] = None,
+    *,
+    blur_threshold: Optional[float] = None,
 ) -> Tuple[bool, str]:
     """
     Brightness + blur (Laplacian variance).
 
     When ``bbox`` [x1,y1,x2,y2] is provided, metrics use the face crop
     (webcam full-frames often fail blur because soft backgrounds dominate).
+
+    ``blur_threshold`` overrides ``IMAGE_BLUR_THRESHOLD``. ``<= 0`` skips the
+    blur gate (used for Excel import of photos from other HR systems).
     """
     try:
         image = cv2.imread(image_path)
@@ -33,12 +38,15 @@ def check_image_quality(
                 f"({settings.IMAGE_BRIGHTNESS_MIN}-{settings.IMAGE_BRIGHTNESS_MAX}).",
             )
 
+        blur_limit = (
+            settings.IMAGE_BLUR_THRESHOLD if blur_threshold is None else float(blur_threshold)
+        )
         blur_value = float(cv2.Laplacian(region, cv2.CV_64F).var())
-        if blur_value < settings.IMAGE_BLUR_THRESHOLD:
+        if blur_limit > 0 and blur_value < blur_limit:
             return (
                 False,
                 f"Image is too blurry (Blur value: {blur_value:.2f}, "
-                f"Threshold: {settings.IMAGE_BLUR_THRESHOLD}).",
+                f"Threshold: {blur_limit}).",
             )
 
         return True, "Image quality is good."

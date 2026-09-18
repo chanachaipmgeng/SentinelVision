@@ -31,6 +31,8 @@ from ..schemas.company_employee_schema import (
     PositionInput,
 )
 from ..utils.face_engine import generate_face_encoding
+from ..utils.face_gpu_queue import run_on_face_gpu
+from ..config.settings import settings
 from .company_employee_controller import register_member
 
 # Header keys used in row 1 of the Employees sheet (Thai labels for HR users).
@@ -144,8 +146,11 @@ def _lookup_by_name(items: List[Any], name: str) -> Optional[Any]:
     if not key:
         return None
     for item in items:
-        th = (getattr(item, "thName", None) or "").strip().lower()
-        eng = (getattr(item, "engName", None) or "").strip().lower()
+        # Read loaded columns only — expired ORM attrs would lazy-IO and
+        # raise greenlet_spawn in this sync helper.
+        data = item.__dict__
+        th = (data.get("thName") or "").strip().lower()
+        eng = (data.get("engName") or "").strip().lower()
         if key == th or key == eng:
             return item
     return None
@@ -287,6 +292,14 @@ def _resolve_photo_bytes(
     return None
 
 
+async def _recover_import_session(db: AsyncSession) -> None:
+    """Clear a failed/expired async session so the next Excel row can continue."""
+    try:
+        await db.rollback()
+    except Exception:
+        pass
+
+
 async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSession) -> str:
     """Save profile picture + InsightFace encoding. Returns faceEncodingId."""
     member = await db.get(Member, UUID(str(member_id)))
@@ -304,13 +317,18 @@ async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSessio
     profile_name = f"{uuid4()}.jpg"
     profile_path = uploaded_dir / profile_name
     file_moved = False
+    encoding_started = False
 
     try:
         temp_path.write_bytes(image_bytes)
-        # keep a copy for profile display
         shutil.copyfile(temp_path, profile_path)
 
-        encoding = generate_face_encoding(str(temp_path))
+        path = str(temp_path)
+        blur_limit = float(settings.IMAGE_BLUR_THRESHOLD_IMPORT)
+        encoding_started = True
+        encoding = await run_on_face_gpu(
+            lambda p=path, b=blur_limit: generate_face_encoding(p, blur_threshold=b)
+        )
         if encoding is None:
             raise ValueError("ไม่พบใบหน้าในรูป หรือคุณภาพรูปไม่ผ่านเกณฑ์")
 
@@ -325,12 +343,15 @@ async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSessio
         file_moved = True
         return str(new_face.faceEncodingId)
     except ValueError:
-        await db.rollback()
+        # Do not rollback here: employee row is already committed. Rollback
+        # expires cached Department/Position objects and the next Excel rows
+        # then fail with greenlet_spawn / await_only().
         if profile_path.exists():
             profile_path.unlink(missing_ok=True)
         raise
     except Exception as exc:
-        await db.rollback()
+        if encoding_started:
+            await _recover_import_session(db)
         if profile_path.exists():
             profile_path.unlink(missing_ok=True)
         raise ValueError(f"บันทึกใบหน้าไม่สำเร็จ: {exc}") from exc
@@ -622,6 +643,8 @@ async def import_employees_from_excel(
                     faces_ok += 1
             except Exception as face_exc:
                 face_warning = str(face_exc)
+                await _recover_import_session(db)
+                departments, positions = await _load_org_lookups(companyId, db)
 
             created.append(
                 {
@@ -635,9 +658,13 @@ async def import_employees_from_excel(
             )
             boss_by_email[email] = member_id
         except HTTPException as exc:
+            await _recover_import_session(db)
+            departments, positions = await _load_org_lookups(companyId, db)
             detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
             errors.append({"row": row_num, "email": email, "message": detail})
         except Exception as exc:
+            await _recover_import_session(db)
+            departments, positions = await _load_org_lookups(companyId, db)
             errors.append({"row": row_num, "email": email, "message": str(exc)})
 
     return {

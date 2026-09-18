@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # Image Quality Settings — measured on face crop when available
     IMAGE_BLUR_THRESHOLD: float = 20.0
+    # Excel import of photos from other systems. 0 = skip blur reject (face still required).
+    IMAGE_BLUR_THRESHOLD_IMPORT: float = 0.0
     IMAGE_BRIGHTNESS_MIN: int = 40
     IMAGE_BRIGHTNESS_MAX: int = 220
 

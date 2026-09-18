@@ -13,20 +13,41 @@ from ..config.settings import settings
 
 IdentifyMode = Literal["fast", "walkby", "secure"]
 
-_sdk_root = Path(__file__).resolve().parents[4] / "face-core" / "sdk" / "python"
-if _sdk_root.is_dir() and str(_sdk_root) not in sys.path:
-    sys.path.insert(0, str(_sdk_root))
+
+def _add_face_core_sdk_to_path() -> None:
+    """Locate sibling face-core/sdk/python without assuming repo depth.
+
+    Docker copies API-Fast to /app (too shallow for parents[4]). Dev trees
+    keep dpu-project next to face-core — walk parents until that dir exists.
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "face-core" / "sdk" / "python"
+        if candidate.is_dir() and str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+            return
+
+
+_add_face_core_sdk_to_path()
 
 try:
     from face_core.client import FaceCoreClient as _SdkClient
     from face_core.client import FaceCoreError, IdentifyMode as _SdkIdentifyMode
-except ImportError as _import_err:
-    raise ImportError(
-        "face_core SDK not found. pip install ../../../face-core/sdk/python "
-        "or set PYTHONPATH to face-core/sdk/python"
-    ) from _import_err
 
-IdentifyMode = _SdkIdentifyMode  # noqa: F811
+    IdentifyMode = _SdkIdentifyMode  # noqa: F811
+except ImportError as _import_err:
+    _SdkClient = None  # type: ignore[assignment,misc]
+
+    class FaceCoreError(Exception):  # type: ignore[no-redef]
+        def __init__(self, detail: str = "", status_code: int = 502):
+            super().__init__(detail)
+            self.detail = detail
+            self.status_code = status_code
+
+    if settings.FACE_CORE_ENABLED:
+        raise ImportError(
+            "face_core SDK not found. pip install ../../../face-core/sdk/python "
+            "or set PYTHONPATH to face-core/sdk/python"
+        ) from _import_err
 
 _client: Optional["FaceCoreClient"] = None
 
@@ -54,6 +75,11 @@ class FaceCoreClient:
     """Wraps SDK client; maps FaceCoreError → HTTPException for FastAPI routes."""
 
     def __init__(self, base_url: str, api_key: str, *, timeout: float = 120.0):
+        if _SdkClient is None:
+            raise RuntimeError(
+                "face_core SDK is not installed; set FACE_CORE_ENABLED=false "
+                "or mount face-core/sdk/python"
+            )
         self._inner = _SdkClient(base_url, api_key, timeout=timeout)
 
     async def ensure_company(self, company_code: str, display_name: Optional[str] = None) -> dict:

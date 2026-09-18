@@ -37,7 +37,9 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 
 - Every face HTTP route needs `Authorization: Bearer`; form `companyId` is bound to the caller (company admin of that company or system admin)
 - WS: first message `{"type":"session","companyId":..,"token":..,"latitude":..,"longitude":..}` — server validates the token and company before accepting frames. Without a valid token the server replies `{"type":"error","detail":"Invalid token"}`
-- Access tokens last `ACCESS_TOKEN_EXPIRE_MINUTES` (60). A kiosk that runs all day relies on the HTTP interceptor refresh; re-send `session` after a reconnect with the current token
+- Access tokens last `ACCESS_TOKEN_EXPIRE_MINUTES` (60). Server sends `token_expiring`; client calls `/auth/refresh-token` and re-sends `session` without dropping the socket. Reconnect always re-sends `session` from `TokenService`
+- Boxes come from WS `detected` only. Do not add face-api.js or `assets/models` back into the admin image
+- HTTP 503 `face_core_down` means the circuit is open; show a scan-unavailable state, do not hammer detect
 - Punch photo URLs from the kiosk use `authedImage()` → `/images/<file>?token=<jwt>`
 
 ## GPU / backpressure

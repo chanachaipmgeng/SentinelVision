@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True
     LINE_CHANNEL_ACCESS_TOKEN: str = ""
     NOTIFY_POLL_SECONDS: int = 30
+    SERVICE_NOTIFY_TOKEN: str = ""
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

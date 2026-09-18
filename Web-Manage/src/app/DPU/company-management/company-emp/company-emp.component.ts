@@ -1170,12 +1170,33 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     }
     this.isImporting = true;
     this.cdr.detectChanges();
-    this.employeeService.importExcel(this.companyId, file, photosZip).subscribe({
-      next: (result) => {
+    this.employeeService.startImportJob(this.companyId, file, photosZip).subscribe({
+      next: (job) => this.pollImportJob(job.jobId),
+      error: (err) => {
         this.isImporting = false;
         this.cdr.detectChanges();
-        this.ngOnInit();
-        this.showImportResult(result);
+        swal('นำเข้าไม่สำเร็จ', this.formatApiError(err), 'error');
+      },
+    });
+  }
+
+  private pollImportJob(jobId: string): void {
+    this.employeeService.importJob(this.companyId, jobId).subscribe({
+      next: (job) => {
+        if (job.status === 'done') {
+          this.isImporting = false;
+          this.cdr.detectChanges();
+          this.ngOnInit();
+          this.showImportResult(job.result || { total: 0, success: 0, failed: 0 });
+          return;
+        }
+        if (job.status === 'failed') {
+          this.isImporting = false;
+          this.cdr.detectChanges();
+          swal('นำเข้าไม่สำเร็จ', job.error || 'import failed', 'error');
+          return;
+        }
+        setTimeout(() => this.pollImportJob(jobId), 2000);
       },
       error: (err) => {
         this.isImporting = false;

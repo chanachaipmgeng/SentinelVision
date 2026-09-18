@@ -6,12 +6,15 @@ from ..utils.file_handler import save_uploaded_file
 from uuid import UUID
 from ..schemas.member_schema import MemberUpdate
 
-async def get_users(db: AsyncSession):
-    result = await db.execute(select(Member))
+async def get_users(db: AsyncSession, include_deleted: bool = False):
+    stmt = select(Member)
+    if not include_deleted:
+        stmt = stmt.where(Member.deletedAt.is_(None))
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 async def get_user_by_id(id: UUID, db: AsyncSession):
-    result = await db.execute(select(Member).where(Member.memberId == id))
+    result = await db.execute(select(Member).where(Member.memberId == id, Member.deletedAt.is_(None)))
     user = result.scalar_one_or_none()
     return user
 
@@ -28,7 +31,7 @@ async def create_user(user_data: dict, db: AsyncSession):
 async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
     try:
         # Fetch the user
-        result = await db.execute(select(Member).where(Member.memberId == id))
+        result = await db.execute(select(Member).where(Member.memberId == id, Member.deletedAt.is_(None)))
         member = result.scalar_one_or_none()
 
         if not member:
@@ -74,12 +77,12 @@ async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
 
 async def delete_user(memberId: UUID, db: AsyncSession):
     # Retrieve the member by ID
-    member = await db.get(Member, memberId)
-    if not member:
-        raise HTTPException(status_code=404, detail="Member not found")
+    from ..utils.soft_delete import mark_deleted
 
-    # Delete the member instance
-    await db.delete(member)
+    member = await db.get(Member, memberId)
+    if not member or member.deletedAt is not None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    mark_deleted(member)
     await db.commit()
 
     return {

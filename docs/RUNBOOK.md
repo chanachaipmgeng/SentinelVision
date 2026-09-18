@@ -17,4 +17,17 @@ Host TLS nginx must set `client_max_body_size 500m`. See `docker/nginx/tls-edge.
 The API refuses to start when `AUTH_FAIL_FAST=true` and `SECRET_KEY` is shorter than 32 characters or still `change-me-in-production`. Set a new secret and restart `api`. Existing tokens become invalid.
 
 ## Biometric data
-Face vectors in `face_encoding` are required for matching. `enrolled_images` are gallery copies. Punch photos in `uploaded_images` are attendance evidence. `temp_images` can be deleted; the retention loop removes them after `TEMP_RETENTION_HOURS`.
+Face vectors in `face_encoding` are required for matching when DPU runs InsightFace itself. In BFF mode Face Core owns embeddings; DPU keeps timestamps and punch photos. `temp_images` can be deleted; the retention loop removes them after `TEMP_RETENTION_HOURS`.
+
+## Face Core down
+`/ready` returns 503 `face_core_down` when `FACE_CORE_URL/v1/health` fails. The kiosk shows scan errors and the API opens a 15 second circuit instead of retrying every frame. Restart `face-core-api` on `face-net`, then `dpu-api`.
+
+## Rotate Face Core key
+Create a key with `POST /v1/api-keys` on face-core, put it in DPU `.env` as `FACE_CORE_API_KEY`, recreate `dpu-api`, then revoke the old key.
+
+## One GPU down
+Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Start `face-core-gpu1` again when the second card is back.
+
+## Alembic
+Existing databases already applied `schema_migrate`. After pulling this revision run `alembic stamp 0002_schema_migrate` inside `dpu-api` (needs `DATABASE_URL`). Fresh databases can `alembic upgrade head` after `create_all`.
+

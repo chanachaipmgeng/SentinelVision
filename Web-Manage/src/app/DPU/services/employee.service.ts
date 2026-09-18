@@ -180,6 +180,24 @@ export class EmployeeService {
     );
   }
 
+  startImportJob(companyId: string, file: File, photosZip?: File | null) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (photosZip) {
+      formData.append('photos', photosZip);
+    }
+    return this.http.post<{ jobId: string; status: string }>(
+      this.apiBaseUrl + '/' + companyId + '/import-jobs',
+      formData
+    );
+  }
+
+  importJob(companyId: string, jobId: string) {
+    return this.http.get<{ status: string; result: any; error: string }>(
+      this.apiBaseUrl + '/' + companyId + '/import-jobs/' + jobId
+    );
+  }
+
 }
 
 export interface EmployeeImportCreatedRow {

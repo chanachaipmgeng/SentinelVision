@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import Awaitable, Callable, List, Literal, Optional, TypeVar, Union
 
 import httpx
 from fastapi import HTTPException, status
@@ -50,6 +51,25 @@ except ImportError as _import_err:
         ) from _import_err
 
 _client: Optional["FaceCoreClient"] = None
+_fail_streak = 0
+_open_until = 0.0
+_T = TypeVar("_T")
+_WEAK_KEYS = {"", "dev-face-core-key-change-me", "change-me", "changeme"}
+
+
+def assert_face_core_configured() -> None:
+    """Fail fast when BFF mode is on but the API key is missing or still the placeholder."""
+    if not settings.FACE_CORE_ENABLED:
+        return
+    key = (settings.FACE_CORE_API_KEY or "").strip()
+    if key in _WEAK_KEYS or len(key) < 16:
+        raise RuntimeError(
+            "FACE_CORE_ENABLED requires FACE_CORE_API_KEY (at least 16 characters, not the placeholder)"
+        )
+
+
+def face_core_circuit_open() -> bool:
+    return time.monotonic() < _open_until
 
 
 def _raise_http(exc: FaceCoreError) -> None:
@@ -71,6 +91,35 @@ def _raise_http(exc: FaceCoreError) -> None:
     )
 
 
+async def _guarded(factory: Callable[[], Awaitable[_T]], *, retry: bool) -> _T:
+    """One retry for idempotent calls, then open a short circuit so kiosks see face_core_down."""
+    global _fail_streak, _open_until
+    if time.monotonic() < _open_until:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="face_core_down")
+    last: Optional[BaseException] = None
+    attempts = 2 if retry else 1
+    for i in range(attempts):
+        try:
+            result = await factory()
+            _fail_streak = 0
+            return result
+        except FaceCoreError as exc:
+            last = exc
+            if exc.status_code < 500 or i == attempts - 1:
+                break
+        except Exception as exc:
+            last = exc
+            if i == attempts - 1:
+                break
+    _fail_streak += 1
+    if _fail_streak >= 3:
+        _open_until = time.monotonic() + 15
+        _fail_streak = 0
+    if isinstance(last, FaceCoreError) and last.status_code < 500:
+        _raise_http(last)
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="face_core_down")
+
+
 class FaceCoreClient:
     """Wraps SDK client; maps FaceCoreError → HTTPException for FastAPI routes."""
 
@@ -78,16 +127,15 @@ class FaceCoreClient:
         if _SdkClient is None:
             raise RuntimeError(
                 "face_core SDK is not installed; set FACE_CORE_ENABLED=false "
-                "or mount face-core/sdk/python"
+                "or bake face-core/sdk/python into the image"
             )
         self._inner = _SdkClient(base_url, api_key, timeout=timeout)
 
     async def ensure_company(self, company_code: str, display_name: Optional[str] = None) -> dict:
-        try:
-            return await self._inner.ensure_company(company_code, display_name=display_name)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.ensure_company(company_code, display_name=display_name),
+            retry=True,
+        )
 
     async def enroll(
         self,
@@ -97,13 +145,10 @@ class FaceCoreClient:
         *,
         filename: str = "face.jpg",
     ) -> dict:
-        try:
-            return await self._inner.enroll(
-                company_code, subject_id, file_path, filename=filename
-            )
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.enroll(company_code, subject_id, file_path, filename=filename),
+            retry=False,
+        )
 
     async def identify(
         self,
@@ -111,11 +156,10 @@ class FaceCoreClient:
         file_paths: List[Union[str, Path]],
         mode: IdentifyMode = "fast",
     ) -> dict:
-        try:
-            return await self._inner.identify(company_code, file_paths, mode=mode)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.identify(company_code, file_paths, mode=mode),
+            retry=True,
+        )
 
     async def verify(
         self,
@@ -123,53 +167,40 @@ class FaceCoreClient:
         subject_id: str,
         file_path: Union[str, Path],
     ) -> dict:
-        try:
-            return await self._inner.verify(company_code, subject_id, file_path)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.verify(company_code, subject_id, file_path),
+            retry=True,
+        )
 
     async def list_faces(self, company_code: str, subject_id: str) -> List[dict]:
-        try:
-            return await self._inner.list_faces(company_code, subject_id)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.list_faces(company_code, subject_id),
+            retry=True,
+        )
 
     async def fetch_face_image(self, company_code: str, face_id: str) -> bytes:
-        try:
-            return await self._inner.fetch_face_image(company_code, face_id)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.fetch_face_image(company_code, face_id),
+            retry=True,
+        )
 
     async def delete_face(self, face_id: str) -> dict:
-        try:
-            return await self._inner.delete_face(face_id)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(lambda: self._inner.delete_face(face_id), retry=False)
 
     async def clear_subject_faces(self, company_code: str, subject_id: str) -> dict:
-        try:
-            return await self._inner.clear_subject_faces(company_code, subject_id)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.clear_subject_faces(company_code, subject_id),
+            retry=False,
+        )
 
     async def detect(self, image_bytes: bytes) -> dict:
-        try:
-            return await self._inner.detect(image_bytes)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(lambda: self._inner.detect(image_bytes), retry=True)
 
     async def queue_stats(self, company_code: Optional[str] = None) -> dict:
-        try:
-            return await self._inner.queue_stats(company_code=company_code)
-        except FaceCoreError as exc:
-            _raise_http(exc)
-            raise
+        return await _guarded(
+            lambda: self._inner.queue_stats(company_code=company_code),
+            retry=True,
+        )
 
 
 def get_face_core_client() -> FaceCoreClient:
@@ -189,7 +220,19 @@ def get_face_core_client() -> FaceCoreClient:
 
 
 def face_core_enabled() -> bool:
-    return bool(settings.FACE_CORE_ENABLED and settings.FACE_CORE_API_KEY)
+    key = (settings.FACE_CORE_API_KEY or "").strip()
+    return bool(settings.FACE_CORE_ENABLED and key and key not in _WEAK_KEYS)
+
+
+async def ping_face_core() -> dict:
+    url = settings.FACE_CORE_URL.rstrip("/") + "/v1/health"
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+        body = response.json()
+        if not isinstance(body, dict):
+            return {"status": "ok"}
+        return body
 
 
 def bff_enrolled_image_url(face_id: str, company_id) -> str:

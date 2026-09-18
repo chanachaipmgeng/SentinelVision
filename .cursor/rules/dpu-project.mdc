@@ -5,7 +5,7 @@ alwaysApply: true
 
 # DPU Attendance — project defaults
 
-Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack behind nginx.
+Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core BFF (`FACE_CORE_ENABLED`). Docker stack behind nginx.
 
 ## Layout
 
@@ -23,7 +23,12 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, Docker stack b
 ## Runtime
 
 ```bash
+# Local InsightFace (one GPU process, FACE_DEVICES for more)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+
+# Production BFF: Face Core holds both GPUs. See scripts/deploy-stack.sh
+docker network create face-net
+docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.face-core.yml up -d --build
 ```
 
 - Admin: `http://localhost/`
@@ -38,7 +43,9 @@ Code is **baked into images** — rebuild the service after source changes (`api
 - Every route except `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/` requires a Bearer JWT (`src/security/middleware.py` `AuthzMiddleware`)
 - `companyId` in a path, form, or body must be bound to the caller: use `assert_request_company_access(request, db, companyId)` from `src/security/deps.py`
 - New members get a random temporary password + `mustChangePassword`; never write `1234`
-- Kiosk WebSocket `session` carries `token`; `<img>` for `/images/*` appends `?token=`
+- Kiosk WebSocket `session` carries `token`; server sends `token_expiring` when < 5 min remain
+- BFF: `FACE_CORE_API_KEY` required when `FACE_CORE_ENABLED=true`; `/ready` pings Face Core; 503 `face_core_down` opens a 15s circuit
+- Deletes set `deletedAt` (member, company, employee, department, position, location) — list queries hide them
 - Writes are audited (`audit_log`); notifications go through `notification_outbox`
 
 ## Agent defaults

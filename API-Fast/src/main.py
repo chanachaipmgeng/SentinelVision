@@ -8,6 +8,7 @@ import logging
 from .config.database import engine, Base, async_session
 from .config.settings import settings
 from .security.jwt import assert_secret_configured
+from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
 from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
 from .services import audit_service, notification_service  # noqa: F401  register tables
@@ -43,6 +44,7 @@ from .routes import (
 )
 
 assert_secret_configured()
+assert_face_core_configured()
 configure_logging()
 logger = logging.getLogger("dpu.api")
 
@@ -94,6 +96,9 @@ async def _notify_loop() -> None:
     while True:
         try:
             await drain_outbox()
+            from .services.notification_service import attendance_cutoff_tick
+
+            await attendance_cutoff_tick()
         except Exception:
             logger.exception("notify drain failed")
         await asyncio.sleep(max(5, int(settings.NOTIFY_POLL_SECONDS)))
@@ -110,7 +115,7 @@ async def startup():
         await ensure_face_embedding_index(conn)
         await ensure_profile_and_approval_columns(conn)
 
-    if not settings.FACE_CORE_ENABLED:
+    if not face_core_enabled():
         from .utils.face_gpu_queue import start_face_gpu_workers
 
         devices = settings.face_device_list()
@@ -138,8 +143,16 @@ async def ready():
             await db.execute(text("SELECT 1"))
     except Exception as exc:
         return JSONResponse({"status": "down", "db": str(exc)}, status_code=503)
-    queue = face_gpu_queue_stats()
-    if not settings.FACE_CORE_ENABLED and not queue.get("started"):
+    queue = {"source": "face-core"} if face_core_enabled() else face_gpu_queue_stats()
+    if face_core_enabled():
+        try:
+            queue = await ping_face_core()
+        except Exception as exc:
+            return JSONResponse(
+                {"status": "down", "faceCore": str(exc), "code": "face_core_down"},
+                status_code=503,
+            )
+    elif not queue.get("started"):
         return JSONResponse({"status": "down", "queue": queue}, status_code=503)
     return {"status": "ok", "queue": queue}
 
@@ -155,7 +168,7 @@ async def root():
         "message": "Welcome to the API",
         "face": (
             "Face Core BFF"
-            if settings.FACE_CORE_ENABLED
+            if face_core_enabled()
             else "InsightFace buffalo_l + pgvector"
         ),
     }

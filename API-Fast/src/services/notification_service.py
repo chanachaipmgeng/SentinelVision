@@ -120,6 +120,74 @@ def json_bytes(obj) -> bytes:
 import urllib.parse  # noqa: E402
 
 
+_cutoff_sent: set[str] = set()
+
+
+async def attendance_cutoff_tick() -> int:
+    """Enqueue one late/missing notice per company per day after notify:{id}.cutoff (HH:MM)."""
+    from datetime import datetime
+
+    from sqlalchemy import text
+
+    from ..config.database import async_session
+
+    now = datetime.now()
+    day = now.date().isoformat()
+    queued = 0
+    async with async_session() as db:
+        rows = (
+            await db.execute(text("SELECT key, value FROM system_setting WHERE key LIKE 'notify:%'"))
+        ).all()
+        for key, value in rows:
+            if not isinstance(value, dict):
+                continue
+            cutoff = str(value.get("cutoff") or "")
+            if len(cutoff) < 4 or ":" not in cutoff:
+                continue
+            hour, minute = cutoff.split(":", 1)
+            try:
+                if (now.hour, now.minute) < (int(hour), int(minute)):
+                    continue
+            except ValueError:
+                continue
+            company_id = str(key).split(":", 1)[-1]
+            marker = f"{day}:{company_id}"
+            if marker in _cutoff_sent:
+                continue
+            missing = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT count(*) FROM company_employee ce
+                        WHERE ce."companyId" = :cid AND ce.deleted_at IS NULL
+                          AND NOT EXISTS (
+                            SELECT 1 FROM employee_timestamp t
+                            WHERE t."company_employeeId" = ce."company_employeeId"
+                              AND t."timestamp"::date = CURRENT_DATE
+                          )
+                        """
+                    ),
+                    {"cid": company_id},
+                )
+            ).scalar_one()
+            _cutoff_sent.add(marker)
+            if int(missing or 0) <= 0:
+                continue
+            await enqueue(
+                "attendance.missing",
+                "line" if value.get("lineToken") else "email",
+                {
+                    "to": value.get("email") or "",
+                    "lineToken": value.get("lineToken") or "",
+                    "subject": "DPU missing check-in",
+                    "body": f"{missing} employees have no check-in today",
+                },
+                company_id=company_id,
+            )
+            queued += 1
+    return queued
+
+
 async def drain_outbox(limit: int = 20) -> int:
     sent = 0
     async with async_session() as db:

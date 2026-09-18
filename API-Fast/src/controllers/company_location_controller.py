@@ -77,6 +77,8 @@ async def update_location(locationId: UUID, companyId: UUID, data: dict, db: Asy
 
 # ลบสถานที่
 async def delete_location(locationId: UUID, companyId: UUID, db: AsyncSession):
+    from ..utils.soft_delete import mark_deleted
+
     location = await get_location_by_id(locationId, companyId, db)
-    await db.delete(location)
+    mark_deleted(location)
     await db.commit()

@@ -1,30 +1,22 @@
-# DPU API linked to sibling Face Core service (shared Docker network `face-net`).
+# DPU API linked to sibling Face Core (shared Docker network `face-net`).
 #
-# One-time setup:
-#   docker network create face-net
-#
-# Terminal 1 — Face Core (sibling repo, scale + shared network for DPU):
-#   cd ../face-core
-#   docker network create face-net   # one-time
-#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
-#
-# Terminal 2 — DPU (CPU api, BFF → face-core-api:8000 on face-net):
-#   Set POSTGRES_PORT=5434 and HTTP_PORT=8880 in dpu-project/.env (face-core uses 5435/8081)
-#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build
+# One-time: docker network create face-net
+# Sibling checkout must exist at ../face-core (or /opt/face-core next to this repo).
+# FACE_CORE_API_KEY must be set in .env — there is no placeholder default.
 services:
   api:
     build:
       context: ./API-Fast
-      dockerfile: Dockerfile.cpu
+      dockerfile: Dockerfile.bff
+      additional_contexts:
+        face_sdk: ../face-core/sdk/python
     environment:
       FACE_CORE_ENABLED: "true"
       FACE_CORE_URL: http://face-core-api:8000
-      FACE_CORE_API_KEY: ${FACE_CORE_API_KEY:-dev-face-core-key-change-me}
+      FACE_CORE_API_KEY: ${FACE_CORE_API_KEY:?set FACE_CORE_API_KEY in .env}
       FACE_DEVICE: cpu
       NVIDIA_VISIBLE_DEVICES: ""
       PYTHONPATH: /opt/face-core-sdk
-    volumes:
-      - ../face-core/sdk/python:/opt/face-core-sdk:ro
     networks:
       - default
       - face-net

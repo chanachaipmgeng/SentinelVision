@@ -11,7 +11,7 @@ alwaysApply: false
 `db` (pgvector), `api`, `admin`, `nginx` (:80)
 
 GPU API: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api`
-Production: add `-f docker-compose.prod.yml` (no published Postgres port, cpu/mem limits)
+BFF (Face Core holds the GPUs): `-f docker-compose.face-core.yml` after `docker network create face-net`. Image is `API-Fast/Dockerfile.bff` (SDK baked in; sibling `../face-core/sdk/python` required at build). `FACE_CORE_API_KEY` has no default. `scripts/deploy-stack.sh` starts face-core first.
 
 All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks (`api` → `/ready`, `nginx` → `/health`).
 
@@ -28,6 +28,7 @@ All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks 
 | `API-Fast/src/**` | `api` |
 | `Web-Manage/**` | `admin` |
 | `docker/nginx/default.conf` | `nginx` |
+| `docker-compose.face-core.yml`, `API-Fast/Dockerfile.bff` | `api` (needs sibling face-core SDK) |
 
 API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code.
 

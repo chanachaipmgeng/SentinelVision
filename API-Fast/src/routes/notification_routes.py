@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +12,26 @@ router = APIRouter()
 
 def _notify_key(company_id: str) -> str:
     return f"notify:{company_id}"
+
+
+@router.post("/system")
+async def system_alert(request: Request, db: AsyncSession = Depends(get_db)):
+    """Backup/ops hook. Requires X-Service-Token matching SERVICE_NOTIFY_TOKEN."""
+    from ..config.settings import settings
+
+    expected = (getattr(settings, "SERVICE_NOTIFY_TOKEN", "") or "").strip()
+    if not expected or request.headers.get("x-service-token") != expected:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=401, detail="Service token required")
+    body = await request.json()
+    await enqueue(
+        str(body.get("event") or "system.alert"),
+        "line",
+        {"body": str(body.get("body") or "system alert")},
+        company_id=body.get("companyId"),
+    )
+    return {"queued": True}
 
 
 @router.get("/pending-count")

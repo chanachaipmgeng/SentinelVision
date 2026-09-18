@@ -32,6 +32,34 @@ from ..utils.face_engine import (
 from ..utils.face_gpu_queue import face_gpu_queue_stats, run_on_face_gpu
 
 logger = logging.getLogger(__name__)
+_bff_pending_value = 0
+_bff_pending_at = 0.0
+
+
+async def _bff_pending() -> int:
+    """Cached Face Core queue depth so detect frames do not each call queue-stats."""
+    global _bff_pending_value, _bff_pending_at
+    import time
+
+    now = time.monotonic()
+    if now - _bff_pending_at < 2:
+        return _bff_pending_value
+    try:
+        stats = await get_face_core_client().queue_stats()
+        pending = stats.get("pending")
+        if pending is None and isinstance(stats.get("pendingByCompany"), dict):
+            pending = sum(int(v or 0) for v in stats["pendingByCompany"].values())
+        _bff_pending_value = int(pending or 0)
+    except Exception:
+        _bff_pending_value = int(settings_backpressure())
+    _bff_pending_at = now
+    return _bff_pending_value
+
+
+def settings_backpressure() -> int:
+    from ..config.settings import settings
+
+    return int(settings.WS_QUEUE_BACKPRESSURE)
 TEMP_DIR = Path("temp_images")
 
 
@@ -101,7 +129,39 @@ async def _handle_detect(
         from ..config.settings import settings
         from ..utils.face_gpu_queue import face_gpu_queue_stats
 
-        if not face_core_enabled():
+        if face_core_enabled():
+            from ..clients.face_core_client import face_core_circuit_open
+
+            if face_core_circuit_open():
+                await _send(
+                    websocket,
+                    {
+                        "type": "error",
+                        "intent": "detect",
+                        "requestId": request_id,
+                        "code": "face_core_down",
+                        "detail": "face_core_down",
+                    },
+                    lock=send_lock,
+                )
+                return
+            pending = await _bff_pending()
+            if pending >= int(settings.WS_QUEUE_BACKPRESSURE):
+                await _send(
+                    websocket,
+                    {
+                        "type": "detected",
+                        "requestId": request_id,
+                        "dropped": True,
+                        "queue": {"pending": pending, "source": "face-core"},
+                        "frameWidth": 0,
+                        "frameHeight": 0,
+                        "faces": [],
+                    },
+                    lock=send_lock,
+                )
+                return
+        else:
             queue = face_gpu_queue_stats()
             if int(queue.get("pending") or 0) >= int(settings.WS_QUEUE_BACKPRESSURE):
                 await _send(
@@ -352,6 +412,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     latitude = 0.0
     longitude = 0.0
     send_lock = asyncio.Lock()
+    token_exp = 0
+    token_warned = False
 
     await _send(
         websocket,
@@ -366,6 +428,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
 
     try:
         while True:
+            import time as _time
+
+            if token_exp and not token_warned and token_exp - _time.time() < 300:
+                token_warned = True
+                await _send(websocket, {"type": "token_expiring"}, lock=send_lock)
             message = await websocket.receive_text()
             try:
                 data = json.loads(message)
@@ -399,6 +466,10 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         async with async_session() as db:
                             member = await member_from_token(token, db)
                             await assert_company_access(db, member, company_id)
+                        from ..security.jwt import decode_token
+
+                        token_exp = int(decode_token(token).get("exp") or 0)
+                        token_warned = False
                 except Exception as exc:
                     await _send(
                         websocket,

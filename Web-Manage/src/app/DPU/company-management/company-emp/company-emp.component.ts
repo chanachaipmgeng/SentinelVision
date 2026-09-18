@@ -20,7 +20,6 @@ import { FileUploadModule } from 'ng2-file-upload';
 import { FileItem, FileUploader, ParsedResponseHeaders } from "ng2-file-upload";
 import { environment } from "../../../../environments/environment";
 import { HttpClient } from "@angular/common/http";
-import * as faceapi from 'face-api.js';
 import { FaceManagementComponent } from '../dialogs/face-management/face-management.component';
 import { firstValueFrom } from 'rxjs';
 import { playCaptureBeep, unlockBeepAudio } from '../../../shared/utils/beep';
@@ -147,6 +146,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   uploadFaceItems: { file: File; preview: string }[] = [];
   @ViewChild('faceUploadInput') faceUploadInput?: ElementRef<HTMLInputElement>;
   private modelsLoaded = false;
+  /** Browser FaceDetector (Chrome). Local face-api models are not shipped. */
+  private faceDetector: { detect: (source: HTMLVideoElement) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>> } | null = null;
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
   private videoStream: MediaStream | null = null;
   private smoothedBox: SmoothBox | null = null;
@@ -417,10 +418,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     if (this.modelsLoaded) {
       return;
     }
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector'),
-      faceapi.nets.faceLandmark68Net.loadFromUri('/assets/models/face_landmark_68'),
-    ]);
+    const FaceDetectorCtor = (globalThis as { FaceDetector?: new (opts?: object) => NonNullable<CompanyEmpComponent['faceDetector']> }).FaceDetector;
+    if (typeof FaceDetectorCtor === 'function') {
+      try {
+        this.faceDetector = new FaceDetectorCtor({ fastMode: true, maxDetectedFaces: 1 });
+      } catch {
+        this.faceDetector = null;
+      }
+    }
     this.modelsLoaded = true;
   }
 
@@ -473,7 +478,6 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     };
     this.canvas.nativeElement.width = displaySize.width;
     this.canvas.nativeElement.height = displaySize.height;
-    faceapi.matchDimensions(this.canvas.nativeElement, displaySize);
 
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
@@ -491,7 +495,6 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       }
       this.faceDetectBusy = true;
       try {
-        // Refresh display size each tick (modal layout can change)
         const liveSize = {
           width: videoEl.clientWidth || videoEl.width || 640,
           height: videoEl.clientHeight || videoEl.height || 480,
@@ -502,40 +505,25 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         ) {
           this.canvas.nativeElement.width = liveSize.width;
           this.canvas.nativeElement.height = liveSize.height;
-          faceapi.matchDimensions(this.canvas.nativeElement, liveSize);
         }
 
-        const detections = await faceapi
-          .detectAllFaces(
-            videoEl,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.35 }),
-          )
-          .withFaceLandmarks();
-        const resized = faceapi.resizeResults(detections, liveSize);
+        const nextBox = await this.detectBrowserFaceBox(videoEl, liveSize);
         const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
         ctx.clearRect(0, 0, liveSize.width, liveSize.height);
 
-        const best = resized[0];
-        if (best) {
-          const nextBox: SmoothBox = {
-            x: best.detection.box.x,
-            y: best.detection.box.y,
-            width: best.detection.box.width,
-            height: best.detection.box.height,
-          };
+        if (nextBox) {
           this.smoothedBox = this.smoothedBox
             ? this.lerpBox(this.smoothedBox, nextBox, this.boxLerp)
             : nextBox;
 
-          const pose = this.estimatePose(best.landmarks);
           const step = this.currentAngle;
-          const poseOk = step ? this.matchesAngle(step.id, pose) : false;
           const inCooldown = Date.now() < this.captureCooldownUntil;
+          const ready = !!step && !inCooldown;
           const label = step
-            ? (poseOk && !inCooldown ? `${step.label} ✓` : step.label)
+            ? (ready ? `${step.label} ✓` : step.label)
             : 'ครบ 5 มุม';
 
-          this.drawSmoothOverlay(ctx, this.smoothedBox, label, poseOk && !inCooldown, this.capturingAngle);
+          this.drawSmoothOverlay(ctx, this.smoothedBox, label, ready, this.capturingAngle);
 
           this.ngZone.run(() => {
             this.isFaceDetected = true;
@@ -543,7 +531,6 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
             if (
               step &&
               !step.captured &&
-              poseOk &&
               !this.capturingAngle &&
               !this.allAnglesCaptured &&
               !inCooldown
@@ -558,33 +545,12 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
                   0,
                   (this.poseHoldMs - (Date.now() - this.poseHoldStartedAt)) / 1000,
                 );
-                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ค้างท่าไว้… ${leftSec.toFixed(1)}s`;
+                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint} ค้างไว้… ${leftSec.toFixed(1)}s`;
               }
-            } else {
-              // Don't reset hold on a single jitter frame
-              if (this.poseHoldStartedAt && !poseOk) {
-                if (!this.poseMissStartedAt) {
-                  this.poseMissStartedAt = Date.now();
-                } else if (Date.now() - this.poseMissStartedAt >= this.poseMissGraceMs) {
-                  this.poseHoldStartedAt = 0;
-                  this.poseMissStartedAt = 0;
-                }
-              } else if (!poseOk) {
-                this.poseHoldStartedAt = 0;
-                this.poseMissStartedAt = 0;
-              }
-
-              if (step && !step.captured) {
-                if (inCooldown) {
-                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
-                } else if (poseOk) {
-                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — พร้อมถ่าย`;
-                } else {
-                  this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
-                }
-              } else if (this.allAnglesCaptured) {
-                this.faceStatus = 'ครบ 5 มุมแล้ว กดบันทึกเพื่ออัปโหลด';
-              }
+            } else if (step && !step.captured) {
+              this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
+            } else if (this.allAnglesCaptured) {
+              this.faceStatus = 'ครบ 5 มุมแล้ว กดบันทึกเพื่ออัปโหลด';
             }
             this.cdr.detectChanges();
           });
@@ -607,7 +573,30 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       } finally {
         this.faceDetectBusy = false;
       }
-    }, 100);
+    }, 160);
+  }
+
+  /** Box in display pixels. Null when the browser has no FaceDetector or no face. */
+  private async detectBrowserFaceBox(
+    videoEl: HTMLVideoElement,
+    liveSize: { width: number; height: number },
+  ): Promise<SmoothBox | null> {
+    if (!this.faceDetector) {
+      return null;
+    }
+    const faces = await this.faceDetector.detect(videoEl);
+    const box = faces[0]?.boundingBox;
+    if (!box || box.width < 8 || box.height < 8) {
+      return null;
+    }
+    const sx = liveSize.width / (videoEl.videoWidth || liveSize.width);
+    const sy = liveSize.height / (videoEl.videoHeight || liveSize.height);
+    return {
+      x: box.x * sx,
+      y: box.y * sy,
+      width: box.width * sx,
+      height: box.height * sy,
+    };
   }
 
   captureImage(): void {
@@ -727,52 +716,6 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       u8arr[n] = bstr.charCodeAt(n);
     }
     return new File([u8arr], filename, { type: mime });
-  }
-
-  private estimatePose(landmarks: faceapi.FaceLandmarks68): { yaw: number; pitch: number } {
-    const positions = landmarks.positions;
-    const avg = (from: number, to: number) => {
-      let x = 0;
-      let y = 0;
-      const n = to - from + 1;
-      for (let i = from; i <= to; i++) {
-        x += positions[i].x;
-        y += positions[i].y;
-      }
-      return { x: x / n, y: y / n };
-    };
-    const leftEye = avg(36, 41);
-    const rightEye = avg(42, 47);
-    const nose = positions[30];
-    const eyeMid = { x: (leftEye.x + rightEye.x) / 2, y: (leftEye.y + rightEye.y) / 2 };
-    const eyeDist = Math.max(1, Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y));
-    // Non-mirrored camera: user turns left → nose shifts toward image-right → yaw > 0
-    const yaw = (nose.x - eyeMid.x) / eyeDist;
-    const pitch = (nose.y - eyeMid.y) / eyeDist - 0.45;
-    return { yaw, pitch };
-  }
-
-  private matchesAngle(
-    id: FaceAngleStep['id'],
-    pose: { yaw: number; pitch: number },
-  ): boolean {
-    const { yaw, pitch } = pose;
-    switch (id) {
-      case 'front':
-        // Slightly looser so laptop / desk camera angles still count as front
-        return Math.abs(yaw) < 0.2 && Math.abs(pitch) < 0.22;
-      case 'left':
-        // User turns their left → nose moves toward image-right
-        return yaw > 0.16 && Math.abs(pitch) < 0.3;
-      case 'right':
-        return yaw < -0.16 && Math.abs(pitch) < 0.3;
-      case 'up':
-        return pitch < -0.1 && Math.abs(yaw) < 0.28;
-      case 'down':
-        return pitch > 0.12 && Math.abs(yaw) < 0.28;
-      default:
-        return false;
-    }
   }
 
   private lerpBox(prev: SmoothBox, next: SmoothBox, t: number): SmoothBox {

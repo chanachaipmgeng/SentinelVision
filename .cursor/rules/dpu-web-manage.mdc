@@ -15,6 +15,15 @@ alwaysApply: false
 - Crop faces before send; do not upload full frames for multi-person
 - Cap concurrent check-ins / identifies; never global-lock the whole camera for one person
 - Do not change face WS / GPU / check-in logic when only polishing kiosk layout
+- WS session payload comes from `enroll-face/kiosk-ws-client.ts` (`buildKioskSession`) and includes the JWT; punch photos use `authedImage()` (`?token=`)
+
+## Auth / routing
+
+- `AuthGuard` on the content layout; `RoleGuard` with `data.area` (`admin` | `company`) on `common.module.ts` / `company-management.module.ts`
+- `HttpRequestInterceptor` is the only HTTP stack (`provideHttpClient(withInterceptorsFromDi())`); it refreshes on **401/403** via `/auth/refresh-token` and must not log URLs
+- Login saves `access_token` + `refresh_token`; `mustChangePassword` → `/auth/change-password`
+- Header badge reads `GET /notifications/pending-count`; no hard-coded counts
+- Company audit + notification settings page: `/company/audit-log`
 
 ## Shared list UI kit
 
@@ -46,6 +55,8 @@ Patterns: `app-page-header` + toolbar (title/chips/search/actions) + table or ca
 - Use `NgZone` + `ChangeDetectorRef` when updating UI from `setInterval` / WS / face-api
 - Production `environment.prod.ts` uses `baseUrl: ''` (same-origin via nginx)
 - Rebuild `admin` image after UI changes: `docker compose ... up -d --build admin`
+- Removed and must stay out: `shared/prismData`, Firebase / `@angular/fire`, `react`, `gsap`, `ng-gallery`, `ngx-editor`; import `Validators` from `@angular/forms`
+- Budget: initial warn 2 MB / error 8 MB (`angular.json`) — trim before adding a new chart/map library
 
 ## UI
 

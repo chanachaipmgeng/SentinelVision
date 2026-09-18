@@ -1,108 +1,100 @@
 import os
+from pathlib import Path
 from uuid import uuid4
 import base64
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from fastapi.responses import JSONResponse, FileResponse
 import aiofiles
 
-router = APIRouter()
+from ..config.settings import settings
+from ..security.deps import get_current_member
 
-# Directory for storing uploaded images
-UPLOAD_DIR = "./uploaded_images"
-os.makedirs(UPLOAD_DIR, exist_ok=True)  # Create folder if it doesn't exist
+router = APIRouter(dependencies=[Depends(get_current_member)])
 
-async def _save_upload_image(file: UploadFile) -> JSONResponse:
-    # Validate file type
-    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        raise HTTPException(
-            status_code=400, detail="Only JPEG and PNG image files are allowed"
-        )
+UPLOAD_DIR = Path("./uploaded_images")
+UPLOAD_DIR.mkdir(exist_ok=True)
+_ALLOWED = {b"\xff\xd8\xff": ".jpg", b"\x89PNG": ".png"}
+_MAX = int(settings.UPLOAD_MAX_BYTES)
 
-    # Generate a new filename
-    file_extension = os.path.splitext(file.filename or "")[-1].lower() or ".jpg"
-    new_filename = f"{uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, new_filename)
 
-    # Save the file to the directory
-    async with aiofiles.open(file_path, "wb") as out_file:
-        content = await file.read()
+def _safe_name(filename: str) -> str:
+    name = Path(filename or "").name
+    if not name or name in {".", ".."} or ".." in name.replace("\\", "/"):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    return name
+
+
+def _sniff(content: bytes) -> str:
+    if len(content) < 8 or len(content) > _MAX:
+        raise HTTPException(status_code=400, detail="Invalid image size")
+    for magic, ext in _ALLOWED.items():
+        if content.startswith(magic):
+            return ext
+    raise HTTPException(status_code=400, detail="Only JPEG and PNG image files are allowed")
+
+
+async def _save_bytes(content: bytes) -> JSONResponse:
+    ext = _sniff(content)
+    new_filename = f"{uuid4()}{ext}"
+    path = UPLOAD_DIR / new_filename
+    async with aiofiles.open(path, "wb") as out_file:
         await out_file.write(content)
-
     return JSONResponse(
         status_code=200,
         content={
             "message": "File uploaded successfully",
             "filename": new_filename,
-            "path": f"/uploaded_images/{new_filename}",
+            "path": f"/images/{new_filename}",
         },
     )
 
 
-# Accept both /api/upload-image and /api/upload-image/ (Angular uses no trailing slash).
 @router.post("/upload-image")
 @router.post("/upload-image/")
 async def upload_image(file: UploadFile = File(...)):
-    return await _save_upload_image(file)
+    content = await file.read()
+    return await _save_bytes(content)
 
 
 @router.post("/upload-image-base64")
 @router.post("/upload-image-base64/")
 async def upload_image_base64(base64_image: str = Form(...)):
-    # Decode the base64 string
+    raw = base64_image
+    if raw.startswith("data:image/jpeg;base64,"):
+        raw = raw.split(",", 1)[1]
+    elif raw.startswith("data:image/png;base64,"):
+        raw = raw.split(",", 1)[1]
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
     try:
-        # Extract file type from base64 string
-        if base64_image.startswith("data:image/jpeg;base64,"):
-            base64_image = base64_image.replace("data:image/jpeg;base64,", "")
-            file_extension = ".jpg"
-        elif base64_image.startswith("data:image/png;base64,"):
-            base64_image = base64_image.replace("data:image/png;base64,", "")
-            file_extension = ".png"
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported image format")
-
-        image_data = base64.b64decode(base64_image)
+        content = base64.b64decode(raw)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid base64 string")
+    return await _save_bytes(content)
 
-    # Generate a unique filename
-    new_filename = f"{uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, new_filename)
 
-    # Save the decoded image data to a file
-    async with aiofiles.open(file_path, "wb") as out_file:
-        await out_file.write(image_data)
+def _resolve(filename: str) -> Path:
+    safe = _safe_name(filename)
+    path = (UPLOAD_DIR / safe).resolve()
+    if UPLOAD_DIR.resolve() not in path.parents and path != UPLOAD_DIR.resolve():
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Image not found")
+    return path
 
-    return JSONResponse(
-        status_code=200,
-        content={
-            "message": "File uploaded successfully",
-            "filename": new_filename,
-            "path": f"/uploaded_images/{new_filename}",
-        },
-    )
 
 @router.get("/get-image/{filename}")
 async def get_image(filename: str):
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    return FileResponse(file_path, media_type="image/jpeg", filename=filename)
+    path = _resolve(filename)
+    media = "image/png" if path.suffix == ".png" else "image/jpeg"
+    return FileResponse(path, media_type=media, filename=path.name)
+
 
 @router.get("/get-image-base64/{filename}")
 async def get_image_base64(filename: str):
-    file_path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail="Image not found")
-    try:
-        with open(file_path, "rb") as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
-        mime_type = "image/jpeg" if filename.endswith(".jpg") or filename.endswith(".jpeg") else \
-                    "image/png" if filename.endswith(".png") else \
-                    "application/octet-stream"
-        return JSONResponse(content={
-            "filename": filename,
-            "mime_type": mime_type,
-            "data": f"data:{mime_type};base64,{encoded_image}"
-        })
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error reading image")
+    path = _resolve(filename)
+    encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
+    mime = "image/png" if path.suffix == ".png" else "image/jpeg"
+    return JSONResponse(
+        content={"filename": path.name, "mime_type": mime, "data": f"data:{mime};base64,{encoded}"}
+    )

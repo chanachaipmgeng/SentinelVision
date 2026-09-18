@@ -39,8 +39,60 @@ class Settings(BaseSettings):
     FACE_CORE_API_KEY: str = ""
     FACE_CORE_TIMEOUT_SECONDS: float = 120.0
 
-    # When true, /face/* HTTP routes require JWT (WS /face/ws/kiosk unchanged)
-    FACE_ROUTES_REQUIRE_JWT: bool = False
+    # When true, /face/* HTTP routes require JWT. WS session must carry the same token.
+    FACE_ROUTES_REQUIRE_JWT: bool = True
+
+    # Auth
+    SECRET_KEY: str = "change-me-in-production"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    CORS_ORIGINS: str = (
+        "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,"
+        "http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,"
+        "http://127.0.0.1:4201,https://face-in.myhr.co.th,http://face-in.myhr.co.th"
+    )
+    AUTH_FAIL_FAST: bool = True
+    MAX_FAILED_LOGINS: int = 5
+    LOCKOUT_MINUTES: int = 15
+
+    # Ops
+    LOG_LEVEL: str = "INFO"
+    LOG_JSON: bool = True
+    EXPOSE_API_DOCS: bool = False
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_RECYCLE: int = 1800
+    HNSW_EF_SEARCH: int = 40
+
+    # Multi-GPU. Comma list; worker i uses devices[i % len].
+    FACE_DEVICES: str = ""
+    FACE_DETECT_DET_SIZE: int = 320
+    FACE_EMBED_DET_SIZE: int = 640
+    WS_DETECT_MIN_INTERVAL_MS: int = 80
+    WS_QUEUE_BACKPRESSURE: int = 32
+
+    # Storage
+    STORAGE_BACKEND: str = "local"
+    IMAGE_RETENTION_DAYS: int = 90
+    TEMP_RETENTION_HOURS: int = 24
+    UPLOAD_MAX_BYTES: int = 8 * 1024 * 1024
+
+    # Notifications
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_TLS: bool = True
+    LINE_CHANNEL_ACCESS_TOKEN: str = ""
+    NOTIFY_POLL_SECONDS: int = 30
+
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    def face_device_list(self) -> list[str]:
+        raw = (self.FACE_DEVICES or "").strip() or (self.FACE_DEVICE or "cuda:0")
+        return [p.strip() for p in raw.split(",") if p.strip()]
 
 
 settings = Settings()

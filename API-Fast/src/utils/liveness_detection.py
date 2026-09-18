@@ -39,12 +39,13 @@ def check_multi_frame_liveness(
     if len(valid) < max(2, len(frames) / 2):
         return False, "Face not consistently detected in frames."
 
-    embeddings = [f["embedding"] for f in valid]
-    anchor = embeddings[0]
-    for emb in embeddings[1:]:
-        dist = cosine_distance(anchor, emb)
-        if dist > same_person_max_distance:
-            return False, f"Face identity inconsistent across frames (distance={dist:.3f})."
+    embeddings = [f["embedding"] for f in valid if f.get("embedding")]
+    if len(embeddings) >= 2:
+        anchor = embeddings[0]
+        for emb in embeddings[1:]:
+            dist = cosine_distance(anchor, emb)
+            if dist > same_person_max_distance:
+                return False, f"Face identity inconsistent across frames (distance={dist:.3f})."
 
     centers = [bbox_center(f["bbox"]) for f in valid]
     max_motion = 0.0

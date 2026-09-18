@@ -1,26 +1,23 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from ..models.member import Member
-from ..config.database import get_db
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-import jwt
 import bcrypt
-from ..schemas.auth_schema import Token, LoginRequest
+from passlib.context import CryptContext
+
+from ..config.database import get_db
+from ..models.member import Member
+from ..schemas.auth_schema import LoginRequest, Token
+from ..security.deps import get_current_member
+from ..security.jwt import create_access_token, create_refresh_token, decode_token
+from ..security.passwords import assert_not_locked, hash_password, register_failure, register_success
+from ..services.audit_service import write_audit
 
 router = APIRouter()
-
-# Secret key and algorithm for JWT
-SECRET_KEY = "***REMOVED***"  # Replace with your actual secret key
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 3600 * 3600
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def _verify_password(plain: str, password_hash: str) -> bool:
-    """Prefer bcrypt.checkpw — avoids passlib backend bugs with newer bcrypt."""
     try:
         hashed = password_hash.encode("utf-8") if isinstance(password_hash, str) else password_hash
         return bcrypt.checkpw(plain.encode("utf-8"), hashed)
@@ -31,27 +28,77 @@ def _verify_password(plain: str, password_hash: str) -> bool:
             return False
 
 
+class RefreshRequest(BaseModel):
+    refreshToken: str | None = None
+    refresh_token: str | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    currentPassword: str
+    newPassword: str
+
+
+def _tokens(member: Member) -> dict:
+    access = create_access_token(str(member.memberId), member.username)
+    refresh = create_refresh_token(str(member.memberId), member.username)
+    return {
+        "member": member,
+        "access_token": access,
+        "refresh_token": refresh,
+        "token_type": "bearer",
+        "mustChangePassword": bool(getattr(member, "mustChangePassword", False)),
+        "accessToken": access,
+        "refreshToken": refresh,
+    }
+
+
 @router.post("/login", response_model=Token)
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
-    username = request.username
-    password = request.password
-
-    stmt = select(Member).where(Member.username == username)
-    result = await db.execute(stmt)
+    result = await db.execute(select(Member).where(Member.username == request.username))
     member = result.scalars().first()
-
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=404, detail="Member not found")
-
-    if not _verify_password(password, member.passwordHash):
+    assert_not_locked(member)
+    if not _verify_password(request.password, member.passwordHash):
+        register_failure(member)
+        await db.commit()
+        await write_audit(actor=member, action="LOGIN_FAIL", path="/auth/login", status_code=401)
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    register_success(member)
+    await db.commit()
+    await db.refresh(member)
+    await write_audit(actor=member, action="LOGIN_OK", path="/auth/login", status_code=200)
+    return _tokens(member)
 
-    token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    token_payload = {
-        "memberId": str(member.memberId),
-        "username": member.username,
-        "exp": datetime.utcnow() + token_expires,
-    }
-    token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
 
-    return {"member": member, "access_token": token, "token_type": "bearer"}
+@router.post("/refresh-token")
+@router.post("/refresh")
+async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    raw = body.refreshToken or body.refresh_token
+    if not raw:
+        raise HTTPException(status_code=401, detail="Refresh token required")
+    payload = decode_token(raw, expected_typ="refresh")
+    from uuid import UUID
+
+    member = await db.get(Member, UUID(str(payload["memberId"])))
+    if not member or getattr(member, "deletedAt", None) is not None:
+        raise HTTPException(status_code=401, detail="Member not found")
+    issued = _tokens(member)
+    return issued
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    if len(body.newPassword) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not _verify_password(body.currentPassword, member.passwordHash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    db_member = await db.get(Member, member.memberId)
+    db_member.passwordHash = hash_password(body.newPassword)
+    db_member.mustChangePassword = False
+    await db.commit()
+    return {"ok": True}

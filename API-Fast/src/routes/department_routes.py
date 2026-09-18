@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from ..config.database import get_db
@@ -11,6 +11,7 @@ from ..controllers.department_controller import (
     delete_department
 )
 from ..schemas.department_schema import DepartmentCreate, DepartmentUpdate, DepartmentResponse
+from ..security.deps import assert_request_company_access
 
 router = APIRouter()
 
@@ -27,14 +28,19 @@ async def get_departments_by_companyId_route(companyId: str, db: AsyncSession = 
     return await get_departments_by_companyId(companyId, db)
 
 @router.post("", response_model=DepartmentResponse)
-async def create_department_route(department: DepartmentCreate, db: AsyncSession = Depends(get_db)):
+async def create_department_route(request: Request, department: DepartmentCreate, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, department.companyId)
     return await create_department(department.dict(), db)
 
 @router.put("/{departmentId}", response_model=DepartmentResponse)
-async def update_department_route(departmentId: str, department: DepartmentUpdate, db: AsyncSession = Depends(get_db)):
+async def update_department_route(request: Request, departmentId: str, department: DepartmentUpdate, db: AsyncSession = Depends(get_db)):
+    existing = await get_department_by_id(departmentId, db)
+    await assert_request_company_access(request, db, existing.companyId)
     return await update_department(departmentId, department.dict(exclude_unset=True), db)
 
 @router.delete("/{departmentId}")
-async def delete_department_route(departmentId: str, db: AsyncSession = Depends(get_db)):
+async def delete_department_route(request: Request, departmentId: str, db: AsyncSession = Depends(get_db)):
+    existing = await get_department_by_id(departmentId, db)
+    await assert_request_company_access(request, db, existing.companyId)
     await delete_department(departmentId, db)
     return {"detail": "Department deleted successfully"}

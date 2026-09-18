@@ -55,9 +55,11 @@ async def prepare_pgvector(connection) -> None:
     ).fetchall()
     column_names = {row[0] for row in columns}
 
-    # Old face_recognition JSON column or missing embedding → recreate table
+    # Old face_recognition JSON column — do not drop in place (enterprise: migrate via Alembic).
     if "embedding" not in column_names:
-        await connection.execute(text("DROP TABLE face_encoding CASCADE"))
+        raise RuntimeError(
+            "face_encoding.embedding is missing. Run a migration instead of dropping the table."
+        )
 
 
 async def ensure_face_embedding_index(connection) -> None:

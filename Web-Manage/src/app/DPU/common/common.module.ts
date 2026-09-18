@@ -2,9 +2,10 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CommonComponent } from './common.component';
 import { RouterModule, Routes } from '@angular/router';
+import { RoleGuard } from '../../shared/services/role.guard';
 export const admin: Routes = [
   {
-    path: 'admin', children: [{
+    path: 'admin', canActivate: [RoleGuard], data: { area: 'admin' }, children: [{
       path: 'home',
       loadComponent: () =>
         import('./home-common/home-common.component').then((m) => m.HomeCommonComponent),

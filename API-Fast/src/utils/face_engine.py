@@ -13,9 +13,21 @@ from .image_quality import check_image_quality
 from .liveness_detection import check_multi_frame_liveness, cosine_distance
 from ..config.settings import settings
 
-_face_app: Optional[FaceAnalysis] = None
+_face_apps: dict = {}
 _face_app_lock = threading.Lock()
-_face_app_device: Optional[str] = None
+_thread_device = threading.local()
+
+
+def set_thread_device(device: str) -> None:
+    _thread_device.device = device
+
+
+def _active_device() -> str:
+    pinned = getattr(_thread_device, "device", None)
+    if pinned:
+        return pinned
+    devices = settings.face_device_list()
+    return devices[0] if devices else "cpu"
 
 
 def _cuda_runtime_usable() -> bool:
@@ -71,38 +83,38 @@ def _resolve_providers_and_ctx(device: str) -> Tuple[List[str], int]:
     return ["CPUExecutionProvider"], -1
 
 
-def get_face_app() -> FaceAnalysis:
-    """Lazy singleton FaceAnalysis (CUDA when available, else CPU)."""
-    global _face_app, _face_app_device
-    if _face_app is not None:
-        return _face_app
+def get_face_app(device: Optional[str] = None, *, det_size: Optional[int] = None) -> FaceAnalysis:
+    """Lazy FaceAnalysis per CUDA device (or CPU)."""
+    global _face_apps
+    device = (device or _active_device() or "cpu").strip()
+    size = int(det_size or settings.FACE_EMBED_DET_SIZE)
+    key = f"{device}:{size}"
+    cached = _face_apps.get(key)
+    if cached is not None:
+        return cached
     with _face_app_lock:
-        if _face_app is None:
-            device = (settings.FACE_DEVICE or "cuda:0").strip() or "cuda:0"
-            providers, ctx_id = _resolve_providers_and_ctx(device)
-            print(f"Loading InsightFace buffalo_l providers={providers} ctx_id={ctx_id}", flush=True)
-            try:
-                app = FaceAnalysis(name="buffalo_l", providers=providers)
-                app.prepare(ctx_id=ctx_id, det_size=(640, 640))
-                _face_app_device = device if ctx_id >= 0 else "cpu"
-            except Exception as exc:
-                if ctx_id < 0:
-                    raise
-                print(
-                    f"CUDA InsightFace init failed ({exc}); falling back to CPU.",
-                    flush=True,
-                )
-                app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
-                app.prepare(ctx_id=-1, det_size=(640, 640))
-                _face_app_device = "cpu"
-            _face_app = app
-            print(f"InsightFace ready on {_face_app_device}", flush=True)
-    return _face_app
+        cached = _face_apps.get(key)
+        if cached is not None:
+            return cached
+        providers, ctx_id = _resolve_providers_and_ctx(device)
+        print(f"Loading InsightFace buffalo_l device={device} providers={providers} ctx_id={ctx_id} det={size}", flush=True)
+        try:
+            app = FaceAnalysis(name="buffalo_l", providers=providers)
+            app.prepare(ctx_id=ctx_id, det_size=(size, size))
+        except Exception as exc:
+            if ctx_id < 0:
+                raise
+            print(f"CUDA InsightFace init failed ({exc}); falling back to CPU.", flush=True)
+            app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+            app.prepare(ctx_id=-1, det_size=(size, size))
+            key = f"cpu:{size}"
+        _face_apps[key] = app
+        print(f"InsightFace ready key={key}", flush=True)
+        return app
 
 
 def get_face_device() -> str:
-    get_face_app()
-    return _face_app_device or "cpu"
+    return _active_device()
 
 
 def _largest_face(faces):
@@ -115,6 +127,20 @@ def _largest_face(faces):
 
 
 def _read_bgr(image_path: str) -> np.ndarray:
+    image = cv2.imread(image_path)
+    if image is None:
+        raise ValueError(f"Could not read image: {image_path}")
+    return image
+
+
+def detect_bbox(image_path: str) -> Optional[np.ndarray]:
+    """Detector only (smaller det_size) for liveness motion checks."""
+    image = _read_bgr(image_path)
+    app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
+    bboxes, _kpss = app.det_model.detect(image, max_num=1, metric="default")
+    if bboxes is None or len(bboxes) == 0:
+        return None
+    return np.asarray(bboxes[0][:4], dtype=np.float32)
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError(f"Could not read image: {image_path}")
@@ -220,14 +246,10 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
 
     frames = []
     for path in image_paths:
-        # Skip blur/brightness on every frame; quality on the recognition frame only
-        result = extract_face_features(path, require_quality=False)
-        if result is None:
-            frames.append(None)
-            continue
-        embedding, bbox = result
-        frames.append({"embedding": embedding, "bbox": bbox})
+        bbox = detect_bbox(path)
+        frames.append({"bbox": bbox, "embedding": None} if bbox is not None else None)
 
+    # Motion uses boxes only. Same-person uses the first and middle embeddings.
     is_live, reason = check_multi_frame_liveness(
         frames,
         same_person_max_distance=settings.LIVENESS_SAME_PERSON_MAX_DISTANCE,

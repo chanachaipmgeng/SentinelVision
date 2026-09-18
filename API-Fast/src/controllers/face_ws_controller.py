@@ -98,6 +98,26 @@ async def _handle_detect(
 ) -> None:
     """Detection-only pass for kiosk face boxes (no temp files, no DB)."""
     try:
+        from ..config.settings import settings
+        from ..utils.face_gpu_queue import face_gpu_queue_stats
+
+        if not face_core_enabled():
+            queue = face_gpu_queue_stats()
+            if int(queue.get("pending") or 0) >= int(settings.WS_QUEUE_BACKPRESSURE):
+                await _send(
+                    websocket,
+                    {
+                        "type": "detected",
+                        "requestId": request_id,
+                        "dropped": True,
+                        "queue": queue,
+                        "frameWidth": 0,
+                        "frameHeight": 0,
+                        "faces": [],
+                    },
+                    lock=send_lock,
+                )
+                return
         content = _decode_image_b64(image_b64)
         if face_core_enabled():
             client = get_face_core_client()
@@ -370,10 +390,19 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     company_id = UUID(str(data["companyId"]))
                     latitude = float(data.get("latitude", 0) or 0)
                     longitude = float(data.get("longitude", 0) or 0)
-                except Exception:
+                    from ..config.settings import settings as _settings
+                    if _settings.FACE_ROUTES_REQUIRE_JWT:
+                        from ..config.database import async_session
+                        from ..security.deps import assert_company_access, member_from_token
+
+                        token = str(data.get("token") or "")
+                        async with async_session() as db:
+                            member = await member_from_token(token, db)
+                            await assert_company_access(db, member, company_id)
+                except Exception as exc:
                     await _send(
                         websocket,
-                        {"type": "error", "detail": "Invalid session payload"},
+                        {"type": "error", "detail": getattr(exc, "detail", None) or "Invalid session payload"},
                     )
                     continue
                 await _send(

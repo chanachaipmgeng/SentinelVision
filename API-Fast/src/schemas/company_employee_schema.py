@@ -219,6 +219,7 @@ class EmployeeImportCreatedRow(BaseModel):
     employeeId: str = ""
     faceEnrolled: bool = False
     faceWarning: Optional[str] = None
+    temporaryPassword: Optional[str] = None
 
 
 class EmployeeImportErrorRow(BaseModel):

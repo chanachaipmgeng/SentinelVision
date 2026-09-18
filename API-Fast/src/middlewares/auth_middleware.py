@@ -1,18 +1,15 @@
-from fastapi import Request, HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
+"""JWT gate. Secrets live in settings."""
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-SECRET_KEY = "***REMOVED***"  # ใช้ secret key เดียวกับที่ใช้ใน auth_routes
-ALGORITHM = "HS256"
+from ..security.jwt import decode_token
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
-async def authenticate_jwt(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    try:
-        # Decode and validate the JWT
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload  # คืน payload ที่ถอดรหัสแล้ว
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+
+async def authenticate_jwt(
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Authorization required")
+    return decode_token(credentials.credentials, expected_typ="access")

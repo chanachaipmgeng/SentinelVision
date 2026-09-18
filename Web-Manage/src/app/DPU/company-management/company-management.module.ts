@@ -3,8 +3,14 @@ import { CommonModule } from '@angular/common';
 import { InstallManagementComponent } from './company-management.component';
 import { RouterModule, Routes } from '@angular/router';
 
-export const companyRoutes: Routes = [
+import { RoleGuard } from '../../shared/services/role.guard';
 
+export const companyRoutes: Routes = [
+  {
+    path: '',
+    canActivateChild: [RoleGuard],
+    data: { area: 'company' },
+    children: [
     {
       path: 'company/home/:companyId',
       loadComponent: () =>
@@ -60,8 +66,13 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./warning-timetamp/warning-timetamp.component').then((m) => m.WarningTimetampComponent),
     },
-
-
+    {
+      path: 'company/audit-log',
+      loadComponent: () =>
+        import('./audit-log/audit-log.component').then((m) => m.AuditLogComponent),
+    },
+    ],
+  },
 ];
 
 

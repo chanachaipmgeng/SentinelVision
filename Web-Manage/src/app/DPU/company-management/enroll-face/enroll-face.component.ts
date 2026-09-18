@@ -23,6 +23,7 @@ import {
   resolveTtsSettings,
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
+import { buildKioskSession } from './kiosk-ws-client';
 
 // pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
 // drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
@@ -1466,7 +1467,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     });
     const photoFile = ts.photoTimestamp || null;
     const photoUrl = photoFile
-      ? `${environment.baseUrl || ''}/images/${photoFile}`.replace(/([^:]\/)\/+/g, '$1')
+      ? this.authedImage(photoFile)
       : frames.length
         ? frames[Math.floor(frames.length / 2)]
         : ts.photoUrl
@@ -1608,9 +1609,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   personPhoto(person: KioskRosterPerson): string {
     const file = person.photoTimestamp || person.picture;
     if (file) {
-      return `${environment.baseUrl}/images/${file}`;
+      return this.authedImage(file);
     }
     return './assets/images/faces/1.jpg';
+  }
+
+  private authedImage(file: string): string {
+    const base = `${environment.baseUrl || ''}/images/${file}`.replace(/([^:]\/)\/+/g, '$1');
+    const token = this.tokenService.getToken();
+    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
   }
 
   isOutside(person: KioskRosterPerson): boolean {
@@ -1647,20 +1654,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     if (!this.wsConnected) {
       return;
     }
-    // Avoid locking the WS session on Null Island (0,0) before GPS arrives.
-    if (!this.hasValidLocation) {
-      this.wsSend({
-        type: 'session',
+    this.wsSend(
+      buildKioskSession({
         companyId: this.companyId,
-      });
-      return;
-    }
-    this.wsSend({
-      type: 'session',
-      companyId: this.companyId,
-      latitude: this.location.latitude,
-      longitude: this.location.longitude,
-    });
+        token: this.tokenService.getToken(),
+        latitude: this.hasValidLocation ? this.location.latitude : undefined,
+        longitude: this.hasValidLocation ? this.location.longitude : undefined,
+      }),
+    );
   }
 
   private applyGeoPosition(position: GeolocationPosition): void {

@@ -156,6 +156,7 @@ export class NavService implements OnDestroy {
           { path: '/company/timestamp-log', title: 'ข้อมูลการลงเวลา', type: 'link' },
           { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
           { path: '/company/timestamp-face', title: 'Kiosk ใบหน้า', type: 'link' },
+          { path: '/company/audit-log', title: 'ประวัติการใช้งาน', type: 'link' },
         ],
       },
     ];

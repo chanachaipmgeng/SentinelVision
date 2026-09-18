@@ -34,6 +34,7 @@ class CompanyEmployee(Base):
     bossId = Column(String, nullable=True, default="")
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
     updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
     # ความสัมพันธ์กับโมเดลอื่น ๆ
     member = relationship("Member", back_populates="companyEmployees")

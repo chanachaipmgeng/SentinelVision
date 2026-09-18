@@ -7,7 +7,9 @@ from fastapi import HTTPException, status
 
 # ดึงข้อมูล position ทั้งหมด
 async def get_all_positions(db: AsyncSession):
-    result = await db.execute(select(Position).options(joinedload(Position.company)))
+    result = await db.execute(
+        select(Position).where(Position.deletedAt.is_(None)).options(joinedload(Position.company))
+    )
     return result.scalars().all()
 
 # ดึงข้อมูล position ตาม ID
@@ -53,9 +55,10 @@ async def update_position(positionId: str, position_data: dict, db: AsyncSession
 
 # ลบ position
 async def delete_position(positionId: str, db: AsyncSession):
-    position = await db.get(Position, positionId)
-    if not position:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position not found")
+    from ..utils.soft_delete import mark_deleted
 
-    await db.delete(position)
+    position = await db.get(Position, positionId)
+    if not position or position.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position not found")
+    mark_deleted(position)
     await db.commit()

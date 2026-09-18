@@ -5,13 +5,18 @@ from fastapi import HTTPException, status
 import bcrypt
 
 # ฟังก์ชันเพื่อดึงข้อมูลบริษัททั้งหมด
-async def get_all_companies(db: AsyncSession):
-    result = await db.execute(select(Company))
+async def get_all_companies(db: AsyncSession, include_deleted: bool = False):
+    stmt = select(Company)
+    if not include_deleted:
+        stmt = stmt.where(Company.deletedAt.is_(None))
+    result = await db.execute(stmt)
     return result.scalars().all()
 
 # ฟังก์ชันเพื่อดึงข้อมูลบริษัทตาม ID
 async def get_company_by_id(companyId: str, db: AsyncSession):
-    result = await db.execute(select(Company).where(Company.companyId == companyId))
+    result = await db.execute(
+        select(Company).where(Company.companyId == companyId, Company.deletedAt.is_(None))
+    )
     company = result.scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
@@ -36,11 +41,13 @@ async def update_company(companyId: str, company_data: dict, db: AsyncSession):
 
 # ฟังก์ชันเพื่อการลบบริษัท
 async def delete_company(companyId: str, db: AsyncSession):
+    from ..utils.soft_delete import mark_deleted
+
     company = await get_company_by_id(companyId, db)
-    await db.delete(company)
+    mark_deleted(company)
     await db.commit()
     return {
         "actionStatus": "Success",
-        "message": "User deleted successfully",
+        "message": "Company deleted",
         "statusCode": 200,
     }

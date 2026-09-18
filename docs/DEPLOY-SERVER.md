@@ -377,3 +377,15 @@ docker compose run --rm \
 ---
 
 *อัปเดตล่าสุดให้สอดคล้องกับ Docker stack: `db` · `api` · `admin` · `nginx`*
+
+## 10. Deploy ร่วมกับ Face Core (BFF)
+
+Production ที่ใช้ GPU 2 ใบให้ Face Core ถือ vision และ DPU เป็น BFF (CPU)
+
+1. Clone `research/face-core` ไว้ข้าง ๆ repo นี้ (`/opt/face-core` และ `/opt/facescan-timeattendance`)
+2. สร้าง network `docker network create face-net`
+3. ตั้ง `SECRET_KEY` (DPU), `BOOTSTRAP_API_KEY` (face-core), `FACE_CORE_API_KEY` (ค่าเดียวกัน) ให้ยาวอย่างน้อย 16–32 ตัวอักษร
+4. รัน `scripts/deploy-stack.sh` — ขึ้น face-core ก่อน (dual GPU + Redis) แล้วรอ `/v1/ready` จากนั้นขึ้น DPU ด้วย `docker-compose.face-core.yml` แล้วรอ `/ready`
+5. ย้ายใบหน้าที่ enroll ไว้ใน DPU: `FACE_CORE_API_KEY=... scripts/migrate-faces.sh` ก่อนสลับ overlay ถ้ายังรันโหมด local อยู่ ไฟล์ mapping อยู่ที่ `backups/migration_mapping.json`
+6. Rollback: เอา `-f docker-compose.face-core.yml` ออก แถว `face_encoding` ใน DPU ยังอยู่เพราะสคริปต์ migrate ไม่ลบ
+

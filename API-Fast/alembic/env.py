@@ -4,12 +4,16 @@ Stamp this baseline after the first boot of an existing database:
 
     alembic stamp 0001_baseline
 """
+import os
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 config = context.config
+url = os.environ.get("DATABASE_URL", "")
+if url:
+    config.set_main_option("sqlalchemy.url", url.replace("+asyncpg", "+psycopg"))
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 

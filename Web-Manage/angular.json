@@ -55,8 +55,13 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "ignore": ["**/models/**"],
+                "output": "/assets"
+              },
               "src/favicon.ico",
-              "src/assets",
               "src/.htaccess"
             ],
             "styles": [
@@ -125,8 +130,13 @@
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+              {
+                "glob": "**/*",
+                "input": "src/assets",
+                "ignore": ["**/models/**"],
+                "output": "/assets"
+              },
               "src/favicon.ico",
-              "src/assets",
               "src/.htaccess"
             ],
             "styles": [

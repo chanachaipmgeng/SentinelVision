@@ -27,6 +27,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api
 ```
 
 Production adds `-f docker-compose.prod.yml` (no published Postgres port, resource limits).
+BFF (Face Core holds the GPUs): also `-f docker-compose.face-core.yml` after `docker network create face-net`. `scripts/deploy-stack.sh` starts face-core first, waits for `/v1/ready`, then DPU, then smokes `/health` `/ready` `/docs` `/companys`.
 
 ## Before `up`
 
@@ -66,6 +67,19 @@ Nginx may hold a stale API IP. Rebuild/restart `dpu-nginx`; keep `resolver 127.0
 4. `POST /auth/refresh-token` with `refreshToken` → new pair; with the access token → 401
 5. `GET /images/x.jpg` → 401; `?token=` → 404 (authorized, missing file)
 6. Kiosk WS `session` without `token` → `{"type":"error"}`
+
+## Next tests (BFF, not run on 10.50.0.117 yet)
+
+Run on a host that has both checkouts and `face-net`. Do not migrate production faces until 1–4 pass.
+
+1. Face Core `GET /v1/ready` 200 with `BOOTSTRAP_API_KEY` set (placeholder must fail startup).
+2. DPU with `docker-compose.face-core.yml`: `GET /ready` 200 and body includes Face Core health. Stop `face-core-api` → `/ready` 503 `face_core_down`, then recover.
+3. `GET /face/queue-stats` with a DPU JWT returns `source: face-core`. Kiosk WS `session` with token → `session_ok`; without token → error. Leave the socket open past the warning window → `token_expiring` then a new `session`.
+4. Company admin of company A: face `identify` / `POST /departments` for company B → 403.
+5. `scripts/migrate-faces.sh` dry-run, then real, on a copy of the DB. Face count on Face Core equals `face_encoding` per company. Spot-check 20 `POST /v1/verify`. Rollback = drop the BFF overlay; local rows stay.
+6. Stop `face-core-gpu1` only. Identify still succeeds on `cuda:0`.
+7. Soft-delete an employee → gone from `GET /employees/company/{id}`; row still in Postgres with `deleted_at`.
+8. Excel import via UI polls `import-jobs` until `done`.
 
 ## Do not
 

@@ -7,7 +7,9 @@ from fastapi import HTTPException, status
 
 # ดึงข้อมูล department ทั้งหมด
 async def get_all_departments(db: AsyncSession):
-    result = await db.execute(select(Department).options(joinedload(Department.company)))
+    result = await db.execute(
+        select(Department).where(Department.deletedAt.is_(None)).options(joinedload(Department.company))
+    )
     return result.scalars().all()
 
 # ดึงข้อมูล department ตาม ID
@@ -53,9 +55,10 @@ async def update_department(departmentId: str, department_data: dict, db: AsyncS
 
 # ลบ department
 async def delete_department(departmentId: str, db: AsyncSession):
-    department = await db.get(Department, departmentId)
-    if not department:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
+    from ..utils.soft_delete import mark_deleted
 
-    await db.delete(department)
+    department = await db.get(Department, departmentId)
+    if not department or department.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
+    mark_deleted(department)
     await db.commit()

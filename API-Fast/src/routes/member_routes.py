@@ -17,10 +17,11 @@ router = APIRouter()
 
 @router.get("", response_model=List[MemberResponse])
 async def get_members(
+    includeDeleted: bool = False,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    return await get_users(db)
+    return await get_users(db, include_deleted=includeDeleted)
 
 @router.get("/{memberId}", response_model=MemberResponse)
 async def get_member(

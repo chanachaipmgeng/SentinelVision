@@ -1,11 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import * as faceapi from 'face-api.js';
-
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { TokenService } from '../../../shared/services/token.service';
+import { AuthService } from '../../../shared/services/auth.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
@@ -212,6 +211,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   constructor(
     private http: HttpClient,
     private tokenService: TokenService,
+    private authService: AuthService,
     private comLocationService: CompanyLocationService,
     private systemSettingService: SystemSettingService,
     private ngZone: NgZone,
@@ -295,38 +295,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.startSceneClock();
   }
 
-  /**
-   * Local face-api is only a fallback (server GPU is primary).
-   * Kiosk devices without WebGL crash the tfjs webgl backend — try cpu, else disable.
-   */
+  /** Server WS detect is the only detector. Local face-api models are not shipped. */
   private async prepareLocalDetector(): Promise<void> {
-    const tf: any = (faceapi as any).tf;
-    let backendOk = false;
-    try {
-      backendOk = await tf.setBackend('webgl');
-      if (backendOk) await tf.ready();
-    } catch {
-      backendOk = false;
-    }
-    if (!backendOk) {
-      try {
-        backendOk = await tf.setBackend('cpu');
-        if (backendOk) await tf.ready();
-        console.warn('kiosk: WebGL unavailable — local fallback uses CPU backend');
-      } catch {
-        backendOk = false;
-      }
-    }
-    if (!backendOk) {
-      console.warn('kiosk: local face detection disabled (no usable tfjs backend) — server detect only');
-      return;
-    }
-    try {
-      await faceapi.nets.tinyFaceDetector.loadFromUri('/assets/models/tiny_face_detector');
-      this.localDetectReady = true;
-    } catch (e) {
-      console.warn('kiosk: local detector model load failed — server detect only', e);
-    }
+    this.localDetectReady = false;
   }
 
   /** Decorative + header clock only — never trigger component CD (face/WS work). */
@@ -463,13 +434,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   async detectFace() {
     const videoEl = this.video.nativeElement as HTMLVideoElement;
     const displaySize = { width: videoEl.width, height: videoEl.height };
-    faceapi.matchDimensions(this.canvas.nativeElement, displaySize);
 
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
     }
-
-    const detector = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.45 });
 
     this.ngZone.runOutsideAngular(() => {
       this.faceDetectionInterval = setInterval(async () => {
@@ -488,32 +456,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           this.sendDetectFrame(videoEl);
           return;
         }
-
-        // Fallback: local face-api detection (skip if tfjs unusable on this device)
-        if (this.detectBusy || !this.localDetectReady) {
-          return;
-        }
-        this.detectBusy = true;
-        try {
-          const detections = await faceapi.detectAllFaces(videoEl, detector);
-          const resized = faceapi.resizeResults(detections, displaySize);
-          const boxes: SmoothBox[] = resized.map((d) => ({
-            x: d.box.x,
-            y: d.box.y,
-            width: d.box.width,
-            height: d.box.height,
-          }));
-          this.localDetectErrors = 0;
-          this.processDetections(boxes, Date.now());
-        } catch (e) {
-          this.localDetectErrors += 1;
-          if (this.localDetectErrors >= 5) {
-            this.localDetectReady = false;
-            console.warn('kiosk: local detection keeps failing — disabled, server detect only');
-          }
-          console.error('detectFace error', e);
-        } finally {
-          this.detectBusy = false;
+        if (this.tracks.length > 0 && this.lastDetectionsAt > 0 && nowMs - this.lastDetectionsAt > 1600) {
+          this.updateTracks([], nowMs);
         }
       }, 140);
 
@@ -813,9 +757,32 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     return `${trackId}-${Date.now()}-${this.wsReqSeq}`;
   }
 
+  private refreshKioskToken(): void {
+    const refresh = this.tokenService.getRefreshToken();
+    if (!refresh) {
+      return;
+    }
+    this.authService.refreshToken(refresh.replace('Bearer ', '')).subscribe({
+      next: (token) => {
+        if (token?.accessToken) {
+          this.tokenService.saveToken(token.accessToken);
+        }
+        if (token?.refreshToken) {
+          this.tokenService.saveRefreshToken(token.refreshToken);
+        }
+        this.sendWsSession();
+      },
+    });
+  }
+
   private onKioskWsMessage(msg: any) {
     if (msg?.queue?.pending != null) {
       this.queuePending = Number(msg.queue.pending) || 0;
+    }
+
+    if (msg.type === 'token_expiring') {
+      this.refreshKioskToken();
+      return;
     }
 
     if (msg.type === 'identified') {

@@ -60,6 +60,8 @@ class AuthzMiddleware(BaseHTTPMiddleware):
         path = request.url.path.rstrip("/") or "/"
         if request.method == "OPTIONS" or path == "/" or path.startswith(_OPEN_PREFIXES):
             return await call_next(request)
+        if path == "/notifications/system":
+            return await call_next(request)
         if path.startswith("/metrics") or path.startswith("/docs") or path.startswith("/redoc") or path == "/openapi.json":
             return await call_next(request)
 

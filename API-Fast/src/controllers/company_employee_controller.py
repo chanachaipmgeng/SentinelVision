@@ -35,7 +35,7 @@ def _member_dict(member: Member) -> dict:
 async def get_all_companyEmployees(companyId: str, db: AsyncSession, limit: int | None = None, offset: int = 0):
     stmt = (
         select(CompanyEmployee)
-        .where(CompanyEmployee.companyId == companyId)
+        .where(CompanyEmployee.companyId == companyId, CompanyEmployee.deletedAt.is_(None))
         .options(
             selectinload(CompanyEmployee.member),
             selectinload(CompanyEmployee.position),
@@ -363,8 +363,10 @@ async def update_company_employee(
 
 # ลบ CompanyEmployee ตาม company_employeeId และ companyId
 async def delete_company_employee(company_employeeId: str, companyId: str, db: AsyncSession):
+    from ..utils.soft_delete import mark_deleted
+
     company_employee = await get_company_employee_by_id(company_employeeId, companyId, db)
-    await db.delete(company_employee)
+    mark_deleted(company_employee)
     await db.commit()
 
 # ค้นหาบริษัทที่ memberId อยู่

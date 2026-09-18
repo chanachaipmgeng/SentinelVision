@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>สเป็คระบบลงเวลาด้วยใบหน้า DPU / Face-in</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 18mm 14mm;
+      @top-left { content: "DPU Attendance / Face-in  - System Specification"; font-size: 8pt; color: #0f766e; }
+      @bottom-left { content: "myHR  |  Internal  |  v1.0  |  18 Sep 2026"; font-size: 8pt; color: #64748b; }
+      @bottom-right { content: counter(page) " / " counter(pages); font-size: 8pt; color: #64748b; }
+    }
+    @font-face {
+      font-family: "Leelawadee";
+      src: url("file:///C:/Windows/Fonts/LeelawUI.ttf") format("truetype");
+      font-weight: normal;
+    }
+    @font-face {
+      font-family: "Leelawadee";
+      src: url("file:///C:/Windows/Fonts/leelawdb.ttf") format("truetype");
+      font-weight: bold;
+    }
+    body {
+      font-family: "Leelawadee", sans-serif;
+      font-size: 10.5pt;
+      color: #1e293b;
+      line-height: 1.45;
+    }
+    h1 { font-size: 20pt; color: #0f766e; margin: 0 0 6pt; }
+    h2 { font-size: 13.5pt; color: #0f766e; border-bottom: 1.5pt solid #0f766e; padding-bottom: 3pt; margin-top: 16pt; }
+    h3 { font-size: 11.5pt; color: #115e59; margin-top: 10pt; }
+    .sub { color: #64748b; font-size: 10pt; margin-bottom: 14pt; }
+    .cover-meta { color: #334155; font-size: 10.5pt; }
+    table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 9.5pt; }
+    th { background: #0f766e; color: #fff; text-align: left; padding: 5pt 6pt; }
+    td { border: 0.4pt solid #cbd5e1; padding: 4.5pt 6pt; vertical-align: top; }
+    tr:nth-child(even) td { background: #f0fdfa; }
+    .note { background: #ecfdf5; border-left: 3pt solid #0f766e; padding: 7pt 9pt; margin: 8pt 0 12pt; font-size: 9.5pt; }
+    .warn { background: #fff7ed; border-left: 3pt solid #ea580c; padding: 7pt 9pt; margin: 8pt 0 12pt; font-size: 9.5pt; }
+    ul { margin: 4pt 0 10pt 14pt; }
+    li { margin-bottom: 2pt; }
+    code { font-size: 8.5pt; }
+    .muted { color: #64748b; font-size: 9pt; }
+  </style>
+</head>
+<body>
+
+<h1>เอกสารสเป็คระบบ</h1>
+<p class="sub">DPU Attendance / Face-in — ระบบลงเวลาด้วยใบหน้า</p>
+<p class="cover-meta">
+  เวอร์ชันเอกสาร: 1.0 &nbsp;|&nbsp; วันที่: 18 กันยายน 2026<br/>
+  ผู้ใช้งาน: myHR (face-in.myhr.co.th)<br/>
+  โหมดที่ติดตั้งจริง: InsightFace ในเครื่อง (FACE_CORE_ENABLED=false) + GPU
+</p>
+
+<div class="note">
+  ตัวเลขความจุและ concurrent เป็นค่าประมาณจากสถาปัตยกรรมปัจจุบัน
+  ยังไม่ได้ทำ load test เต็มระบบบนเซิร์ฟเวอร์นี้
+</div>
+
+<h2>1. ภาพรวม</h2>
+<p>
+  ระบบลงเวลาเข้า–ออกงานด้วยใบหน้าสำหรับหลายบริษัท แอดมินจัดการพนักงานและลงทะเบียนใบหน้า
+  พนักงานลงเวลาที่คีออสในเว็บแอดมิน ไม่มีแอปมือถือแยก
+</p>
+<ul>
+  <li>จดจำใบหน้า: InsightFace รุ่น <b>buffalo_l</b> (embedding 512 มิติ)</li>
+  <li>ค้นหา 1:N ภายในบริษัทเท่านั้น ไม่ค้นข้ามบริษัท</li>
+  <li>เก็บ vector ใน PostgreSQL + ส่วนขยาย pgvector (ดัชนี HNSW, cosine)</li>
+  <li>กันลงเวลาซ้ำด้วยช่วงเวลา (ค่าเริ่มต้น 5 นาที)</li>
+  <li>ตรวจพิกัดสถานที่ (geofence) ตอนบันทึกลงเวลา</li>
+</ul>
+
+<h2>2. สถาปัตยกรรม (โหมดที่ใช้อยู่)</h2>
+<p>Docker Compose หลัง nginx — โค้ดถูก bake ใน image ต้อง rebuild หลังแก้ซอร์ส</p>
+<table>
+  <tr><th>บริการ</th><th>บทบาท</th></tr>
+  <tr><td>dpu-nginx</td><td>เกตเวย์พอร์ต HTTP อัปโหลดได้ถึง 500 MB, import timeout 1 ชั่วโมง, WebSocket คีออส</td></tr>
+  <tr><td>dpu-admin</td><td>Angular 17 หน้าแอดมิน + คีออส /company/timestamp-face</td></tr>
+  <tr><td>dpu-api</td><td>FastAPI + InsightFace + คิว GPU</td></tr>
+  <tr><td>dpu-db</td><td>PostgreSQL 16 + pgvector</td></tr>
+</table>
+<p>เส้นทางข้อมูล: เบราว์เซอร์ → nginx → admin (หน้าเว็บ) หรือ api (ใบหน้า / HR) → Postgres</p>
+<div class="note">
+  <b>FACE_CORE_ENABLED</b> เป็นสวิตช์ส่งงานวิชันไปบริการ face-core แยก<br/>
+  เซิร์ฟเวอร์นี้ตั้ง <b>false</b> ไม่จำเป็นต้องมี face-core
+</div>
+
+<h2>3. สแต็กซอฟต์แวร์</h2>
+<table>
+  <tr><th>ชั้น</th><th>เทคโนโลยี</th></tr>
+  <tr><td>UI</td><td>Angular 17 (Web-Manage)</td></tr>
+  <tr><td>API</td><td>FastAPI + Uvicorn (Python 3.12)</td></tr>
+  <tr><td>ใบหน้า</td><td>InsightFace 0.7.3 buffalo_l, ONNX Runtime GPU 1.21.0</td></tr>
+  <tr><td>ฐานข้อมูล</td><td>pgvector/pgvector:pg16, embedding vector(512)</td></tr>
+  <tr><td>เกตเวย์</td><td>nginx 1.27, client_max_body_size 500m</td></tr>
+  <tr><td>รันไทม์</td><td>Docker Compose, image API จาก nvidia/cuda:12.8.1-cudnn</td></tr>
+</table>
+
+<h2>4. สเป็คฮาร์ดแวร์ที่ตรวจบนเซิร์ฟเวอร์</h2>
+<table>
+  <tr><th>รายการ</th><th>ที่พบบนเครื่อง myhr</th></tr>
+  <tr><td>GPU</td><td>NVIDIA Quadro RTX 5000 จำนวน 2 ใบ (VRAM 16 GB/ใบ)</td></tr>
+  <tr><td>ไดรเวอร์ที่ต้องตรงกัน</td><td>เคอร์เนลโมดูลกับ NVML ต้องเป็นรุ่นเดียวกัน (เช่น 580.178)</td></tr>
+  <tr><td>GPU ที่ระบบใช้ตอนนี้</td><td>cuda:0 ใบเดียว (ใบที่สองยังไม่ถูกใช้)</td></tr>
+  <tr><td>NVIDIA persistenced</td><td>ต้องมี /run/nvidia-persistenced/socket เพื่อให้คอนเทนเนอร์ GPU ขึ้น</td></tr>
+</table>
+<div class="warn">
+  บน nvidia-smi พบคำเตือน infoROM corrupted ทั้งสองใบ ไม่ได้บล็อกการรัน
+  แต่ควรสำรองและติดตามสุขภาพ GPU
+</div>
+
+<h2>5. ความจุจำนวนคน (gallery)</h2>
+<p>ค้นหาใบหน้าจำกัดต่อบริษัท + ดัชนี HNSW — embedding ในเบสเล็กมาก (~2 KB/คน) จุดที่โตคือไฟล์ JPEG</p>
+<table>
+  <tr><th>ระดับ</th><th>จำนวนโดยประมาณ</th><th>หมายเหตุ</th></tr>
+  <tr><td>ใช้งานสบาย</td><td>2,500 – 10,000 คน / บริษัท</td><td>ตรงกับชุด import หลักพัน–หมื่น</td></tr>
+  <tr><td>ยังรองรับ</td><td>~20,000 – 50,000 คน</td><td>ค้นหายังเร็ว ดิสก์รูปจะโตก่อน CPU</td></tr>
+  <tr><td>ต้องออกแบบใหม่</td><td>แสนคนขึ้นไป หรือค้นข้ามทุกบริษัท</td><td>ไม่ใช่โหมดปัจจุบันของระบบ</td></tr>
+</table>
+<p class="muted">ประมาณการดิสก์รูป: หลักสิบ–ร้อย KB ต่อไฟล์ × 2 ชุด (โปรไฟล์ + ใบหน้าที่ลงทะเบียน)</p>
+
+<h2>6. Concurrent (ใช้งานพร้อมกัน)</h2>
+<p>คอขวดคือคิว GPU ไม่ใช่หน้าเว็บแอดมิน</p>
+<table>
+  <tr><th>พารามิเตอร์</th><th>ค่าเริ่มต้น</th></tr>
+  <tr><td>FACE_GPU_WORKERS</td><td>1 (ประมวลผลใบหน้าทีละงาน)</td></tr>
+  <tr><td>FACE_GPU_QUEUE_SIZE</td><td>64 (คิวรอสูงสุด)</td></tr>
+  <tr><td>Throughput โดยประมาณบน RTX 5000</td><td>ประมาณ 5–10 งานใบหน้า / วินาที</td></tr>
+</table>
+<table>
+  <tr><th>สถานการณ์</th><th>ความเหมาะสม</th></tr>
+  <tr><td>คีออส 1 จอ คนเดินผ่านเป็นกลุ่ม</td><td>รองรับดี</td></tr>
+  <tr><td>คีออส 2–4 จอ พร้อมกัน</td><td>ยังไหว เริ่มมีงานรอในคิว</td></tr>
+  <tr><td>คีออส 10+ จอ หรือคนอัดหน้ากล้องพร้อมกันมาก</td><td>หน่วง งานรอเต็มคิว 64</td></tr>
+  <tr><td>แอดมินเปิดเว็บพร้อมกันหลายสิบคน</td><td>ไม่ใช่คอขวด</td></tr>
+  <tr><td>Import Excel+ZIP หลักพันรูป</td><td>รันทีละรูปบน GPU ใช้เวลาหลายนาที</td></tr>
+</table>
+<p>ตรวจคิวจริง: <code>GET /face/queue-stats</code> ดู pending / active / workers</p>
+
+<h2>7. คีออสลงเวลา</h2>
+<ul>
+  <li>เส้นทาง: /company/timestamp-face (เต็มจอ ไม่มีแอปมือถือแยก)</li>
+  <li>โหมดหลัก: WebSocket /face/ws/kiosk (identify + walk-by check-in)</li>
+  <li>สำรอง: HTTP walk-by หาก WS ใช้ไม่ได้</li>
+  <li>หลายคนในเฟรม: ติดตามด้วย IoU ส่งครอปใบหน้า ไม่ล็อกกล้องทั้งจอให้คนเดียว</li>
+  <li>ค้นหาและลงเวลาต้องส่ง companyId — ไม่จับคู่ข้ามบริษัท</li>
+  <li>กันลงเวลาซ้ำ: CHECK_IN_DEDUPE_SECONDS (ค่าเริ่มต้น 300 วินาที)</li>
+</ul>
+
+<h2>8. นำเข้าพนักงาน (Excel + รูป)</h2>
+<table>
+  <tr><th>รายการ</th><th>สเป็ค</th></tr>
+  <tr><td>API</td><td>GET .../import-template และ POST .../import (file=xlsx, photos=zip)</td></tr>
+  <tr><td>ขนาดอัปโหลด</td><td>nginx 500 MB (HTTPS ด้านนอกต้องตั้ง client_max_body_size ด้วย มิฉะนั้นได้ 413)</td></tr>
+  <tr><td>เกณฑ์เบลอตอน import</td><td>IMAGE_BLUR_THRESHOLD_IMPORT=0 ไม่ตัดรูปเบลอจากระบบอื่น (ยังต้องเจอใบหน้า)</td></tr>
+  <tr><td>เกณฑ์เบลอตอนคีออส / เพิ่มใบหน้า</td><td>IMAGE_BLUR_THRESHOLD=20.0</td></tr>
+  <tr><td>Import ซ้ำ</td><td>อีเมลที่มีในบริษัทแล้ว = error ไม่แก้ข้อมูลเดิม ไม่ลงใบหน้าซ้ำ แถวอื่นทำต่อได้</td></tr>
+</table>
+
+<h2>9. พื้นที่จัดเก็บ</h2>
+<table>
+  <tr><th>ที่เก็บ</th><th>เนื้อหา</th><th>ลบหลังเทรน/import เสร็จ</th></tr>
+  <tr><td>ตาราง face_encoding</td><td>vector 512-d สำหรับจับคู่</td><td>ห้ามลบ ถ้าลบจะลงเวลาด้วยใบหน้าไม่ได้</td></tr>
+  <tr><td>enrolled_images</td><td>รูปใบหน้าที่ลงทะเบียน</td><td>ลบได้ถ้าไม่ต้องดูแกลเลอรี — ลงเวลายังใช้ vector ในเบส</td></tr>
+  <tr><td>uploaded_images</td><td>รูปโปรไฟล์ + รูปตอนลงเวลา</td><td>อย่าลบทั้งโฟลเดอร์ UI และหลักฐานลงเวลาจะหาย</td></tr>
+  <tr><td>temp_images</td><td>ไฟล์ชั่วคราว</td><td>ลบของค้างได้</td></tr>
+</table>
+<p>เช็กขนาดเบส: <code>SELECT pg_size_pretty(pg_database_size('dpu'));</code><br/>
+เช็กขนาดรูป: <code>du -sh /app/enrolled_images /app/uploaded_images</code> ในคอนเทนเนอร์ dpu-api</p>
+
+<h2>10. URL สำคัญ</h2>
+<table>
+  <tr><th>เส้นทาง</th><th>หน้าที่</th></tr>
+  <tr><td>/</td><td>เว็บแอดมิน</td></tr>
+  <tr><td>/company/timestamp-face</td><td>คีออสลงเวลา</td></tr>
+  <tr><td>/docs</td><td>OpenAPI</td></tr>
+  <tr><td>/face/queue-stats</td><td>สุขภาพคิว GPU</td></tr>
+</table>
+
+<h2>11. ข้อแนะนำเมื่อจะขยาย</h2>
+<ul>
+  <li>เพิ่มคีออสพร้อมกันหลายจุด: ตั้ง FACE_GPU_WORKERS และใช้ GPU ใบที่สอง หรือแยกวิชันไป Face Core</li>
+  <li>ไดรเวอร์ NVIDIA หลังอัปเดตต้องรีบูต ให้เคอร์เนลโมดูลตรงกับ NVML</li>
+  <li>อัปโหลดผ่าน HTTPS ต้องตั้งขนาดบอดี้ที่ nginx ฝั่ง TLS ไม่ใช่แค่ใน Docker</li>
+  <li>หลังแก้โค้ด API/UI/nginx ต้อง rebuild image ที่เกี่ยวข้อง</li>
+</ul>
+
+<p class="muted">เอกสารนี้อ้างอิงโค้ดใน repo facescan-timeattendance (DPU Attendance) และการตรวจบนเซิร์ฟเวอร์ production ณ วันที่ระบุ</p>
+
+</body>
+</html>

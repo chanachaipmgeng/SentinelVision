@@ -3,6 +3,8 @@
 
 Simulates N concurrent kiosk screens: JWT session, detect at ~90 ms,
 optional identify / check-in under the same concurrency caps as the UI.
+Use --faces-per-kiosk to mosaic multiple faces into each detect frame and
+drive up to 2 identify / 3 check-in in flight per screen (UI caps).
 
 Credentials via env (never hardcoded):
   KIOSK_LOAD_USER
@@ -194,6 +196,35 @@ def image_b64(image: bytes) -> str:
     return base64.b64encode(image).decode("ascii")
 
 
+def mosaic_faces(image: bytes, count: int) -> bytes:
+    """Tile the sample face into a grid so detect can see multiple boxes."""
+    if count <= 1:
+        return image
+    from io import BytesIO
+
+    from PIL import Image
+
+    face = Image.open(BytesIO(image)).convert("RGB")
+    # Prefer a wide row so faces stay separated (helps detector NMS).
+    cols = min(count, 3)
+    rows = (count + cols - 1) // cols
+    gap = 24
+    cell_w, cell_h = face.size
+    canvas = Image.new(
+        "RGB",
+        (cols * cell_w + (cols + 1) * gap, rows * cell_h + (rows + 1) * gap),
+        (32, 32, 32),
+    )
+    for i in range(count):
+        r, c = divmod(i, cols)
+        x = gap + c * (cell_w + gap)
+        y = gap + r * (cell_h + gap)
+        canvas.paste(face, (x, y))
+    out = BytesIO()
+    canvas.save(out, format="JPEG", quality=85)
+    return out.getvalue()
+
+
 def append_jsonl(path: Optional[Path], row: dict[str, Any]) -> None:
     if path is None:
         return
@@ -214,7 +245,9 @@ class KioskClient:
         company_id: str,
         lat: float,
         lon: float,
-        image_b64_str: str,
+        detect_b64: str,
+        crop_b64: str,
+        faces_per_kiosk: int,
         profile: str,
         hold_s: float,
         jsonl: Optional[Path],
@@ -226,7 +259,9 @@ class KioskClient:
         self.company_id = company_id
         self.lat = lat
         self.lon = lon
-        self.image_b64 = image_b64_str
+        self.detect_b64 = detect_b64
+        self.crop_b64 = crop_b64
+        self.faces_per_kiosk = max(1, faces_per_kiosk)
         self.profile = profile
         self.hold_s = hold_s
         self.jsonl = jsonl
@@ -235,8 +270,9 @@ class KioskClient:
         self._pending: dict[str, asyncio.Future] = {}
         self._identify_inflight = 0
         self._checkin_inflight = 0
-        self._last_identify_at = 0.0
+        self._last_identify_at: dict[int, float] = {}
         self._stop = False
+        self._track_ids = list(range(1, self.faces_per_kiosk + 1))
 
     def _log(self, event: str, **extra: Any) -> None:
         row = {
@@ -341,7 +377,7 @@ class KioskClient:
                 {
                     "type": "detect",
                     "requestId": detect_id,
-                    "image": self.image_b64,
+                    "image": self.detect_b64,
                 }
             )
         )
@@ -354,44 +390,70 @@ class KioskClient:
 
         detect_ms = (time.perf_counter() - t0) * 1000
         dropped = bool(detected.get("dropped"))
+        face_n = len(detected.get("faces") or [])
         self.stats.detect.add(detect_ms, dropped=dropped)
         self._log(
             "detected",
             latency_ms=round(detect_ms, 1),
             dropped=dropped,
-            faces=len(detected.get("faces") or []),
+            faces=face_n,
+            want_faces=self.faces_per_kiosk,
         )
 
         bg: Optional[asyncio.Task] = None
-        if self.profile == "rush" and not dropped and (detected.get("faces") or []):
-            # Fire identify/checkin without blocking the detect cadence.
-            bg = asyncio.create_task(self._rush_side(ws))
+        # Drive people-load from --faces-per-kiosk (UI track count), even if
+        # mosaic NMS returns fewer boxes — still log actual face_n above.
+        people = self.faces_per_kiosk if (not dropped and face_n > 0) else 0
+        if self.profile == "rush" and people > 0:
+            bg = asyncio.create_task(self._rush_side(ws, people))
 
         await asyncio.sleep(DETECT_INTERVAL_MS / 1000.0)
         return bg
 
-    async def _rush_side(self, ws) -> None:
-        await self._maybe_identify(ws)
-        await self._maybe_checkin(ws)
-
-    async def _maybe_identify(self, ws) -> None:
+    async def _rush_side(self, ws, people: int) -> None:
+        tasks: list[asyncio.Task] = []
         now = time.monotonic()
-        if self._identify_inflight >= MAX_CONCURRENT_IDENTIFY:
-            return
-        if (now - self._last_identify_at) * 1000 < IDENTIFY_EVERY_MS:
-            return
-        self._last_identify_at = now
-        self._identify_inflight += 1
-        req_id = f"i-{self.kiosk_id}-{uuid.uuid4().hex[:10]}"
+        identify_budget = min(people, MAX_CONCURRENT_IDENTIFY)
+        for track_id in self._track_ids[:identify_budget]:
+            if self._identify_inflight >= MAX_CONCURRENT_IDENTIFY:
+                break
+            last = self._last_identify_at.get(track_id, 0.0)
+            if (now - last) * 1000 < IDENTIFY_EVERY_MS:
+                continue
+            self._last_identify_at[track_id] = now
+            # Reserve slot before create_task so parallel starts respect the cap.
+            self._identify_inflight += 1
+            tasks.append(asyncio.create_task(self._do_identify(ws, track_id, reserved=True)))
+
+        checkin_budget = min(people, MAX_CONCURRENT_CHECKIN)
+        started_checkin = 0
+        for track_id in self._track_ids[:checkin_budget]:
+            if self._checkin_inflight + started_checkin >= MAX_CONCURRENT_CHECKIN:
+                break
+            started_checkin += 1
+            self._checkin_inflight += 1
+            tasks.append(
+                asyncio.create_task(self._do_checkin(ws, track_id, reserved=True))
+            )
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _do_identify(self, ws, track_id: int, *, reserved: bool = False) -> None:
+        if not reserved:
+            if self._identify_inflight >= MAX_CONCURRENT_IDENTIFY:
+                return
+            self._identify_inflight += 1
+        req_id = f"i-{self.kiosk_id}-{track_id}-{uuid.uuid4().hex[:8]}"
         t0 = time.perf_counter()
         try:
             await ws.send(
                 json.dumps(
                     {
                         "type": "identify",
-                        "trackId": self.kiosk_id,
+                        "trackId": track_id,
                         "requestId": req_id,
-                        "image": self.image_b64,
+                        "image": self.crop_b64,
                     }
                 )
             )
@@ -401,6 +463,7 @@ class KioskClient:
                 self.stats.identify.add_error()
                 self._log(
                     "identify_error",
+                    trackId=track_id,
                     detail=msg.get("detail"),
                     latency_ms=round(ms, 1),
                 )
@@ -408,30 +471,32 @@ class KioskClient:
                 self.stats.identify.add(ms)
                 self._log(
                     "identified",
+                    trackId=track_id,
                     latency_ms=round(ms, 1),
                     memberId=msg.get("memberId"),
                     matched=msg.get("matched"),
                 )
         except Fail:
             self.stats.identify.add_error()
-            self._log("identify_timeout")
+            self._log("identify_timeout", trackId=track_id)
         finally:
             self._identify_inflight = max(0, self._identify_inflight - 1)
 
-    async def _maybe_checkin(self, ws) -> None:
-        if self._checkin_inflight >= MAX_CONCURRENT_CHECKIN:
-            return
-        self._checkin_inflight += 1
-        req_id = f"c-{self.kiosk_id}-{uuid.uuid4().hex[:10]}"
+    async def _do_checkin(self, ws, track_id: int, *, reserved: bool = False) -> None:
+        if not reserved:
+            if self._checkin_inflight >= MAX_CONCURRENT_CHECKIN:
+                return
+            self._checkin_inflight += 1
+        req_id = f"c-{self.kiosk_id}-{track_id}-{uuid.uuid4().hex[:8]}"
         t0 = time.perf_counter()
         try:
             await ws.send(
                 json.dumps(
                     {
                         "type": "checkin",
-                        "trackId": self.kiosk_id,
+                        "trackId": track_id,
                         "requestId": req_id,
-                        "images": [self.image_b64],
+                        "images": [self.crop_b64],
                         "latitude": self.lat,
                         "longitude": self.lon,
                         "note": "kiosk load test",
@@ -444,6 +509,7 @@ class KioskClient:
                 self.stats.checkin.add_error()
                 self._log(
                     "checkin_error",
+                    trackId=track_id,
                     detail=msg.get("detail"),
                     latency_ms=round(ms, 1),
                 )
@@ -455,6 +521,7 @@ class KioskClient:
                     self.stats.checkin.checked_in += 1
                 self._log(
                     "checked_in",
+                    trackId=track_id,
                     latency_ms=round(ms, 1),
                     checkedIn=bool(msg.get("checkedIn")),
                     duplicate=bool(msg.get("duplicate")),
@@ -462,7 +529,7 @@ class KioskClient:
                 )
         except Fail:
             self.stats.checkin.add_error()
-            self._log("checkin_timeout")
+            self._log("checkin_timeout", trackId=track_id)
         finally:
             self._checkin_inflight = max(0, self._checkin_inflight - 1)
 
@@ -520,12 +587,17 @@ async def run_step(
     company_id: str,
     lat: float,
     lon: float,
-    image_b64_str: str,
+    detect_b64: str,
+    crop_b64: str,
+    faces_per_kiosk: int,
     profile: str,
     hold_s: float,
     jsonl: Optional[Path],
 ) -> RunStats:
-    label = f"kiosks={n_kiosks} profile={profile} hold={hold_s}s"
+    label = (
+        f"kiosks={n_kiosks} faces/kiosk={faces_per_kiosk} "
+        f"profile={profile} hold={hold_s}s"
+    )
     print(f"\n--- Starting {label} ---")
     clients = [
         KioskClient(
@@ -535,7 +607,9 @@ async def run_step(
             company_id=company_id,
             lat=lat,
             lon=lon,
-            image_b64_str=image_b64_str,
+            detect_b64=detect_b64,
+            crop_b64=crop_b64,
+            faces_per_kiosk=faces_per_kiosk,
             profile=profile,
             hold_s=hold_s,
             jsonl=jsonl,
@@ -625,6 +699,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds to hold each kiosk step",
     )
     p.add_argument(
+        "--faces-per-kiosk",
+        type=int,
+        default=1,
+        help=(
+            "People simulated per screen (mosaic detect + up to 2 identify / "
+            "3 check-in in flight, matching UI caps). Default 1."
+        ),
+    )
+    p.add_argument(
         "--prepare",
         action="store_true",
         help="Download sample face + enroll member before load",
@@ -668,7 +751,12 @@ def main() -> int:
             print(f"Preparing enroll for member {args.member_id} ...")
             prepare_enroll(args.base_url, token, args.member_id, image)
 
-        b64 = image_b64(image)
+        faces = max(1, int(args.faces_per_kiosk))
+        mosaic = mosaic_faces(image, faces)
+        crop_b64 = image_b64(image)
+        detect_b64 = image_b64(mosaic)
+        print(f"  faces/kiosk={faces}  detect mosaic={len(mosaic)} bytes")
+
         ws_url = http_to_ws(args.base_url)
         overall = RunStats()
         step_stats: list[tuple[int, RunStats]] = []
@@ -682,7 +770,9 @@ def main() -> int:
                     company_id=args.company_id,
                     lat=args.lat,
                     lon=args.lon,
-                    image_b64_str=b64,
+                    detect_b64=detect_b64,
+                    crop_b64=crop_b64,
+                    faces_per_kiosk=faces,
                     profile=args.profile,
                     hold_s=args.hold,
                     jsonl=args.jsonl,

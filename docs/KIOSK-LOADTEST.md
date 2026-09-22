@@ -96,9 +96,17 @@ python kiosk_load.py --profile rush --kiosks 1,2,4 --hold 60 --jsonl results-rus
 | พฤติกรรม | ค่า |
 |----------|-----|
 | `detect` | ทุก ~90 ms ต่อจอ |
-| `identify` (rush) | ห่างอย่างน้อย 1.2 s, ค้างได้สูงสุด 2 งานต่อจอ |
+| `identify` (rush) | ห่างอย่างน้อย 1.2 s ต่อ track, ค้างได้สูงสุด 2 งานต่อจอ |
 | `checkin` (rush) | ค้างได้สูงสุด 3 งานต่อจอ |
+| `--faces-per-kiosk N` | mosaic N ใบหน้าในเฟรม detect + ยิง identify/check-in ตามเพดาน UI |
 | พิกัด | `13.7563, 100.5018` (ใน geofence เดโม) |
+
+ตัวอย่างหลายจอ × หลายคนต่อจอ:
+
+```bash
+# 2 จอ × 3 คน/จอ (identify≤2, checkin≤3 ตาม UI)
+python kiosk_load.py --profile rush --kiosks 1,2 --faces-per-kiosk 3 --hold 45 --jsonl results-multi.jsonl
+```
 
 ---
 

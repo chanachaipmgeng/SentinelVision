@@ -34,10 +34,8 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       this.router.navigate(['/auth/login']);
       return false;
     }
-    if (need === 'company' && isSystem) {
-      this.router.navigate(['/admin/member-manage']);
-      return false;
-    }
+    // System admins enter a company from /admin/manage-companys. Company pages
+    // then use the company saved by the home screen. Company admins stay out of /admin.
     return true;
   }
 }

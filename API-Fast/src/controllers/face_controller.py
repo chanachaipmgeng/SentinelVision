@@ -386,7 +386,9 @@ async def identify_face(
             fc = await _face_core_identify(companyId, temp_image_paths, "fast")
             return await _enrich_face_core_match(db, companyId, fc)
         features = await run_on_face_gpu(
-            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
+            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False),
+            kind="identify",
+            company_id=companyId,
         )
         if features is None:
             raise HTTPException(
@@ -619,7 +621,9 @@ async def check_in_face(
                 default_note="Face kiosk auto check-in",
             )
         target_encoding = await run_on_face_gpu(
-            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps)
+            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
+            kind="checkin",
+            company_id=companyId,
         )
         return await _finalize_check_in(
             db=db,
@@ -684,7 +688,9 @@ async def check_in_face_walkby(
                 default_note="Face kiosk walk-by check-in",
             )
         target_encoding = await run_on_face_gpu(
-            lambda ps=list(temp_image_paths): get_walkby_encoding(ps)
+            lambda ps=list(temp_image_paths): get_walkby_encoding(ps),
+            kind="checkin",
+            company_id=companyId,
         )
         return await _finalize_check_in(
             db=db,
@@ -887,7 +893,9 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
             return score
 
         features = await run_on_face_gpu(
-            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False)
+            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False),
+            kind="identify",
+            company_id=company_ids[0] if company_ids else None,
         )
         if features is None:
             raise HTTPException(

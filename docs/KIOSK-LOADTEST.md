@@ -189,6 +189,117 @@ python kiosk_load.py --profile rush --kiosks 1,2 --faces-per-kiosk 3 --hold 45 -
 
 ---
 
+## 5b. ผลบน `face-in.myhr.co.th` (baseline ก่อนจูนซอฟต์แวร์)
+
+วัด 2026-09-23 จากโฮสต์ → `https://face-in.myhr.co.th` (JWT บริษัททดสอบ, `--faces-per-kiosk 3`, hold 30 s):
+
+| โปรไฟล์ | ยังใช้ได้ | เริ่มแย่ (เกิน detect p95 550 ms) | พังชัด |
+|---------|-----------|-------------------------------------|--------|
+| **idle** | ≤ **16** จอ (p95 ~505 ms) | — | ยังไม่ drop ถึง 16 |
+| **rush** | **1** จอ (p95 ~419 ms) | **2** จอ (p95 ~774 ms) | **4–6** จอ (1.6–2.5 s) |
+
+`GET /face/queue-stats`: `workers=1`, `source` local (ไม่มี `devices` ใน build ที่วัด), `active` ≤ 1, throughput rush ~12 งาน/s, pending สูงสุด ~27 ที่ 6 จอ
+
+ตรวจ CUDA บนเซิร์ฟเวอร์ (host nginx ดึง `/ready` ไป SPA — อย่าใช้โดเมนสำหรับ `/ready`):
+
+```bash
+docker logs dpu-api 2>&1 | grep -E "InsightFace|CUDAExecutionProvider|falling back to CPU"
+nvidia-smi -L
+# ระหว่างโหลดเทส: nvidia-smi -l 1  — util ควรขึ้น ถ้าติด 0% ตลอด = ยังไม่ใช้ GPU
+```
+
+---
+
+## 5c. จูนหลายบริษัทบนเซิร์ฟเวอร์เดียว
+
+ซอฟต์แวร์ (deploy แล้ว rebuild `api` + `admin`):
+
+| การจูน | ผลที่คาด |
+|--------|----------|
+| Detect ใช้ `FACE_DETECT_DET_SIZE=320` + decode นอก GPU worker | เฟรม detect ถูกลง ~3× |
+| Walk-by / identify→checkin cache (`FACE_IDENTIFY_CACHE_SECONDS`) | ลงเวลาเหลือ 1 รอบ GPU ต่อคนเมื่อ identify เพิ่งผ่าน |
+| คิว priority `checkin > identify > detect` + round-robin ต่อบริษัท | บริษัทเล็กไม่ถูก starve; check-in ไม่รอ detect ของบริษัทอื่น |
+| `FACE_DETECT_STALE_MS` + `WS_DETECT_MIN_INTERVAL_MS` ฝั่ง server | ทิ้งเฟรมเก่า / ผ่อนจอว่าง |
+| Kiosk `nextCaptureInterval(queuePending)` + identify เฉพาะ track ที่ยังไม่มี label | ลดยิงซ้ำตอนคิวตัน |
+
+ฮาร์ดแวร์ (`.env` แล้ว `docker compose ... up -d --build api`):
+
+```bash
+# การ์ดสองใบ
+FACE_DEVICES=cuda:0,cuda:1
+FACE_GPU_WORKERS=2
+
+# ทดลองซ้อน worker 2 บนการ์ดเดียว (เฉพาะเมื่อ nvidia-smi util < ~60% หลังจูนซอฟต์แวร์)
+# FACE_DEVICES=cuda:0
+# FACE_GPU_WORKERS=2
+```
+
+หลัง deploy ให้วัดซ้ำ:
+
+```bash
+python poll_queue.py --base-url $env:KIOSK_LOAD_BASE_URL --csv queue-post-tune.csv
+python kiosk_load.py --faces-per-kiosk 3 --profile idle --kiosks 8,16,32 --hold 30 --jsonl results-idle-post.jsonl
+python kiosk_load.py --faces-per-kiosk 3 --profile rush --kiosks 2,4,8,16 --hold 30 --jsonl results-rush-post.jsonl
+# Fairness: สองเทอร์มินัล คนละ company-id พร้อมกัน (rush --kiosks 4)
+```
+
+เป้าหลังจูนซอฟต์แวร์บน 1 GPU: rush ~8–12 จอ; + GPU ใบที่ 2: ~16–24 จอ
+
+หน่วยทดสอบคิว (ไม่ต้องมี GPU): `cd API-Fast && pytest tests/test_face_gpu_queue.py` — ตรวจ priority / round-robin / stale drop
+
+**สถานะ remasure บน face-in หลังจูน:** ต้อง `git pull` + rebuild `api` และ `admin` บน `10.50.0.117` ก่อน แล้วรันคำสั่งด้านบน เทียบกับ baseline ใน §5b (ไฟล์อ้างอิง: `scripts/kiosk-load/.cache/results-face-in-{idle,rush}.jsonl`, `queue-face-in-both.csv`)
+
+### ผลวัดซ้ำ 2026-09-23 (หลัง pull — ยัง workers=1)
+
+ชี้ `http://10.50.0.117:8880` เพราะ `https://face-in.myhr.co.th` ยัง 502 (host TLS ชี้พอร์ตผิด / nginx ใน compose ฟัง `8880`)
+
+| สภาพ | ค่า |
+|------|-----|
+| `queue-stats` | `workers=1`, ไม่มี `devices` / `pendingByKind` |
+| log api | `Face GPU queue started workers=1 queue_size=64` (ยังไม่เห็น log แบบ `devices=...`) |
+| poll | `active` ≤ 1 ตลอด |
+
+**Idle** (3 คน/จอ, hold 30s) vs baseline §5b
+
+| จอ | baseline detect p95 | รอบนี้ | หมายเหตุ |
+|----|---------------------|--------|----------|
+| 8 | (ไม่วัดใน §5b; ใกล้ ๆ 309 ที่ 8 จอเดิม) | **415 ms** | ยังใต้ 550 |
+| 16 | ~505 ms | **805 ms** | แย่ลง / เกิน SLO |
+| 32 | — | **2034 ms** | ไม่ไหว |
+
+**Rush** (3 คน/จอ) vs baseline
+
+| จอ | baseline detect p95 | รอบนี้ | หมายเหตุ |
+|----|---------------------|--------|----------|
+| 2 | ~774 ms | **~4.5 s** | แย่ลงชัด |
+| 4 | ~1.6 s | **~8.2 s** | คิวตัน |
+| 8–16 | — | 16–18 s+ | ไม่ใช้งานได้ |
+
+สรุป: การ์ดสองใบ / โค้ดจูน **ยังไม่ทำงานใน runtime** — ต้องตั้ง `.env` + rebuild ให้ `workers≥2` และให้ log มี `devices=` ก่อนวัดซ้ำอีกรอบ
+
+Checklist บนเซิร์ฟเวอร์:
+
+```bash
+# 1) ใน .env
+grep -E 'FACE_DEVICE|FACE_DEVICES|FACE_GPU|HTTP_PORT' .env
+# ควรมี:
+# FACE_DEVICES=cuda:0,cuda:1
+# FACE_GPU_WORKERS=2
+# HTTP_PORT=80   # ถ้า host TLS proxy ไปที่ :80 — หรือชี้ proxy ไป :8880
+
+# 2) ยืนยันการ์ด
+sudo nvidia-smi -L
+
+# 3) rebuild ให้ได้โค้ดใหม่ (อย่าแค่ recreate image เก่า)
+sudo docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api admin nginx
+
+# 4) ตรวจ
+sudo docker logs dpu-api 2>&1 | grep -E 'Face GPU queue|InsightFace|CUDA'
+# ต้องเห็น workers=2 และ CUDAExecutionProvider / devices=['cuda:0','cuda:1']
+```
+
+---
+
 ## 6. ก่อนชี้เซิร์ฟเวอร์จริง
 
 ชุดสคริปต์เดิม เปลี่ยนแค่ URL และบัญชี:

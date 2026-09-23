@@ -6,11 +6,12 @@ import asyncio
 import base64
 import json
 import logging
+import time
 import uuid
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
@@ -25,21 +26,23 @@ from ..controllers.face_controller import (
 )
 from ..clients.face_core_client import face_core_enabled, get_face_core_client
 from ..utils.face_engine import (
-    detect_faces_bytes,
+    decode_image_bytes,
+    detect_faces_bgr,
     extract_face_features,
     get_walkby_encoding,
 )
-from ..utils.face_gpu_queue import face_gpu_queue_stats, run_on_face_gpu
+from ..utils.face_gpu_queue import StaleFaceJob, face_gpu_queue_stats, run_on_face_gpu
 
 logger = logging.getLogger(__name__)
 _bff_pending_value = 0
 _bff_pending_at = 0.0
 
+TEMP_DIR = Path("temp_images")
+
 
 async def _bff_pending() -> int:
     """Cached Face Core queue depth so detect frames do not each call queue-stats."""
     global _bff_pending_value, _bff_pending_at
-    import time
 
     now = time.monotonic()
     if now - _bff_pending_at < 2:
@@ -60,7 +63,6 @@ def settings_backpressure() -> int:
     from ..config.settings import settings
 
     return int(settings.WS_QUEUE_BACKPRESSURE)
-TEMP_DIR = Path("temp_images")
 
 
 async def _face_core_queue_stats(company_id: Optional[UUID] = None) -> dict:
@@ -117,12 +119,47 @@ def _cleanup(paths: List[str]) -> None:
             pass
 
 
+def _detect_interval_ms(pending: int) -> float:
+    """Raise server-side detect floor when the GPU queue is backed up."""
+    from ..config.settings import settings
+
+    base = float(settings.WS_DETECT_MIN_INTERVAL_MS)
+    if pending >= 32:
+        return max(base, 800.0)
+    if pending >= 8:
+        return max(base, 500.0)
+    return base
+
+
+class _IdentifyCache:
+    """Per-connection trackId → embedding reuse for walk-by check-in."""
+
+    def __init__(self) -> None:
+        self._items: Dict[str, Tuple[List[float], float]] = {}
+
+    def put(self, track_id: Any, encoding: List[float]) -> None:
+        self._items[str(track_id)] = (encoding, time.monotonic())
+
+    def get(self, track_id: Any, *, max_age_s: float) -> Optional[List[float]]:
+        key = str(track_id)
+        item = self._items.get(key)
+        if item is None:
+            return None
+        encoding, ts = item
+        if time.monotonic() - ts > max_age_s:
+            self._items.pop(key, None)
+            return None
+        return encoding
+
+
 async def _handle_detect(
     websocket: WebSocket,
     *,
     request_id: Any,
     image_b64: str,
+    company_id: Optional[UUID],
     send_lock: asyncio.Lock,
+    last_detect_at: Dict[str, float],
 ) -> None:
     """Detection-only pass for kiosk face boxes (no temp files, no DB)."""
     try:
@@ -146,45 +183,101 @@ async def _handle_detect(
                 )
                 return
             pending = await _bff_pending()
-            if pending >= int(settings.WS_QUEUE_BACKPRESSURE):
-                await _send(
-                    websocket,
-                    {
-                        "type": "detected",
-                        "requestId": request_id,
-                        "dropped": True,
-                        "queue": {"pending": pending, "source": "face-core"},
-                        "frameWidth": 0,
-                        "frameHeight": 0,
-                        "faces": [],
-                    },
-                    lock=send_lock,
-                )
-                return
         else:
             queue = face_gpu_queue_stats()
-            if int(queue.get("pending") or 0) >= int(settings.WS_QUEUE_BACKPRESSURE):
-                await _send(
-                    websocket,
-                    {
-                        "type": "detected",
-                        "requestId": request_id,
-                        "dropped": True,
-                        "queue": queue,
-                        "frameWidth": 0,
-                        "frameHeight": 0,
-                        "faces": [],
-                    },
-                    lock=send_lock,
-                )
-                return
+            pending = int(queue.get("pending") or 0)
+
+        # Per-connection min interval (raised under backpressure).
+        now = time.monotonic()
+        min_ms = _detect_interval_ms(pending)
+        last = last_detect_at.get("t", 0.0)
+        if (now - last) * 1000.0 < min_ms:
+            await _send(
+                websocket,
+                {
+                    "type": "detected",
+                    "requestId": request_id,
+                    "dropped": True,
+                    "queue": (
+                        {"pending": pending, "source": "face-core"}
+                        if face_core_enabled()
+                        else face_gpu_queue_stats()
+                    ),
+                    "frameWidth": 0,
+                    "frameHeight": 0,
+                    "faces": [],
+                },
+                lock=send_lock,
+            )
+            return
+        last_detect_at["t"] = now
+
+        if pending >= int(settings.WS_QUEUE_BACKPRESSURE):
+            await _send(
+                websocket,
+                {
+                    "type": "detected",
+                    "requestId": request_id,
+                    "dropped": True,
+                    "queue": (
+                        {"pending": pending, "source": "face-core"}
+                        if face_core_enabled()
+                        else face_gpu_queue_stats()
+                    ),
+                    "frameWidth": 0,
+                    "frameHeight": 0,
+                    "faces": [],
+                },
+                lock=send_lock,
+            )
+            return
+
         content = _decode_image_b64(image_b64)
         if face_core_enabled():
             client = get_face_core_client()
             result = await client.detect(content)
-            queue = await _face_core_queue_stats()
+            queue = await _face_core_queue_stats(company_id)
         else:
-            result = await run_on_face_gpu(lambda c=content: detect_faces_bytes(c))
+            # Decode off the GPU worker; only det_model.detect uses the slot.
+            loop = asyncio.get_running_loop()
+            try:
+                image = await loop.run_in_executor(
+                    None, lambda c=content: decode_image_bytes(c)
+                )
+            except ValueError as exc:
+                await _send(
+                    websocket,
+                    {
+                        "type": "error",
+                        "intent": "detect",
+                        "requestId": request_id,
+                        "detail": str(exc),
+                    },
+                    lock=send_lock,
+                )
+                return
+            try:
+                result = await run_on_face_gpu(
+                    lambda img=image: detect_faces_bgr(img),
+                    kind="detect",
+                    company_id=company_id,
+                    stale_ms=float(settings.FACE_DETECT_STALE_MS),
+                )
+            except StaleFaceJob:
+                await _send(
+                    websocket,
+                    {
+                        "type": "detected",
+                        "requestId": request_id,
+                        "dropped": True,
+                        "queue": face_gpu_queue_stats(),
+                        "frameWidth": 0,
+                        "frameHeight": 0,
+                        "faces": [],
+                    },
+                    lock=send_lock,
+                )
+                return
             queue = face_gpu_queue_stats()
         await _send(
             websocket,
@@ -221,6 +314,7 @@ async def _handle_identify(
     image_b64: str,
     company_id: UUID,
     send_lock: asyncio.Lock,
+    identify_cache: _IdentifyCache,
 ) -> None:
     paths: List[str] = []
     try:
@@ -232,7 +326,9 @@ async def _handle_identify(
                 queue = await _face_core_queue_stats(company_id)
             else:
                 features = await run_on_face_gpu(
-                    lambda p=paths[0]: extract_face_features(p, require_quality=False)
+                    lambda p=paths[0]: extract_face_features(p, require_quality=False),
+                    kind="identify",
+                    company_id=company_id,
                 )
                 if features is None:
                     await _send(
@@ -249,6 +345,7 @@ async def _handle_identify(
                     return
 
                 encoding, _bbox = features
+                identify_cache.put(track_id, encoding)
                 payload = await _resolve_match_response(
                     db,
                     encoding,
@@ -308,7 +405,10 @@ async def _handle_checkin(
     longitude: float,
     note: Optional[str],
     send_lock: asyncio.Lock,
+    identify_cache: _IdentifyCache,
 ) -> None:
+    from ..config.settings import settings
+
     paths: List[str] = []
     try:
         if not images_b64:
@@ -348,9 +448,18 @@ async def _handle_checkin(
                 )
                 queue = await _face_core_queue_stats(company_id)
             else:
-                encoding = await run_on_face_gpu(
-                    lambda ps=list(paths): get_walkby_encoding(ps)
+                cached = identify_cache.get(
+                    track_id,
+                    max_age_s=float(settings.FACE_IDENTIFY_CACHE_SECONDS),
                 )
+                if cached is not None:
+                    encoding = cached
+                else:
+                    encoding = await run_on_face_gpu(
+                        lambda ps=list(paths): get_walkby_encoding(ps),
+                        kind="checkin",
+                        company_id=company_id,
+                    )
                 result = await _finalize_check_in(
                     db=db,
                     companyId=company_id,
@@ -414,6 +523,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     send_lock = asyncio.Lock()
     token_exp = 0
     token_warned = False
+    last_detect_at: Dict[str, float] = {"t": 0.0}
+    identify_cache = _IdentifyCache()
 
     await _send(
         websocket,
@@ -428,9 +539,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
 
     try:
         while True:
-            import time as _time
-
-            if token_exp and not token_warned and token_exp - _time.time() < 300:
+            if token_exp and not token_warned and token_exp - time.time() < 300:
                 token_warned = True
                 await _send(websocket, {"type": "token_expiring"}, lock=send_lock)
             message = await websocket.receive_text()
@@ -458,6 +567,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     latitude = float(data.get("latitude", 0) or 0)
                     longitude = float(data.get("longitude", 0) or 0)
                     from ..config.settings import settings as _settings
+
                     if _settings.FACE_ROUTES_REQUIRE_JWT:
                         from ..config.database import async_session
                         from ..security.deps import assert_company_access, member_from_token
@@ -473,7 +583,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 except Exception as exc:
                     await _send(
                         websocket,
-                        {"type": "error", "detail": getattr(exc, "detail", None) or "Invalid session payload"},
+                        {
+                            "type": "error",
+                            "detail": getattr(exc, "detail", None)
+                            or "Invalid session payload",
+                        },
                     )
                     continue
                 await _send(
@@ -493,7 +607,9 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         websocket,
                         request_id=data.get("requestId"),
                         image_b64=str(data.get("image") or ""),
+                        company_id=company_id,
                         send_lock=send_lock,
+                        last_detect_at=last_detect_at,
                     )
                 )
                 continue
@@ -520,6 +636,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         image_b64=str(data.get("image") or ""),
                         company_id=company_id,
                         send_lock=send_lock,
+                        identify_cache=identify_cache,
                     )
                 )
                 continue
@@ -553,7 +670,10 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             "intent": "checkin",
                             "trackId": data.get("trackId"),
                             "requestId": data.get("requestId"),
-                            "detail": "Invalid GPS (0,0). Enable location / use HTTPS before check-in.",
+                            "detail": (
+                                "Invalid GPS (0,0). Enable location / use HTTPS "
+                                "before check-in."
+                            ),
                         },
                         lock=send_lock,
                     )
@@ -569,6 +689,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         longitude=longitude,
                         note=data.get("note"),
                         send_lock=send_lock,
+                        identify_cache=identify_cache,
                     )
                 )
                 continue

@@ -23,6 +23,7 @@ import {
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
 import { buildKioskSession } from './kiosk-ws-client';
+import { nextCaptureInterval } from './kiosk-tracker.service';
 
 // pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
 // drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
@@ -525,8 +526,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         return;
       }
     }
-    // Slightly faster detect pace so size/position targets refresh sooner.
-    if (now - this.lastWsDetectAt < 75) {
+    // Pace detect by queue depth; idle (no faces for 2s) slows to ~400 ms.
+    const idleNoFaces =
+      this.tracks.length === 0 &&
+      (this.lastDetectionsAt === 0 || now - this.lastDetectionsAt > 2000);
+    const minGap = nextCaptureInterval(this.queuePending, { idleNoFaces });
+    if (now - this.lastWsDetectAt < minGap) {
       return;
     }
 
@@ -1192,6 +1197,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
     if (track.memberId && this.isMemberOnCooldown(track.memberId, now)) {
       track.phase = 'cooldown';
+      return false;
+    }
+    // Already labeled — skip re-identify until the track is lost / replaced.
+    if (track.memberId && track.label) {
       return false;
     }
     return now - track.lastIdentifyAt >= this.identifyEveryMs;

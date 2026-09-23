@@ -327,7 +327,8 @@ async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSessio
         blur_limit = float(settings.IMAGE_BLUR_THRESHOLD_IMPORT)
         encoding_started = True
         encoding = await run_on_face_gpu(
-            lambda p=path, b=blur_limit: generate_face_encoding(p, blur_threshold=b)
+            lambda p=path, b=blur_limit: generate_face_encoding(p, blur_threshold=b),
+            kind="other",
         )
         if encoding is None:
             raise ValueError("ไม่พบใบหน้าในรูป หรือคุณภาพรูปไม่ผ่านเกณฑ์")

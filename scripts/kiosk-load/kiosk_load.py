@@ -508,13 +508,14 @@ class KioskClient:
         # Drive people-load from --faces-per-kiosk (UI track count), even if
         # mosaic NMS returns fewer boxes — still log actual face_n above.
         people = self.faces_per_kiosk if (not dropped and face_n > 0) else 0
-        if self.profile == "rush" and people > 0:
-            bg = asyncio.create_task(self._rush_side(ws, people))
+        if self.profile in ("rush", "identify") and people > 0:
+            bg = asyncio.create_task(self._people_side(ws, people))
 
         await asyncio.sleep(self.detect_interval_ms / 1000.0)
         return bg
 
-    async def _rush_side(self, ws, people: int) -> None:
+    async def _people_side(self, ws, people: int) -> None:
+        """Identify (+ optional check-in for rush) driven by faces-per-kiosk."""
         tasks: list[asyncio.Task] = []
         now = time.monotonic()
         identify_budget = min(people, MAX_CONCURRENT_IDENTIFY)
@@ -529,19 +530,24 @@ class KioskClient:
             self._identify_inflight += 1
             tasks.append(asyncio.create_task(self._do_identify(ws, track_id, reserved=True)))
 
-        checkin_budget = min(people, MAX_CONCURRENT_CHECKIN)
-        started_checkin = 0
-        for track_id in self._track_ids[:checkin_budget]:
-            if self._checkin_inflight + started_checkin >= MAX_CONCURRENT_CHECKIN:
-                break
-            started_checkin += 1
-            self._checkin_inflight += 1
-            tasks.append(
-                asyncio.create_task(self._do_checkin(ws, track_id, reserved=True))
-            )
+        if self.profile == "rush":
+            checkin_budget = min(people, MAX_CONCURRENT_CHECKIN)
+            started_checkin = 0
+            for track_id in self._track_ids[:checkin_budget]:
+                if self._checkin_inflight + started_checkin >= MAX_CONCURRENT_CHECKIN:
+                    break
+                started_checkin += 1
+                self._checkin_inflight += 1
+                tasks.append(
+                    asyncio.create_task(self._do_checkin(ws, track_id, reserved=True))
+                )
 
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+    async def _rush_side(self, ws, people: int) -> None:
+        # Back-compat alias
+        await self._people_side(ws, people)
 
     async def _do_identify(self, ws, track_id: int, *, reserved: bool = False) -> None:
         if not reserved:
@@ -805,11 +811,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lon", type=float, default=DEFAULT_LON)
     p.add_argument(
         "--profile",
-        choices=("idle", "rush", "stress"),
+        choices=("idle", "identify", "rush", "stress"),
         default="idle",
         help=(
-            "idle=detect only (closed-loop); rush=detect+identify+checkin; "
-            "stress=open-loop detect at --rate to saturate the server"
+            "idle=detect only; identify=detect+identify (no check-in); "
+            "rush=detect+identify+checkin; stress=open-loop detect at --rate"
         ),
     )
     p.add_argument(
@@ -865,7 +871,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=float(os.environ.get("KIOSK_LOAD_DETECT_INTERVAL_MS", str(DETECT_INTERVAL_MS))),
         help=(
-            "Closed-loop detect pacing in ms (idle/rush). Default 90 (full-rate loadgen). "
+            "Closed-loop detect pacing in ms (idle/identify/rush). Default 90 (full-rate loadgen). "
             "Use 600–2000 to approximate kiosk motion-gating on a static scene."
         ),
     )

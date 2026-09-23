@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk) — สรุปการวัด สาเหตุ ข้อแนะนำ และการประมาณสเป็ค</title>
+  <style>
+@page { size: A4; margin: 18mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Sarabun", "Leelawadee UI", "Tahoma", "Segoe UI", sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #1a1a1a;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 8px 24px;
+}
+h1 {
+  font-size: 18pt;
+  color: #0b3d5c;
+  border-bottom: 3px solid #0b3d5c;
+  padding-bottom: 8px;
+  margin-top: 0;
+}
+h2 {
+  font-size: 13pt;
+  color: #0b3d5c;
+  margin-top: 1.4em;
+  border-left: 4px solid #2a9d8f;
+  padding-left: 10px;
+}
+h3 { font-size: 11.5pt; color: #264653; margin-top: 1.1em; }
+p { margin: 0.55em 0; }
+ul, ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
+li { margin: 0.25em 0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 1.2em 0; }
+code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+  background: #f3f5f7;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+pre {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9.5pt;
+  background: #f3f5f7;
+  border: 1px solid #dde2e6;
+  border-radius: 6px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  line-height: 1.35;
+}
+blockquote {
+  margin: 0.8em 0;
+  padding: 10px 14px;
+  background: #eef7f5;
+  border-left: 4px solid #2a9d8f;
+  color: #234;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7em 0 1em;
+  font-size: 10pt;
+}
+th, td {
+  border: 1px solid #cfd8dc;
+  padding: 7px 9px;
+  vertical-align: top;
+  text-align: left;
+}
+th {
+  background: #0b3d5c;
+  color: #fff;
+  font-weight: 600;
+}
+tr:nth-child(even) td { background: #f7fafc; }
+.meta { color: #445; }
+.footer {
+  margin-top: 1.5em;
+  font-size: 9.5pt;
+  color: #666;
+  font-style: italic;
+}
+.banner {
+  background: #0b3d5c;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 0 0 1em;
+  font-size: 10.5pt;
+}
+.banner strong { color: #9ef0d2; }
+</style>
+</head>
+<body>
+  <div class="banner">รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า · วัด 22–24 ก.ย. 2026 · เซิร์ฟเวอร์ 10.50.0.117</div>
+  <h1>รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk) — สรุปการวัด สาเหตุ ข้อแนะนำ และการประมาณสเป็ค</h1>
+<p><strong>ช่วงเวลาทดสอบ:</strong> 22–24 กันยายน 2026  </p>
+<p><strong>เซิร์ฟเวอร์:</strong> <code>10.50.0.117</code> (production ภายใน) · URL <code>http://10.50.0.117:8880</code>  </p>
+<p><strong>สเป็คเครื่อง:</strong> CPU 32 core · RAM 436 GB · GPU 2× NVIDIA Quadro RTX 5000 16 GB  </p>
+<p><strong>โค้ดล่าสุดที่วัด:</strong> <code>9d407e2d</code> (perf รอบ 2) + overlay quad-API (<code>a00e354c</code>)  </p>
+<p><strong>เอกสารเทคนิคประกอบ:</strong> <a href="KIOSK-LOADTEST-SATURATION.md">KIOSK-LOADTEST-SATURATION.md</a> · <a href="KIOSK-LOADTEST-PERF2-TABLE.md">PERF2-TABLE</a> · <a href="KIOSK-LOADTEST-PERF3-TABLE.md">PERF3-TABLE</a></p>
+<hr>
+<h2>1. สรุปสำหรับผู้บริหาร (อ่านหน้าเดียวจบ)</h2>
+<table>
+<tr><th>คำถาม</th><th>คำตอบจากผลวัดล่าสุด (รอบ 3)</th></tr>
+<tr><td>จอคีออสที่ลื่นในชั่วโมงเร่งด่วน (หลายคนหน้ากล้อง)</td><td><strong>24 จอพร้อมกัน</strong> (แนะนำวางแผนที่ 16–20)</td></tr>
+<tr><td>ถ้าคนละคนต่อจอ / เปิดบนมือถือของตัวเอง</td><td><strong>32 คนพร้อมกัน</strong> (แนะนำวางแผนที่ 24–28)</td></tr>
+<tr><td>จอว่างรอคน (detect อย่างเดียว)</td><td><strong>≥ 48 จอ</strong> ยังไม่ชนเพดาน</td></tr>
+<tr><td>เทียบจุดเริ่มต้น (22 ก.ย.)</td><td>เพดานเร่งด่วน <strong>5 → 24 จอ (~4.8 เท่า)</strong> โดยไม่ซื้อฮาร์ดแวร์</td></tr>
+<tr><td>ทรัพยากรที่ยังเหลือ</td><td>GPU ใช้เฉลี่ยเพียง <strong>~16%</strong> ต่อใบ · CPU ใช้ ~480% จาก 3,200%</td></tr>
+<tr><td>รองรับพนักงาน 10,000 คนลงเวลาช่วงเดียวกันไหม</td><td><strong>ไม่ได้บนเครื่องเดียว</strong> — ต้องสเกลหลายเครื่อง (ดู §7)</td></tr>
+</table>
+<pre>
+เร่งด่วนหนาแน่น (3 คน/จอ)   ████████████████████████░░░░░░░░  24 จอ
+เร่งด่วน คนละคน/จอ          ████████████████████████████████  32 จอ
+จอว่าง / detect             ████████████████████████████████████████████████  ≥48 จอ
+</pre>
+<hr>
+<h2>2. ไทม์ไลน์การทดสอบและสิ่งที่ปรับในแต่ละรอบ</h2>
+<table>
+<tr><th>วัน–เวลา (UTC+7)</th><th>รอบ</th><th>สภาพระบบ</th><th>ผลเพดาน rush×3 / rush×1 / idle</th></tr>
+<tr><td>22 ก.ย. 11:25–12:30</td><td>Baseline (laptop RTX 5050)</td><td>process เดียว, worker 1</td><td>สร้างเครื่องมือ loadtest, ยืนยันวิธีวัด</td></tr>
+<tr><td>23 ก.ย. 13:55–15:15</td><td>Server ครั้งแรก</td><td><code>FACE_DEVICES=cuda:0,cuda:1</code> ใน process เดียว, worker 2, เฟรมทดสอบใหญ่ (~546 KB)</td><td><strong>5 / 8 / 12 จอ</strong></td></tr>
+<tr><td>23 ก.ย. 16:00–17:40</td><td>Retest workers=2</td><td>เท่าเดิม + วัด GPU util จริง</td><td>พบ GPU0 util 16%, GPU1 ~2% → pin ผิด</td></tr>
+<tr><td>23 ก.ย. 22:00–22:35</td><td>Dual-API (Phase 1–2)</td><td>แยก <code>dpu-api</code> (GPU0) + <code>dpu-api-gpu1</code> (GPU1), nginx <code>least_conn</code>, เฟรมสมจริง 78 KB, decode pool</td><td><strong>6 / 12 / 24 จอ</strong></td></tr>
+<tr><td>23 ก.ย. 23:50–24:10</td><td>Perf รอบ 2</td><td>det@320 แล้ว embed ทันที, identify/check-in ใน memory (ไม่เขียน temp file), worker 3/process, หน้าบ้าน motion gating</td><td><strong>16 / 24 / ≥32 จอ</strong></td></tr>
+<tr><td>24 ก.ย. 00:20–00:45</td><td>Perf รอบ 3</td><td>2 process ต่อ GPU (4 process), whisper_server ย้ายไป GPU1</td><td><strong>24 / 32 / ≥48 จอ</strong></td></tr>
+</table>
+<p>นิยามโปรไฟล์ทดสอบ (จำลองพฤติกรรมคีออสจริงจาก <code>enroll-face.component.ts</code>):</p>
+<ul>
+<li><strong>idle</strong> — จอมีคนอยู่ในเฟรมแต่ไม่ลงเวลา: ส่ง detect ทุก 90 ms ต่อเนื่อง (~11 เฟรม/วินาที/จอ)</li>
+<li><strong>rush × 3</strong> — 3 คนหน้ากล้องพร้อมกัน: detect + identify (≤ 2 ค้าง) + check-in (≤ 3 ค้าง) ตลอด 30 วินาที</li>
+<li><strong>rush × 1</strong> — คนเดียวต่อจอ (เช่น เปิดบนมือถือตัวเอง) ทำ identify + check-in ต่อเนื่อง</li>
+</ul>
+<p>เกณฑ์ผ่าน (SLO): <strong>detect p95 ≤ 550 ms · ทิ้งเฟรม ≤ 5% · session p95 ≤ 500 ms</strong> — ตัวเลข &quot;ใช้ได้&quot; ในรายงานคือจำนวนจอสูงสุดที่ยังผ่านเกณฑ์นี้</p>
+<blockquote><p>ตัวเลขทั้งหมดวัดด้วยโหลดที่ <strong>หนักกว่าจริง</strong>: loadgen ส่ง detect เต็มอัตราตลอด ไม่มี cooldown 5 นาทีหลังลงเวลา และไม่มี motion gating ของหน้าบ้าน — ของจริงจึงรับได้มากกว่านี้</p></blockquote>
+<hr>
+<h2>3. ค่าเฉลี่ย / p95 ที่วัดได้ (รอบล่าสุด)</h2>
+<h3>3.1 Latency ต่อจำนวนจอ — รอบ 3 (4 process, worker 3)</h3>
+<table>
+<tr><th>โปรไฟล์</th><th>จอ</th><th>detect p50</th><th>detect p95</th><th>ทิ้งเฟรม</th><th>identify p95</th><th>check-in p95</th><th>ผล</th></tr>
+<tr><td>idle ×3</td><td>16</td><td>56 ms</td><td>72 ms</td><td>0.4%</td><td>—</td><td>—</td><td>OK</td></tr>
+<tr><td>idle ×3</td><td>32</td><td>68 ms</td><td>124 ms</td><td>0.1%</td><td>—</td><td>—</td><td>OK</td></tr>
+<tr><td>idle ×3</td><td>48</td><td>97 ms</td><td>173 ms</td><td>0.0%</td><td>—</td><td>—</td><td>OK</td></tr>
+<tr><td>rush ×3</td><td>8</td><td>67 ms</td><td>120 ms</td><td>0.3%</td><td>223 ms</td><td>158 ms</td><td>OK</td></tr>
+<tr><td>rush ×3</td><td>16</td><td>225 ms</td><td>383 ms</td><td>0.0%</td><td>452 ms</td><td>384 ms</td><td>OK</td></tr>
+<tr><td>rush ×3</td><td><strong>24</strong></td><td>311 ms</td><td><strong>514 ms</strong></td><td>0.0%</td><td>614 ms</td><td>548 ms</td><td><strong>OK (ขอบ)</strong></td></tr>
+<tr><td>rush ×3</td><td>32</td><td>483 ms</td><td>740 ms</td><td>0.0%</td><td>806 ms</td><td>779 ms</td><td>เกิน SLO</td></tr>
+<tr><td>rush ×1</td><td>16</td><td>107 ms</td><td>179 ms</td><td>0.0%</td><td>244 ms</td><td>212 ms</td><td>OK</td></tr>
+<tr><td>rush ×1</td><td>24</td><td>176 ms</td><td>307 ms</td><td>0.0%</td><td>336 ms</td><td>333 ms</td><td>OK</td></tr>
+<tr><td>rush ×1</td><td><strong>32</strong></td><td>251 ms</td><td><strong>429 ms</strong></td><td>0.0%</td><td>465 ms</td><td>471 ms</td><td><strong>OK</strong></td></tr>
+<tr><td>rush ×1</td><td>48</td><td>523 ms</td><td>817 ms</td><td>0.0%</td><td>730 ms</td><td>844 ms</td><td>เกิน SLO</td></tr>
+</table>
+<h3>3.2 การใช้ทรัพยากรเครื่องระหว่างโหลด (เฉลี่ยช่วงที่มีงาน)</h3>
+<table>
+<tr><th>รอบ</th><th>process API</th><th>GPU0 SM</th><th>GPU1 SM</th><th>CPU ต่อ process</th><th>CPU รวม API</th><th>ข้อสรุป</th></tr>
+<tr><td>Retest 23 ก.ย.</td><td>1</td><td>~16% (peak 87%)</td><td>~2%</td><td>—</td><td>—</td><td>GPU1 ไม่ถูกใช้จริง (pin ผิด)</td></tr>
+<tr><td>รอบ 2</td><td>2</td><td>~11% (peak 31%)</td><td>~11% (peak 35%)</td><td>~150% (p95 250%)</td><td>~300%</td><td>คอขวด CPU/GIL ต่อ process</td></tr>
+<tr><td>รอบ 3</td><td>4</td><td>~18% (peak 36%)</td><td>~15% (peak 39%)</td><td>~120% (p95 200%)</td><td>~480%</td><td>GPU ยังเหลือ &gt;80%; latency ไล่ตาม check-in</td></tr>
+</table>
+<h3>3.3 เวลาต่อคำขอที่โหลดต่ำ (4 จอ) — ใช้เป็น &quot;ค่าฐาน&quot; ของระบบ</h3>
+<table>
+<tr><th>งาน</th><th>ก่อนรอบ 2</th><th>หลังรอบ 2</th><th>หมายเหตุ</th></tr>
+<tr><td>detect (1 เฟรม)</td><td>p50 49 ms · p95 181 ms</td><td>p50 55 ms · p95 90 ms</td><td>det@320 บน GPU + decode บน CPU pool</td></tr>
+<tr><td>identify (1 หน้า)</td><td>p95 326 ms</td><td><strong>p95 187 ms</strong></td><td>ตัด detect 640 + ตัด disk I/O</td></tr>
+<tr><td>check-in</td><td>p95 110 ms</td><td>p95 135 ms</td><td>จำกัดที่ DB (dedupe 5 นาที + insert)</td></tr>
+<tr><td>GPU compute จริงต่องาน</td><td>~5–15 ms</td><td>~5–15 ms</td><td>ไม่ใช่คอขวด</td></tr>
+</table>
+<hr>
+<h2>4. สาเหตุที่ระบบช้า (จากหลักฐานที่วัด ไม่ใช่การเดา)</h2>
+<table>
+<tr><th>ลำดับ</th><th>คอขวด</th><th>หลักฐาน</th><th>สิ่งที่แก้แล้ว</th></tr>
+<tr><td>1</td><td><strong>CPU/GIL ใน Python process เดียว</strong> — decode JPEG, base64, JSON, WebSocket I/O แย่ง GIL กับ ONNX</td><td>process เดียว: GPU ว่าง 80%+ แต่ worker &quot;ยุ่ง&quot; ตลอด; แยก 2 process แล้วเพดาน idle 12 → 24 จอ; 4 process → ≥48</td><td>Dual API (รอบ dual) → Quad API (รอบ 3)</td></tr>
+<tr><td>2</td><td><strong>GPU1 ไม่ถูกใช้จริง</strong> — insightface ไม่ส่ง <code>device_id</code> ให้ CUDA provider ทำให้ทั้ง <code>cuda:0</code> และ <code>cuda:1</code> ลง GPU0</td><td><code>nvidia-smi --query-compute-apps</code> เห็น python เฉพาะ GPU0</td><td>ส่ง <code>provider_options device_id</code> + <code>CUDA_VISIBLE_DEVICES</code> ต่อ process</td></tr>
+<tr><td>3</td><td><strong>หน้าบ้านส่งเฟรมถี่เกินจำเป็น</strong> — 11 เฟรม/วินาที/จอ แม้ภาพนิ่ง</td><td>idle 24 จอ = ~264 detect/วินาที คือโหลดหลัก</td><td>thumbnail diff + ปรับ interval ตามสถานะ track (รอบ 2)</td></tr>
+<tr><td>4</td><td><strong>path identify/check-in เขียนไฟล์ + detect ซ้ำที่ 640</strong> — เขียน temp → อ่านซ้ำ → detect 640 → embed → copy รูป</td><td>identify p95 300–700 ms ใน rush แม้ detect ยังดี</td><td>ทำใน memory + det@320 แล้ว embed จาก keypoints (รอบ 2)</td></tr>
+<tr><td>5</td><td><strong>เฟรมทดสอบใหญ่เกินจริง</strong> (~546 KB / 3,936 px) ทำให้ตัวเลขแย่กว่าจริง</td><td>decode 3.7 MP กิน CPU 15–25 ms/เฟรม</td><td>loadgen ใช้เฟรม 1280 px q70 (~78 KB) เท่าคีออสจริง</td></tr>
+<tr><td>6</td><td><strong>GPU0 ถูกแชร์กับ whisper_server</strong> (~4 GB)</td><td>compute-apps บน GPU0</td><td>ย้ายไป GPU1 (รอบ 3) — ผลต่อ latency น้อย เพราะ GPU ไม่ใช่คอขวด</td></tr>
+<tr><td>7</td><td><strong>DB / dedupe ต่อ check-in</strong> (ยังเหลืออยู่)</td><td>check-in p95 ไล่ตาม detect p95 ในทุก step ของรอบ 3; rush×3 ที่ 24 จอ check-in 548 ms</td><td>ยังไม่ได้แก้ — เป็นเพดานถัดไป</td></tr>
+</table>
+<p><strong>สิ่งที่ไม่ใช่คอขวด:</strong> GPU compute (RetinaFace 320 / ArcFace ~5–15 ms/งาน), nginx, uvicorn WS handshake (session p95 &lt; 130 ms ทุก step), pgvector search เอง (HNSW <code>ef_search=40</code>)</p>
+<hr>
+<h2>5. ข้อแนะนำที่จำเป็น</h2>
+<h3>5.1 การติดตั้งใช้งานจริงบนเซิร์ฟเวอร์นี้</h3>
+<ol>
+<li><strong>วางแผนติดตั้งไม่เกิน 16–20 จอ</strong> ในโซนที่ชั่วโมงเร่งด่วนมีหลายคนหน้ากล้อง (เพดานเทส 24)</li>
+<li>โซนที่คนละคนต่อจอ / มือถือส่วนตัว: <strong>ไม่เกิน 24–28 คนพร้อมกัน</strong> (เพดานเทส 32)</li>
+<li>ใช้ overlay <strong>quad-API</strong> ตาม <code>docs/DEPLOY-SERVER.md</code> (<code>docker-compose.gpu.yml</code> + <code>docker-compose.gpu-x2.yml</code>) และคง <code>FACE_GPU_WORKERS=3</code></li>
+<li>เก็บเกณฑ์ UX: กรอบตอบสนอง ≤ 0.55 วินาที · ทิ้งเฟรม ≤ 5% — ถ้าเกินให้ลดจำนวนจอหรือขยายตาม §7</li>
+<li><code>whisper_server</code> ไม่อยู่ใน systemd — หลังรีบูตต้องรันใหม่พร้อม <code>CUDA_VISIBLE_DEVICES=1</code> (บันทึกใน DEPLOY-SERVER)</li>
+</ol>
+<h3>5.2 การปรับปรุงลำดับถัดไป (เรียงตามผลตอบแทน)</h3>
+<table>
+<tr><th>ลำดับ</th><th>รายการ</th><th>คาดผล</th><th>ความยาก</th></tr>
+<tr><td>1</td><td><strong>ลดงาน DB ต่อ check-in</strong> — cache dedupe ใน memory ต่อ process (TTL 5 นาที) ก่อน query, เขียน timestamp แบบ async batch</td><td>check-in p95 ลด 30–50% ใน rush</td><td>ต่ำ–กลาง</td></tr>
+<tr><td>2</td><td><strong>3 process ต่อ GPU</strong> (6 process) บนเครื่อง 32 core</td><td>rush×3 24 → ~32 จอ (ผลตอบแทนเริ่มลด)</td><td>ต่ำ (compose overlay)</td></tr>
+<tr><td>3</td><td><strong>วัดด้วยคีออสจริง</strong> (motion gating ทำงาน) แทน loadgen เต็มอัตรา</td><td>ได้ตัวเลขจริงที่สูงกว่าตาราง</td><td>ต่ำ</td></tr>
+<tr><td>4</td><td><strong>แยก DB ออกจากเครื่อง API</strong> เมื่อเกิน ~40 จอ</td><td>ตัด contention CPU/IO ระหว่าง API กับ Postgres</td><td>กลาง</td></tr>
+<tr><td>5</td><td><strong>Face Core หลายเครื่อง + Redis queue</strong></td><td>สเกลเป็นร้อยจอ / หลายบริษัท</td><td>สูง — ทำเมื่อต้องข้ามเครื่องเท่านั้น</td></tr>
+</table>
+<h3>5.3 สิ่งที่ไม่ควรทำ</h3>
+<ul>
+<li>ไม่ต้องซื้อ GPU เพิ่มเพื่อเครื่องนี้ — GPU ใช้เพียง ~16%</li>
+<li>ไม่ต้องเพิ่ม <code>FACE_GPU_WORKERS</code> เกิน 3 — A/B 2 vs 3 ไม่ต่างในระดับ noise; เกินนี้จะแย่ง GPU กันเอง</li>
+<li>ไม่ต้องแยก Face Core เพื่อ &quot;ใช้ GPU ให้เต็ม&quot; — ปัญหาอยู่ที่ CPU/DB ไม่ใช่ GPU</li>
+</ul>
+<hr>
+<h2>6. การประมาณสเป็ค — เครื่องเดียว</h2>
+<p>หลักคิด: <strong>1 API process ≈ 1.2–1.5 CPU core เมื่อเต็มโหลด</strong> และรับ rush ได้ประมาณ <strong>6–8 จอ (3 คน/จอ)</strong> หรือ <strong>8–10 คน (คนละคน/จอ)</strong>; GPU 1 ใบรองรับได้ 2–3 process โดยยังใช้ SM ไม่ถึง 40%</p>
+<table>
+<tr><th>เป้าหมายพร้อมกัน (rush)</th><th>API process</th><th>CPU core แนะนำ</th><th>RAM</th><th>GPU</th><th>หมายเหตุ</th></tr>
+<tr><td>≤ 6 จอ / ≤ 12 คน</td><td>1</td><td>4–8</td><td>16 GB</td><td>1 ใบ ระดับ RTX 4060 / T4</td><td>เครื่องเล็ก / สาขา</td></tr>
+<tr><td>≤ 16 จอ / ≤ 24 คน</td><td>2 (1/GPU)</td><td>8–16</td><td>32 GB</td><td>1–2 ใบ</td><td>ค่าที่วัดได้รอบ 2</td></tr>
+<tr><td><strong>≤ 24 จอ / ≤ 32 คน</strong></td><td><strong>4 (2/GPU)</strong></td><td><strong>16–32</strong></td><td>32–64 GB</td><td><strong>2 ใบ RTX 5000</strong></td><td><strong>เครื่องปัจจุบัน (รอบ 3)</strong></td></tr>
+<tr><td>≤ 32 จอ / ≤ 48 คน</td><td>6 (3/GPU) + DB แยก</td><td>32</td><td>64 GB</td><td>2 ใบ</td><td>ประมาณการ — ยังไม่ได้วัด</td></tr>
+<tr><td>&gt; 48 จอ / &gt; 64 คน</td><td>หลายเครื่อง</td><td>—</td><td>—</td><td>—</td><td>ดู §7</td></tr>
+</table>
+<p>การ์ดจอ: งานเป็น RetinaFace 320 + ArcFace r50 ที่ ~5–15 ms/งาน — การ์ดระดับ 8–16 GB ทั่วไปเพียงพอ; <strong>จำนวน CPU core และ process สำคัญกว่า GPU รุ่นแรง</strong></p>
+<hr>
+<h2>7. การประมาณสเป็ค — กรณี 10,000 คนลงเวลาช่วงเดียวกัน</h2>
+<h3>7.1 แปลงเป็นอัตราคำขอ</h3>
+<table>
+<tr><th>สมมติฐาน</th><th>ค่า</th></tr>
+<tr><td>พนักงาน</td><td>10,000 คน</td></tr>
+<tr><td>หน้าต่างเวลาลงเวลา</td><td>20 นาที (07:50–08:10)</td></tr>
+<tr><td>อัตราเฉลี่ย</td><td>≈ <strong>8.3 คน/วินาที</strong></td></tr>
+<tr><td>อัตราพีค (นาทีที่แน่นสุด ~3–5× ของเฉลี่ย)</td><td>≈ <strong>25–45 คน/วินาที</strong></td></tr>
+<tr><td>งานต่อ 1 คน (คีออสจริงหลัง motion gating)</td><td>detect ~15–25 เฟรม + identify 1–2 + check-in 1 ≈ 20–30 คำขอ</td></tr>
+<tr><td>คำขอรวมช่วงพีค</td><td>≈ <strong>600–1,200 คำขอ/วินาที</strong></td></tr>
+</table>
+<h3>7.2 เครื่องปัจจุบันรับได้เท่าไร</h3>
+<p>จากรอบ 3: 24 จอ rush×3 = ~72 คนหน้ากล้องพร้อมกัน ≈ <strong>50–60 detect/วินาที + ~35 identify/วินาที + ~95 check-in/วินาที</strong> โดยยังผ่าน SLO → เทียบเป็น <strong>&quot;ลงเวลาสำเร็จ&quot; ประมาณ 3–6 คน/วินาที</strong> ต่อเครื่อง (ขึ้นกับเวลาที่แต่ละคนยืนหน้ากล้อง ~4–8 วินาที)</p>
+<p><strong>ดังนั้น 1 เครื่อง ≈ 4,000–7,000 คนต่อ 20 นาที ถ้าโหลดกระจายสม่ำเสมอ — แต่ที่พีค 25–45 คน/วินาที จะล้นทันที</strong></p>
+<h3>7.3 สเป็คที่แนะนำสำหรับ 10,000 คน / 20 นาที</h3>
+<table>
+<tr><th>องค์ประกอบ</th><th>จำนวน / สเป็ค</th><th>เหตุผล</th></tr>
+<tr><td><strong>จอ/จุดลงเวลา</strong></td><td><strong>≥ 120–150 จุด</strong> (คนละคนต่อจอ) หรือ ≥ 60 จอแบบหลายคน</td><td>45 คน/วินาที × 4–6 วินาที/คน ≈ 180–270 คนยืนพร้อมกันตอนพีค — จำนวนจอเป็นข้อจำกัดทางกายภาพก่อนซอฟต์แวร์</td></tr>
+<tr><td><strong>API/Face node</strong></td><td><strong>4–6 เครื่อง</strong> ระดับเครื่องปัจจุบัน (16–32 core, 2 GPU 16 GB) หรือ 8–12 เครื่องระดับ 1 GPU</td><td>แต่ละเครื่องรับ ~30 คนพร้อมกัน / ~5 ลงเวลาต่อวินาที; ต้องการ ~250 คนพร้อมกันตอนพีค + margin 30%</td></tr>
+<tr><td><strong>Load balancer</strong></td><td>nginx / HAProxy <code>least_conn</code> แยกเครื่อง, sticky ต่อ WebSocket</td><td>กระจาย WS ต่อ connection</td></tr>
+<tr><td><strong>Database</strong></td><td>PostgreSQL + pgvector แยกเครื่อง: 16 core, 64 GB, NVMe; connection pool รวม ≥ 300; พิจารณา read replica สำหรับ 1:N search</td><td>check-in insert ~50–100/วินาที + dedupe query + vector search 10,000 embedding (×5 มุม)</td></tr>
+<tr><td><strong>Object storage</strong></td><td>NFS/S3 สำหรับรูป punch (~50 KB × 10,000 = ~500 MB/วัน)</td><td>หลาย node ต้องเขียนรูปที่เดียว</td></tr>
+<tr><td><strong>Queue (ทางเลือก)</strong></td><td>Face Core + Redis เมื่อต้องการ fairness หลายบริษัท</td><td>ไม่จำเป็นถ้าแยก node ตามสาขา/บริษัทอยู่แล้ว</td></tr>
+</table>
+<h3>7.4 ทางเลือกลดสเป็ค (ทำได้ทันที ไม่ต้องซื้อ)</h3>
+<ul>
+<li><strong>กระจายเวลา:</strong> แบ่งกะ/แผนกลงเวลาต่างช่วง 10–15 นาที ลดพีคจาก 45 → ~15 คน/วินาที → ลดจำนวนเครื่องลงครึ่งหนึ่ง</li>
+<li><strong>แยกตามสาขา:</strong> สาขาละเครื่อง (แต่ละสาขาไม่น่ามี &gt; 1,000 คนลงเวลาพร้อมกัน) แล้ว sync ไปฐานกลาง</li>
+<li><strong>ลดงานต่อคน:</strong> motion gating (มีแล้ว) + cooldown 5 นาที (มีแล้ว) + ทำ dedupe cache ใน memory (ข้อแนะนำ §5.2-1)</li>
+</ul>
+<p><strong>คำตอบตรง ๆ:</strong> 10,000 คนในช่วงเดียวกัน <strong>ทำได้</strong> แต่ต้องเป็นระบบ <strong>4–6 เครื่องระดับปัจจุบัน + DB แยก + จุดลงเวลา ≥ 120</strong> — ไม่ใช่เครื่องเดียว</p>
+<hr>
+<h2>8. วิธีทดสอบซ้ำ (สำหรับทีมเทคนิค)</h2>
+<pre>
+# บนเซิร์ฟเวอร์ (quad API)
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.gpu-x2.yml up -d --build
+
+# จากเครื่องทดสอบ
+export KIOSK_LOAD_BASE_URL=http://10.50.0.117:8880
+python scripts/kiosk-load/kiosk_load.py --prepare --frame-width 1280 --jpeg-quality 70 \
+  --profile rush --faces-per-kiosk 3 --kiosks 8,16,24,32 --hold 30 --jsonl results-rush3.jsonl
+python scripts/kiosk-load/summarize_capacity.py --idle ... --rush3 ... --rush1 ... --workers 3 --out docs/TABLE.md
+</pre>
+<p>ไฟล์ดิบทุกรอบอยู่ใน <code>scripts/kiosk-load/.cache/</code> (ไฟล์ <code>results-&lt;รอบ&gt;-&lt;โปรไฟล์&gt;.jsonl</code> และ <code>hostmetrics-&lt;รอบ&gt;.csv</code>)</p>
+<hr>
+<p class="footer">จัดทำจากผลวัดจริงบนเซิร์ฟเวอร์ 22–24 กันยายน 2026 · ตัวเลข &quot;ประมาณการ&quot; ใน §6–7 ยังไม่ได้วัดจริงและควรยืนยันด้วย loadtest ก่อนจัดซื้อ</p>
+</body>
+</html>

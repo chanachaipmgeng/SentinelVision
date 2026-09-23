@@ -19,7 +19,7 @@ Rules are short and actionable. Prefer editing the matching rule when convention
 |-------|----------|
 | `dpu-face-kiosk` | Multi-person kiosk, walk-by, WebSocket stream, InsightFace check-in, `dpu-kiosk-mode` fullscreen |
 | `dpu-web-manage-ui` | Admin list CRUD, shared kit, header/sidebar shell, homes, dashboard, face-management dialog |
-| `dpu-docker-rebuild` | Rebuild/verify containers, 502, queue-stats |
+| `dpu-docker-rebuild` | Rebuild/verify containers (incl. `api-gpu1`), 502, queue-stats, dual-GPU pin |
 
 Invoke by mentioning the skill name or describing the matching task (agent auto-discovers via `description`).
 
@@ -37,6 +37,7 @@ Invoke by mentioning the skill name or describing the matching task (agent auto-
 2. **P2** — `POST /face/members/check-in-walkby` (no motion liveness)  
 3. **P3** — `WS /face/ws/kiosk` + `face_gpu_queue`  
 4. **P4** — JWT on face HTTP + WS session, `FACE_DEVICES` multi-GPU workers, det-only 320 model, WS detect backpressure, `hnsw.ef_search` + company JOIN match  
+5. **P5** — Dual-API per GPU (`api` + `api-gpu1`), ORT `provider_options` pin, decode pool / reduced JPEG, realistic kiosk loadtest + saturation ceilings  
 
 Canonical UI: `Web-Manage/.../enroll-face/` (fullscreen via `html.dpu-kiosk-mode`)  
 Canonical API: `API-Fast/src/controllers/face_*.py`, `utils/face_engine.py`, `utils/face_gpu_queue.py`
@@ -59,5 +60,7 @@ There is **no** `Webview-Mobile` app — check-in is kiosk-only.
 - [API.md](API.md)
 - [SETUP.md](SETUP.md)
 - [RUNBOOK.md](RUNBOOK.md)
+- [KIOSK-LOADTEST.md](KIOSK-LOADTEST.md)
+- [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md)
 - [BACKLOG.md](BACKLOG.md)
 - [PLAN-CLEANUP-REDESIGN.md](PLAN-CLEANUP-REDESIGN.md)

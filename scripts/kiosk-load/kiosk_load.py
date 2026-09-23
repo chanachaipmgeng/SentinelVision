@@ -196,33 +196,59 @@ def image_b64(image: bytes) -> str:
     return base64.b64encode(image).decode("ascii")
 
 
-def mosaic_faces(image: bytes, count: int) -> bytes:
-    """Tile the sample face into a grid so detect can see multiple boxes."""
-    if count <= 1:
-        return image
+def prepare_frame(
+    image: bytes,
+    count: int,
+    *,
+    frame_width: int = 1280,
+    jpeg_quality: int = 70,
+) -> bytes:
+    """Build a detect frame sized like a real kiosk canvas.
+
+    Multi-face mosaics are tiled then downscaled so width ≤ frame_width
+    (default 1280) at jpeg_quality ~70 — matching the Angular kiosk
+    (quality 0.7), not a full-res 3× mosaic (~3936 px / ~500 KB).
+    """
     from io import BytesIO
 
     from PIL import Image
 
     face = Image.open(BytesIO(image)).convert("RGB")
-    # Prefer a wide row so faces stay separated (helps detector NMS).
-    cols = min(count, 3)
-    rows = (count + cols - 1) // cols
-    gap = 24
-    cell_w, cell_h = face.size
-    canvas = Image.new(
-        "RGB",
-        (cols * cell_w + (cols + 1) * gap, rows * cell_h + (rows + 1) * gap),
-        (32, 32, 32),
-    )
-    for i in range(count):
-        r, c = divmod(i, cols)
-        x = gap + c * (cell_w + gap)
-        y = gap + r * (cell_h + gap)
-        canvas.paste(face, (x, y))
+    count = max(1, int(count))
+    if count <= 1:
+        canvas = face
+    else:
+        # Prefer a wide row so faces stay separated (helps detector NMS).
+        cols = min(count, 3)
+        rows = (count + cols - 1) // cols
+        gap = 24
+        cell_w, cell_h = face.size
+        canvas = Image.new(
+            "RGB",
+            (cols * cell_w + (cols + 1) * gap, rows * cell_h + (rows + 1) * gap),
+            (32, 32, 32),
+        )
+        for i in range(count):
+            r, c = divmod(i, cols)
+            x = gap + c * (cell_w + gap)
+            y = gap + r * (cell_h + gap)
+            canvas.paste(face, (x, y))
+
+    max_w = max(320, int(frame_width))
+    if canvas.size[0] > max_w:
+        ratio = max_w / float(canvas.size[0])
+        new_size = (max_w, max(1, int(round(canvas.size[1] * ratio))))
+        canvas = canvas.resize(new_size, Image.Resampling.LANCZOS)
+
+    quality = max(40, min(95, int(jpeg_quality)))
     out = BytesIO()
-    canvas.save(out, format="JPEG", quality=85)
+    canvas.save(out, format="JPEG", quality=quality, optimize=True)
     return out.getvalue()
+
+
+# Back-compat alias used by older docs / callers.
+def mosaic_faces(image: bytes, count: int) -> bytes:
+    return prepare_frame(image, count)
 
 
 def append_jsonl(path: Optional[Path], row: dict[str, Any]) -> None:
@@ -252,6 +278,8 @@ class KioskClient:
         hold_s: float,
         jsonl: Optional[Path],
         step_label: str,
+        rate: float = 0.0,
+        max_inflight: int = 8,
     ) -> None:
         self.kiosk_id = kiosk_id
         self.ws_url = ws_url
@@ -266,10 +294,14 @@ class KioskClient:
         self.hold_s = hold_s
         self.jsonl = jsonl
         self.step_label = step_label
+        # Open-loop stress: send detect at --rate jobs/s without waiting.
+        self.rate = float(rate)
+        self.max_inflight = max(1, int(max_inflight))
         self.stats = RunStats()
         self._pending: dict[str, asyncio.Future] = {}
         self._identify_inflight = 0
         self._checkin_inflight = 0
+        self._detect_inflight = 0
         self._last_identify_at: dict[int, float] = {}
         self._stop = False
         self._track_ids = list(range(1, self.faces_per_kiosk + 1))
@@ -350,11 +382,14 @@ class KioskClient:
                 recv_task = asyncio.create_task(self._receiver(ws))
                 try:
                     deadline = time.monotonic() + self.hold_s
-                    while time.monotonic() < deadline:
-                        bg_tasks = [t for t in bg_tasks if not t.done()]
-                        task = await self._tick(ws)
-                        if task is not None:
-                            bg_tasks.append(task)
+                    if self.profile == "stress":
+                        await self._run_stress(ws, deadline)
+                    else:
+                        while time.monotonic() < deadline:
+                            bg_tasks = [t for t in bg_tasks if not t.done()]
+                            task = await self._tick(ws)
+                            if task is not None:
+                                bg_tasks.append(task)
                 finally:
                     self._stop = True
                     if bg_tasks:
@@ -368,6 +403,73 @@ class KioskClient:
             self._log("error", detail=str(exc))
             raise
         return self.stats
+
+    async def _run_stress(self, ws, deadline: float) -> None:
+        """Open-loop detect: fire at --rate without waiting for each reply."""
+        interval = 1.0 / self.rate if self.rate > 0 else DETECT_INTERVAL_MS / 1000.0
+        next_send = time.monotonic()
+        inflight: set[asyncio.Task] = set()
+
+        while time.monotonic() < deadline:
+            now = time.monotonic()
+            # Reap finished waiters.
+            done = {t for t in inflight if t.done()}
+            for t in done:
+                inflight.discard(t)
+                try:
+                    t.result()
+                except Exception:
+                    pass
+
+            if self._detect_inflight >= self.max_inflight:
+                await asyncio.sleep(0.002)
+                continue
+
+            if now < next_send:
+                await asyncio.sleep(min(0.002, next_send - now))
+                continue
+
+            next_send = max(next_send + interval, time.monotonic())
+            task = asyncio.create_task(self._detect_open_loop(ws))
+            inflight.add(task)
+
+        if inflight:
+            await asyncio.gather(*inflight, return_exceptions=True)
+
+    async def _detect_open_loop(self, ws) -> None:
+        detect_id = f"d-{self.kiosk_id}-{uuid.uuid4().hex[:10]}"
+        self._detect_inflight += 1
+        t0 = time.perf_counter()
+        try:
+            await ws.send(
+                json.dumps(
+                    {
+                        "type": "detect",
+                        "requestId": detect_id,
+                        "image": self.detect_b64,
+                    }
+                )
+            )
+            try:
+                detected = await self._wait_key(detect_id, timeout=20.0)
+            except Fail:
+                self.stats.detect.add_error()
+                self._log("detect_timeout", requestId=detect_id)
+                return
+            detect_ms = (time.perf_counter() - t0) * 1000
+            dropped = bool(detected.get("dropped"))
+            face_n = len(detected.get("faces") or [])
+            self.stats.detect.add(detect_ms, dropped=dropped)
+            self._log(
+                "detected",
+                latency_ms=round(detect_ms, 1),
+                dropped=dropped,
+                faces=face_n,
+                want_faces=self.faces_per_kiosk,
+                open_loop=True,
+            )
+        finally:
+            self._detect_inflight = max(0, self._detect_inflight - 1)
 
     async def _tick(self, ws) -> Optional[asyncio.Task]:
         detect_id = f"d-{self.kiosk_id}-{uuid.uuid4().hex[:10]}"
@@ -593,11 +695,15 @@ async def run_step(
     profile: str,
     hold_s: float,
     jsonl: Optional[Path],
+    rate: float = 0.0,
+    max_inflight: int = 8,
 ) -> RunStats:
     label = (
         f"kiosks={n_kiosks} faces/kiosk={faces_per_kiosk} "
         f"profile={profile} hold={hold_s}s"
     )
+    if profile == "stress" and rate > 0:
+        label += f" rate={rate:g}/s"
     print(f"\n--- Starting {label} ---")
     clients = [
         KioskClient(
@@ -614,6 +720,8 @@ async def run_step(
             hold_s=hold_s,
             jsonl=jsonl,
             step_label=label,
+            rate=rate,
+            max_inflight=max_inflight,
         )
         for i in range(n_kiosks)
     ]
@@ -629,6 +737,8 @@ async def run_step(
             continue
         merged.merge(result)
     print_summary(label, merged)
+    detect_n = len(merged.detect.samples_ms)
+    sent_per_s = (detect_n / hold_s) if hold_s > 0 else 0.0
     append_jsonl(
         jsonl,
         {
@@ -640,8 +750,15 @@ async def run_step(
             "identify": merged.identify.summary(),
             "checkin": merged.checkin.summary(),
             "face_core_down": merged.face_core_down,
+            "throughput_detect_per_s": round(sent_per_s, 2),
+            "rate_target": rate if profile == "stress" else None,
         },
     )
+    if profile == "stress":
+        print(
+            f"  open-loop throughput≈{sent_per_s:.1f} detect/s "
+            f"(target {rate:g}/s × {n_kiosks} kiosks)"
+        )
     return merged
 
 
@@ -682,9 +799,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--lon", type=float, default=DEFAULT_LON)
     p.add_argument(
         "--profile",
-        choices=("idle", "rush"),
+        choices=("idle", "rush", "stress"),
         default="idle",
-        help="idle=detect only; rush=detect+identify+checkin",
+        help=(
+            "idle=detect only (closed-loop); rush=detect+identify+checkin; "
+            "stress=open-loop detect at --rate to saturate the server"
+        ),
     )
     p.add_argument(
         "--kiosks",
@@ -706,6 +826,33 @@ def build_parser() -> argparse.ArgumentParser:
             "People simulated per screen (mosaic detect + up to 2 identify / "
             "3 check-in in flight, matching UI caps). Default 1."
         ),
+    )
+    p.add_argument(
+        "--frame-width",
+        type=int,
+        default=int(os.environ.get("KIOSK_LOAD_FRAME_WIDTH", "1280")),
+        help="Max detect-frame width in px (default 1280, like a real kiosk)",
+    )
+    p.add_argument(
+        "--jpeg-quality",
+        type=int,
+        default=int(os.environ.get("KIOSK_LOAD_JPEG_QUALITY", "70")),
+        help="JPEG quality for detect frames (default 70 ≈ UI quality 0.7)",
+    )
+    p.add_argument(
+        "--rate",
+        type=float,
+        default=float(os.environ.get("KIOSK_LOAD_RATE", "0")),
+        help=(
+            "Open-loop detect sends per second PER kiosk (stress profile). "
+            "0 = use 1000/90 ≈ 11.1/s. Total target ≈ rate × kiosks."
+        ),
+    )
+    p.add_argument(
+        "--max-inflight",
+        type=int,
+        default=8,
+        help="Max in-flight detect requests per kiosk in stress mode (default 8)",
     )
     p.add_argument(
         "--prepare",
@@ -752,10 +899,26 @@ def main() -> int:
             prepare_enroll(args.base_url, token, args.member_id, image)
 
         faces = max(1, int(args.faces_per_kiosk))
-        mosaic = mosaic_faces(image, faces)
-        crop_b64 = image_b64(image)
+        mosaic = prepare_frame(
+            image,
+            faces,
+            frame_width=args.frame_width,
+            jpeg_quality=args.jpeg_quality,
+        )
+        # Single-face crop for identify/check-in stays full sample size.
+        crop = prepare_frame(
+            image, 1, frame_width=args.frame_width, jpeg_quality=args.jpeg_quality
+        )
+        crop_b64 = image_b64(crop)
         detect_b64 = image_b64(mosaic)
-        print(f"  faces/kiosk={faces}  detect mosaic={len(mosaic)} bytes")
+        print(
+            f"  faces/kiosk={faces}  detect frame={len(mosaic)} bytes "
+            f"(max_w={args.frame_width} q={args.jpeg_quality})"
+        )
+
+        rate = float(args.rate)
+        if args.profile == "stress" and rate <= 0:
+            rate = 1000.0 / DETECT_INTERVAL_MS  # ~11.1/s per kiosk
 
         ws_url = http_to_ws(args.base_url)
         overall = RunStats()
@@ -776,6 +939,8 @@ def main() -> int:
                     profile=args.profile,
                     hold_s=args.hold,
                     jsonl=args.jsonl,
+                    rate=rate,
+                    max_inflight=args.max_inflight,
                 )
             )
             overall.merge(stats)

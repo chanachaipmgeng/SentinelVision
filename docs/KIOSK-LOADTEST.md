@@ -277,6 +277,65 @@ python kiosk_load.py --faces-per-kiosk 3 --profile rush --kiosks 2,4,8,16 --hold
 
 สรุป: การ์ดสองใบ / โค้ดจูน **ยังไม่ทำงานใน runtime** — ต้องตั้ง `.env` + rebuild ให้ `workers≥2` และให้ log มี `devices=` ก่อนวัดซ้ำอีกรอบ
 
+### ผลวัดซ้ำ 2026-09-23 (หลังตั้ง dual GPU + rebuild)
+
+ชี้ `http://10.50.0.117:8880` · โฮสต์มี **2× Quadro RTX 5000 16 GB** · `.env`: `FACE_DEVICES=cuda:0,cuda:1` · `FACE_GPU_WORKERS=2`
+
+| สภาพ | ค่า |
+|------|-----|
+| log api | `Face GPU queue started workers=2 … devices=['cuda:0', 'cuda:1']` |
+| `queue-stats` | `devices=cuda:0,cuda:1`, `active` สูงสุด **2** |
+| nvidia-smi ระหว่างโหลด | GPU0 util สูงสุด ~87% / mem ~15 GB · GPU1 util สูงสุด ~71% / mem ~12 GB |
+
+**Idle** (3 คน/จอ, hold 30s) vs รอบ workers=1 ด้านบน
+
+| จอ | workers=1 detect p95 | dual GPU | หมายเหตุ |
+|----|----------------------|----------|----------|
+| 8 | 415 ms | **352 ms** | ดีขึ้น |
+| 16 | 805 ms | **606 ms** | ดีขึ้น (ยังเกิน SLO 550 นิด) |
+| 32 | 2034 ms | **1063 ms** | ดีขึ้น ~2× |
+
+**Rush** (3 คน/จอ) vs รอบ workers=1
+
+| จอ | workers=1 detect p95 | dual GPU | หมายเหตุ |
+|----|----------------------|----------|----------|
+| 2 | ~4.5 s | **288 ms** | ใต้ SLO |
+| 4 | ~8.2 s | **447 ms** | ใต้ SLO |
+| 8 | 16 s+ | **1296 ms** | ดีขึ้นมาก แต่เกิน SLO / drop ~56% |
+| 16 | 16–18 s+ | **2478 ms** | ยังไม่ไหวใช้งานจริง |
+
+สรุปใช้งาน: **rush สบายที่ 2–4 จอ (3 คน/จอ)**; idle ~8–16 จอ · ไฟล์: `results-dual-retest-{idle,rush}.jsonl`, `queue-dual-retest.csv`
+
+รายงาน capacity แบบละเอียด (อัตราเต็ม, workers=2): **[KIOSK-LOADTEST-WORKERS2-CAPACITY.md](KIOSK-LOADTEST-WORKERS2-CAPACITY.md)** — เพดาน SLO: idle ×3 = **12 จอ**, rush ×3 = **5 จอ**, rush ×1 = **8 จอ**
+
+### ผล saturation 2026-09-23 (dual API + เฟรมสมจริง)
+
+หลังพบว่า GPU1 ว่างจริง (device ไม่ถูก pin) และ process เดียวติด GIL จึงแยกเป็น `dpu-api` / `dpu-api-gpu1` + nginx `least_conn` และย่อเฟรมเทสให้เท่า kiosk จริง (~1280 px, q70)
+
+| โปรไฟล์ | เพดาน SLO (รอบ saturation) |
+|---------|----------------------------|
+| idle ×3 | **24 จอ** |
+| rush ×3 | **6 จอ** (MARGIN ที่ 8–12) |
+| rush ×1 | **12 จอ** (MARGIN ที่ 16) |
+
+รายละเอียด + เกณฑ์ตัดสิน face-core: **[KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md)**
+
+รัน dual-GPU stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+# ตรวจ: dpu-api, dpu-api-gpu1, nginx (mount default.dual-gpu.conf)
+```
+
+Loadgen บน server (ตัด LAN/Windows ออก):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+  -f docker-compose.loadtest.yml --profile loadtest run --rm \
+  -e KIOSK_LOAD_USER=... -e KIOSK_LOAD_PASSWORD=... \
+  loadgen --profile idle --kiosks 1,4,8 --hold 20 --jsonl /results/idle.jsonl
+```
+
 Checklist บนเซิร์ฟเวอร์:
 
 ```bash

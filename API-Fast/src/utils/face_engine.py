@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple
 
 import cv2
@@ -16,6 +17,13 @@ from ..config.settings import settings
 _face_apps: dict = {}
 _face_app_lock = threading.Lock()
 _thread_device = threading.local()
+# Separate from the GPU ThreadPoolExecutor so JPEG decode does not steal
+# inference worker slots (and so decode can oversubscribe CPU cores).
+_decode_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="face-decode")
+
+
+def get_decode_executor() -> ThreadPoolExecutor:
+    return _decode_executor
 
 
 def set_thread_device(device: str) -> None:
@@ -97,9 +105,22 @@ def get_face_app(device: Optional[str] = None, *, det_size: Optional[int] = None
         if cached is not None:
             return cached
         providers, ctx_id = _resolve_providers_and_ctx(device)
-        print(f"Loading InsightFace buffalo_l device={device} providers={providers} ctx_id={ctx_id} det={size}", flush=True)
+        # Pin CUDA EP to the requested device. InsightFace's prepare(ctx_id=N)
+        # alone does not always set ORT provider_options device_id — without
+        # this, cuda:0 and cuda:1 both land on GPU0.
+        provider_options = None
+        if ctx_id >= 0 and providers and providers[0] == "CUDAExecutionProvider":
+            provider_options = [{"device_id": ctx_id}, {}]
+        print(
+            f"Loading InsightFace buffalo_l device={device} providers={providers} "
+            f"ctx_id={ctx_id} provider_options={provider_options} det={size}",
+            flush=True,
+        )
         try:
-            app = FaceAnalysis(name="buffalo_l", providers=providers)
+            kwargs: dict = {"name": "buffalo_l", "providers": providers}
+            if provider_options is not None:
+                kwargs["provider_options"] = provider_options
+            app = FaceAnalysis(**kwargs)
             app.prepare(ctx_id=ctx_id, det_size=(size, size))
         except Exception as exc:
             if ctx_id < 0:
@@ -143,12 +164,34 @@ def detect_bbox(image_path: str) -> Optional[np.ndarray]:
     return np.asarray(bboxes[0][:4], dtype=np.float32)
 
 
-def decode_image_bytes(image_bytes: bytes) -> np.ndarray:
-    """JPEG/PNG decode outside the GPU worker so inference slots stay busy."""
+def decode_image_bytes(image_bytes: bytes, *, for_detect: bool = False) -> np.ndarray:
+    """JPEG/PNG decode outside the GPU worker so inference slots stay busy.
+
+    When for_detect=True and the payload looks large, use IMREAD_REDUCED_COLOR_2
+    (½ resolution) — detect only needs FACE_DETECT_DET_SIZE (320), so frames
+    wider than ~2× that gain nothing from a full-res decode.
+    """
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
-    image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    image = None
+    if for_detect and len(image_bytes) >= 80_000:
+        # Halved decode avoids paying full JPEG cost for kiosk/mosaic frames.
+        image = cv2.imdecode(arr, cv2.IMREAD_REDUCED_COLOR_2)
+    if image is None:
+        image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError("Could not decode frame")
+    if for_detect:
+        height, width = image.shape[:2]
+        det = int(settings.FACE_DETECT_DET_SIZE)
+        # If still wider than 2× det_size, downscale before GPU (CPU resize is
+        # cheaper than feeding a huge tensor into the detector).
+        if width > 2 * det:
+            scale = (2.0 * det) / float(width)
+            image = cv2.resize(
+                image,
+                (int(round(width * scale)), int(round(height * scale))),
+                interpolation=cv2.INTER_AREA,
+            )
     return image
 
 
@@ -186,7 +229,7 @@ def detect_faces_bgr(image: np.ndarray) -> dict:
 
 def detect_faces_bytes(image_bytes: bytes) -> dict:
     """Decode + detect (prefer decode_image_bytes + detect_faces_bgr off the GPU path)."""
-    return detect_faces_bgr(decode_image_bytes(image_bytes))
+    return detect_faces_bgr(decode_image_bytes(image_bytes, for_detect=True))
 
 
 def extract_face_features(

@@ -10,31 +10,53 @@ alwaysApply: false
 
 `db` (pgvector), `api`, `admin`, `nginx` (:80)
 
-GPU API: `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api`
-BFF (Face Core holds the GPUs): `-f docker-compose.face-core.yml` after `docker network create face-net`. Image is `API-Fast/Dockerfile.bff` (SDK baked in; sibling `../face-core/sdk/python` required at build). `FACE_CORE_API_KEY` has no default. `scripts/deploy-stack.sh` starts face-core first.
+### Local InsightFace (DPU holds GPUs)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+`docker-compose.gpu.yml` starts **two API processes** on a dual-GPU host:
+
+| Container | Pin | Workers |
+|-----------|-----|---------|
+| `dpu-api` | `CUDA_VISIBLE_DEVICES=0` | `FACE_GPU_WORKERS` (default 2) |
+| `dpu-api-gpu1` | `CUDA_VISIBLE_DEVICES=1` | same |
+| `dpu-nginx` | mounts `docker/nginx/default.dual-gpu.conf` | `upstream least_conn` → both APIs |
+
+Each process sees a single device as `cuda:0`. Do **not** set `FACE_DEVICES=cuda:0,cuda:1` inside one process expecting both cards — pin failed historically without `provider_options` + separate processes.
+
+### BFF (Face Core holds the GPUs)
+
+`-f docker-compose.face-core.yml` after `docker network create face-net`. Image is `API-Fast/Dockerfile.bff` (SDK baked in; sibling `../face-core/sdk/python` required at build). `FACE_CORE_API_KEY` has no default. `scripts/deploy-stack.sh` starts face-core first. Prefer dual-API above for single-host saturation; Face Core when scaling across hosts / many API replicas.
+
+### Loadtest generator
+
+`-f docker-compose.loadtest.yml --profile loadtest` → `loadgen` service hits `http://nginx:80`. See [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md).
 
 All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks (`api` → `/ready`, `nginx` → `/health`).
 
 ## Required env
 
 - `SECRET_KEY` ≥ 32 chars — `api` exits at import otherwise (`AUTH_FAIL_FAST`)
-- `FACE_DEVICES` comma list for multi-GPU; `FACE_GPU_WORKERS` is raised to the device count automatically
+- Dual-GPU overlay sets `FACE_DEVICES=cuda:0` + `CUDA_VISIBLE_DEVICES` per service; override `FACE_GPU_WORKERS` (default 2, ONNX can oversubscribe)
 - `EXPOSE_API_DOCS=false` in production; nginx also returns 404 for `/docs`, `/redoc`, `/openapi.json`
 
 ## Rebuild matrix
 
 | Change | Rebuild |
 |--------|---------|
-| `API-Fast/src/**` | `api` |
+| `API-Fast/src/**` | `api` **and** `api-gpu1` |
 | `Web-Manage/**` | `admin` |
-| `docker/nginx/default.conf` | `nginx` |
+| `docker/nginx/default.conf` or `default.dual-gpu.conf` | `nginx` |
 | `docker-compose.face-core.yml`, `API-Fast/Dockerfile.bff` | `api` (needs sibling face-core SDK) |
 
-API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code.
+API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code. Recreate nginx together with the APIs so upstream IPs stay fresh.
 
 ## Nginx
 
-- Resolve API via Docker DNS `127.0.0.11` + variable `proxy_pass` (avoid stale IP 502)
+- Single-GPU / CPU: `default.conf` uses Docker DNS `127.0.0.11` + variable `proxy_pass` (avoid stale IP 502)
+- Dual-GPU: `default.dual-gpu.conf` — `upstream dpu_api { least_conn; server api:8000; server api-gpu1:8000; }` (WS sticky per connection)
 - Face WS: `location ^~ /face/ws/` with Upgrade + long timeouts **before** the general `/face` regex
 - Uploads: `client_max_body_size 500m` (http + `/employees/.../import`); import `proxy_read_timeout 3600s`
 - HTTPS 413: drop `docker/nginx/host-upload-limit.conf` onto the **host** TLS nginx (`/etc/nginx/conf.d/`)
@@ -45,4 +67,5 @@ API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only �
 
 - API healthcheck hits `/ready` (DB ping + GPU queue started)
 - After recreate: `GET /health` → 200, `GET /ready` → 200, `GET /companys` without token → 401, then `GET /face/queue-stats` with a Bearer token
+- Dual-GPU: expect both `dpu-api` and `dpu-api-gpu1` healthy; `nvidia-smi --query-compute-apps` should show a python process on **each** GPU after first inference
 - Backups: `scripts/backup.sh` (pg_dump); see `docs/RUNBOOK.md`

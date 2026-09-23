@@ -23,10 +23,11 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core B
 ## Runtime
 
 ```bash
-# Local InsightFace (one GPU process, FACE_DEVICES for more)
+# Local InsightFace — dual GPU = api + api-gpu1 (see docker-compose.gpu.yml)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
-# Production BFF: Face Core holds both GPUs. See scripts/deploy-stack.sh
+# Production BFF: Face Core holds both GPUs (cross-host / many API replicas).
+# Prefer dual-API above for single-host saturation. See scripts/deploy-stack.sh
 docker network create face-net
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.face-core.yml up -d --build
 ```
@@ -34,8 +35,9 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compos
 - Admin: `http://localhost/`
 - API docs: `http://localhost/docs`
 - Kiosk: `http://localhost/company/timestamp-face`
+- Loadtest: `scripts/kiosk-load/` · capacity notes in `docs/KIOSK-LOADTEST-SATURATION.md`
 
-Code is **baked into images** — rebuild the service after source changes (`api`, `admin`, `nginx` as needed).
+Code is **baked into images** — rebuild after source changes (`api`, `api-gpu1`, `admin`, `nginx` as needed).
 
 ## Security baseline (enterprise upgrade)
 

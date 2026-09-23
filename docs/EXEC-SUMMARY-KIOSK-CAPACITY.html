@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า</title>
+  <style>
+@page { size: A4; margin: 18mm 16mm; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Sarabun", "Leelawadee UI", "Tahoma", "Segoe UI", sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  color: #1a1a1a;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 8px 24px;
+}
+h1 {
+  font-size: 18pt;
+  color: #0b3d5c;
+  border-bottom: 3px solid #0b3d5c;
+  padding-bottom: 8px;
+  margin-top: 0;
+}
+h2 {
+  font-size: 13pt;
+  color: #0b3d5c;
+  margin-top: 1.4em;
+  border-left: 4px solid #2a9d8f;
+  padding-left: 10px;
+}
+h3 { font-size: 11.5pt; color: #264653; margin-top: 1.1em; }
+p { margin: 0.55em 0; }
+ul, ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
+li { margin: 0.25em 0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 1.2em 0; }
+code {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+  background: #f3f5f7;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+pre {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 9.5pt;
+  background: #f3f5f7;
+  border: 1px solid #dde2e6;
+  border-radius: 6px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  line-height: 1.35;
+}
+blockquote {
+  margin: 0.8em 0;
+  padding: 10px 14px;
+  background: #eef7f5;
+  border-left: 4px solid #2a9d8f;
+  color: #234;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.7em 0 1em;
+  font-size: 10pt;
+}
+th, td {
+  border: 1px solid #cfd8dc;
+  padding: 7px 9px;
+  vertical-align: top;
+  text-align: left;
+}
+th {
+  background: #0b3d5c;
+  color: #fff;
+  font-weight: 600;
+}
+tr:nth-child(even) td { background: #f7fafc; }
+.meta { color: #445; }
+.footer {
+  margin-top: 1.5em;
+  font-size: 9.5pt;
+  color: #666;
+  font-style: italic;
+}
+.banner {
+  background: #0b3d5c;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 0 0 1em;
+  font-size: 10.5pt;
+}
+.banner strong { color: #9ef0d2; }
+</style>
+</head>
+<body>
+  <div class="banner">เอกสารสรุปผู้บริหาร · ความจุระบบลงเวลาด้วยใบหน้า · วัด 23 ก.ย. 2026</div>
+  <h1>สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)</h1>
+<p><strong>วันที่วัดล่าสุด:</strong> 23 กันยายน 2026 (รอบ saturation / dual-API)  </p>
+<p><strong>ระบบ:</strong> Face Scan Time Attendance (DPU) · เซิร์ฟเวอร์ <code>face-in</code> (<code>10.50.0.117</code>)  </p>
+<p><strong>เอกสารเทคนิค:</strong> <a href="KIOSK-LOADTEST-SATURATION.md">KIOSK-LOADTEST-SATURATION.md</a> · <a href="KIOSK-LOADTEST-SATURATION-TABLE.md">ตารางตัวเลข</a>  </p>
+<p><strong>รายงานรอบก่อน (conservative):</strong> <a href="KIOSK-LOADTEST-WORKERS2-CAPACITY.md">KIOSK-LOADTEST-WORKERS2-CAPACITY.md</a>  </p>
+<p><strong>ไฟล์ PDF:</strong> <a href="EXEC-SUMMARY-KIOSK-CAPACITY.pdf">EXEC-SUMMARY-KIOSK-CAPACITY.pdf</a> <em>(อาจยังเป็นตัวเลขรอบก่อน — ดูตารางด้านล่างเป็นปัจจุบัน)</em></p>
+<hr>
+<h2>1. โปรดักต์นี้ทำอะไร</h2>
+<p>ระบบลงเวลาทำงานด้วยการจดจำใบหน้า:</p>
+<ol>
+<li>พนักงานยืนหน้ากล้องที่ <strong>จอคีออส</strong> (ไม่ต้องแตะเครื่อง)</li>
+<li>ระบบตรวจจับใบหน้า → จับคู่กับข้อมูลที่ลงทะเบียนไว้ → บันทึกเวลาเข้า/ออก</li>
+<li>แอดมินจัดการบริษัท พนักงาน สถานที่ และนำเข้าข้อมูลผ่านเว็บ</li>
+</ol>
+<p>คอขวดหลักของความเร็วอยู่ที่ <strong>การประมวลผลใบหน้าบนการ์ดจอ (GPU)</strong> ของเซิร์ฟเวอร์</p>
+<hr>
+<h2>2. สเป็คที่ทดสอบ (รอบล่าสุด)</h2>
+<table>
+<tr><th>รายการ</th><th>ค่าที่ใช้ทดสอบ</th></tr>
+<tr><td>เซิร์ฟเวอร์</td><td>production (<code>10.50.0.117</code>)</td></tr>
+<tr><td>การ์ดจอ (GPU)</td><td><strong>2 ใบ</strong> · Quadro RTX 5000 · 16 GB/ใบ</td></tr>
+<tr><td>สถาปัตยกรรม</td><td><strong>API 2 process</strong> แยกตาม GPU (nginx กระจายโหลด) · คนละ 2 workers</td></tr>
+<tr><td>วิธีวัด</td><td>จำลองจอคีออสหลายจอ · เฟรมขนาดใกล้ของจริง (~1280 px, JPEG q70)</td></tr>
+<tr><td>เกณฑ์คุณภาพ (UX)</td><td>กรอบใบหน้า ≤ ~0.55 วินาที · ทิ้งเฟรม ≤ 5%</td></tr>
+</table>
+<blockquote><p>รอบก่อนใช้ process เดียว + เฟรมทดสอบใหญ่เกินจริง ทำให้ตัวเลข <strong>conservative</strong> (ต่ำกว่าความจุจริง)</p></blockquote>
+<hr>
+<h2>3. สรุปผลในหนึ่งหน้า</h2>
+<h3>คำตอบสั้น ๆ สำหรับวางแผนติดตั้ง</h3>
+<table>
+<tr><th>สถานการณ์หน้างาน</th><th>จำนวนจอที่แนะนำ (รอบล่าสุด)</th><th>รอบก่อน (conservative)</th></tr>
+<tr><td>เร่งด่วนหนาแน่น (~หลายคนในกล้อง)</td><td><strong>ไม่เกิน 6 จอ</strong></td><td>ไม่เกิน 4–5 จอ</td></tr>
+<tr><td>เร่งด่วนคนละคนต่อจอ</td><td><strong>ไม่เกิน 12 จอ</strong></td><td>ไม่เกิน 8 จอ</td></tr>
+<tr><td>ช่วงโล่ง / กล้องรอคน</td><td><strong>ได้ถึงประมาณ 24 จอ</strong></td><td>ได้ถึงประมาณ 12 จอ</td></tr>
+</table>
+<h3>ภาพรวมความจุ (หลังปรับ dual-API)</h3>
+<pre>
+เร่งด่วนหนาแน่น     ██████░░░░  ~6 จอ    ← ใช้วางแผน deploy จริง
+เร่งด่วนคนละคน/จอ   ████████████ ~12 จอ
+ช่วงโล่ง (detect)   ████████████████████ ~24 จอ
+</pre>
+<h3>สิ่งที่พิสูจน์แล้วจากการวัดรอบนี้</h3>
+<ul>
+<li>การ์ดจอ <strong>ทั้ง 2 ใบมี process ของระบบจริง</strong> (~2 GB/ใบ)</li>
+<li>แยก API ตาม GPU + แก้การ pin อุปกรณ์ แล้ว GPU1 ไม่ถูกทิ้งว่างเหมือนรอบก่อน</li>
+<li>ยังไม่จำเป็นต้องแยก Face Core แค่เพื่อ “ใช้ GPU ให้เต็ม” บนเครื่องนี้</li>
+</ul>
+<hr>
+<h2>4. แปลผลเป็นภาษาธุรกิจ</h2>
+<table>
+<tr><th>คำถามของผู้บริหาร</th><th>คำตอบจากผลการทดสอบล่าสุด</th></tr>
+<tr><td>ติดตั้งกี่จอต่อเซิร์ฟเวอร์นี้ได้โดยยังลื่น?</td><td><strong>6 จอ</strong> สำหรับชั่วโมงเร่งด่วนที่มีคนหนาแน่น</td></tr>
+<tr><td>ถ้าส่วนใหญ่คนละคนต่อจอ?</td><td>ได้ถึงประมาณ <strong>12 จอ</strong></td></tr>
+<tr><td>เกินแล้วเกิดอะไรขึ้น?</td><td>ภาพช้า กรอบกระพริบ ทิ้งเฟรมสูง — ระบบยังลงเวลาได้แต่ UX แย่</td></tr>
+<tr><td>ถ้าต้องการมากกว่า 12–16 จอ?</td><td>ขยายเซิร์ฟเวอร์/GPU หรือสเกลข้ามเครื่อง (Face Core เป็นทางเลือกตอนนั้น)</td></tr>
+</table>
+<hr>
+<h2>5. ข้อเสนอแนะเชิงปฏิบัติ</h2>
+<ol>
+<li><strong>เพดานติดตั้งแนะนำ = 6 จอ</strong> สำหรับการใช้งานจริงแบบหนาแน่นบนเซิร์ฟเวอร์นี้</li>
+<li>โซนที่คนส่วนใหญ่ยืนคนละจอ: วางแผนได้ถึง <strong>12 จอ</strong></li>
+<li><strong>ยังไม่ต้องลงทุนแยก Face Core</strong> เพื่อเพิ่มความจุบนเครื่องใบนี้ — งานนั้นเหมาะตอนสเกลหลายเครื่อง</li>
+<li>เก็บเกณฑ์ UX: ตอบสนองกรอบ ≤ ~0.55 วินาที · ทิ้งเฟรม ≤ 5% ในชั่วโมงเร่งด่วน</li>
+</ol>
+<hr>
+<h2>6. สรุปหนึ่งประโยค</h2>
+<p><strong>หลังปรับให้ใช้ GPU สองใบจริง (API แยก process) เซิร์ฟเวอร์ Quadro RTX 5000 สองใบนี้รองรับจอคีออสได้อย่างลื่นประมาณ 6 จอในช่วงเร่งด่วนหนาแน่น และราว 12 จอถ้าโดยทั่วไปมีคนละคนต่อจอ — หากต้องการมากกว่านั้นควรขยายฮาร์ดแวร์หรือสเกลข้ามเครื่อง</strong></p>
+<hr>
+<p class="footer">จัดทำจากผลการโหลดเทส saturation วันที่ 23 ก.ย. 2026</p>
+</body>
+</html>

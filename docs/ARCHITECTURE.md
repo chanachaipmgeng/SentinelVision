@@ -26,7 +26,9 @@ nginx :80
 
 Start with `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build`.
 
-### Face Core BFF (recommended for production GPU)
+On a dual-GPU host the GPU overlay runs **two API processes** (`dpu-api` on GPU0, `dpu-api-gpu1` on GPU1) behind nginx `least_conn` (`docker/nginx/default.dual-gpu.conf`). Prefer this for single-host capacity; see [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md).
+
+### Face Core BFF (cross-host / many API replicas)
 
 When `FACE_CORE_ENABLED=true`, DPU keeps `/face/*` URLs and Web-Manage unchanged; vision + gallery run in sibling repo **face-core**; check-in, GPS, dedupe, and HR stay in DPU.
 

@@ -197,6 +197,21 @@ Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (
 
 ---
 
+## 4g. Identify-only ceiling hunt (จูนจนชนเพดาน)
+
+รอบหาเพดานสุดท้ายโหมด **หาว่าเป็นใคร** (`--profile identify` · ไม่มี check-in) — รายละเอียดเต็ม [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) §1 / §3b / §4.2
+
+| ขั้น | ผล |
+|------|-----|
+| A/B short | quad w3 vs hexa w3 vs hexa w2 · จุดตัดสิน ×1@48 / ×3@40 |
+| ผู้ชนะ | **hexa · `FACE_GPU_WORKERS=2`** (ผ่าน ×1@64 และ ×3@48 ในชุดสั้น) |
+| ×1 full / gated | **64** OK / FAIL@72 · gated **80** OK / FAIL@96 |
+| ×3 full / gated | **48** OK / FAIL@56 · gated **64** OK / FAIL@72 |
+| HTTP refine | conc **20** OK (p95 768 · ~35 RPS) · FAIL@25 |
+| Production | **คืน quad w3** สำหรับ attendance (hexa ช่วย identify แต่ทำลาย rush) |
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

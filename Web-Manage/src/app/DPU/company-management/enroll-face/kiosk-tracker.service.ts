@@ -8,13 +8,13 @@ export const KIOSK_IDLE_CAPTURE_INTERVAL_MS = 400;
 export const KIOSK_STATIC_SCENE_DIFF = 6;
 
 /** Keep-alive when faces are tracked but the scene is still. */
-export const KIOSK_STATIC_WITH_FACES_MS = 600;
+export const KIOSK_STATIC_WITH_FACES_MS = 800;
 
 /** Keep-alive when the scene is empty and still. */
 export const KIOSK_STATIC_EMPTY_MS = 2000;
 
 /** Locked tracks (identified / in check-in) — slower detect is fine. */
-export const KIOSK_TRACKING_LOCKED_MS = 180;
+export const KIOSK_TRACKING_LOCKED_MS = 220;
 
 /** All tracks done/cooldown — ping lightly. */
 export const KIOSK_ALL_SETTLED_MS = 300;

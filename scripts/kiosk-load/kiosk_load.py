@@ -280,6 +280,7 @@ class KioskClient:
         step_label: str,
         rate: float = 0.0,
         max_inflight: int = 8,
+        detect_interval_ms: float = DETECT_INTERVAL_MS,
     ) -> None:
         self.kiosk_id = kiosk_id
         self.ws_url = ws_url
@@ -297,6 +298,7 @@ class KioskClient:
         # Open-loop stress: send detect at --rate jobs/s without waiting.
         self.rate = float(rate)
         self.max_inflight = max(1, int(max_inflight))
+        self.detect_interval_ms = float(detect_interval_ms)
         self.stats = RunStats()
         self._pending: dict[str, asyncio.Future] = {}
         self._identify_inflight = 0
@@ -487,7 +489,7 @@ class KioskClient:
             detected = await self._wait_key(detect_id, timeout=20.0)
         except Fail:
             self.stats.detect.add_error()
-            await asyncio.sleep(DETECT_INTERVAL_MS / 1000.0)
+            await asyncio.sleep(self.detect_interval_ms / 1000.0)
             return None
 
         detect_ms = (time.perf_counter() - t0) * 1000
@@ -509,7 +511,7 @@ class KioskClient:
         if self.profile == "rush" and people > 0:
             bg = asyncio.create_task(self._rush_side(ws, people))
 
-        await asyncio.sleep(DETECT_INTERVAL_MS / 1000.0)
+        await asyncio.sleep(self.detect_interval_ms / 1000.0)
         return bg
 
     async def _rush_side(self, ws, people: int) -> None:
@@ -697,6 +699,7 @@ async def run_step(
     jsonl: Optional[Path],
     rate: float = 0.0,
     max_inflight: int = 8,
+    detect_interval_ms: float = DETECT_INTERVAL_MS,
 ) -> RunStats:
     label = (
         f"kiosks={n_kiosks} faces/kiosk={faces_per_kiosk} "
@@ -704,6 +707,8 @@ async def run_step(
     )
     if profile == "stress" and rate > 0:
         label += f" rate={rate:g}/s"
+    if detect_interval_ms != DETECT_INTERVAL_MS:
+        label += f" detect_ms={detect_interval_ms:g}"
     print(f"\n--- Starting {label} ---")
     clients = [
         KioskClient(
@@ -722,6 +727,7 @@ async def run_step(
             step_label=label,
             rate=rate,
             max_inflight=max_inflight,
+            detect_interval_ms=detect_interval_ms,
         )
         for i in range(n_kiosks)
     ]
@@ -855,6 +861,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Max in-flight detect requests per kiosk in stress mode (default 8)",
     )
     p.add_argument(
+        "--detect-interval-ms",
+        type=float,
+        default=float(os.environ.get("KIOSK_LOAD_DETECT_INTERVAL_MS", str(DETECT_INTERVAL_MS))),
+        help=(
+            "Closed-loop detect pacing in ms (idle/rush). Default 90 (full-rate loadgen). "
+            "Use 600–2000 to approximate kiosk motion-gating on a static scene."
+        ),
+    )
+    p.add_argument(
         "--prepare",
         action="store_true",
         help="Download sample face + enroll member before load",
@@ -941,6 +956,7 @@ def main() -> int:
                     jsonl=args.jsonl,
                     rate=rate,
                     max_inflight=args.max_inflight,
+                    detect_interval_ms=args.detect_interval_ms,
                 )
             )
             overall.merge(stats)

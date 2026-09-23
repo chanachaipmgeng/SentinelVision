@@ -21,6 +21,7 @@ from ..utils.face_engine import (
     detect_faces_bytes,
 )
 from ..utils.face_gpu_queue import run_on_face_gpu
+from ..utils.checkin_dedupe_cache import get_cached_check_in, put_cached_check_in
 from ..config.settings import settings
 from ..controllers.employee_timestamp_controller import create_timestamp
 from ..clients.face_core_client import face_core_enabled, get_face_core_client, bff_enrolled_image_url
@@ -521,6 +522,38 @@ async def _finalize_check_in(
 
     dedupe_seconds = int(getattr(settings, "CHECK_IN_DEDUPE_SECONDS", 300) or 0)
     if dedupe_seconds > 0:
+        cached = get_cached_check_in(
+            companyId,
+            company_employee.company_employeeId,
+            ttl_s=float(dedupe_seconds),
+        )
+        if cached is not None:
+            ts_type_value = getattr(cached.timestamp_type, "value", cached.timestamp_type)
+            photo = cached.photo_timestamp
+            return {
+                **match_payload,
+                "message": "Already checked in recently",
+                "checkedIn": False,
+                "duplicate": True,
+                "mode": mode,
+                "dedupeSeconds": dedupe_seconds,
+                "dedupeCache": True,
+                "isWarning": int(ts_type_value) == 0,
+                "employee": _employee_brief(company_employee),
+                "timestamp": {
+                    "timestampId": cached.timestamp_id,
+                    "timestamp": cached.timestamp,
+                    "timestampType": ts_type_value,
+                    "locationName": cached.location_name,
+                    "latitude": cached.latitude,
+                    "longitude": cached.longitude,
+                    "photoTimestamp": photo,
+                    "photoUrl": f"/images/{photo}" if photo else None,
+                    "approvalStatus": cached.approval_status,
+                    "note": cached.note,
+                },
+            }
+
         since = datetime.now(timezone.utc) - timedelta(seconds=dedupe_seconds)
         recent = await db.execute(
             select(EmployeeTimestamp)
@@ -538,6 +571,19 @@ async def _finalize_check_in(
             ts_type = existing_ts.timestampType
             ts_type_value = getattr(ts_type, "value", ts_type)
             photo = existing_ts.photoTimestamp
+            put_cached_check_in(
+                companyId,
+                company_employee.company_employeeId,
+                timestamp_id=str(existing_ts.timestampId),
+                timestamp=existing_ts.timestamp,
+                timestamp_type=ts_type_value,
+                location_name=existing_ts.locationName,
+                latitude=existing_ts.latitude,
+                longitude=existing_ts.longitude,
+                photo_timestamp=photo,
+                approval_status=existing_ts.approvalStatus,
+                note=existing_ts.note,
+            )
             return {
                 **match_payload,
                 "message": "Already checked in recently",
@@ -605,6 +651,20 @@ async def _finalize_check_in(
     ts_type = timestamp.get("timestampType")
     ts_type_value = getattr(ts_type, "value", ts_type)
     is_warning = int(ts_type_value) == 0
+
+    put_cached_check_in(
+        companyId,
+        company_employee.company_employeeId,
+        timestamp_id=str(timestamp["timestampId"]),
+        timestamp=timestamp["timestamp"],
+        timestamp_type=ts_type_value,
+        location_name=timestamp.get("locationName"),
+        latitude=timestamp.get("latitude"),
+        longitude=timestamp.get("longitude"),
+        photo_timestamp=timestamp.get("photoTimestamp"),
+        approval_status=timestamp.get("approvalStatus"),
+        note=timestamp.get("note"),
+    )
 
     return {
         **match_payload,

@@ -159,6 +159,29 @@ Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (
 
 ---
 
+## 4e. รอบ 5 — check-in dedupe cache (quad) + แผน A/B hexa workers=2
+
+| รายการ | รายละเอียด |
+|--------|-------------|
+| Rollback | ถอย hexa → quad บนเซิร์ฟเวอร์ก่อนวัด |
+| โค้ด | [`checkin_dedupe_cache.py`](../API-Fast/src/utils/checkin_dedupe_cache.py) — TTL = `CHECK_IN_DEDUPE_SECONDS`; hit ข้าม query `EmployeeTimestamp` |
+| Loadgen | เพิ่ม `--detect-interval-ms` ใน [`kiosk_load.py`](../scripts/kiosk-load/kiosk_load.py) สำหรับจำลอง motion gating (600–2000 ms) |
+
+ผลวัด — [KIOSK-LOADTEST-PERF5-TABLE.md](KIOSK-LOADTEST-PERF5-TABLE.md):
+
+| โปรไฟล์ | PERF3 (full-rate) | PERF5A cache | PERF5B hexa w2 | PERF5C gated 600 ms |
+|---------|-------------------|--------------|----------------|---------------------|
+| rush×3 24 | **514 OK** | 790 FAIL | 663 FAIL | 766* |
+| rush×3 32 | 740 FAIL | 856 FAIL | 793 FAIL | **425 OK** |
+| rush×1 32 | 429 OK | 501 OK | 1742 FAIL | **189 OK** |
+| rush×1 48 | 817 FAIL | — | — | **399 OK** |
+
+**สรุป:** cache ช่วย check-in โหลดต่ำ; hexa+w2 ไม่ชนะ quad; **motion gating ~600 ms ดัน rush×3 เป็น 32 จอ และ rush×1 เป็น 48 จอ** บน quad — production คง quad w3 + ค่า `KIOSK_STATIC_WITH_FACES_MS=800`
+
+> หลัง loadtest 5A โฮสต์เคยไม่ตอบชั่วคราวแล้วกลับมา; ท้ายรอบถอย hexa แล้วเหลือ quad
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

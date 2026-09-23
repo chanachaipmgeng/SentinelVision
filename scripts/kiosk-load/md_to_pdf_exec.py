@@ -237,7 +237,10 @@ tr:nth-child(even) td { background: #f7fafc; }
 """
 
 
-def wrap_html(body: str, title: str) -> str:
+DEFAULT_BANNER = "เอกสารสรุปผู้บริหาร · ความจุระบบลงเวลาด้วยใบหน้า · วัด 23 ก.ย. 2026"
+
+
+def wrap_html(body: str, title: str, banner: str = DEFAULT_BANNER) -> str:
     # mark last italic paragraph as footer if present
     body = re.sub(
         r"<p><em>(.*?)</em></p>\s*$",
@@ -254,7 +257,7 @@ def wrap_html(body: str, title: str) -> str:
   <style>{CSS}</style>
 </head>
 <body>
-  <div class="banner">เอกสารสรุปผู้บริหาร · ความจุระบบลงเวลาด้วยใบหน้า · วัด 23 ก.ย. 2026</div>
+  <div class="banner">{html.escape(banner)}</div>
   {body}
 </body>
 </html>
@@ -286,15 +289,20 @@ def main() -> int:
         type=Path,
         default=Path("docs"),
     )
+    p.add_argument("--title", default=None, help="<title>; default = first '# ' heading")
+    p.add_argument("--banner", default=DEFAULT_BANNER, help="top banner text")
     args = p.parse_args()
     md_text = args.md.read_text(encoding="utf-8")
-    title = "สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า"
+    title = args.title
+    if not title:
+        m = re.search(r"^# (.+)$", md_text, flags=re.M)
+        title = m.group(1).strip() if m else args.md.stem
     body = md_to_html(md_text)
     # soften first h1 duplicate with banner — keep h1
-    page = wrap_html(body, title)
+    page = wrap_html(body, title, args.banner)
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    html_path = args.out_dir / "EXEC-SUMMARY-KIOSK-CAPACITY.html"
-    pdf_path = args.out_dir / "EXEC-SUMMARY-KIOSK-CAPACITY.pdf"
+    html_path = args.out_dir / f"{args.md.stem}.html"
+    pdf_path = args.out_dir / f"{args.md.stem}.pdf"
     html_path.write_text(page, encoding="utf-8")
 
     chrome_candidates = [

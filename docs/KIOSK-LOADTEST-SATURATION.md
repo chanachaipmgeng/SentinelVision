@@ -138,6 +138,27 @@ Host metrics: GPU SM avg ~16%/ใบ (peak 39%), API CPU ~120% × 4 process (ร
 
 ---
 
+## 4d. รอบ 4 — 3 process ต่อการ์ด (hexa API) · หา saturation โดยไม่สน UX
+
+| รายการ | รายละเอียด | ถอยกลับ |
+|--------|-------------|---------|
+| Hexa API | [`docker-compose.gpu-x3.yml`](../docker-compose.gpu-x3.yml) เพิ่ม `dpu-api-gpu0c` + `dpu-api-gpu1c`; nginx [`default.hexa-gpu.conf`](../docker/nginx/default.hexa-gpu.conf) (6 upstreams) | ตัด `-f docker-compose.gpu-x3.yml` แล้ว `up -d --remove-orphans` (กลับเป็น quad) |
+| เป้าหมายวัด | หาเพดานฮาร์ดแวร์เมื่อยอมรับ latency 1–2 s / ไม่ยึด SLO 550 ms | — |
+
+ผลวัด — ตาราง [KIOSK-LOADTEST-PERF4-TABLE.md](KIOSK-LOADTEST-PERF4-TABLE.md):
+
+| โปรไฟล์ | Quad (รอบ 3) SLO | Hexa SLO | Hexa saturation (ยังรับงาน, drop≈0) |
+|---------|------------------|----------|-------------------------------------|
+| idle ×3 | 48 จอ | **≥ 96 จอ** (112+ มี session error) | ~160 จอ (detect ยัง ~506 ms แต่ handshake พังบางส่วน) |
+| rush ×3 | **24 จอ** | **16 จอ** (24 = 674 ms แย่กว่า quad) | ~56 จอ @ 1.6–1.8 s |
+| rush ×1 | **32 จอ** | ~24–32 จอ (ขอบ) | ~80 จอ @ ~1.8 s |
+
+Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (6× ~1.9 GB), CPU ต่อ process ~75–90% avg → **GPU ยังไม่เต็ม**; rush แย่ลงเพราะแย่ง GPU queue + DB ระหว่าง process มากขึ้น
+
+**ข้อสรุป:** 3 process/GPU เหมาะกับ idle concurrent สูง ไม่เหมาะชั่วโมงเร่งด่วน — production ที่สน UX ควรอยู่ที่ **quad (2/GPU)**
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

@@ -38,21 +38,9 @@ Browser → nginx → dpu-api (BFF)
 
 **Mapping:** `companyId` → `companyCode=str(companyId)`, `memberId` → `subjectId`, `faceEncodingId` ↔ `faceId`.
 
-**Linked startup:**
+**Linked startup:** one GPU uses `docker-compose.gpu.yml` on Face Core only. Two GPUs add `docker-compose.scale.yml` and `docker-compose.dual-gpu.yml` (`face-api` on `cuda:0`, `face-core-gpu1` on `cuda:1`, Redis queue). DPU always uses `docker-compose.face-core.yml` (CPU BFF, no GPU). Commands and the call contract are in [SETUP.md](SETUP.md), [DEPLOY-SERVER.md](DEPLOY-SERVER.md) section 10, and [API.md](API.md).
 
-```bash
-docker network create face-net
-
-# Terminal 1 — Face Core
-cd ../face-core
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.face-net.yml up -d
-
-# Terminal 2 — DPU (CPU api, no local GPU queue)
-cd dpu-project
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build api
-```
-
-Env on `dpu-api`: `FACE_CORE_ENABLED`, `FACE_CORE_URL`, `FACE_CORE_API_KEY`. Set `FACE_CORE_ENABLED=false` to fall back to local InsightFace + pgvector.
+Env on `dpu-api`: `FACE_CORE_ENABLED=true`, `FACE_CORE_URL=http://face-core-api:8000`, `FACE_CORE_API_KEY` equal to Face Core `BOOTSTRAP_API_KEY`. Set `FACE_CORE_ENABLED=false` and omit the overlay to fall back to local InsightFace + pgvector.
 
 **Migration:** after BFF is live, run `API-Fast/scripts/migrate_faces_to_face_core.py` (does not delete local `face_encoding` rows).
 

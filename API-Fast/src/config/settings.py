@@ -70,6 +70,10 @@ class Settings(BaseSettings):
     FACE_EMBED_DET_SIZE: int = 640
     WS_DETECT_MIN_INTERVAL_MS: int = 80
     WS_QUEUE_BACKPRESSURE: int = 32
+    # Drop detect jobs that waited longer than this (ms) — stale boxes are useless.
+    FACE_DETECT_STALE_MS: int = 400
+    # Reuse identify embedding for walk-by check-in on the same WS track.
+    FACE_IDENTIFY_CACHE_SECONDS: float = 3.0
 
     # Storage
     STORAGE_BACKEND: str = "local"

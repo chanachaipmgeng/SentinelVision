@@ -3,7 +3,9 @@
 services:
   api:
     environment:
-      FACE_DEVICE: ${FACE_DEVICE:-cuda:0}
+      FACE_DEVICE: "${FACE_DEVICE:-cuda:0}"
+      FACE_DEVICES: "${FACE_DEVICES:-cuda:0}"
+      FACE_GPU_WORKERS: "${FACE_GPU_WORKERS:-1}"
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
     gpus: all

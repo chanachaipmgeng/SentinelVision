@@ -158,9 +158,13 @@ def main() -> int:
             prev_ts = now
 
             device_s = ",".join(str(d) for d in devices) if devices else "-"
+            by_kind = stats.get("pendingByKind") or {}
+            kind_s = ""
+            if by_kind:
+                kind_s = " " + ",".join(f"{k}:{by_kind[k]}" for k in sorted(by_kind) if by_kind[k])
             print(
                 f"{now:12.1f}  {pending:7d}  {active:6d}  {completed:9d}  "
-                f"{throughput:7.1f}  {device_s}  [{source}]"
+                f"{throughput:7.1f}  {device_s}  [{source}]{kind_s}"
             )
 
             if csv_writer:

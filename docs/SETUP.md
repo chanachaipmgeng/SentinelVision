@@ -61,19 +61,23 @@ Keep Web-Manage URLs (`/face/*`, `/face/ws/kiosk`). Vision + gallery run in sibl
 
 **Ports:** copy `.env.example` → `.env` (defaults `POSTGRES_PORT=5434`, `HTTP_PORT=8880` so Postgres does not clash with face-core on `5435`).
 
+Set `FACE_CORE_ENABLED=true` and `FACE_CORE_API_KEY` in DPU `.env`. Set the same string as `BOOTSTRAP_API_KEY` in the face-core `.env`. Both keys must be at least 16 characters and must not be `dev-face-core-key-change-me`. DPU `SECRET_KEY` must be at least 32 characters. The overlay forces `FACE_CORE_URL=http://face-core-api:8000` and keeps the DPU API on CPU (`Dockerfile.bff`). Face Core holds the GPU.
+
 ```bash
 docker network create face-net   # one-time
 
-# Terminal 1 — Face Core (CPU + Redis scale stack, on face-net)
+# One GPU (verified): Face Core on cuda:0, DPU is the BFF
 cd ../face-core
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.scale.yml up -d --build
+# .env: FACE_DEVICE=cuda:0
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.face-net.yml up -d --build
 
-# Terminal 2 — DPU (full stack or api only)
 cd ../dpu-project
-docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-core.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.face-core.yml up -d --build
 ```
 
-Overlay sets `FACE_CORE_ENABLED=true` and `FACE_CORE_URL=http://face-core-api:8000` (Docker DNS on `face-net` — not host port 8081). Set `FACE_CORE_ENABLED=false` to fall back to local InsightFace + pgvector.
+No NVIDIA device: swap the Face Core line for `docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-net.yml up -d --build` and set `FACE_DEVICE=cpu`. Two GPUs on a Linux server: use `scripts/deploy-stack.sh` (see [DEPLOY-SERVER.md](DEPLOY-SERVER.md) section 10). Do not add `docker-compose.gpu.yml` to the DPU command — that gives the GPU to DPU and leaves Face Core without it.
+
+Expect Face Core `GET http://127.0.0.1:8081/v1/health` to show `device` `cuda:0` (or `cpu`). DPU `GET /ready` on the nginx port must show the same device and `service: face-core`. `GET /face/queue-stats` with a DPU JWT returns `source: face-core`. Set `FACE_CORE_ENABLED=false` and drop the face-core overlay to fall back to local InsightFace.
 
 **Migrate existing enrollments** (does not delete local `face_encoding`):
 

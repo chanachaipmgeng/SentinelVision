@@ -81,7 +81,11 @@ nano .env
 | `POSTGRES_DB` | `dpu` | ชื่อฐานข้อมูล |
 | `HTTP_PORT` | `80` | พอร์ต nginx ฝั่งโฮสต์ |
 | `SECRET_KEY` | สตริงสุ่มยาว | ใช้ใน production ต้องเปลี่ยน |
-| `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace |
+| `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace (การ์ดใบเดียว) |
+| `FACE_DEVICES` | `cuda:0` หรือ `cuda:0,cuda:1` | รายการการ์ด — worker ผูกทีละใบ (override `FACE_DEVICE`) |
+| `FACE_GPU_WORKERS` | `1` หรือ `2` | จำนวน worker (≥ จำนวนการ์ดใน `FACE_DEVICES`) |
+| `FACE_DETECT_STALE_MS` | `400` | ทิ้งเฟรม detect ที่ค้างคิวนานเกินนี้ |
+| `FACE_IDENTIFY_CACHE_SECONDS` | `3` | ใช้ embedding จาก identify ซ้ำตอน check-in บน track เดิม |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
 | `CHECK_IN_DEDUPE_SECONDS` | `300` | กันลงเวลาซ้ำ (วินาที) · `0` = ปิด |
 | `IMAGE_BLUR_THRESHOLD` | `20.0` | เกณฑ์ blur ตอน enroll ที่คีออส / เพิ่มใบหน้า |
@@ -96,6 +100,9 @@ POSTGRES_DB=dpu
 HTTP_PORT=80
 SECRET_KEY=ใส่ค่าสุ่มยาวอย่างน้อย-32-ตัวอักษร
 FACE_DEVICE=cuda:0
+FACE_DEVICES=cuda:0
+FACE_GPU_WORKERS=1
+# การ์ดสองใบ: FACE_DEVICES=cuda:0,cuda:1 และ FACE_GPU_WORKERS=2 แล้ว recreate api
 FACE_RECOGNITION_THRESHOLD=0.40
 IMAGE_BLUR_THRESHOLD=20.0
 IMAGE_BLUR_THRESHOLD_IMPORT=0
@@ -103,11 +110,24 @@ IMAGE_BRIGHTNESS_MIN=40
 IMAGE_BRIGHTNESS_MAX=220
 ```
 
+หลังใส่ GPU ใบที่ 2 บนโฮสต์:
+
+```env
+FACE_DEVICES=cuda:0,cuda:1
+FACE_GPU_WORKERS=2
+```
+
+แล้ว `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api` (หรือสแตก prod ที่ใช้) ตรวจ `GET /face/queue-stats` ว่า `workers` / `devices` ตรงจำนวนการ์ด
+
 ไม่มี GPU ให้ตั้ง:
 
 ```env
 FACE_DEVICE=cpu
+FACE_DEVICES=cpu
+FACE_GPU_WORKERS=1
 ```
+
+จำนวน worker ที่แนะนำ: **1 ต่อการ์ด** อย่าตั้ง `FACE_GPU_WORKERS` สูงกว่าจำนวนการ์ดจนกว่าจะวัดแล้วว่า util ยังต่ำหลังจูนซอฟต์แวร์ (ดู [KIOSK-LOADTEST.md](KIOSK-LOADTEST.md) §5c)
 
 ---
 
@@ -376,16 +396,96 @@ docker compose run --rm \
 
 ---
 
-*อัปเดตล่าสุดให้สอดคล้องกับ Docker stack: `db` · `api` · `admin` · `nginx`*
+*อัปเดตล่าสุดให้สอดคล้องกับ Docker stack: `db` · `api` · `admin` · `nginx` และ Face Core BFF*
 
-## 10. Deploy ร่วมกับ Face Core (BFF)
+ขั้นตอนด้านบนเป็นโหมด InsightFace ใน DPU เอง เซิร์ฟเวอร์ที่ให้ Face Core ถือ GPU ใช้หัวข้อ 10 แทน ไม่ใส่ `docker-compose.gpu.yml` บน DPU
 
-Production ที่ใช้ GPU 2 ใบให้ Face Core ถือ vision และ DPU เป็น BFF (CPU)
+## 10. ติดตั้งบนเซิร์ฟเวอร์ร่วมกับ Face Core (BFF)
 
-1. Clone `research/face-core` ไว้ข้าง ๆ repo นี้ (`/opt/face-core` และ `/opt/facescan-timeattendance`)
-2. สร้าง network `docker network create face-net`
-3. ตั้ง `SECRET_KEY` (DPU), `BOOTSTRAP_API_KEY` (face-core), `FACE_CORE_API_KEY` (ค่าเดียวกัน) ให้ยาวอย่างน้อย 16–32 ตัวอักษร
-4. รัน `scripts/deploy-stack.sh` — ขึ้น face-core ก่อน (dual GPU + Redis) แล้วรอ `/v1/ready` จากนั้นขึ้น DPU ด้วย `docker-compose.face-core.yml` แล้วรอ `/ready`
-5. ย้ายใบหน้าที่ enroll ไว้ใน DPU: `FACE_CORE_API_KEY=... scripts/migrate-faces.sh` ก่อนสลับ overlay ถ้ายังรันโหมด local อยู่ ไฟล์ mapping อยู่ที่ `backups/migration_mapping.json`
-6. Rollback: เอา `-f docker-compose.face-core.yml` ออก แถว `face_encoding` ใน DPU ยังอยู่เพราะสคริปต์ migrate ไม่ลบ
+เบราว์เซอร์เรียกแค่ DPU (`/face/*`, `/face/ws/kiosk`) ด้วย JWT ของ DPU DPU เรียก Face Core เองด้วย `Authorization: Bearer` คีย์ไม่ถูกส่งไปที่เบราว์เซอร์ สัญญาการเรียกอยู่ที่ [API.md](API.md) หัวข้อ Face Core calls
+
+ใช้สอง checkout ข้างกัน จนกว่าจะ merge: DPU สาขา `DEV`, Face Core สาขา `enterprise`
+
+| | Face Core | DPU |
+|--|-----------|-----|
+| โฟลเดอร์ | `/opt/face-core` | `/opt/facescan-timeattendance` |
+| HTTP | `127.0.0.1:8081` | nginx พอร์ต `HTTP_PORT` (สคริปต์ deploy ตรวจที่พอร์ต 80) |
+| Postgres | `5435` | `5434` (prod overlay ไม่ publish พอร์ตออกโฮสต์) |
+| Redis | `6380` เฉพาะตอนใช้การ์ดคู่ | — |
+| GPU | ถือการ์ด | ไม่ได้รับ GPU (`Dockerfile.bff`) |
+
+### 10.1 คีย์และ `.env`
+
+คัดลอก `.env.example` เป็น `.env` ทั้งสอง repo แล้วตั้งค่าเหล่านี้ ห้ามใช้ค่าตัวอย่าง
+
+| ไฟล์ | ตัวแปร | เงื่อนไข |
+|------|--------|----------|
+| DPU `.env` | `SECRET_KEY` | สุ่มอย่างน้อย 32 ตัว ไม่ใช่ `change-me-in-production` |
+| DPU `.env` | `FACE_CORE_ENABLED` | `true` |
+| DPU `.env` | `FACE_CORE_API_KEY` | สตริงเดียวกับคีย์ด้านล่าง อย่างน้อย 16 ตัว ไม่ใช่ `dev-face-core-key-change-me` |
+| Face Core `.env` | `BOOTSTRAP_API_KEY` | ค่าเดียวกับ `FACE_CORE_API_KEY` |
+| Face Core `.env` | `FACE_DEVICE` | `cuda:0` เมื่อมีการ์ดใบเดียว |
+| Face Core `.env` | `HTTP_PORT` | `8081` |
+| Face Core `.env` | `POSTGRES_PORT` | `5435` |
+| DPU `.env` | `POSTGRES_PORT` | `5434` |
+| DPU `.env` | `HTTP_PORT` | `80` ถ้าจะรัน `scripts/deploy-stack.sh` (สคริปต์ยิง `http://127.0.0.1/ready`) |
+
+`docker-compose.face-core.yml` เขียนทับ `FACE_CORE_URL` เป็น `http://face-core-api:8000` บนเครือข่าย `face-net` ไม่ต้องชี้ไปที่พอร์ต 8081 จากในคอนเทนเนอร์ DPU
+
+### 10.2 การ์ดใบเดียว
+
+ตรวจบนเครื่องนี้แล้ว: Face Core `device=cuda:0`, worker 1, DPU `/ready` เห็นอุปกรณ์เดียวกัน, `/face/queue-stats` ได้ `source=face-core` และคอนเทนเนอร์ `dpu-api` ไม่มี GPU
+
+```bash
+docker network create face-net
+
+cd /opt/face-core
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+  -f docker-compose.face-net.yml -f docker-compose.prod.yml up -d --build
+
+cd /opt/facescan-timeattendance
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  -f docker-compose.face-core.yml up -d --build
+```
+
+ไม่มี GPU ให้เปลี่ยนบรรทัด Face Core เป็น `-f docker-compose.cpu.yml` แทน `-f docker-compose.gpu.yml` และตั้ง `FACE_DEVICE=cpu`
+
+### 10.3 การ์ดสองใบ
+
+หนึ่งโปรเซสผูกได้การ์ดเดียว `scripts/deploy-stack.sh` สร้าง `face-net` ขึ้น Face Core ก่อน (Redis + `face-api` ที่ `cuda:0` + `face-core-gpu1` ที่ `cuda:1`) รอ `GET http://127.0.0.1:8081/v1/ready` แล้วขึ้น DPU รอ `GET http://127.0.0.1/ready`
+
+```bash
+cd /opt/facescan-timeattendance
+FACE_CORE_DIR=/opt/face-core DPU_DIR=/opt/facescan-timeattendance \
+  scripts/deploy-stack.sh
+```
+
+หยุด `face-core-gpu1` อย่างเดียวได้ `cuda:0` ยังให้บริการต่อ
+
+### 10.4 ตรวจหลังติดตั้ง
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8081/v1/health   # 200
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8081/v1/ready    # 200
+curl -s http://127.0.0.1:8081/v1/health                                    # device เป็น cuda:0 หรือ cpu ไม่ใช่ error
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/health           # 200 เมื่อ HTTP_PORT=80
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/ready            # 200 และ body.queue.service = face-core
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/docs             # 404
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1/companys         # 401
+```
+
+`GET /ready` ของ DPU ได้ 503 `face_core_down` แปลว่า Face Core ล่มหรืออยู่นอก `face-net` ไม่ใช่ JWT ผิด หยุด `face-core-api` แล้วยิงซ้ำต้องได้ 503 พอสตาร์ทกลับและรอ `/v1/ready` แล้ว `/ready` ต้องกลับเป็น 200
+
+### 10.5 ย้ายใบหน้าเดิมและย้อนกลับ
+
+รันตอน Face Core พร้อม และก่อนหรือหลังสลับ overlay ก็ได้ สคริปต์ไม่ลบแถว `face_encoding` ใน DPU
+
+```bash
+cd /opt/facescan-timeattendance
+scripts/migrate-faces.sh
+```
+
+ไฟล์ mapping อยู่ที่ `backups/migration_mapping.json` ย้อนกลับ: เอา `-f docker-compose.face-core.yml` ออก แล้วขึ้น DPU โหมด InsightFace ตามหัวข้อ 3 แถวใบหน้าใน DPU ยังอยู่
+
+รายละเอียดเมื่อ Face Core ล่ม หมุนคีย์ หรือการ์ดใบหนึ่งดับ อยู่ที่ [RUNBOOK.md](RUNBOOK.md)
 

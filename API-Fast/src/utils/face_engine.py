@@ -141,24 +141,28 @@ def detect_bbox(image_path: str) -> Optional[np.ndarray]:
     if bboxes is None or len(bboxes) == 0:
         return None
     return np.asarray(bboxes[0][:4], dtype=np.float32)
-    image = cv2.imread(image_path)
-    if image is None:
-        raise ValueError(f"Could not read image: {image_path}")
-    return image
 
 
-def detect_faces_bytes(image_bytes: bytes) -> dict:
-    """
-    Fast detection-only pass for the kiosk stream (no embeddings).
-    Returns frame size + face boxes [{x, y, width, height, score}].
-    """
+def decode_image_bytes(image_bytes: bytes) -> np.ndarray:
+    """JPEG/PNG decode outside the GPU worker so inference slots stay busy."""
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
     image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError("Could not decode frame")
+    return image
+
+
+def detect_faces_bgr(image: np.ndarray) -> dict:
+    """
+    Fast detection-only pass for the kiosk stream (no embeddings).
+    Uses FACE_DETECT_DET_SIZE (320) — not the 640 embed model.
+    Returns frame size + face boxes [{x, y, width, height, score}].
+    """
+    if image is None or not hasattr(image, "shape"):
+        raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
 
-    app = get_face_app()
+    app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
     bboxes, _kpss = app.det_model.detect(image, max_num=0, metric="default")
 
     faces = []
@@ -178,6 +182,11 @@ def detect_faces_bytes(image_bytes: bytes) -> dict:
             )
 
     return {"frameWidth": width, "frameHeight": height, "faces": faces}
+
+
+def detect_faces_bytes(image_bytes: bytes) -> dict:
+    """Decode + detect (prefer decode_image_bytes + detect_faces_bgr off the GPU path)."""
+    return detect_faces_bgr(decode_image_bytes(image_bytes))
 
 
 def extract_face_features(
@@ -268,26 +277,21 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
 def get_walkby_encoding(image_paths: List[str]) -> List[float]:
     """
     Walk-by mode: 1–2 frames, no head-motion liveness.
-    - Detect face on each frame
-    - If 2+ frames: require same-person embedding consistency
-    - Prefer a quality-checked embedding; fall back without quality if needed
+    One InsightFace pass per frame (require_quality=False). Soft quality
+    check runs on the crop after inference — never a second GPU pass.
     """
     if not image_paths:
         raise ValueError("No image frames provided for walk-by check-in")
 
     candidates: List[List[float]] = []
     for path in image_paths:
-        encoding = None
-        try:
-            encoding = generate_face_encoding(path)
-        except ValueError:
-            encoding = None
-        if encoding is None:
-            result = extract_face_features(path, require_quality=False)
-            if result is not None:
-                encoding = result[0]
-        if encoding is not None:
-            candidates.append(encoding)
+        result = extract_face_features(path, require_quality=False)
+        if result is None:
+            continue
+        encoding, bbox = result
+        # Soft gate only — do not reject / re-infer when quality fails.
+        check_image_quality(path, bbox)
+        candidates.append(encoding)
 
     if not candidates:
         raise ValueError("No face detected for walk-by check-in")

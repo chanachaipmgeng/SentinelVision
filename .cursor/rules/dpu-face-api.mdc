@@ -9,7 +9,9 @@ alwaysApply: false
 ## Stack
 
 - Embeddings: InsightFace `buffalo_l`, `vector(512)` in `face_encoding`
-- Devices: `FACE_DEVICES=cuda:0,cuda:1` (comma list; one queue worker bound per device via `set_thread_device`). Blocking inference goes through `run_on_face_gpu`
+- Devices: prefer **one visible GPU per API process** (`CUDA_VISIBLE_DEVICES` + `FACE_DEVICES=cuda:0`). Dual-GPU host → `api` + `api-gpu1` via `docker-compose.gpu.yml`
+- `get_face_app` must pass ORT `provider_options=[{"device_id": N}, {}]` — `prepare(ctx_id=N)` alone can leave both sessions on GPU0
+- In-process queue: `run_on_face_gpu` + `set_thread_device`; JPEG decode uses a **separate** ThreadPoolExecutor (`get_decode_executor`) with `decode_image_bytes(..., for_detect=True)` / `IMREAD_REDUCED` for large frames
 - Detect-only path uses `FACE_DETECT_DET_SIZE` (320); embedding uses `FACE_EMBED_DET_SIZE` (640)
 - Threshold: `FACE_RECOGNITION_THRESHOLD` (cosine distance; match if `< threshold`)
 - 1:N match lives in `services/face_match_service.py` (`SET LOCAL hnsw.ef_search` + JOIN `company_employee`)
@@ -41,6 +43,7 @@ Shared finalize: `_finalize_check_in` (match **within company** → company empl
 - Walk-by / WS: no head-motion liveness; still require a detectable face (+ same-person if 2+ frames)
 - Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true`, do not double-insert
 - Outside geofence: `create_timestamp` needs a `note` — kiosk sends a default note
-- Nginx: WebSocket needs `^~ /face/ws/` with `Upgrade` headers (see `docker/nginx/default.conf`)
+- Nginx: WebSocket needs `^~ /face/ws/` with `Upgrade` headers (`default.conf` or dual-GPU `default.dual-gpu.conf`)
+- Single-host capacity: dual API first; Face Core BFF only when scaling across hosts / many replicas (see `docs/KIOSK-LOADTEST-SATURATION.md`)
 - Do not add `DROP TABLE` or `create_all`-style destructive steps at startup; schema changes go in `utils/schema_migrate.py` (idempotent SQL) and an Alembic revision under `API-Fast/alembic/versions/`
 - Mutating handlers are audited by the middleware; do not log passwords, tokens, or embeddings

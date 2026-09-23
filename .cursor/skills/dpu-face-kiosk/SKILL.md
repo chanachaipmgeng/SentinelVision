@@ -44,9 +44,11 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 
 ## GPU / backpressure
 
-- `FACE_DEVICES=cuda:0,cuda:1` → one worker per device; `queue-stats.devices` lists them
-- Detect frames use the 320 det-size model; embedding uses 640
+- Dual-GPU host: two API containers (`dpu-api` / `dpu-api-gpu1`), each `FACE_DEVICES=cuda:0` + `FACE_GPU_WORKERS` (default 2). nginx `least_conn` spreads WS connections
+- Single process with `FACE_DEVICES=cuda:0,cuda:1` is legacy — confirm both GPU UUIDs in `nvidia-smi --query-compute-apps` or prefer dual-API
+- Detect frames use the 320 det-size model (decode may use `IMREAD_REDUCED`); embedding uses 640
 - When `pending >= WS_QUEUE_BACKPRESSURE` the server answers `detect` with `dropped: true`; use `nextCaptureInterval(queueDepth)` to slow the kiosk
+- Capacity ceilings / load scripts: `docs/KIOSK-LOADTEST-SATURATION.md`, `scripts/kiosk-load/`
 
 ## Fullscreen chrome
 
@@ -63,8 +65,8 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 - [ ] 1:N search only through `face_match_service.search_face_pgvector` (company JOIN)
 - [ ] Dedupe + geofence note handled
 - [ ] Nginx WS Upgrade intact if touching gateway
-- [ ] Rebuild `api` / `admin` / `nginx` as needed
-- [ ] Verify: queue-stats, kiosk shows stream connected, multi-face boxes
+- [ ] Rebuild `api` / `api-gpu1` / `admin` / `nginx` as needed (dual-GPU overlay)
+- [ ] Verify: queue-stats on a token, kiosk shows stream connected, multi-face boxes; under load both GPUs show compute apps
 - [ ] Leaving kiosk restores shell chrome (class removed)
 
 ## Debug
@@ -80,3 +82,4 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 
 - [docs/CURSOR-AGENT.md](../../docs/CURSOR-AGENT.md)
 - [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)
+- [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md)

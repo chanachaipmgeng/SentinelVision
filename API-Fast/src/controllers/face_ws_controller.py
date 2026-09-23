@@ -29,6 +29,7 @@ from ..utils.face_engine import (
     decode_image_bytes,
     detect_faces_bgr,
     extract_face_features,
+    get_decode_executor,
     get_walkby_encoding,
 )
 from ..utils.face_gpu_queue import StaleFaceJob, face_gpu_queue_stats, run_on_face_gpu
@@ -238,11 +239,13 @@ async def _handle_detect(
             result = await client.detect(content)
             queue = await _face_core_queue_stats(company_id)
         else:
-            # Decode off the GPU worker; only det_model.detect uses the slot.
+            # Decode off the GPU worker on a dedicated pool; only det_model.detect
+            # uses the GPU slot.
             loop = asyncio.get_running_loop()
             try:
                 image = await loop.run_in_executor(
-                    None, lambda c=content: decode_image_bytes(c)
+                    get_decode_executor(),
+                    lambda c=content: decode_image_bytes(c, for_detect=True),
                 )
             except ValueError as exc:
                 await _send(

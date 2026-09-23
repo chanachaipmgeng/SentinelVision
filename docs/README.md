@@ -3,6 +3,9 @@
 - [SETUP](SETUP.md) — run the stack (local / Docker Desktop) + optional Face Core BFF
 - [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
 - [KIOSK-LOADTEST](KIOSK-LOADTEST.md) — โหลดเทส WebSocket kiosk (local ก่อน แล้วชี้เซิร์ฟเวอร์)
+- [KIOSK-LOADTEST-SATURATION](KIOSK-LOADTEST-SATURATION.md) — รอบ saturation: dual-API + เฟรมสมจริง + เกณฑ์ face-core
+- [KIOSK-LOADTEST-WORKERS2-CAPACITY](KIOSK-LOADTEST-WORKERS2-CAPACITY.md) — เพดาน dual GPU (workers=2) อัตราเต็ม (conservative)
+- [EXEC-SUMMARY-KIOSK-CAPACITY](EXEC-SUMMARY-KIOSK-CAPACITY.md) — สรุปความจุคีออสสำหรับผู้บริหาร ([PDF](EXEC-SUMMARY-KIOSK-CAPACITY.pdf))
 - [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology
 - [API](API.md) — DPU routes plus the Face Core calls the BFF makes
 - [CURSOR-AGENT](CURSOR-AGENT.md) — Cursor rules & skills for agents

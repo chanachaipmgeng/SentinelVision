@@ -82,8 +82,8 @@ nano .env
 | `HTTP_PORT` | `80` | พอร์ต nginx ฝั่งโฮสต์ |
 | `SECRET_KEY` | สตริงสุ่มยาว | ใช้ใน production ต้องเปลี่ยน |
 | `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace (การ์ดใบเดียว) |
-| `FACE_DEVICES` | `cuda:0` หรือ `cuda:0,cuda:1` | รายการการ์ด — worker ผูกทีละใบ (override `FACE_DEVICE`) |
-| `FACE_GPU_WORKERS` | `1` หรือ `2` | จำนวน worker (≥ จำนวนการ์ดใน `FACE_DEVICES`) |
+| `FACE_DEVICES` | `cuda:0` | ในแต่ละ API process (dual-GPU overlay ตั้งให้อัตโนมัติ) |
+| `FACE_GPU_WORKERS` | `2` | workers ต่อ process (default ใน `docker-compose.gpu.yml`) |
 | `FACE_DETECT_STALE_MS` | `400` | ทิ้งเฟรม detect ที่ค้างคิวนานเกินนี้ |
 | `FACE_IDENTIFY_CACHE_SECONDS` | `3` | ใช้ embedding จาก identify ซ้ำตอน check-in บน track เดิม |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
@@ -101,8 +101,8 @@ HTTP_PORT=80
 SECRET_KEY=ใส่ค่าสุ่มยาวอย่างน้อย-32-ตัวอักษร
 FACE_DEVICE=cuda:0
 FACE_DEVICES=cuda:0
-FACE_GPU_WORKERS=1
-# การ์ดสองใบ: FACE_DEVICES=cuda:0,cuda:1 และ FACE_GPU_WORKERS=2 แล้ว recreate api
+FACE_GPU_WORKERS=2
+# การ์ดสองใบ: ใช้ docker-compose.gpu.yml → api + api-gpu1 (ไม่ต้องใส่ cuda:0,cuda:1 ใน process เดียว)
 FACE_RECOGNITION_THRESHOLD=0.40
 IMAGE_BLUR_THRESHOLD=20.0
 IMAGE_BLUR_THRESHOLD_IMPORT=0
@@ -110,14 +110,21 @@ IMAGE_BRIGHTNESS_MIN=40
 IMAGE_BRIGHTNESS_MAX=220
 ```
 
-หลังใส่ GPU ใบที่ 2 บนโฮสต์:
+หลังใส่ GPU ใบที่ 2 บนโฮสต์ — **แนะนำ dual API** (คนละ process ต่อการ์ด):
 
-```env
-FACE_DEVICES=cuda:0,cuda:1
-FACE_GPU_WORKERS=2
+```bash
+# docker-compose.gpu.yml จะขึ้น dpu-api (GPU0) + dpu-api-gpu1 (GPU1)
+# และ mount nginx default.dual-gpu.conf (least_conn)
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 ```
 
-แล้ว `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api` (หรือสแตก prod ที่ใช้) ตรวจ `GET /face/queue-stats` ว่า `workers` / `devices` ตรงจำนวนการ์ด
+ตรวจ:
+
+- `docker ps` มีทั้ง `dpu-api` และ `dpu-api-gpu1` healthy
+- หลังยิง detect ครั้งแรก: `nvidia-smi --query-compute-apps` มี python บน **ทั้งสอง GPU UUID**
+- เพดานจอ / วิธีวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md)
+
+โหมด legacy (process เดียว + `FACE_DEVICES=cuda:0,cuda:1`) ยังใช้ได้แต่เสี่ยง pin ผิด — ต้องยืนยัน compute-apps ก่อนเชื่อ util บน GPU1
 
 ไม่มี GPU ให้ตั้ง:
 
@@ -127,7 +134,7 @@ FACE_DEVICES=cpu
 FACE_GPU_WORKERS=1
 ```
 
-จำนวน worker ที่แนะนำ: **1 ต่อการ์ด** อย่าตั้ง `FACE_GPU_WORKERS` สูงกว่าจำนวนการ์ดจนกว่าจะวัดแล้วว่า util ยังต่ำหลังจูนซอฟต์แวร์ (ดู [KIOSK-LOADTEST.md](KIOSK-LOADTEST.md) §5c)
+จำนวน worker ที่แนะนำต่อ process: **2** (ค่า default ใน `docker-compose.gpu.yml`; ONNX ปล่อย GIL ได้) — อย่าตั้งสูงเกินโดยไม่วัดซ้ำ (ดู [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md))
 
 ---
 

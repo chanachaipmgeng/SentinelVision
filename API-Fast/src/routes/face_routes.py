@@ -5,6 +5,7 @@ from typing import List, Optional
 from ..config.database import get_db
 from ..controllers.face_controller import (
     add_face,
+    detect_faces_upload,
     check_face_emp,
     identify_face,
     check_in_face,
@@ -64,6 +65,15 @@ async def add_face_route(
     _auth=_face_auth,
 ):
     return await add_face(memberId, file, db)
+
+
+@router.post("/detect")
+async def detect_faces_route(
+    file: UploadFile = File(...),
+    _auth=_face_auth,
+):
+    """Detection-only preview for admin enroll camera (no embedding)."""
+    return await detect_faces_upload(file)
 
 
 @router.post("/members/check-face-emp")

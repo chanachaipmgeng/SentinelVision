@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     FACE_DETECT_STALE_MS: int = 400
     # Reuse identify embedding for walk-by check-in on the same WS track.
     FACE_IDENTIFY_CACHE_SECONDS: float = 3.0
+    # WS identify/check-in: detect at FACE_DETECT_DET_SIZE then embed (skip 640 det).
+    FACE_FAST_EMBED_DETECT: bool = True
 
     # Storage
     STORAGE_BACKEND: str = "local"

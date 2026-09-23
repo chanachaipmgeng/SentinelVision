@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
 
-from .image_quality import check_image_quality
+from .image_quality import check_image_quality, check_image_quality_bgr
 from .liveness_detection import check_multi_frame_liveness, cosine_distance
 from ..config.settings import settings
 
@@ -232,28 +232,93 @@ def detect_faces_bytes(image_bytes: bytes) -> dict:
     return detect_faces_bgr(decode_image_bytes(image_bytes, for_detect=True))
 
 
-def extract_face_features(
-    image_path: str,
+def _largest_det_index(bboxes) -> Optional[int]:
+    if bboxes is None or len(bboxes) == 0:
+        return None
+    areas = []
+    for box in bboxes:
+        x1, y1, x2, y2 = (float(v) for v in box[:4])
+        areas.append(max(0.0, x2 - x1) * max(0.0, y2 - y1))
+    return int(max(range(len(areas)), key=lambda i: areas[i]))
+
+
+def _embed_from_det(
+    image: np.ndarray,
+    bbox: np.ndarray,
+    kps: Optional[np.ndarray],
+    det_score: float,
+) -> Optional[np.ndarray]:
+    """Run recognition on a pre-detected face (skips the 640 embed detector)."""
+    from insightface.app.common import Face
+
+    # Recognition lives on the embed-sized app so model weights match enrollment.
+    app = get_face_app(det_size=int(settings.FACE_EMBED_DET_SIZE))
+    face = Face(
+        bbox=np.asarray(bbox[:4], dtype=np.float32),
+        kps=None if kps is None else np.asarray(kps, dtype=np.float32),
+        det_score=float(det_score),
+    )
+    rec = app.models.get("recognition")
+    if rec is None:
+        # Fallback: full pipeline (detect+embed) if recognition key missing.
+        faces = app.get(image)
+        largest = _largest_face(faces)
+        if largest is None or largest.normed_embedding is None:
+            return None
+        return largest.normed_embedding.astype(np.float32)
+    rec.get(image, face)
+    if face.normed_embedding is None:
+        return None
+    return face.normed_embedding.astype(np.float32)
+
+
+def extract_face_features_bgr(
+    image: np.ndarray,
     *,
     require_quality: bool = True,
     blur_threshold: Optional[float] = None,
+    fast_detect: bool = True,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
     """
     Detect the largest face and return (normed_embedding list, bbox).
-    bbox is [x1, y1, x2, y2].
 
-    Quality (blur/brightness) is evaluated on the face crop so soft webcam
-    backgrounds do not reject usable enroll frames.
+    When ``fast_detect`` is True, run det at FACE_DETECT_DET_SIZE (320) then
+    recognition only — avoids a second full detect at 640. Set False for the
+    legacy FaceAnalysis.get path (enrollment / HTTP).
     """
-    image = _read_bgr(image_path)
+    if image is None or not hasattr(image, "shape"):
+        raise ValueError("Could not decode frame")
+
+    use_fast = bool(fast_detect) and bool(getattr(settings, "FACE_FAST_EMBED_DETECT", True))
+    if use_fast:
+        det_app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
+        bboxes, kpss = det_app.det_model.detect(image, max_num=0, metric="default")
+        idx = _largest_det_index(bboxes)
+        if idx is None:
+            return None
+        box = np.asarray(bboxes[idx], dtype=np.float32)
+        bbox = box[:4]
+        score = float(box[4]) if box.shape[0] > 4 else 0.0
+        kps = None if kpss is None else np.asarray(kpss[idx], dtype=np.float32)
+        if require_quality:
+            is_good, message = check_image_quality_bgr(
+                image, bbox, blur_threshold=blur_threshold
+            )
+            if not is_good:
+                raise ValueError(message)
+        embedding = _embed_from_det(image, bbox, kps, score)
+        if embedding is None:
+            return None
+        return embedding.astype(np.float32).tolist(), bbox.astype(np.float32)
+
     faces = get_face_app().get(image)
     face = _largest_face(faces)
     if face is None:
         return None
 
     if require_quality:
-        is_good, message = check_image_quality(
-            image_path, face.bbox, blur_threshold=blur_threshold
+        is_good, message = check_image_quality_bgr(
+            image, face.bbox, blur_threshold=blur_threshold
         )
         if not is_good:
             raise ValueError(message)
@@ -263,6 +328,25 @@ def extract_face_features(
         return None
 
     return embedding.astype(np.float32).tolist(), face.bbox.astype(np.float32)
+
+
+def extract_face_features(
+    image_path: str,
+    *,
+    require_quality: bool = True,
+    blur_threshold: Optional[float] = None,
+) -> Optional[Tuple[List[float], np.ndarray]]:
+    """
+    Detect the largest face and return (normed_embedding list, bbox).
+    Path-based wrapper for enrollment / HTTP — uses the legacy 640 detect path.
+    """
+    image = _read_bgr(image_path)
+    return extract_face_features_bgr(
+        image,
+        require_quality=require_quality,
+        blur_threshold=blur_threshold,
+        fast_detect=False,
+    )
 
 
 def generate_face_encoding(
@@ -317,23 +401,26 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
     return encoding
 
 
-def get_walkby_encoding(image_paths: List[str]) -> List[float]:
+def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
     """
-    Walk-by mode: 1–2 frames, no head-motion liveness.
-    One InsightFace pass per frame (require_quality=False). Soft quality
-    check runs on the crop after inference — never a second GPU pass.
+    Walk-by mode on in-memory BGR frames (no temp files).
+    Uses fast det@320 + recognition when FACE_FAST_EMBED_DETECT is on.
+    Soft quality check after inference — never a second GPU pass.
     """
-    if not image_paths:
+    if not frames:
         raise ValueError("No image frames provided for walk-by check-in")
 
     candidates: List[List[float]] = []
-    for path in image_paths:
-        result = extract_face_features(path, require_quality=False)
+    for image in frames:
+        result = extract_face_features_bgr(
+            image,
+            require_quality=False,
+            fast_detect=True,
+        )
         if result is None:
             continue
         encoding, bbox = result
-        # Soft gate only — do not reject / re-infer when quality fails.
-        check_image_quality(path, bbox)
+        check_image_quality_bgr(image, bbox)
         candidates.append(encoding)
 
     if not candidates:
@@ -349,3 +436,14 @@ def get_walkby_encoding(image_paths: List[str]) -> List[float]:
                 )
 
     return candidates[len(candidates) // 2]
+
+
+def get_walkby_encoding(image_paths: List[str]) -> List[float]:
+    """
+    Walk-by mode: 1–2 frames, no head-motion liveness.
+    Path-based wrapper — loads frames then delegates to get_walkby_encoding_frames.
+    """
+    if not image_paths:
+        raise ValueError("No image frames provided for walk-by check-in")
+    frames = [_read_bgr(path) for path in image_paths]
+    return get_walkby_encoding_frames(frames)

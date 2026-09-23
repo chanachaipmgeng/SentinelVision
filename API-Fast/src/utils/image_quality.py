@@ -5,14 +5,14 @@ from typing import Optional, Tuple, Union
 from ..config.settings import settings
 
 
-def check_image_quality(
-    image_path: str,
+def check_image_quality_bgr(
+    image: np.ndarray,
     bbox: Optional[Union[np.ndarray, list]] = None,
     *,
     blur_threshold: Optional[float] = None,
 ) -> Tuple[bool, str]:
     """
-    Brightness + blur (Laplacian variance).
+    Brightness + blur (Laplacian variance) on an in-memory BGR image.
 
     When ``bbox`` [x1,y1,x2,y2] is provided, metrics use the face crop
     (webcam full-frames often fail blur because soft backgrounds dominate).
@@ -21,8 +21,7 @@ def check_image_quality(
     blur gate (used for Excel import of photos from other HR systems).
     """
     try:
-        image = cv2.imread(image_path)
-        if image is None:
+        if image is None or not hasattr(image, "shape"):
             return False, "Could not read the image file."
 
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -51,6 +50,22 @@ def check_image_quality(
 
         return True, "Image quality is good."
 
+    except Exception as e:
+        return False, f"An error occurred during image quality check: {str(e)}"
+
+
+def check_image_quality(
+    image_path: str,
+    bbox: Optional[Union[np.ndarray, list]] = None,
+    *,
+    blur_threshold: Optional[float] = None,
+) -> Tuple[bool, str]:
+    """Path-based wrapper — loads the file then delegates to ``check_image_quality_bgr``."""
+    try:
+        image = cv2.imread(image_path)
+        if image is None:
+            return False, "Could not read the image file."
+        return check_image_quality_bgr(image, bbox, blur_threshold=blur_threshold)
     except Exception as e:
         return False, f"An error occurred during image quality check: {str(e)}"
 

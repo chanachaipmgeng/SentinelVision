@@ -18,6 +18,7 @@ from ..utils.face_engine import (
     verify_liveness_and_get_encoding,
     get_walkby_encoding,
     extract_face_features,
+    detect_faces_bytes,
 )
 from ..utils.face_gpu_queue import run_on_face_gpu
 from ..config.settings import settings
@@ -195,6 +196,29 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
     finally:
         if not file_moved and temp_file_path.exists():
             temp_file_path.unlink()
+
+
+async def detect_faces_upload(image_file: UploadFile) -> dict:
+    """Lightweight detection for admin enroll preview (no embedding)."""
+    content = await image_file.read()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image"
+        )
+    if face_core_enabled():
+        client = get_face_core_client()
+        return await client.detect(content)
+    try:
+        return await run_on_face_gpu(
+            lambda c=content: detect_faces_bytes(c),
+            kind="detect",
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )
 
 
 async def _search_face_pgvector(
@@ -422,6 +446,15 @@ def _persist_photo_from_path(source_path: str) -> str:
     return filename
 
 
+def _persist_photo_from_bytes(content: bytes) -> str:
+    """Write punch photo from in-memory JPEG/PNG bytes (no temp file)."""
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    filename = f"{uuid.uuid4()}.jpg"
+    dest = UPLOAD_DIR / filename
+    dest.write_bytes(content)
+    return filename
+
+
 def _employee_brief(company_employee: CompanyEmployee) -> dict:
     member = company_employee.member
     first_name = (member.firstName if member else "") or ""
@@ -448,7 +481,8 @@ async def _finalize_check_in(
     latitude: float,
     longitude: float,
     note: Optional[str],
-    photo_source_path: str,
+    photo_source_path: Optional[str] = None,
+    photo_source_bytes: Optional[bytes] = None,
     liveness_passed: bool,
     mode: str,
     default_note: str,
@@ -541,7 +575,20 @@ async def _finalize_check_in(
             detail="Invalid GPS coordinates (0,0). Enable location / open via HTTPS before check-in.",
         )
 
-    photo_filename = _persist_photo_from_path(photo_source_path)
+    if photo_source_bytes is not None:
+        import asyncio
+
+        from ..utils.face_engine import get_decode_executor
+
+        loop = asyncio.get_running_loop()
+        photo_filename = await loop.run_in_executor(
+            get_decode_executor(),
+            lambda b=photo_source_bytes: _persist_photo_from_bytes(b),
+        )
+    elif photo_source_path:
+        photo_filename = _persist_photo_from_path(photo_source_path)
+    else:
+        raise ValueError("photo_source_path or photo_source_bytes is required")
     check_in_note = (note or "").strip() or default_note
     timestamp = await create_timestamp(
         {

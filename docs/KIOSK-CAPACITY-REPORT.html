@@ -95,22 +95,22 @@ tr:nth-child(even) td { background: #f7fafc; }
 </style>
 </head>
 <body>
-  <div class="banner">รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า · วัด 22–24 ก.ย. 2026 · เซิร์ฟเวอร์ 10.50.0.117</div>
+  <div class="banner">รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า · อัปเดตรอบ 5 · 22–24 ก.ย. 2026</div>
   <h1>รายงานทดสอบความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk) — สรุปการวัด สาเหตุ ข้อแนะนำ และการประมาณสเป็ค</h1>
 <p><strong>ช่วงเวลาทดสอบ:</strong> 22–24 กันยายน 2026  </p>
 <p><strong>เซิร์ฟเวอร์:</strong> <code>10.50.0.117</code> (production ภายใน) · URL <code>http://10.50.0.117:8880</code>  </p>
 <p><strong>สเป็คเครื่อง:</strong> CPU 32 core · RAM 436 GB · GPU 2× NVIDIA Quadro RTX 5000 16 GB  </p>
 <p><strong>โค้ดล่าสุดที่วัด:</strong> <code>9d407e2d</code> (perf รอบ 2) + overlay quad-API (<code>a00e354c</code>)  </p>
-<p><strong>เอกสารเทคนิคประกอบ:</strong> <a href="KIOSK-LOADTEST-SATURATION.md">KIOSK-LOADTEST-SATURATION.md</a> · <a href="KIOSK-LOADTEST-PERF2-TABLE.md">PERF2-TABLE</a> · <a href="KIOSK-LOADTEST-PERF3-TABLE.md">PERF3-TABLE</a></p>
+<p><strong>เอกสารเทคนิคประกอบ:</strong> <a href="KIOSK-LOADTEST-SATURATION.md">KIOSK-LOADTEST-SATURATION.md</a> · <a href="KIOSK-LOADTEST-PERF2-TABLE.md">PERF2</a> · <a href="KIOSK-LOADTEST-PERF3-TABLE.md">PERF3</a> · <a href="KIOSK-LOADTEST-PERF4-TABLE.md">PERF4</a> · <a href="KIOSK-LOADTEST-PERF5-TABLE.md">PERF5</a></p>
 <hr>
 <h2>1. สรุปสำหรับผู้บริหาร (อ่านหน้าเดียวจบ)</h2>
 <table>
-<tr><th>คำถาม</th><th>คำตอบจากผลวัดล่าสุด (รอบ 3)</th></tr>
-<tr><td>จอคีออสที่ลื่นในชั่วโมงเร่งด่วน (หลายคนหน้ากล้อง)</td><td><strong>24 จอพร้อมกัน</strong> (แนะนำวางแผนที่ 16–20)</td></tr>
-<tr><td>ถ้าคนละคนต่อจอ / เปิดบนมือถือของตัวเอง</td><td><strong>32 คนพร้อมกัน</strong> (แนะนำวางแผนที่ 24–28)</td></tr>
-<tr><td>จอว่างรอคน (detect อย่างเดียว)</td><td><strong>≥ 48 จอ</strong> ยังไม่ชนเพดาน</td></tr>
-<tr><td>เทียบจุดเริ่มต้น (22 ก.ย.)</td><td>เพดานเร่งด่วน <strong>5 → 24 จอ (~4.8 เท่า)</strong> โดยไม่ซื้อฮาร์ดแวร์</td></tr>
-<tr><td>ทรัพยากรที่ยังเหลือ</td><td>GPU ใช้เฉลี่ยเพียง <strong>~16%</strong> ต่อใบ · CPU ใช้ ~480% จาก 3,200%</td></tr>
+<tr><th>คำถาม</th><th>คำตอบจากผลวัดล่าสุด (รอบ 5)</th></tr>
+<tr><td>จอคีออสที่ลื่นในชั่วโมงเร่งด่วน (หลายคนหน้ากล้อง)</td><td><strong>24 จอ</strong> แบบ loadgen เต็มอัตรา · <strong>~32 จอ</strong> ถ้าคีออสใช้ motion gating (~600 ms)</td></tr>
+<tr><td>ถ้าคนละคนต่อจอ / เปิดบนมือถือของตัวเอง</td><td><strong>32 คน</strong> (full-rate) · <strong>~48 คน</strong> (gating)</td></tr>
+<tr><td>จอว่างรอคน (detect อย่างเดียว)</td><td><strong>≥ 48 จอ</strong> (hexa เคยถึง ~96) — production คง quad</td></tr>
+<tr><td>เทียบจุดเริ่มต้น (22 ก.ย.)</td><td>เพดานเร่งด่วน <strong>5 → 24 จอ (~4.8 เท่า)</strong> full-rate; gating จริงสูงกว่า</td></tr>
+<tr><td>ทรัพยากรที่ยังเหลือ</td><td>GPU ใช้เฉลี่ยเพียง <strong>~16–21%</strong> ต่อใบ</td></tr>
 <tr><td>รองรับพนักงาน 10,000 คนลงเวลาช่วงเดียวกันไหม</td><td><strong>ไม่ได้บนเครื่องเดียว</strong> — ต้องสเกลหลายเครื่อง (ดู §7)</td></tr>
 </table>
 <pre>
@@ -128,6 +128,8 @@ tr:nth-child(even) td { background: #f7fafc; }
 <tr><td>23 ก.ย. 22:00–22:35</td><td>Dual-API (Phase 1–2)</td><td>แยก <code>dpu-api</code> (GPU0) + <code>dpu-api-gpu1</code> (GPU1), nginx <code>least_conn</code>, เฟรมสมจริง 78 KB, decode pool</td><td><strong>6 / 12 / 24 จอ</strong></td></tr>
 <tr><td>23 ก.ย. 23:50–24:10</td><td>Perf รอบ 2</td><td>det@320 แล้ว embed ทันที, identify/check-in ใน memory (ไม่เขียน temp file), worker 3/process, หน้าบ้าน motion gating</td><td><strong>16 / 24 / ≥32 จอ</strong></td></tr>
 <tr><td>24 ก.ย. 00:20–00:45</td><td>Perf รอบ 3</td><td>2 process ต่อ GPU (4 process), whisper_server ย้ายไป GPU1</td><td><strong>24 / 32 / ≥48 จอ</strong></td></tr>
+<tr><td>24 ก.ย. 01:00–01:40</td><td>Perf รอบ 4</td><td>hexa 3 process/GPU (saturation)</td><td>rush แย่ลง; idle ≥96</td></tr>
+<tr><td>24 ก.ย. 01:55–02:45</td><td>Perf รอบ 5</td><td>dedupe cache + A/B hexa w2 + gated 600 ms</td><td>full-rate คง 24/32; <strong>gated 32/48</strong></td></tr>
 </table>
 <p>นิยามโปรไฟล์ทดสอบ (จำลองพฤติกรรมคีออสจริงจาก <code>enroll-face.component.ts</code>):</p>
 <ul>
@@ -179,27 +181,27 @@ tr:nth-child(even) td { background: #f7fafc; }
 <tr><td>4</td><td><strong>path identify/check-in เขียนไฟล์ + detect ซ้ำที่ 640</strong> — เขียน temp → อ่านซ้ำ → detect 640 → embed → copy รูป</td><td>identify p95 300–700 ms ใน rush แม้ detect ยังดี</td><td>ทำใน memory + det@320 แล้ว embed จาก keypoints (รอบ 2)</td></tr>
 <tr><td>5</td><td><strong>เฟรมทดสอบใหญ่เกินจริง</strong> (~546 KB / 3,936 px) ทำให้ตัวเลขแย่กว่าจริง</td><td>decode 3.7 MP กิน CPU 15–25 ms/เฟรม</td><td>loadgen ใช้เฟรม 1280 px q70 (~78 KB) เท่าคีออสจริง</td></tr>
 <tr><td>6</td><td><strong>GPU0 ถูกแชร์กับ whisper_server</strong> (~4 GB)</td><td>compute-apps บน GPU0</td><td>ย้ายไป GPU1 (รอบ 3) — ผลต่อ latency น้อย เพราะ GPU ไม่ใช่คอขวด</td></tr>
-<tr><td>7</td><td><strong>DB / dedupe ต่อ check-in</strong> (ยังเหลืออยู่)</td><td>check-in p95 ไล่ตาม detect p95 ในทุก step ของรอบ 3; rush×3 ที่ 24 จอ check-in 548 ms</td><td>ยังไม่ได้แก้ — เป็นเพดานถัดไป</td></tr>
+<tr><td>7</td><td><strong>DB / dedupe ต่อ check-in</strong></td><td>check-in p95 ไล่ตาม detect ในรอบ 3</td><td>รอบ 5: in-process cache — ช่วยโหลดต่ำ (check-in ~63 ms) แต่ไม่ดันเพดาน rush full-rate</td></tr>
 </table>
 <p><strong>สิ่งที่ไม่ใช่คอขวด:</strong> GPU compute (RetinaFace 320 / ArcFace ~5–15 ms/งาน), nginx, uvicorn WS handshake (session p95 &lt; 130 ms ทุก step), pgvector search เอง (HNSW <code>ef_search=40</code>)</p>
 <hr>
 <h2>5. ข้อแนะนำที่จำเป็น</h2>
 <h3>5.1 การติดตั้งใช้งานจริงบนเซิร์ฟเวอร์นี้</h3>
 <ol>
-<li><strong>วางแผนติดตั้งไม่เกิน 16–20 จอ</strong> ในโซนที่ชั่วโมงเร่งด่วนมีหลายคนหน้ากล้อง (เพดานเทส 24)</li>
-<li>โซนที่คนละคนต่อจอ / มือถือส่วนตัว: <strong>ไม่เกิน 24–28 คนพร้อมกัน</strong> (เพดานเทส 32)</li>
-<li>ใช้ overlay <strong>quad-API</strong> ตาม <code>docs/DEPLOY-SERVER.md</code> (<code>docker-compose.gpu.yml</code> + <code>docker-compose.gpu-x2.yml</code>) และคง <code>FACE_GPU_WORKERS=3</code></li>
-<li>เก็บเกณฑ์ UX: กรอบตอบสนอง ≤ 0.55 วินาที · ทิ้งเฟรม ≤ 5% — ถ้าเกินให้ลดจำนวนจอหรือขยายตาม §7</li>
-<li><code>whisper_server</code> ไม่อยู่ใน systemd — หลังรีบูตต้องรันใหม่พร้อม <code>CUDA_VISIBLE_DEVICES=1</code> (บันทึกใน DEPLOY-SERVER)</li>
+<li><strong>วางแผนติดตั้งไม่เกิน 16–20 จอ</strong> ในโซนเร่งด่วนถ้าอิงตาราง full-rate (เพดานเทส 24); ถ้าคีออสมี motion gating วางได้ถึง <strong>~28–32 จอ</strong></li>
+<li>โซนคนละคนต่อจอ: <strong>24–28 คน</strong> (full-rate เพดาน 32) หรือ <strong>~40–48</strong> เมื่อ gating ทำงาน</li>
+<li>ใช้ <strong>quad-API</strong> (<code>docker-compose.gpu-x2.yml</code>) และคง <code>FACE_GPU_WORKERS=3</code> — <strong>ไม่ใช้ hexa</strong> เป็น production (รอบ 4–5 ยืนยัน rush แย่ลง)</li>
+<li>เก็บเกณฑ์ UX: กรอบตอบสนอง ≤ 0.55 วินาที · ทิ้งเฟรม ≤ 5%</li>
+<li><code>whisper_server</code> ไม่อยู่ใน systemd — หลังรีบูตต้องรันใหม่พร้อม <code>CUDA_VISIBLE_DEVICES=1</code></li>
 </ol>
 <h3>5.2 การปรับปรุงลำดับถัดไป (เรียงตามผลตอบแทน)</h3>
 <table>
 <tr><th>ลำดับ</th><th>รายการ</th><th>คาดผล</th><th>ความยาก</th></tr>
-<tr><td>1</td><td><strong>ลดงาน DB ต่อ check-in</strong> — cache dedupe ใน memory ต่อ process (TTL 5 นาที) ก่อน query, เขียน timestamp แบบ async batch</td><td>check-in p95 ลด 30–50% ใน rush</td><td>ต่ำ–กลาง</td></tr>
-<tr><td>2</td><td><strong>3 process ต่อ GPU</strong> (6 process) บนเครื่อง 32 core</td><td>rush×3 24 → ~32 จอ (ผลตอบแทนเริ่มลด)</td><td>ต่ำ (compose overlay)</td></tr>
-<tr><td>3</td><td><strong>วัดด้วยคีออสจริง</strong> (motion gating ทำงาน) แทน loadgen เต็มอัตรา</td><td>ได้ตัวเลขจริงที่สูงกว่าตาราง</td><td>ต่ำ</td></tr>
-<tr><td>4</td><td><strong>แยก DB ออกจากเครื่อง API</strong> เมื่อเกิน ~40 จอ</td><td>ตัด contention CPU/IO ระหว่าง API กับ Postgres</td><td>กลาง</td></tr>
-<tr><td>5</td><td><strong>Face Core หลายเครื่อง + Redis queue</strong></td><td>สเกลเป็นร้อยจอ / หลายบริษัท</td><td>สูง — ทำเมื่อต้องข้ามเครื่องเท่านั้น</td></tr>
+<tr><td>1</td><td>~~ลดงาน DB ต่อ check-in~~</td><td>ทำแล้วรอบ 5 (cache) — ช่วยโหลดต่ำ</td><td>เสร็จ</td></tr>
+<tr><td>2</td><td>~~3 process ต่อ GPU~~</td><td>วัดแล้ว (รอบ 4–5) — <strong>ไม่ใช้</strong> สำหรับ rush UX</td><td>ปิด</td></tr>
+<tr><td>3</td><td>วัดด้วยคีออสจริง / <code>--detect-interval-ms 600</code></td><td>รอบ 5C: rush×3 <strong>32</strong> · rush×1 <strong>48</strong></td><td>เสร็จ (จำลอง)</td></tr>
+<tr><td>4</td><td><strong>แยก DB ออกจากเครื่อง API</strong> เมื่อเกิน ~40 จอ</td><td>ตัด contention</td><td>กลาง</td></tr>
+<tr><td>5</td><td><strong>Face Core หลายเครื่อง + Redis queue</strong></td><td>สเกลเป็นร้อยจอ</td><td>สูง</td></tr>
 </table>
 <h3>5.3 สิ่งที่ไม่ควรทำ</h3>
 <ul>

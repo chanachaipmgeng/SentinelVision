@@ -88,7 +88,7 @@ nano .env
 | `FACE_DETECT_STALE_MS` | `400` | ทิ้งเฟรม detect ที่ค้างคิวนานเกินนี้ |
 | `FACE_IDENTIFY_CACHE_SECONDS` | `3` | ใช้ embedding จาก identify ซ้ำตอน check-in บน track เดิม |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
-| `CHECK_IN_DEDUPE_SECONDS` | `300` | กันลงเวลาซ้ำ (วินาที) · `0` = ปิด |
+| `CHECK_IN_DEDUPE_SECONDS` | `300` | กันลงเวลาซ้ำ (วินาที) · `0` = ปิด · ตั้งแต่รอบ 5 มี in-process memory cache (TTL เดียวกัน) ข้าม query DB เมื่อ hit |
 | `IMAGE_BLUR_THRESHOLD` | `20.0` | เกณฑ์ blur ตอน enroll ที่คีออส / เพิ่มใบหน้า |
 | `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | เกณฑ์ blur ตอน import Excel+ZIP · **`0` = ไม่ตัดรูปเบลอจากระบบอื่น** (ยังต้องเจอใบหน้า) |
 

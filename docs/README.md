@@ -3,7 +3,8 @@
 - [SETUP](SETUP.md) — run the stack (local / Docker Desktop) + optional Face Core BFF
 - [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
 - [KIOSK-LOADTEST](KIOSK-LOADTEST.md) — โหลดเทส WebSocket kiosk (local ก่อน แล้วชี้เซิร์ฟเวอร์)
-- [KIOSK-LOADTEST-SATURATION](KIOSK-LOADTEST-SATURATION.md) — รอบ saturation: dual-API + เฟรมสมจริง + เกณฑ์ face-core
+- [KIOSK-LOADTEST-SATURATION](KIOSK-LOADTEST-SATURATION.md) — รอบ saturation: dual-API + เฟรมสมจริง + เกณฑ์ face-core; §4b ผลรอบ 2
+- [KIOSK-LOADTEST-PERF2-TABLE](KIOSK-LOADTEST-PERF2-TABLE.md) — ตารางเพดานรอบ 2 (workers=3, det@320 in-memory): rush×3 16 จอ · rush×1 24 จอ · idle ≥32 จอ
 - [KIOSK-LOADTEST-WORKERS2-CAPACITY](KIOSK-LOADTEST-WORKERS2-CAPACITY.md) — เพดาน dual GPU (workers=2) อัตราเต็ม (conservative)
 - [EXEC-SUMMARY-KIOSK-CAPACITY](EXEC-SUMMARY-KIOSK-CAPACITY.md) — สรุปความจุคีออสสำหรับผู้บริหาร ([PDF](EXEC-SUMMARY-KIOSK-CAPACITY.pdf))
 - [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology

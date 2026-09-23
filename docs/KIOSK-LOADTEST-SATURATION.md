@@ -182,6 +182,21 @@ Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (
 
 ---
 
+## 4f. Identify-only + แนวแยก Face Core
+
+วัดเพิ่ม `--profile identify` (detect+identify ไม่มี check-in) และ HTTP `POST /face/members/identify` — รายละเอียด [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md)
+
+| โหมด | Full-rate เพดาน | Gated 600 ms |
+|------|-----------------|--------------|
+| identify ×1 | **32 จอ** (ชัวร์) | **≥64 จอ** |
+| identify ×3 | **≥40 จอ** | **≥48 จอ** |
+| rush ×3 (เทียบ) | 24 จอ | 32 จอ |
+| HTTP identify | ~20 concurrent / ~36 RPS | — |
+
+**สรุปสำหรับ Face Core:** ตัด check-in แล้วหลายคน/จอขึ้นจาก 24→≥40 จอ — งาน detect/identify เหมาะย้ายไป Face Core; check-in/DB คงที่ DPU
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

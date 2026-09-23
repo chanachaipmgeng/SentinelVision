@@ -11,6 +11,7 @@
 - [KIOSK-CAPACITY-REPORT](KIOSK-CAPACITY-REPORT.md) — รายงานฉบับเต็ม: ไทม์ไลน์ทดสอบ 22–24 ก.ย., ค่าเฉลี่ย/p95, สาเหตุคอขวด, ข้อแนะนำ, ประมาณสเป็ค (รวมกรณี 10,000 คน) ([PDF](KIOSK-CAPACITY-REPORT.pdf))
 - [KIOSK-LOADTEST-PERF4-TABLE](KIOSK-LOADTEST-PERF4-TABLE.md) — รอบ 4 hexa (3 process/GPU): เพดาน SLO vs saturation ไม่สน UX
 - [KIOSK-LOADTEST-PERF5-TABLE](KIOSK-LOADTEST-PERF5-TABLE.md) — รอบ 5 dedupe cache บน quad: check-in ต่ำดีขึ้น แต่ rush×3 ยังไม่ถึง 32 จอ
+- [FACE-CORE-IDENTIFY-CAPACITY](FACE-CORE-IDENTIFY-CAPACITY.md) — วัด identify-only (ไม่มีลงเวลา) vs idle/rush + HTTP one-shot และแนวแยก Face Core
 - [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology
 - [API](API.md) — DPU routes plus the Face Core calls the BFF makes
 - [CURSOR-AGENT](CURSOR-AGENT.md) — Cursor rules & skills for agents

@@ -26,7 +26,7 @@ nginx :80
 
 Start with `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build`.
 
-On a dual-GPU host the GPU overlay runs **two API processes** (`dpu-api` on GPU0, `dpu-api-gpu1` on GPU1) behind nginx `least_conn` (`docker/nginx/default.dual-gpu.conf`). Prefer this for single-host capacity; see [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md).
+On a dual-GPU host the GPU overlay runs **two API processes** (`dpu-api` on GPU0, `dpu-api-gpu1` on GPU1) behind nginx `least_conn` (`docker/nginx/default.dual-gpu.conf`). Add `docker-compose.gpu-x2.yml` for **two processes per GPU** (`dpu-api-gpu0b`, `dpu-api-gpu1b`, `default.quad-gpu.conf`) when CPU cores are spare — the per-process GIL/decode path is the bottleneck, not GPU SM. See [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md).
 
 ### Face Core BFF (cross-host / many API replicas)
 

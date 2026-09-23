@@ -115,6 +115,29 @@ Host metrics ระหว่างโหลด: GPU SM avg ~11% ต่อใบ 
 
 ---
 
+## 4c. รอบ 3 — 2 process ต่อการ์ด (quad API) + ย้าย whisper ออกจาก GPU0
+
+| รายการ | รายละเอียด | ถอยกลับ |
+|--------|-------------|---------|
+| Quad API | [`docker-compose.gpu-x2.yml`](../docker-compose.gpu-x2.yml) เพิ่ม `dpu-api-gpu0b` (GPU0) + `dpu-api-gpu1b` (GPU1) ผ่าน `extends` จาก `api-gpu1`; nginx mount [`default.quad-gpu.conf`](../docker/nginx/default.quad-gpu.conf) (4 upstreams, `least_conn`) | ตัด `-f docker-compose.gpu-x2.yml` แล้ว `up -d --remove-orphans` |
+| whisper_server | process ของ `myhr` (พอร์ต 8091, th-large-v3 float32 ~4 GB) รันใหม่ด้วย `CUDA_VISIBLE_DEVICES=1` — GPU0 เหลือเฉพาะ DPU | รันตาม `/home/whisper_server/run.txt` โดยไม่ตั้ง env |
+| workers | คง `FACE_GPU_WORKERS=3` ต่อ process (A/B กับ 2 ไม่ต่างในระดับ noise) | — |
+
+ผลวัด (loadgen เต็มอัตรา 90 ms เหมือนเดิม) — ตาราง [KIOSK-LOADTEST-PERF3-TABLE.md](KIOSK-LOADTEST-PERF3-TABLE.md):
+
+| โปรไฟล์ | รอบ 2 (2 process) | รอบ 3 (4 process) |
+|---------|------------------|------------------|
+| idle × 3 คน/จอ | 32 จอ OK (p95 113 ms) | **48 จอ OK** (p95 173 ms) — ยังไม่ชนเพดาน |
+| rush × 3 คน/จอ | 16 จอ OK (299 ms) | **24 จอ OK** (514 ms) · 32 จอ FAIL (740 ms) |
+| rush × 1 คน/จอ | 24 จอ OK (381 ms) | **32 จอ OK** (429 ms) · 48 จอ FAIL (817 ms) |
+| identify p95 @ rush×3 16 จอ | 484 ms | 452 ms |
+
+Host metrics: GPU SM avg ~16%/ใบ (peak 39%), API CPU ~120% × 4 process (รวม ~480% จาก 32 core) → GPU ยังเหลือมาก; เพดานถัดไปน่าจะเป็น **DB/pgvector + dedupe query ต่อ check-in** (check-in p95 ไล่ตาม detect p95 ในทุก step) และ latency ของ WS I/O ใน process เดียว — ถ้าต้องการ > 24 จอ rush ให้พิจารณา 3 process ต่อการ์ด หรือย้ายไป Face Core ข้ามเครื่อง
+
+> ข้อสังเกต: ที่ 16 จอ rush×3 รอบ 3 ได้ 383 ms (รอบ 2 = 299 ms) — อยู่ในช่วง noise ระหว่างรัน (รอบ 2 ที่ 12 จอ = 263, 16 จอ = 299) และ 4 process ช่วยชัดเมื่อโหลด ≥ 24 จอเท่านั้น
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

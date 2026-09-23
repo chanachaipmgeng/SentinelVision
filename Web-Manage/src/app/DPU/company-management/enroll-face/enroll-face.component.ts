@@ -23,7 +23,11 @@ import {
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
 import { buildKioskSession } from './kiosk-ws-client';
-import { nextCaptureInterval } from './kiosk-tracker.service';
+import {
+  frameChangeScore,
+  KIOSK_STATIC_SCENE_DIFF,
+  nextCaptureInterval,
+} from './kiosk-tracker.service';
 
 // pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
 // drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
@@ -165,6 +169,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private serverDetectFailures = 0;
   private serverDetectPausedUntil = 0;
   private detectFrameCanvas: HTMLCanvasElement | null = null;
+  private detectThumbCanvas: HTMLCanvasElement | null = null;
+  private lastDetectThumb: Uint8ClampedArray | null = null;
   private lastDetectionsAt = 0;
 
   // Local face-api fallback health (devices without WebGL crash tfjs)
@@ -526,14 +532,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         return;
       }
     }
-    // Pace detect by queue depth; idle (no faces for 2s) slows to ~400 ms.
-    const idleNoFaces =
-      this.tracks.length === 0 &&
-      (this.lastDetectionsAt === 0 || now - this.lastDetectionsAt > 2000);
-    const minGap = nextCaptureInterval(this.queuePending, { idleNoFaces });
-    if (now - this.lastWsDetectAt < minGap) {
-      return;
-    }
 
     const vw = videoEl.videoWidth || 640;
     const vh = videoEl.videoHeight || 480;
@@ -550,16 +548,54 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       canvas.width = w;
       canvas.height = h;
     }
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) {
       return;
     }
     ctx.drawImage(videoEl, 0, 0, w, h);
+
+    // Thumbnail diff before JPEG encode — skip send when the scene is static.
+    const thumb = this.sampleDetectThumb(canvas);
+    const changeScore = frameChangeScore(this.lastDetectThumb, thumb);
+    const staticScene =
+      this.lastDetectThumb != null && changeScore < KIOSK_STATIC_SCENE_DIFF;
+
+    const hasTracks = this.tracks.length > 0;
+    const allSettled =
+      hasTracks &&
+      this.tracks.every((t) => t.phase === 'done' || t.phase === 'cooldown');
+    const trackingLocked =
+      hasTracks &&
+      this.tracks.every(
+        (t) =>
+          !!t.memberId ||
+          t.phase === 'capturing' ||
+          t.phase === 'checking_in' ||
+          t.phase === 'done' ||
+          t.phase === 'cooldown',
+      );
+    const idleNoFaces =
+      this.tracks.length === 0 &&
+      (this.lastDetectionsAt === 0 || now - this.lastDetectionsAt > 2000);
+
+    const minGap = nextCaptureInterval(this.queuePending, {
+      idleNoFaces,
+      staticScene,
+      trackingLocked,
+      allSettled,
+      hasTracks,
+    });
+    if (now - this.lastWsDetectAt < minGap) {
+      return;
+    }
+
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
     if (this.wsSend({ type: 'detect', requestId: `d-${now}`, image: dataUrl })) {
       this.wsDetectInFlight = true;
       this.lastWsDetectAt = now;
+      // Refresh baseline after a successful send so motion is relative to last sent frame.
+      this.lastDetectThumb = thumb;
       return;
     }
 
@@ -572,6 +608,22 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       });
       this.connectKioskWs();
     }
+  }
+
+  /** 32×24 RGBA sample used for motion gating (cheap vs JPEG). */
+  private sampleDetectThumb(source: HTMLCanvasElement): Uint8ClampedArray {
+    if (!this.detectThumbCanvas) {
+      this.detectThumbCanvas = document.createElement('canvas');
+      this.detectThumbCanvas.width = 32;
+      this.detectThumbCanvas.height = 24;
+    }
+    const thumb = this.detectThumbCanvas;
+    const tctx = thumb.getContext('2d', { willReadFrequently: true });
+    if (!tctx) {
+      return new Uint8ClampedArray(32 * 24 * 4);
+    }
+    tctx.drawImage(source, 0, 0, 32, 24);
+    return new Uint8ClampedArray(tctx.getImageData(0, 0, 32, 24).data);
   }
 
   /** Server detection result → display-space boxes → shared pipeline. */

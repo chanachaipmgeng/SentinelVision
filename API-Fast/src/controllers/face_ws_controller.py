@@ -28,9 +28,9 @@ from ..clients.face_core_client import face_core_enabled, get_face_core_client
 from ..utils.face_engine import (
     decode_image_bytes,
     detect_faces_bgr,
-    extract_face_features,
+    extract_face_features_bgr,
     get_decode_executor,
-    get_walkby_encoding,
+    get_walkby_encoding_frames,
 )
 from ..utils.face_gpu_queue import StaleFaceJob, face_gpu_queue_stats, run_on_face_gpu
 
@@ -321,15 +321,27 @@ async def _handle_identify(
 ) -> None:
     paths: List[str] = []
     try:
-        paths.append(_write_temp_bytes(_decode_image_b64(image_b64)))
+        content = _decode_image_b64(image_b64)
         async with async_session() as db:
             if face_core_enabled():
+                paths.append(_write_temp_bytes(content))
                 fc = await _face_core_identify(company_id, paths, "fast")
                 payload = await _enrich_face_core_match(db, company_id, fc)
                 queue = await _face_core_queue_stats(company_id)
             else:
+                from ..config.settings import settings
+
+                loop = asyncio.get_running_loop()
+                image = await loop.run_in_executor(
+                    get_decode_executor(),
+                    lambda c=content: decode_image_bytes(c),
+                )
                 features = await run_on_face_gpu(
-                    lambda p=paths[0]: extract_face_features(p, require_quality=False),
+                    lambda img=image: extract_face_features_bgr(
+                        img,
+                        require_quality=False,
+                        fast_detect=bool(settings.FACE_FAST_EMBED_DETECT),
+                    ),
                     kind="identify",
                     company_id=company_id,
                 )
@@ -428,13 +440,15 @@ async def _handle_checkin(
             )
             return
 
-        for raw in images_b64[:3]:
-            paths.append(_write_temp_bytes(_decode_image_b64(raw)))
-
-        mid_path = paths[len(paths) // 2]
+        raw_list = list(images_b64[:3])
+        contents = [_decode_image_b64(raw) for raw in raw_list]
+        mid_bytes = contents[len(contents) // 2]
 
         async with async_session() as db:
             if face_core_enabled():
+                for content in contents:
+                    paths.append(_write_temp_bytes(content))
+                mid_path = paths[len(paths) // 2]
                 fc = await _face_core_identify(company_id, paths, "walkby")
                 match_payload = await _enrich_face_core_match(db, company_id, fc)
                 result = await _finalize_check_in(
@@ -451,6 +465,15 @@ async def _handle_checkin(
                 )
                 queue = await _face_core_queue_stats(company_id)
             else:
+                loop = asyncio.get_running_loop()
+                frames = []
+                for content in contents:
+                    frame = await loop.run_in_executor(
+                        get_decode_executor(),
+                        lambda c=content: decode_image_bytes(c),
+                    )
+                    frames.append(frame)
+
                 cached = identify_cache.get(
                     track_id,
                     max_age_s=float(settings.FACE_IDENTIFY_CACHE_SECONDS),
@@ -459,7 +482,7 @@ async def _handle_checkin(
                     encoding = cached
                 else:
                     encoding = await run_on_face_gpu(
-                        lambda ps=list(paths): get_walkby_encoding(ps),
+                        lambda fs=list(frames): get_walkby_encoding_frames(fs),
                         kind="checkin",
                         company_id=company_id,
                     )
@@ -470,7 +493,7 @@ async def _handle_checkin(
                     longitude=longitude,
                     note=note,
                     target_encoding=encoding,
-                    photo_source_path=mid_path,
+                    photo_source_bytes=mid_bytes,
                     liveness_passed=False,
                     mode="walkby-ws",
                     default_note="Face kiosk websocket walk-by",

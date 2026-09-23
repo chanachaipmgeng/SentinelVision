@@ -146,9 +146,13 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   uploadFaceItems: { file: File; preview: string }[] = [];
   @ViewChild('faceUploadInput') faceUploadInput?: ElementRef<HTMLInputElement>;
   private modelsLoaded = false;
-  /** Browser FaceDetector (Chrome). Local face-api models are not shipped. */
+  /** Browser FaceDetector (Chrome). Falls back to POST /face/detect when missing. */
   private faceDetector: { detect: (source: HTMLVideoElement) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>> } | null = null;
   private faceDetectionInterval: ReturnType<typeof setInterval> | null = null;
+  private useServerFaceDetect = false;
+  private serverDetectInFlight = false;
+  private lastServerDetectAt = 0;
+  private enrollDetectCanvas: HTMLCanvasElement | null = null;
   private videoStream: MediaStream | null = null;
   private smoothedBox: SmoothBox | null = null;
   private poseHoldStartedAt = 0;
@@ -426,7 +430,12 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         this.faceDetector = null;
       }
     }
+    this.useServerFaceDetect = !this.faceDetector;
     this.modelsLoaded = true;
+    if (this.useServerFaceDetect) {
+      this.faceStatus = 'ใช้ตรวจจับใบหน้าจากเซิร์ฟเวอร์ (เบราว์เซอร์ไม่รองรับ FaceDetector)';
+      this.cdr.detectChanges();
+    }
   }
 
   startVideo(): Promise<void> {
@@ -576,27 +585,96 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     }, 160);
   }
 
-  /** Box in display pixels. Null when the browser has no FaceDetector or no face. */
+  /** Box in display pixels. Null when no face. Uses FaceDetector or server /face/detect. */
   private async detectBrowserFaceBox(
     videoEl: HTMLVideoElement,
     liveSize: { width: number; height: number },
   ): Promise<SmoothBox | null> {
-    if (!this.faceDetector) {
-      return null;
+    if (this.faceDetector) {
+      const faces = await this.faceDetector.detect(videoEl);
+      const box = faces[0]?.boundingBox;
+      if (!box || box.width < 8 || box.height < 8) {
+        return null;
+      }
+      const sx = liveSize.width / (videoEl.videoWidth || liveSize.width);
+      const sy = liveSize.height / (videoEl.videoHeight || liveSize.height);
+      return {
+        x: box.x * sx,
+        y: box.y * sy,
+        width: box.width * sx,
+        height: box.height * sy,
+      };
     }
-    const faces = await this.faceDetector.detect(videoEl);
-    const box = faces[0]?.boundingBox;
-    if (!box || box.width < 8 || box.height < 8) {
-      return null;
+    return this.detectServerFaceBox(videoEl, liveSize);
+  }
+
+  /** Server-side InsightFace detect for browsers without FaceDetector. */
+  private async detectServerFaceBox(
+    videoEl: HTMLVideoElement,
+    liveSize: { width: number; height: number },
+  ): Promise<SmoothBox | null> {
+    const now = Date.now();
+    // Pace server detect (~3–4/s) so enroll does not flood the GPU queue.
+    if (this.serverDetectInFlight || now - this.lastServerDetectAt < 280) {
+      return this.smoothedBox;
     }
-    const sx = liveSize.width / (videoEl.videoWidth || liveSize.width);
-    const sy = liveSize.height / (videoEl.videoHeight || liveSize.height);
-    return {
-      x: box.x * sx,
-      y: box.y * sy,
-      width: box.width * sx,
-      height: box.height * sy,
-    };
+    this.serverDetectInFlight = true;
+    this.lastServerDetectAt = now;
+    try {
+      const vw = videoEl.videoWidth || 640;
+      const vh = videoEl.videoHeight || 480;
+      const targetW = 480;
+      const scale = Math.min(1, targetW / vw);
+      const w = Math.max(1, Math.round(vw * scale));
+      const h = Math.max(1, Math.round(vh * scale));
+      if (!this.enrollDetectCanvas) {
+        this.enrollDetectCanvas = document.createElement('canvas');
+      }
+      const canvas = this.enrollDetectCanvas;
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return null;
+      }
+      ctx.drawImage(videoEl, 0, 0, w, h);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.7),
+      );
+      if (!blob) {
+        return null;
+      }
+      const form = new FormData();
+      form.append('file', blob, 'enroll-detect.jpg');
+      const res = await firstValueFrom(
+        this.http.post<{
+          faces?: Array<{ x: number; y: number; width: number; height: number; score?: number }>;
+          frameWidth?: number;
+          frameHeight?: number;
+        }>(environment.baseUrl + '/face/detect', form),
+      );
+      const face = res?.faces?.[0];
+      if (!face || face.width < 8 || face.height < 8) {
+        return null;
+      }
+      const fw = res.frameWidth || w;
+      const fh = res.frameHeight || h;
+      const sx = liveSize.width / fw;
+      const sy = liveSize.height / fh;
+      return {
+        x: face.x * sx,
+        y: face.y * sy,
+        width: face.width * sx,
+        height: face.height * sy,
+      };
+    } catch (e) {
+      console.error('server face detect failed', e);
+      return null;
+    } finally {
+      this.serverDetectInFlight = false;
+    }
   }
 
   captureImage(): void {

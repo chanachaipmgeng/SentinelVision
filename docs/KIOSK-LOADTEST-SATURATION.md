@@ -88,6 +88,19 @@ flowchart LR
 
 ---
 
+## 4b. รอบ 2 — ลดโหลดต้นทาง + ตัดดิสก์ (โค้ด)
+
+| รายการ | รายละเอียด | ปิดกลับ |
+|--------|-------------|---------|
+| Motion gating (หน้าบ้าน) | thumbnail 32×24 diff; นิ่ง → keep-alive 600–2000 ms; ล็อกหน้า → 180 ms; settled → 300 ms | ตั้ง `KIOSK_STATIC_SCENE_DIFF` สูงมากใน `kiosk-tracker.service.ts` (หรือลด threshold เป็น 0) |
+| Fast embed detect | WS identify/check-in: det@320 แล้ว recognition (ข้าม det@640) | `FACE_FAST_EMBED_DETECT=false` |
+| In-memory WS path | ไม่เขียน `temp_images/` สำหรับ local InsightFace; รูป punch จาก bytes | — (path face-core ยังใช้ temp) |
+| Workers | `FACE_GPU_WORKERS` default **3** ต่อ API process ใน `docker-compose.gpu.yml` | `FACE_GPU_WORKERS=2` |
+
+คาด: detect/s ต่อจอจริงลดเหลือ ~2–5 เมื่อคนยืนนิ่ง; identify p95 ลดจากตัด disk + det640
+
+---
+
 ## 5. วิธีรันซ้ำ
 
 ```bash

@@ -267,6 +267,13 @@ def main() -> int:
     p.add_argument("--queue", type=Path, default=None)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--title", default="Loadtest capacity — FACE_GPU_WORKERS=2")
+    p.add_argument("--workers", type=int, default=2, help="FACE_GPU_WORKERS per API process")
+    p.add_argument(
+        "--env-note",
+        action="append",
+        default=[],
+        help="Extra environment bullet (repeatable), e.g. code build / flags",
+    )
     args = p.parse_args()
 
     report = build_report(
@@ -274,9 +281,10 @@ def main() -> int:
         env_lines=[
             "Host: `10.50.0.117` · URL: `http://10.50.0.117:8880`",
             "GPUs: 2× Quadro RTX 5000 16 GB",
-            "Dual API: `dpu-api` (GPU0) + `dpu-api-gpu1` (GPU1) · `FACE_GPU_WORKERS=2` each",
+            f"Dual API: `dpu-api` (GPU0) + `dpu-api-gpu1` (GPU1) · `FACE_GPU_WORKERS={args.workers}` each",
             "Client: realistic frames (1280 px, JPEG q70) · detect interval 90 ms",
             "SLO: session p95 ≤ 500 ms · detect p95 ≤ 550 ms · dropped ≤ 5%",
+            *args.env_note,
         ],
         idle_path=args.idle,
         rush3_path=args.rush3,

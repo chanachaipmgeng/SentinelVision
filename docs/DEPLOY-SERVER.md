@@ -83,7 +83,8 @@ nano .env
 | `SECRET_KEY` | สตริงสุ่มยาว | ใช้ใน production ต้องเปลี่ยน |
 | `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace (การ์ดใบเดียว) |
 | `FACE_DEVICES` | `cuda:0` | ในแต่ละ API process (dual-GPU overlay ตั้งให้อัตโนมัติ) |
-| `FACE_GPU_WORKERS` | `2` | workers ต่อ process (default ใน `docker-compose.gpu.yml`) |
+| `FACE_GPU_WORKERS` | `3` | workers ต่อ process (default ใน `docker-compose.gpu.yml`; ค่าใน `.env` จะทับ default) |
+| `FACE_FAST_EMBED_DETECT` | `true` | WS identify/check-in: det@320 แล้ว embed ทันที (ตั้ง `false` เพื่อกลับไป det@640) |
 | `FACE_DETECT_STALE_MS` | `400` | ทิ้งเฟรม detect ที่ค้างคิวนานเกินนี้ |
 | `FACE_IDENTIFY_CACHE_SECONDS` | `3` | ใช้ embedding จาก identify ซ้ำตอน check-in บน track เดิม |
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | ค่า cosine distance (ต่ำ = เข้ม) |
@@ -101,7 +102,7 @@ HTTP_PORT=80
 SECRET_KEY=ใส่ค่าสุ่มยาวอย่างน้อย-32-ตัวอักษร
 FACE_DEVICE=cuda:0
 FACE_DEVICES=cuda:0
-FACE_GPU_WORKERS=2
+FACE_GPU_WORKERS=3
 # การ์ดสองใบ: ใช้ docker-compose.gpu.yml → api + api-gpu1 (ไม่ต้องใส่ cuda:0,cuda:1 ใน process เดียว)
 FACE_RECOGNITION_THRESHOLD=0.40
 IMAGE_BLUR_THRESHOLD=20.0
@@ -134,7 +135,7 @@ FACE_DEVICES=cpu
 FACE_GPU_WORKERS=1
 ```
 
-จำนวน worker ที่แนะนำต่อ process: **2** (ค่า default ใน `docker-compose.gpu.yml`; ONNX ปล่อย GIL ได้) — อย่าตั้งสูงเกินโดยไม่วัดซ้ำ (ดู [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md))
+จำนวน worker ที่แนะนำต่อ process: **3** (ค่า default ใน `docker-compose.gpu.yml` ตั้งแต่รอบ 2; ONNX ปล่อย GIL ได้) — อย่าตั้งสูงเกินโดยไม่วัดซ้ำ (ดู [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) §4b และ [KIOSK-LOADTEST-PERF2-TABLE.md](KIOSK-LOADTEST-PERF2-TABLE.md))
 
 ---
 

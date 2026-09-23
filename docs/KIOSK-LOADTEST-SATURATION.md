@@ -99,6 +99,20 @@ flowchart LR
 
 คาด: detect/s ต่อจอจริงลดเหลือ ~2–5 เมื่อคนยืนนิ่ง; identify p95 ลดจากตัด disk + det640
 
+### ผลวัดรอบ 2 บน `10.50.0.117` (deploy 9d407e2d, workers=3) — ตาราง [KIOSK-LOADTEST-PERF2-TABLE.md](KIOSK-LOADTEST-PERF2-TABLE.md)
+
+> loadgen ยังส่ง detect เต็มอัตรา 90 ms (ไม่ได้ใช้ motion gating ของหน้าบ้าน) — ตัวเลขนี้จึงเป็น **เพดานฝั่ง server ล้วน**; ของจริงคีออสจะส่งน้อยกว่านี้อีก
+
+| โปรไฟล์ | ก่อน (workers=2, code 7b5b140d) | หลัง (workers=3, code 9d407e2d) |
+|---------|------------------|------------------|
+| idle × 3 คน/จอ | 24 จอ OK (p95 85 ms) | **32 จอ OK** (p95 113 ms) — ยังไม่ชนเพดาน |
+| rush × 3 คน/จอ | 6 จอ OK · 8 MARGIN · 16 FAIL (drop 57%) | **16 จอ OK** (detect p95 299 ms, drop 0%) |
+| rush × 1 คน/จอ | 12 จอ OK · 16 MARGIN | **24 จอ OK** (detect p95 381 ms) |
+| identify p95 @ rush×3 4 จอ | 326 ms | **187 ms** |
+| check-in p95 @ rush×3 4 จอ | 110 ms | 135 ms (เท่าเดิมโดยประมาณ — จำกัดที่ DB/dedupe) |
+
+Host metrics ระหว่างโหลด: GPU SM avg ~11% ต่อใบ (peak 31–35%), API CPU ~150% ต่อ process (p95 ~250%) → คอขวดยังเป็น **CPU ต่อ process** ไม่ใช่ GPU; ขั้นถัดไปถ้าต้องการเพดานสูงกว่านี้คือเพิ่ม API process (เช่น 2 process ต่อการ์ด) หรือย้าย whisper ออกจาก GPU0
+
 ---
 
 ## 5. วิธีรันซ้ำ

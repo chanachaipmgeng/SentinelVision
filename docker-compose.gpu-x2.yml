@@ -1,0 +1,44 @@
+# Two API processes per GPU (4 total) on top of docker-compose.gpu.yml.
+# Use when the host has spare CPU cores (GIL/decode is the bottleneck, not GPU).
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#     -f docker-compose.gpu-x2.yml up -d --build
+# Roll back: drop this overlay and `up -d --remove-orphans` (nginx returns to 2 upstreams).
+services:
+  api-gpu0b:
+    extends:
+      file: docker-compose.gpu.yml
+      service: api-gpu1
+    container_name: dpu-api-gpu0b
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+      NVIDIA_VISIBLE_DEVICES: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api-gpu1b:
+    extends:
+      file: docker-compose.gpu.yml
+      service: api-gpu1
+    container_name: dpu-api-gpu1b
+    environment:
+      CUDA_VISIBLE_DEVICES: "1"
+      NVIDIA_VISIBLE_DEVICES: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    volumes:
+      - ./docker/nginx/default.quad-gpu.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      api-gpu1:
+        condition: service_healthy
+      api-gpu0b:
+        condition: service_healthy
+      api-gpu1b:
+        condition: service_healthy
+      admin:
+        condition: service_started

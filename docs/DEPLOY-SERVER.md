@@ -127,6 +127,18 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 โหมด legacy (process เดียว + `FACE_DEVICES=cuda:0,cuda:1`) ยังใช้ได้แต่เสี่ยง pin ผิด — ต้องยืนยัน compute-apps ก่อนเชื่อ util บน GPU1
 
+**2 process ต่อการ์ด (quad API)** — ใช้เมื่อโฮสต์มี CPU core เหลือ (คอขวดคือ GIL/decode ต่อ process ไม่ใช่ GPU; server ปัจจุบัน 32 core):
+
+```bash
+# เพิ่ม dpu-api-gpu0b (GPU0) + dpu-api-gpu1b (GPU1) และ mount nginx default.quad-gpu.conf (4 upstreams)
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.gpu-x2.yml up -d --build
+# ถอยกลับเป็น 2 process: ตัด -f docker-compose.gpu-x2.yml แล้ว up -d --remove-orphans
+```
+
+ตรวจ: `docker exec dpu-nginx grep -c "server api" /etc/nginx/conf.d/default.conf` ต้องได้ `4`; ทุก `dpu-api*` healthy · ผลวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) §4c
+
+งานอื่นบน GPU (`whisper_server` ของ `myhr`, พอร์ต 8091): รันด้วย `CUDA_VISIBLE_DEVICES=1` (ย้ายออกจาก GPU0 ตั้งแต่รอบ 3) — คำสั่งอยู่ใน `/home/whisper_server/run.txt`
+
 ไม่มี GPU ให้ตั้ง:
 
 ```env

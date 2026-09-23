@@ -1,0 +1,49 @@
+# Three API processes per GPU (6 total) on top of gpu.yml + gpu-x2.yml.
+# Saturation / max-throughput experiment when UX/SLO is not the goal.
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#     -f docker-compose.gpu-x2.yml -f docker-compose.gpu-x3.yml up -d --build
+# Roll back to quad: drop this overlay and `up -d --remove-orphans`
+#   (nginx returns to default.quad-gpu.conf via gpu-x2).
+services:
+  api-gpu0c:
+    extends:
+      file: docker-compose.gpu.yml
+      service: api-gpu1
+    container_name: dpu-api-gpu0c
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+      NVIDIA_VISIBLE_DEVICES: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api-gpu1c:
+    extends:
+      file: docker-compose.gpu.yml
+      service: api-gpu1
+    container_name: dpu-api-gpu1c
+    environment:
+      CUDA_VISIBLE_DEVICES: "1"
+      NVIDIA_VISIBLE_DEVICES: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  nginx:
+    volumes:
+      - ./docker/nginx/default.hexa-gpu.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      api-gpu1:
+        condition: service_healthy
+      api-gpu0b:
+        condition: service_healthy
+      api-gpu1b:
+        condition: service_healthy
+      api-gpu0c:
+        condition: service_healthy
+      api-gpu1c:
+        condition: service_healthy
+      admin:
+        condition: service_started

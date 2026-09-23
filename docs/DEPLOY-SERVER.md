@@ -137,6 +137,16 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose
 
 ตรวจ: `docker exec dpu-nginx grep -c "server api" /etc/nginx/conf.d/default.conf` ต้องได้ `4`; ทุก `dpu-api*` healthy · ผลวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) §4c
 
+**3 process ต่อการ์ด (hexa API — ทดลอง saturation)** — ช่วย idle concurrent แต่ทำให้ rush latency แย่ลง (ดู §4d):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+  -f docker-compose.gpu-x2.yml -f docker-compose.gpu-x3.yml up -d --build
+# ถอยกลับเป็น quad: ตัด -f docker-compose.gpu-x3.yml แล้ว up -d --remove-orphans
+```
+
+ตรวจ: nginx ต้องมี `6` บรรทัด `server api`; ผลวัด: [KIOSK-LOADTEST-PERF4-TABLE.md](KIOSK-LOADTEST-PERF4-TABLE.md) · **แนะนำ production คง quad**
+
 งานอื่นบน GPU (`whisper_server` ของ `myhr`, พอร์ต 8091): รันด้วย `CUDA_VISIBLE_DEVICES=1` (ย้ายออกจาก GPU0 ตั้งแต่รอบ 3) — คำสั่งอยู่ใน `/home/whisper_server/run.txt`
 
 ไม่มี GPU ให้ตั้ง:

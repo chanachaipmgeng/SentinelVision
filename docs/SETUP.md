@@ -86,6 +86,8 @@ docker compose -f docker-compose.yml -f docker-compose.face-core.yml \
   run --rm -v ./API-Fast:/app --entrypoint python api scripts/smoke_face_core_bff.py
 ```
 
+**Server `10.50.0.117` (24 ก.ย. 2026):** ขึ้น Face Core dual-GPU + DPU BFF ได้ถึง smoke ผ่าน แต่ identify load ×1@16 เจอ `face_core_down` จำนวนมาก → **rollback แล้ว** เป็น quad w3 monolith — รายละเอียด [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) §6.6
+
 **Migrate existing enrollments** (does not delete local `face_encoding`):
 
 ```bash

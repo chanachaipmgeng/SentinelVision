@@ -316,6 +316,7 @@ Local ชี้ Core บนเซิร์ฟเวอร์: `docker-compose.fa
 | เอกสาร | เนื้อหา |
 |--------|---------|
 | **คู่มือนี้** | สรุปทุกวิธี + สเป็คที่ใช้จริง |
+| [KIOSK-CAPACITY-TEST-RESULTS.html](KIOSK-CAPACITY-TEST-RESULTS.html) | **ผลการเทสทุกรูปแบบ + กราฟ (HTML)** — อ่านสะดวกทีละโหมด |
 | [EXEC-SUMMARY-KIOSK-CAPACITY.html](EXEC-SUMMARY-KIOSK-CAPACITY.html) | **สรุปผู้บริหาร (HTML)** — วิธีที่ดีที่สุด · ค่าวัดจริง · สเป็คแนะนำ |
 | [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) | identify-only · hexa · Face Core §6.6–§6.8 |
 | [KIOSK-LOADTEST-PERF3-TABLE.md](KIOSK-LOADTEST-PERF3-TABLE.md) | ตาราง rush/idle รอบ quad |

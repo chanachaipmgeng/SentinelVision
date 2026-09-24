@@ -30,6 +30,18 @@ from sqlalchemy.orm import sessionmaker
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+# Register all ORM modules so string relationships resolve.
+from src.models import (  # noqa: E402,F401
+    company,
+    company_employee,
+    company_location,
+    department,
+    employee_timestamp,
+    face_encoding,
+    member,
+    position,
+    system_setting,
+)
 from src.models.face_encoding import FaceEncoding  # noqa: E402
 from src.models.company_employee import CompanyEmployee  # noqa: E402
 

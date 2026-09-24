@@ -1,10 +1,12 @@
 # สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)
 
-**วันที่วัดล่าสุด:** 23 กันยายน 2026 (รอบ saturation / dual-API)  
+> **ตัวเลขและการแนะนำสเป็คล่าสุด (24 ก.ย. 2026):** ดูคู่มือรวม  
+> **[KIOSK-CAPACITY-GUIDE.md](KIOSK-CAPACITY-GUIDE.md)**  
+> — production = **quad · workers=3** · ลงเวลา ~**24–32 จอ** · Face Core BFF บนเครื่องนี้ยังไม่แนะนำสำหรับดัน concurrent
+
+**วันที่วัดในไฟล์นี้ (บางส่วน):** 23 กันยายน 2026 (รอบ saturation / dual-API) — อาจต่ำกว่าเพดานรอบหลัง  
 **ระบบ:** Face Scan Time Attendance (DPU) · เซิร์ฟเวอร์ `face-in` (`10.50.0.117`)  
-**เอกสารเทคนิค:** [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) · [ตารางรอบ 3](KIOSK-LOADTEST-PERF3-TABLE.md) · [ตารางรอบ 2](KIOSK-LOADTEST-PERF2-TABLE.md) · [ตารางรอบ dual-API](KIOSK-LOADTEST-SATURATION-TABLE.md)  
-**รายงานรอบก่อน (conservative):** [KIOSK-LOADTEST-WORKERS2-CAPACITY.md](KIOSK-LOADTEST-WORKERS2-CAPACITY.md)  
-**ไฟล์ PDF:** [EXEC-SUMMARY-KIOSK-CAPACITY.pdf](EXEC-SUMMARY-KIOSK-CAPACITY.pdf) *(อาจยังเป็นตัวเลขรอบก่อน — ดูตารางด้านล่างเป็นปัจจุบัน)*
+**เอกสารเทคนิค:** [KIOSK-CAPACITY-GUIDE.md](KIOSK-CAPACITY-GUIDE.md) · [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) · [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) · [ตารางรอบ 3](KIOSK-LOADTEST-PERF3-TABLE.md)
 
 ---
 

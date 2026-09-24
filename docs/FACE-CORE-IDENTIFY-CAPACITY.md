@@ -341,7 +341,7 @@ SLO เข้ม: detect/identify p95 ≤ 550 ms · drop ≤ 5% · `face_core_do
 **สรุปเพดาน OK ภายใต้ SLO:** ประมาณ **≤ 2 จอ** (gated) · full-rate ไม่ผ่านแม้ @4  
 **เพดาน session-stable (ไม่มี `face_core_down`):** ×1 ≥ 32 · ×3 ≥ 24 (latency เกิน SLO ชัด)
 
-เทียบ §6.6 (server BFF · workers=1): @16 พังด้วย `face_core_down` ×1527 → รอบนี้ session นิ่งและไม่มี circuit trip แต่ **latency ยังห่างจาก monolith hexa (~48 จอ)** เพราะ (1) hop local BFF→remote Core (2) GPU1 แชร์กับ Whisper (3) Redis queue + pending/rate ต้องจูน
+เทียบ §6.6 (server BFF · workers=1): @16 พังด้วย `face_core_down` ×1527 → รอบนี้ session นิ่งและไม่มี circuit trip แต่ **latency ยังห่างจาก monolith hexa (~48 จอ)** เพราะ (1) hop local BFF→remote Core (2) GPU1 แชร์กับ Whisper (3) Redis queue + pending/rate ต้องจูน — **ยืนยันด้วย §6.8 co-locate แล้วว่าไม่ใช่แค่ hop: เพดาน Face Core บนเซิร์ฟเวอร์ยัง ≈ ≤2 จอ gated**
 
 **Attendance บนเซิร์ฟเวอร์:** ยัง quad monolith · ไม่เปิด DPU BFF
 
@@ -352,6 +352,50 @@ SLO เข้ม: detect/identify p95 ≤ 550 ms · drop ≤ 5% · `face_core_do
 - `scripts/kiosk-load/.cache/results-a1-w3*.jsonl`
 - `scripts/kiosk-load/.cache/results-a1-w3pin-*.jsonl`
 - `scripts/kiosk-load/.cache/nvidia-w3pin-watch.txt`
+
+### 6.8 Co-locate Face Core ceiling (server BFF · Whisper off)
+
+**24 ก.ย. 2026** — วัด identify ผ่าน **DPU BFF ชั่วคราวบน `10.50.0.117`** → Face Core บนเครื่องเดียวกัน (`face-core-api:8000`) · หยุด Whisper ระหว่างวัด · คืน **quad monolith** + พยายามสตาร์ท Whisper หลังจบ
+
+เงื่อนไข: pin `device_ids` ทั้งสอง GPU · queue/pending=128 · rate=6000 · loadgen จากเครื่อง local ชี้ `http://10.50.0.117:8880` (hop ที่เหลือเป็น client→nginx เหมือน monolith loadtest เดิม)
+
+#### A/B workers บน co-locate (identify ×1)
+
+| คอนฟิก | ×1@4 id p95 | ×1@8 id p95 | ×1@16 id p95 | gated×1@2 id p95 | gated×1@4 id p95 |
+|--------|-------------|-------------|--------------|------------------|------------------|
+| **W3 (3+3)** | 1170 | 2659 | 5534 | **562** | 916 |
+| W2 (2+2) | **1081** | 2685 | 5830 | 581 | **904** |
+
+**เลือกคง W3** — ต่างจาก W2 ในระดับ noise; gated@2 ใกล้ SLO ที่สุดด้วย W3 · **ไม่เพิ่ม workers=4 / ไม่เพิ่ม Face Core process** (ไม่มี GPU ใบที่ 3)
+
+#### เพดาน Face Core co-locate (W3)
+
+| โหมด | ผลภายใต้ SLO (det/id p95 ≤550 · drop ≤5% · ไม่มี `face_core_down`) |
+|------|---------------------------------------------------------------------|
+| Full-rate ×1 | **FAIL ตั้งแต่ @4** (id ~1.2 s) · session นิ่งถึง 32 |
+| Full-rate ×3 | **FAIL ตั้งแต่ @4** (id ~1.8 s) · session นิ่งถึง 24 |
+| Gated 600 ms ×1 | **@2 เกือบผ่าน** (id p95 **562**) · **@4 FAIL** |
+
+**สรุป concurrent เส้นทาง Face Core บนเซิร์ฟเวอร์นี้:** ประมาณ **≤ 2 จอ** (gated) — **ไม่ไล่ตาม monolith hexa (~48–64 จอ)** ได้ด้วยการจูน worker/queue อย่างเดียว
+
+สาเหตุโครง (ไม่ใช่แค่ hop เครือข่าย A+1):
+
+1. Face Core = **2 GPU process** vs monolith **hexa = 6 API process** (คอขวด CPU/GIL ต่อ process)
+2. BFF path = HTTP ไป Core ทุก detect/identify (overhead คิว Redis)
+3. การเพิ่ม `FACE_GPU_WORKERS` 2↔3 ไม่ปิดช่องว่าง
+
+**คำแนะนำ process/worker**
+
+| เส้นทาง | แนะนำ |
+|---------|--------|
+| Production attendance | คง **quad · `FACE_GPU_WORKERS=3`** · ตัวเลขวางแผน = monolith §1 |
+| Face Core (dev / อนาคต) | คง **2 โปรเซส × workers=3** · queue/pending=128 · rate สูง · hard-pin GPU · **อย่า cutover BFF ทั้งเครื่อง** จนกว่าจะเพิ่ม GPU node หรือยอมรับเพดาน ~2 จอ |
+| อย่าทำ | เพิ่ม DPU API process บนโหมด BFF เพื่อเร่ง face · workers≥4 บน Face Core โดยไม่มีหลักฐาน |
+
+#### ไฟล์ดิบ §6.8
+
+- `scripts/kiosk-load/.cache/results-coloc-w3-*.jsonl`
+- `scripts/kiosk-load/.cache/results-coloc-w2-*.jsonl`
 
 ---
 

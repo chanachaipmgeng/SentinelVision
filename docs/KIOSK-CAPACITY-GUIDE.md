@@ -242,7 +242,7 @@ Local ชี้ Core บนเซิร์ฟเวอร์: `docker-compose.fa
 | เอกสาร | เนื้อหา |
 |--------|---------|
 | **คู่มือนี้** | สรุปทุกวิธี + สเป็คที่ใช้จริง |
-| [EXEC-SUMMARY-KIOSK-CAPACITY.md](EXEC-SUMMARY-KIOSK-CAPACITY.md) | สรุปผู้บริหาร (อาจเก่ากว่า — อ้างตารางในคู่มือนี้เป็นหลัก) |
+| [EXEC-SUMMARY-KIOSK-CAPACITY.html](EXEC-SUMMARY-KIOSK-CAPACITY.html) | **สรุปผู้บริหาร (HTML)** — วิธีที่ดีที่สุด · ค่าวัดจริง · สเป็คแนะนำ |
 | [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) | identify-only · hexa · Face Core §6.6–§6.8 |
 | [KIOSK-LOADTEST-PERF3-TABLE.md](KIOSK-LOADTEST-PERF3-TABLE.md) | ตาราง rush/idle รอบ quad |
 | [KIOSK-LOADTEST.md](KIOSK-LOADTEST.md) | วิธีรัน `kiosk_load.py` |

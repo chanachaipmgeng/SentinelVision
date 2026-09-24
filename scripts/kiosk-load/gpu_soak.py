@@ -12,6 +12,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -144,8 +145,50 @@ def run_kiosk_chunk(
     if prepare:
         cmd.append("--prepare")
     print("RUN:", " ".join(cmd), flush=True)
-    return subprocess.call(cmd, env=os.environ.copy())
+    # Retry whole chunk once on early transport failure (login ConnectTimeout)
+    rc = subprocess.call(cmd, env=os.environ.copy())
+    if rc != 0:
+        print(f"chunk failed rc={rc}; retrying once after 5s", flush=True)
+        time.sleep(5.0)
+        rc = subprocess.call(cmd, env=os.environ.copy())
+    return rc
 
+
+def sample_mid_chunk(
+    *,
+    stop: threading.Event,
+    hold: float,
+    helper_uploaded: bool,
+    pw: str,
+    samples: list[dict[str, Any]],
+    chunk_i: int,
+    writer: csv.DictWriter,
+    fh,
+) -> None:
+    """Sample metrics ~halfway through the hold window while load is active."""
+    wait_s = max(30.0, hold * 0.45)
+    if stop.wait(wait_s):
+        return
+    raw = _ssh(f"export DPU_SUDO_PW='{pw}'; bash /tmp/remote_soak_metrics.sh")
+    parsed = parse_metrics(raw)
+    samples.append({"when": f"mid_chunk_{chunk_i}", "t": time.time(), **parsed})
+    g0 = next((g for g in parsed.get("gpus", []) if g["index"] == 0), {})
+    g1 = next((g for g in parsed.get("gpus", []) if g["index"] == 1), {})
+    api = next((c for c in parsed.get("containers", []) if c["name"] == "dpu-api"), {})
+    row = {
+        "t": time.time(),
+        "chunk": chunk_i,
+        "phase": "mid",
+        "gpu0_sm": g0.get("sm"),
+        "gpu1_sm": g1.get("sm"),
+        "gpu0_mem": g0.get("mem_used_mib"),
+        "gpu1_mem": g1.get("mem_used_mib"),
+        "api_mem_pct": api.get("mem_pct"),
+        "api_cpu": api.get("cpu"),
+    }
+    writer.writerow(row)
+    fh.flush()
+    print(json.dumps(row, ensure_ascii=False), flush=True)
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
@@ -180,6 +223,7 @@ def main() -> int:
     csv_fields = [
         "t",
         "chunk",
+        "phase",
         "gpu0_sm",
         "gpu1_sm",
         "gpu0_mem",
@@ -197,6 +241,22 @@ def main() -> int:
             hold = min(args.chunk_hold, max(60.0, remain))
             jsonl = CACHE / f"results-soak-chunk-{chunk_i:02d}.jsonl"
             t_chunk = time.time()
+            stop = threading.Event()
+            mid_thread = threading.Thread(
+                target=sample_mid_chunk,
+                kwargs={
+                    "stop": stop,
+                    "hold": hold,
+                    "helper_uploaded": True,
+                    "pw": pw,
+                    "samples": samples,
+                    "chunk_i": chunk_i,
+                    "writer": w,
+                    "fh": fh,
+                },
+                daemon=True,
+            )
+            mid_thread.start()
             rc = run_kiosk_chunk(
                 base_url=args.base_url,
                 company_id=args.company_id,
@@ -208,6 +268,8 @@ def main() -> int:
                 lat=args.lat,
                 lon=args.lon,
             )
+            stop.set()
+            mid_thread.join(timeout=5.0)
             prepare_once = False
             raw = _ssh(f"export DPU_SUDO_PW='{pw}'; bash /tmp/remote_soak_metrics.sh")
             parsed = parse_metrics(raw)
@@ -230,6 +292,7 @@ def main() -> int:
             row = {
                 "t": time.time(),
                 "chunk": chunk_i,
+                "phase": "after",
                 "gpu0_sm": g0.get("sm"),
                 "gpu1_sm": g1.get("sm"),
                 "gpu0_mem": g0.get("mem_used_mib"),
@@ -261,15 +324,24 @@ def main() -> int:
     if start_mem is not None and end_mem is not None and start_mem > 0:
         leak_suspect = (end_mem - start_mem) / start_mem >= 0.20
 
-    # average sm from samples mid-run
+    # Prefer mid-chunk SM averages when present
     sm0: list[float] = []
     sm1: list[float] = []
     for s in samples:
+        if not str(s.get("when", "")).startswith("mid_chunk_"):
+            continue
         for g in s.get("gpus") or []:
             if g["index"] == 0 and g.get("sm") is not None:
                 sm0.append(float(g["sm"]))
             if g["index"] == 1 and g.get("sm") is not None:
                 sm1.append(float(g["sm"]))
+    if not sm0 and not sm1:
+        for s in samples:
+            for g in s.get("gpus") or []:
+                if g["index"] == 0 and g.get("sm") is not None:
+                    sm0.append(float(g["sm"]))
+                if g["index"] == 1 and g.get("sm") is not None:
+                    sm1.append(float(g["sm"]))
 
     summary = {
         "ts": time.time(),

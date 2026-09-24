@@ -204,6 +204,24 @@ DPU ไม่ถือ GPU · ส่งงานใบหน้าไป Face Co
 
 LAN ปกติรับได้ · E2E ความจุยังใช้ **WS `kiosk_load`** เป็นหลัก (ไม่มี Playwright เปิดกล้องคีออสใน repo รอบนี้)
 
+### 3.3 รอบยืนยันหลังจูน nginx upstream (25 ก.ย. 2026)
+
+**จูนที่ลงมือ:** `docker/nginx/default.quad-gpu.conf` — `max_fails=5 fail_timeout=10s` (เดิม `3` / `20s`) ทั้ง 4 upstream · recreate **nginx เท่านั้น** · ไม่แตะ `FACE_GPU_WORKERS` / `DB_POOL_*` / Face Core
+
+**ฮาร์เนส:** `gpu_soak` retry login + sample GPU กลาง chunk · spike เก็บสเต็ป 20/50/100 · สรุป JSON: `scripts/kiosk-load/.cache/summary-verify-battery.json`
+
+| # | เทส | ก่อน (§3.2 / เป้า) | หลังจูน | ผล |
+|---|------|-------------------|---------|-----|
+| V1 | Identify gated 24 จอ · 10 นาที | ~900 scans/min · p95≤550 · drop≤5% | **878.7**/min · p95 **381.6** ms · drop **0%** | ผ่าน |
+| V2 | Identify gated 32 จอ · 10 นาที | ~1100 scans/min · SLO เดิม | **1103.1**/min · p95 **262.1** ms · drop **0%** | ผ่าน |
+| V3 | Spike HTTP · conc 20/50/100 | 502: 0@50 · **9@100** · peak ~23 RPS | 502: 0@20 · 0@50 · **5@100** · peak **27.4** RPS | **ไม่แย่ลง** (502@100 ลด) |
+| V4 | Soak ~45 นาที @24 (chunk 600s ×5) | Mem คงที่ · มี ConnectTimeout กลางรอบ | Mem **0.42→0.42** · fail chunks **0** · mid SM GPU0/1 ≈1.8%/5.2% | ผ่าน |
+| V5 | pgvector @20k · 100/250 (+ R/W) | p95@250 ≈681 ms · errors=0 | p95@250 **524** ms · R/W p95 **182** ms · errors=0 | ผ่าน |
+
+**คำตัดสิน:** `overall_ok=true` · **`nginx_tune_keep=true`** — คงค่า `max_fails=5 fail_timeout=10s` · **ไม่ rollback**
+
+Rollback (ถ้าต้องการคืนค่าเดิม): ตั้ง `max_fails=3 fail_timeout=20s` แล้ว recreate nginx
+
 ---
 
 ## 4. ตารางเปรียบเทียบด้านเดียว (เลือกสเป็ค)
@@ -216,8 +234,8 @@ LAN ปกติรับได้ · E2E ความจุยังใช้ *
 | แกลเลอรีบริษัทใหญ่ (หมื่นใบหน้า) กระทบไหม? | ถึง ~**35k**/บริษัทยังผ่าน SLO ที่ 16 จอ — คอขวดคือจอพร้อมกัน |
 | หลายบริษัทช่วยเพิ่มความจุไหม? | **ไม่เพิ่มเพดานจอ** · แค่กระจายโหลด; วัดด้วยจอรวมคงที่แล้ว latency ใกล้เคียง |
 | เปิด Face Core BFF ทั้งเครื่องดีไหม? | **ยังไม่** บนฮาร์ดแวร์นี้ — เพดาน ~2 จอ |
-| อยากได้ความจุสูงกว่านี้? | เพิ่ม GPU/โหนด — **อย่าจูน env ซ้ำ** (spike/soak/pgvector รอบ §3.2 ไม่ชี้คอขวด pool) |
-| HTTP identify พัน concurrent? | ไม่รองรับภายใต้ 1s · peak ~23 RPS · ใช้โหมดคีออส WS แทน |
+| อยากได้ความจุสูงกว่านี้? | เพิ่ม GPU/โหนด — **อย่าจูน env/pool ซ้ำ** (§3.2–§3.3 ไม่ชี้คอขวด pool; จูน nginx upstream แล้วคงไว้) |
+| HTTP identify พัน concurrent? | ไม่รองรับภายใต้ 1s · peak ~23–27 RPS · ใช้โหมดคีออส WS แทน |
 
 ---
 
@@ -316,4 +334,4 @@ Local ชี้ Core บนเซิร์ฟเวอร์: `docker-compose.fa
 | **หาชื่ออย่างเดียวสูงสุดที่เคยพิสูจน์** | **~48–64** (hexa ชั่วคราว) |
 | **แกลเลอรี / บริษัท** | ~35k ใบหน้า/บริษัทยังโอเค · หลายบริษัทไม่เพิ่มเพดานจอ |
 | **Face Core บนเครื่องนี้** | จูนเต็มที่แล้ว · เพดาน ~**2** จอ · ไม่ใช่ทางเพิ่ม concurrent |
-| **จูน env ต่อไหม** | **ไม่จำเป็น** — spike/soak/pgvector ไม่ชี้คอขวด pool/VRAM leak |
+| **จูน env ต่อไหม** | **ไม่จำเป็น** — คง nginx `max_fails=5 fail_timeout=10s` (§3.3) · ไม่ขยาย pool/workers |

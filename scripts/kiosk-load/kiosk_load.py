@@ -145,17 +145,29 @@ def require_creds() -> tuple[str, str]:
     return user, password
 
 
-def login(base_url: str, user: str, password: str) -> str:
+def login(base_url: str, user: str, password: str, *, retries: int = 3) -> str:
     url = f"{base_url.rstrip('/')}/auth/login"
-    with httpx.Client(timeout=30.0) as client:
-        resp = client.post(url, json={"username": user, "password": password})
-        if resp.status_code != 200:
-            raise Fail(f"login failed HTTP {resp.status_code}: {resp.text[:300]}")
-        data = resp.json()
-        token = data.get("access_token") or data.get("accessToken")
-        if not token:
-            raise Fail(f"login response missing access_token: {data}")
-        return str(token)
+    last_exc: Exception | None = None
+    for attempt in range(1, max(1, retries) + 1):
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                resp = client.post(url, json={"username": user, "password": password})
+                if resp.status_code != 200:
+                    raise Fail(f"login failed HTTP {resp.status_code}: {resp.text[:300]}")
+                data = resp.json()
+                token = data.get("access_token") or data.get("accessToken")
+                if not token:
+                    raise Fail(f"login response missing access_token: {data}")
+                return str(token)
+        except (httpx.TransportError, httpx.TimeoutException, Fail) as exc:
+            last_exc = exc
+            if attempt >= retries:
+                break
+            wait_s = 2.0 * attempt
+            print(f"  login retry {attempt}/{retries} after {type(exc).__name__}; sleep {wait_s:.0f}s", flush=True)
+            time.sleep(wait_s)
+    assert last_exc is not None
+    raise last_exc
 
 
 def ensure_face_image() -> bytes:

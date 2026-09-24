@@ -264,6 +264,17 @@ tr:nth-child(even) td { background: #f7fafc; }
   <li>วางแผนติดตั้งให้คิดจาก <strong>จอสูงสุดพร้อมกันทั้งเครื่อง</strong> ไม่ใช่จำนวนบริษัท</li>
 </ul>
 
+<h3>3.6 เทสเสริม (Spike / Soak / Vector / เน็ต) — สรุปสั้น</h3>
+<ul>
+  <li><strong>Spike HTTP identify:</strong> ดัน concurrency สูงได้ peak ประมาณ <strong>~23 รูป/วินาที</strong> · ช้าเกิน 1–2 วินาทีตั้งแต่หลักสิบ concurrent · มี HTTP 502 บ้างที่โหลดสูง · <strong>ไม่พบ 504</strong> และ <strong>DB connection ไม่ชนเพดาน</strong></li>
+  <li><strong>Soak 2 ชั่วโมง:</strong> RAM คอนเทนเนอร์ API <strong>ไม่โตสะสม</strong> · GPU ทั้งสองใบมี VRAM ค้างใช้งาน</li>
+  <li><strong>ค้นหา 20,000 ใบหน้า:</strong> ยิงค้นหาพร้อมกันหลักร้อย–ห้าร้อย รายการยังจบในระดับร้อยมิลลิวินาที (p95) · เขียนพร้อมอ่านไม่ทำให้ค้างล็อก</li>
+  <li><strong>แบนด์วิดท์:</strong> 24–32 จอส่งเฟรมรวมราว <strong>40–52 Mbps</strong> — ไม่น่าเป็นคอขวดบน LAN ปกติ</li>
+</ul>
+<div class="warn">
+  <strong>ยังไม่ต้องจูนค่าเซิร์ฟเวอร์เพิ่มจากรอบนี้</strong> — ไม่มีหลักฐานว่าต้องขยาย DB pool หรือปรับดัชนีเวกเตอร์เพื่อดันความจุคีออส
+</div>
+
 <h2>4. สเป็คที่แนะนำให้ล็อกใช้ (Production)</h2>
 <table>
   <thead>

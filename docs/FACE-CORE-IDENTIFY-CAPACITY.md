@@ -4,7 +4,8 @@
 **วัดเพดานสุดท้ายหลังจูน:** 24 ก.ย. 2026 ~03:43–04:20 · A/B + push ceiling · **hexa** · `FACE_GPU_WORKERS=2`  
 **วัดดัน >48 จนไม่ไหว:** 24 ก.ย. 2026 ~07:50+ · hexa w2 · ดู §3c  
 **โฮสต์:** `10.50.0.117` (32c / 436GB / 2× Quadro RTX 5000)  
-**เครื่องมือ:** `kiosk_load.py --profile identify` · `http_identify_load.py`  
+**คู่มืออ่านง่าย (สรุปทุกวิธี + สเป็คที่ใช้จริง):** [KIOSK-CAPACITY-GUIDE.md](KIOSK-CAPACITY-GUIDE.md)  
+**เครื่องมือ:** `kiosk_load.py --profile identify` · `http_identify_load.py`
 **SLO คีออส:** detect p95 ≤ 550 ms · drop ≤ 5% · identify p95 ≤ 550 ms  
 **SLO HTTP one-shot:** identify p95 ≤ 1000 ms · error ≤ 5%  
 **Production attendance (คืนแล้ว):** **quad** · `FACE_GPU_WORKERS=3` — hexa ใช้เฉพาะตอนหาเพดาน identify-only

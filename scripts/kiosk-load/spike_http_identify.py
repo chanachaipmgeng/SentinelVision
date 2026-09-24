@@ -193,7 +193,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--base-url", default=DEFAULT_BASE)
     p.add_argument("--company-id", default=DEFAULT_COMPANY)
-    p.add_argument("--concurrency", default="50,100,200,500,1000")
+    p.add_argument("--concurrency", default="20,50,100")
     p.add_argument("--requests-per-step", type=int, default=500)
     p.add_argument("--sample-pool", action="store_true", default=True)
     p.add_argument("--no-sample-pool", action="store_true")

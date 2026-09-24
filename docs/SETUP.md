@@ -77,6 +77,15 @@ docker compose -f docker-compose.yml -f docker-compose.face-core.yml up -d --bui
 
 No NVIDIA device: swap the Face Core line for `docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.face-net.yml up -d --build` and set `FACE_DEVICE=cpu`. Two GPUs on a Linux server: use `scripts/deploy-stack.sh` (see [DEPLOY-SERVER.md](DEPLOY-SERVER.md) section 10). Do not add `docker-compose.gpu.yml` to the DPU command — that gives the GPU to DPU and leaves Face Core without it.
 
+**Local DPU → remote Face Core (dev):** Face Core รันบนเซิร์ฟเวอร์ (`10.50.0.117:8081`) ส่วน DPU รันบนเครื่อง local:
+
+```bash
+# .env: FACE_CORE_ENABLED=true
+#       FACE_CORE_URL=http://10.50.0.117:8081
+#       FACE_CORE_API_KEY=<same as server BOOTSTRAP_API_KEY>
+docker compose -f docker-compose.yml -f docker-compose.face-core-remote.yml up -d --build
+```
+
 Expect Face Core `GET http://127.0.0.1:8081/v1/health` to show `device` `cuda:0` (or `cpu`). DPU `GET /ready` on the nginx port must show the same device and `service: face-core`. `GET /face/queue-stats` with a DPU JWT returns `source: face-core`. Set `FACE_CORE_ENABLED=false` and drop the face-core overlay to fall back to local InsightFace.
 
 **Local BFF verified (24 ก.ย. 2026):** Face Core CPU + DPU `docker-compose.face-core.yml` บน Docker Desktop — `/v1/health` `device=cpu` · `/ready` `service: face-core` · `/face/queue-stats` `source: face-core` · `scripts/smoke_face_core_bff.py` ผ่าน (enroll / identify / check-in-walkby / verify). Smoke ต้อง login JWT (`admin` / seed password) เพราะ `FACE_ROUTES_REQUIRE_JWT=true`:

@@ -44,6 +44,6 @@ Shared finalize: `_finalize_check_in` (match **within company** → company empl
 - Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true`, do not double-insert
 - Outside geofence: `create_timestamp` needs a `note` — kiosk sends a default note
 - Nginx: WebSocket needs `^~ /face/ws/` with `Upgrade` headers (`default.conf` or dual-GPU `default.dual-gpu.conf`)
-- Single-host capacity: dual API first; Face Core BFF only when scaling across hosts / many replicas (see `docs/KIOSK-LOADTEST-SATURATION.md`)
+- Single-host capacity: dual/hexa API first (`docs/KIOSK-LOADTEST-SATURATION.md`); Face Core BFF for cross-host — tune Core workers/queue/pending/rate + GPU `device_ids` pin (`docs/FACE-CORE-IDENTIFY-CAPACITY.md` §6.7) before cutover
 - Do not add `DROP TABLE` or `create_all`-style destructive steps at startup; schema changes go in `utils/schema_migrate.py` (idempotent SQL) and an Alembic revision under `API-Fast/alembic/versions/`
 - Mutating handlers are audited by the middleware; do not log passwords, tokens, or embeddings

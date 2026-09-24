@@ -95,7 +95,14 @@ docker compose -f docker-compose.yml -f docker-compose.face-core.yml \
   run --rm -v ./API-Fast:/app --entrypoint python api scripts/smoke_face_core_bff.py
 ```
 
-**Server `10.50.0.117` (24 ก.ย. 2026):** ขึ้น Face Core dual-GPU + DPU BFF ได้ถึง smoke ผ่าน แต่ identify load ×1@16 เจอ `face_core_down` จำนวนมาก → **rollback แล้ว** เป็น quad w3 monolith — รายละเอียด [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) §6.6
+**Server `10.50.0.117` (24 ก.ย. 2026):**
+
+| รอบ | ผล |
+|-----|-----|
+| §6.6 co-locate DPU BFF | smoke ผ่าน · identify ×1@16 `face_core_down` ถล่ม → **rollback** attendance เป็น **quad w3 monolith** |
+| §6.7 A+1 (local BFF → FC `:8081`) | จูน Face Core: workers=3/GPU · queue/pending=128 · rate=6000 · **hard-pin GPU0/GPU1** · session นิ่งถึง ×1@32 แต่ SLO p95≤550 ผ่านแค่ ~gated ×1@2 — รายละเอียด [FACE-CORE-IDENTIFY-CAPACITY.md](FACE-CORE-IDENTIFY-CAPACITY.md) §6.6–§6.7 |
+
+Attendance production บนเซิร์ฟเวอร์ยัง monolith · Face Core เปิด `:8081` สำหรับ dev remote BFF ได้ (อย่า cutover DPU BFF ทั้งเครื่องจนกว่า latency จะใกล้ monolith)
 
 **Migrate existing enrollments** (does not delete local `face_encoding`):
 

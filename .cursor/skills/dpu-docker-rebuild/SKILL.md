@@ -31,7 +31,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api
 
 Production adds `-f docker-compose.prod.yml` (no published Postgres port, resource limits).
 
-BFF (Face Core holds the GPUs): also `-f docker-compose.face-core.yml` after `docker network create face-net`. Prefer **dual-API** for single-host saturation; Face Core when scaling across hosts. `scripts/deploy-stack.sh` starts face-core first, waits for `/v1/ready`, then DPU, then smokes `/health` `/ready` `/docs` `/companys`.
+BFF (Face Core holds the GPUs): `-f docker-compose.face-core.yml` after `docker network create face-net` (same host), or `-f docker-compose.face-core-remote.yml` with `FACE_CORE_URL` for a remote `:8081`. Prefer **dual-API** for single-host saturation; Face Core when scaling across hosts. `scripts/deploy-stack.sh` starts face-core first, waits for `/v1/ready`, then DPU, then smokes `/health` `/ready` `/docs` `/companys`.
 
 Loadgen on the same network:
 
@@ -89,18 +89,22 @@ Dual-GPU nginx uses a static upstream list — recreate `dpu-nginx` whenever `ap
 
 ## Capacity / loadtest
 
-See [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md). Use realistic frames (`--frame-width 1280 --jpeg-quality 70`) and optional `--profile stress --rate`.
+- Monolith dual/hexa: [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md)
+- Face Core identify (local or remote BFF): [docs/FACE-CORE-IDENTIFY-CAPACITY.md](../../docs/FACE-CORE-IDENTIFY-CAPACITY.md) §6.6–§6.7
+- Frames: `--frame-width 1280 --jpeg-quality 70` · profile `identify` / `rush`
+
+Remote A+1 tip: raise Face Core `FACE_GPU_WORKERS` (2–3), `FACE_GPU_QUEUE_SIZE` + `FACE_GPU_MAX_PENDING_PER_COMPANY` (128), `RATE_LIMIT_*`, and hard-pin GPUs with `device_ids` — otherwise WS detect storms → 429 → DPU `face_core_down` circuit.
 
 ## Next tests (BFF, not required for single-host GPU saturation)
 
-Run on a host that has both checkouts and `face-net`. Do not migrate production faces until 1–4 pass.
+Run on a host that has both checkouts and `face-net`, or local DPU + remote `:8081`. Do not migrate production faces until 1–4 pass.
 
-1. Face Core `GET /v1/ready` 200 with `BOOTSTRAP_API_KEY` set (placeholder must fail startup).
-2. DPU with `docker-compose.face-core.yml`: `GET /ready` 200 and body includes Face Core health. Stop `face-core-api` → `/ready` 503 `face_core_down`, then recover.
+1. Face Core `GET /v1/ready` 200 with `BOOTSTRAP_API_KEY` set (placeholder must fail startup). Dual-GPU: both GPU UUIDs show Face Core in `nvidia-smi`.
+2. DPU with `docker-compose.face-core.yml` or `face-core-remote.yml`: `GET /ready` 200 and body includes Face Core health. Stop `face-core-api` → `/ready` 503 `face_core_down`, then recover.
 3. `GET /face/queue-stats` with a DPU JWT returns `source: face-core`. Kiosk WS `session` with token → `session_ok`; without token → error. Leave the socket open past the warning window → `token_expiring` then a new `session`.
 4. Company admin of company A: face `identify` / `POST /departments` for company B → 403.
 5. `scripts/migrate-faces.sh` dry-run, then real, on a copy of the DB. Face count on Face Core equals `face_encoding` per company. Spot-check 20 `POST /v1/verify`. Rollback = drop the BFF overlay; local rows stay.
-6. Stop `face-core-gpu1` only. Identify still succeeds on `cuda:0`.
+6. Stop `face-core-gpu1` only. Identify still succeeds on GPU0.
 7. Soft-delete an employee → gone from `GET /employees/company/{id}`; row still in Postgres with `deleted_at`.
 8. Excel import via UI polls `import-jobs` until `done`.
 

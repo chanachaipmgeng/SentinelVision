@@ -26,16 +26,18 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core B
 # Local InsightFace — dual GPU = api + api-gpu1 (see docker-compose.gpu.yml)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
-# Production BFF: Face Core holds both GPUs (cross-host / many API replicas).
-# Prefer dual-API above for single-host saturation. See scripts/deploy-stack.sh
+# Same-host BFF: Face Core on face-net (prefer dual-API for single-host saturation).
 docker network create face-net
 docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.face-core.yml up -d --build
+
+# Local DPU → remote Face Core (dev / A+1): FACE_CORE_URL=http://<host>:8081
+docker compose -f docker-compose.yml -f docker-compose.face-core-remote.yml up -d --build
 ```
 
 - Admin: `http://localhost/`
 - API docs: `http://localhost/docs`
 - Kiosk: `http://localhost/company/timestamp-face`
-- Loadtest: `scripts/kiosk-load/` · capacity notes in `docs/KIOSK-LOADTEST-SATURATION.md`
+- Loadtest: `scripts/kiosk-load/` · monolith saturation `docs/KIOSK-LOADTEST-SATURATION.md` · Face Core identify `docs/FACE-CORE-IDENTIFY-CAPACITY.md`
 
 Code is **baked into images** — rebuild after source changes (`api`, `api-gpu1`, `admin`, `nginx` as needed).
 
@@ -46,7 +48,7 @@ Code is **baked into images** — rebuild after source changes (`api`, `api-gpu1
 - `companyId` in a path, form, or body must be bound to the caller: use `assert_request_company_access(request, db, companyId)` from `src/security/deps.py`
 - New members get a random temporary password + `mustChangePassword`; never write `1234`
 - Kiosk WebSocket `session` carries `token`; server sends `token_expiring` when < 5 min remain
-- BFF: `FACE_CORE_API_KEY` required when `FACE_CORE_ENABLED=true`; `/ready` pings Face Core; 503 `face_core_down` opens a 15s circuit
+- BFF: `FACE_CORE_API_KEY` required when `FACE_CORE_ENABLED=true`; `/ready` pings Face Core; 503 `face_core_down` opens a ~15s circuit (also tripped by Face Core 429 pending/rate — raise Core `FACE_GPU_MAX_PENDING_PER_COMPANY` / `RATE_LIMIT_*` under multi-kiosk)
 - Deletes set `deletedAt` (member, company, employee, department, position, location) — list queries hide them
 - Writes are audited (`audit_log`); notifications go through `notification_outbox`
 

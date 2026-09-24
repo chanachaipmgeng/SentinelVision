@@ -28,7 +28,9 @@ Each process sees a single device as `cuda:0`. Do **not** set `FACE_DEVICES=cuda
 
 ### BFF (Face Core holds the GPUs)
 
-`-f docker-compose.face-core.yml` after `docker network create face-net`. Image is `API-Fast/Dockerfile.bff` (SDK baked in; sibling `../face-core/sdk/python` required at build). `FACE_CORE_API_KEY` has no default. `scripts/deploy-stack.sh` starts face-core first. Prefer dual-API above for single-host saturation; Face Core when scaling across hosts / many API replicas.
+`-f docker-compose.face-core.yml` after `docker network create face-net` (same host). Image is `API-Fast/Dockerfile.bff` (SDK baked in; sibling `../face-core/sdk/python` required at build). `FACE_CORE_API_KEY` has no default. `scripts/deploy-stack.sh` starts face-core first.
+
+**Remote Core:** `-f docker-compose.face-core-remote.yml` with `FACE_CORE_URL=http://<host>:8081` (Face Core must publish LAN — sibling `docker-compose.publish-lan.yml`). Prefer dual-API above for single-host saturation; Face Core when scaling across hosts / many API replicas. Identify ceilings: `docs/FACE-CORE-IDENTIFY-CAPACITY.md` §6.7.
 
 ### Loadtest generator
 

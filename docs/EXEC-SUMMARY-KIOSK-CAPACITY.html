@@ -2,61 +2,76 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>สรุปผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)</title>
   <style>
-@page { size: A4; margin: 18mm 16mm; }
+@page { size: A4; margin: 16mm 14mm; }
 * { box-sizing: border-box; }
 body {
   font-family: "Sarabun", "Leelawadee UI", "Tahoma", "Segoe UI", sans-serif;
   font-size: 11pt;
-  line-height: 1.45;
+  line-height: 1.5;
   color: #1a1a1a;
-  max-width: 900px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: 12px 8px 24px;
+  padding: 16px 12px 32px;
+  background: #fff;
 }
 h1 {
-  font-size: 18pt;
+  font-size: 20pt;
   color: #0b3d5c;
   border-bottom: 3px solid #0b3d5c;
-  padding-bottom: 8px;
-  margin-top: 0;
+  padding-bottom: 10px;
+  margin: 0 0 0.4em;
 }
 h2 {
-  font-size: 13pt;
+  font-size: 13.5pt;
   color: #0b3d5c;
-  margin-top: 1.4em;
+  margin-top: 1.5em;
   border-left: 4px solid #2a9d8f;
   padding-left: 10px;
 }
-h3 { font-size: 11.5pt; color: #264653; margin-top: 1.1em; }
+h3 { font-size: 11.5pt; color: #264653; margin-top: 1.15em; }
 p { margin: 0.55em 0; }
-ul, ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
-li { margin: 0.25em 0; }
-hr { border: none; border-top: 1px solid #ccc; margin: 1.2em 0; }
-code {
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 0.92em;
-  background: #f3f5f7;
-  padding: 1px 5px;
-  border-radius: 3px;
+ul, ol { margin: 0.4em 0 0.7em 1.25em; padding: 0; }
+li { margin: 0.28em 0; }
+.meta { color: #445; font-size: 10pt; margin-bottom: 1em; }
+.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 1em 0 1.2em;
 }
-pre {
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 9.5pt;
-  background: #f3f5f7;
-  border: 1px solid #dde2e6;
-  border-radius: 6px;
-  padding: 10px 12px;
-  white-space: pre-wrap;
-  line-height: 1.35;
+.card {
+  background: linear-gradient(160deg, #f0f7fb 0%, #eef8f5 100%);
+  border: 1px solid #cfe0e8;
+  border-radius: 10px;
+  padding: 12px 14px;
 }
-blockquote {
-  margin: 0.8em 0;
+.card .label { font-size: 9.5pt; color: #456; margin-bottom: 4px; }
+.card .value { font-size: 16pt; font-weight: 700; color: #0b3d5c; line-height: 1.2; }
+.card .hint { font-size: 9pt; color: #567; margin-top: 4px; }
+.best {
+  background: #e8f7f2;
+  border: 1px solid #2a9d8f;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 1em 0;
+}
+.best strong { color: #0b5c4a; }
+.warn {
+  background: #fff8e8;
+  border-left: 4px solid #e9a825;
   padding: 10px 14px;
-  background: #eef7f5;
-  border-left: 4px solid #2a9d8f;
-  color: #234;
+  margin: 0.9em 0;
+  border-radius: 0 8px 8px 0;
+}
+.bad {
+  background: #fdeeee;
+  border-left: 4px solid #c0392b;
+  padding: 10px 14px;
+  margin: 0.9em 0;
+  border-radius: 0 8px 8px 0;
 }
 table {
   width: 100%;
@@ -76,97 +91,232 @@ th {
   font-weight: 600;
 }
 tr:nth-child(even) td { background: #f7fafc; }
-.meta { color: #445; }
-.footer {
-  margin-top: 1.5em;
-  font-size: 9.5pt;
-  color: #666;
-  font-style: italic;
-}
-.banner {
-  background: #0b3d5c;
+.ok { color: #1b7a4a; font-weight: 600; }
+.no { color: #a33; font-weight: 600; }
+.tag {
+  display: inline-block;
+  background: #2a9d8f;
   color: #fff;
-  padding: 10px 14px;
-  border-radius: 6px;
-  margin: 0 0 1em;
-  font-size: 10.5pt;
+  font-size: 9pt;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-right: 6px;
+  vertical-align: middle;
 }
-.banner strong { color: #9ef0d2; }
-</style>
+.footer {
+  margin-top: 2em;
+  padding-top: 12px;
+  border-top: 1px solid #ccc;
+  font-size: 9.5pt;
+  color: #556;
+}
+@media print {
+  body { padding: 0; max-width: none; }
+  .hero { break-inside: avoid; }
+  .best, .warn, .bad, table { break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
+  </style>
 </head>
 <body>
-  <div class="banner">เอกสารสรุปผู้บริหาร · ความจุระบบลงเวลาด้วยใบหน้า · วัด 23 ก.ย. 2026</div>
-  <h1>สรุปสำหรับผู้บริหาร — ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)</h1>
-<p><strong>วันที่วัดล่าสุด:</strong> 23 กันยายน 2026 (รอบ saturation / dual-API)  </p>
-<p><strong>ระบบ:</strong> Face Scan Time Attendance (DPU) · เซิร์ฟเวอร์ <code>face-in</code> (<code>10.50.0.117</code>)  </p>
-<p><strong>เอกสารเทคนิค:</strong> <a href="KIOSK-LOADTEST-SATURATION.md">KIOSK-LOADTEST-SATURATION.md</a> · <a href="KIOSK-LOADTEST-PERF3-TABLE.md">ตารางรอบ 3</a> · <a href="KIOSK-LOADTEST-PERF2-TABLE.md">ตารางรอบ 2</a> · <a href="KIOSK-LOADTEST-SATURATION-TABLE.md">ตารางรอบ dual-API</a>  </p>
-<p><strong>รายงานรอบก่อน (conservative):</strong> <a href="KIOSK-LOADTEST-WORKERS2-CAPACITY.md">KIOSK-LOADTEST-WORKERS2-CAPACITY.md</a>  </p>
-<p><strong>ไฟล์ PDF:</strong> <a href="EXEC-SUMMARY-KIOSK-CAPACITY.pdf">EXEC-SUMMARY-KIOSK-CAPACITY.pdf</a> <em>(อาจยังเป็นตัวเลขรอบก่อน — ดูตารางด้านล่างเป็นปัจจุบัน)</em></p>
-<hr>
-<h2>1. โปรดักต์นี้ทำอะไร</h2>
-<p>ระบบลงเวลาทำงานด้วยการจดจำใบหน้า:</p>
-<ol>
-<li>พนักงานยืนหน้ากล้องที่ <strong>จอคีออส</strong> (ไม่ต้องแตะเครื่อง)</li>
-<li>ระบบตรวจจับใบหน้า → จับคู่กับข้อมูลที่ลงทะเบียนไว้ → บันทึกเวลาเข้า/ออก</li>
-<li>แอดมินจัดการบริษัท พนักงาน สถานที่ และนำเข้าข้อมูลผ่านเว็บ</li>
-</ol>
-<p>คอขวดหลักของความเร็วอยู่ที่ <strong>การประมวลผลใบหน้าบนการ์ดจอ (GPU)</strong> ของเซิร์ฟเวอร์</p>
-<hr>
-<h2>2. สเป็คที่ทดสอบ (รอบล่าสุด)</h2>
-<table>
-<tr><th>รายการ</th><th>ค่าที่ใช้ทดสอบ</th></tr>
-<tr><td>เซิร์ฟเวอร์</td><td>production (<code>10.50.0.117</code>)</td></tr>
-<tr><td>การ์ดจอ (GPU)</td><td><strong>2 ใบ</strong> · Quadro RTX 5000 · 16 GB/ใบ</td></tr>
-<tr><td>สถาปัตยกรรม</td><td><strong>API 2 process</strong> แยกตาม GPU (nginx กระจายโหลด) · คนละ 2 workers</td></tr>
-<tr><td>วิธีวัด</td><td>จำลองจอคีออสหลายจอ · เฟรมขนาดใกล้ของจริง (~1280 px, JPEG q70)</td></tr>
-<tr><td>เกณฑ์คุณภาพ (UX)</td><td>กรอบใบหน้า ≤ ~0.55 วินาที · ทิ้งเฟรม ≤ 5%</td></tr>
-</table>
-<blockquote><p>รอบก่อนใช้ process เดียว + เฟรมทดสอบใหญ่เกินจริง ทำให้ตัวเลข <strong>conservative</strong> (ต่ำกว่าความจุจริง)</p></blockquote>
-<hr>
-<h2>3. สรุปผลในหนึ่งหน้า</h2>
-<h3>คำตอบสั้น ๆ สำหรับวางแผนติดตั้ง</h3>
-<table>
-<tr><th>สถานการณ์หน้างาน</th><th>รอบ 3 (ล่าสุด, 4 process)</th><th>รอบ 2 (2 process)</th><th>รอบ dual-API</th><th>รอบก่อน</th></tr>
-<tr><td>เร่งด่วนหนาแน่น (~หลายคนในกล้อง)</td><td><strong>ไม่เกิน 24 จอ</strong></td><td>16 จอ</td><td>6 จอ</td><td>4–5 จอ</td></tr>
-<tr><td>เร่งด่วนคนละคนต่อจอ</td><td><strong>ไม่เกิน 32 จอ</strong></td><td>24 จอ</td><td>12 จอ</td><td>8 จอ</td></tr>
-<tr><td>ช่วงโล่ง / กล้องรอคน</td><td><strong>≥ 48 จอ</strong> (ยังไม่ชนเพดาน)</td><td>≥ 32 จอ</td><td>24 จอ</td><td>12 จอ</td></tr>
-</table>
-<h3>ภาพรวมความจุ (หลังปรับรอบ 3)</h3>
-<pre>
-เร่งด่วนหนาแน่น     ████████████████████████░░░░░░░░ ~24 จอ   ← ใช้วางแผน deploy จริง
-เร่งด่วนคนละคน/จอ   ████████████████████████████████ ~32 จอ
-ช่วงโล่ง (detect)   ████████████████████████████████████████████████ ≥48 จอ
-</pre>
-<h3>สิ่งที่พิสูจน์แล้วจากการวัดรอบนี้</h3>
+
+<h1>สรุปสำหรับผู้บริหาร<br><span style="font-size:14pt;font-weight:600;">ความจุระบบลงเวลาด้วยใบหน้า (Face Kiosk)</span></h1>
+
+<p class="meta">
+  อัปเดต: <strong>24 กันยายน 2026</strong>
+  · เซิร์ฟเวอร์วัด: face-in (<code>10.50.0.117</code>)
+  · ฮาร์ดแวร์: CPU 32 คอร์ · RAM ~436 GB · GPU <strong>2× Quadro RTX 5000 (16 GB)</strong>
+</p>
+
+<div class="best">
+  <span class="tag">คำตอบสั้น</span>
+  <strong>วิธีที่ดีที่สุดบนเครื่องนี้คือ “DPU Monolith แบบ Quad” (API 4 process · worker 3 ต่อการ์ด · ปิด Face Core)</strong>
+  — รองรับลงเวลาจริงประมาณ <strong>24–32 จอ</strong> พร้อมกัน และช่วงเช้า 20 นาทีสแกนหาชื่อได้ราว <strong>1.8–2.3 หมื่นครั้ง</strong> โดยยังตอบสนองเร็วพอใช้งาน
+</div>
+
+<div class="hero">
+  <div class="card">
+    <div class="label">จอลงเวลาที่แนะนำ</div>
+    <div class="value">24–32 จอ</div>
+    <div class="hint">คนเดียวต่อจอ → สูงสุด ~32 · หลายคนในเฟรม → ~24</div>
+  </div>
+  <div class="card">
+    <div class="label">สแกนช่วงเช้า 20 นาที</div>
+    <div class="value">~18k–23k</div>
+    <div class="hint">วัดจริงที่ 24 และ 32 จอ (หาชื่อสำเร็จ)</div>
+  </div>
+  <div class="card">
+    <div class="label">ความเร็วตอบ (p95)</div>
+    <div class="value">&lt; 230 ms</div>
+    <div class="hint">เกณฑ์ผ่านคือ ≤ 550 ms · ของจริงดีกว่ามาก</div>
+  </div>
+  <div class="card">
+    <div class="label">สเป็คที่ล็อกใช้</div>
+    <div class="value">Quad × w3</div>
+    <div class="hint">Face Core ปิด · ใช้ GPU ทั้งสองใบ</div>
+  </div>
+</div>
+
+<h2>1. เราตัดสิน “ดี/ไม่ดี” ยังไง</h2>
+<p>ทีมเทสใช้เกณฑ์คุณภาพเดียวกับที่ผู้ใช้รู้สึกได้:</p>
 <ul>
-<li>การ์ดจอ <strong>ทั้ง 2 ใบมี process ของระบบจริง</strong> (~2 GB/ใบ)</li>
-<li>แยก API ตาม GPU + แก้การ pin อุปกรณ์ แล้ว GPU1 ไม่ถูกทิ้งว่างเหมือนรอบก่อน</li>
-<li>รอบ 2 (ลดงานต่อคำขอ: ตรวจจับที่ 320 px แล้วจดจำทันที, ไม่เขียนไฟล์ชั่วคราว, worker 3 ต่อ process) ทำให้เพดานชั่วโมงเร่งด่วน <strong>เพิ่มจาก 6 → 16 จอ</strong> โดยไม่แตะฮาร์ดแวร์</li>
-<li>รอบ 3 (API 2 process ต่อการ์ด = 4 process ใช้ CPU 32 core ที่ว่างอยู่ + ย้ายบริการถอดเสียง whisper ออกจาก GPU0) เพดานเร่งด่วน <strong>16 → 24 จอ</strong>, คนละคนต่อจอ <strong>24 → 32 จอ</strong></li>
-<li>ตัวเลขนี้วัดด้วยโหลดที่หนักกว่าจริง (จอส่งภาพ 11 เฟรม/วินาทีตลอด) — หน้าบ้านรอบ 2 ส่งน้อยลงเมื่อคนยืนนิ่ง จอจริงจึงรับได้มากกว่านี้</li>
-<li>ยังไม่จำเป็นต้องแยก Face Core แค่เพื่อ “ใช้ GPU ให้เต็ม” บนเครื่องนี้ (GPU ยังใช้เฉลี่ย ~11%)</li>
+  <li><strong>ความเร็ว:</strong> 95% ของคำขอ (p95) ต้องไม่ช้าเกิน <strong>550 มิลลิวินาที</strong></li>
+  <li><strong>ความนิ่ง:</strong> ทิ้งเฟรม (drop) ไม่เกิน <strong>5%</strong></li>
+  <li>ตัวเลขด้านล่างคือค่าที่ <strong>วัดบนเซิร์ฟเวอร์จริง</strong> ไม่ใช่ประมาณการจากสเป็คการ์ดอย่างเดียว</li>
 </ul>
-<hr>
-<h2>4. แปลผลเป็นภาษาธุรกิจ</h2>
+
+<h2>2. วิธีไหนดีที่สุด — เปรียบเทียบแบบภาษาพูด</h2>
+
 <table>
-<tr><th>คำถามของผู้บริหาร</th><th>คำตอบจากผลการทดสอบล่าสุด</th></tr>
-<tr><td>ติดตั้งกี่จอต่อเซิร์ฟเวอร์นี้ได้โดยยังลื่น?</td><td><strong>24 จอ</strong> สำหรับชั่วโมงเร่งด่วนที่มีคนหนาแน่น</td></tr>
-<tr><td>ถ้าส่วนใหญ่คนละคนต่อจอ?</td><td>ได้ถึงประมาณ <strong>32 จอ</strong></td></tr>
-<tr><td>เกินแล้วเกิดอะไรขึ้น?</td><td>ภาพช้า กรอบกระพริบ ทิ้งเฟรมสูง — ระบบยังลงเวลาได้แต่ UX แย่</td></tr>
-<tr><td>ถ้าต้องการมากกว่า 32–48 จอ?</td><td>GPU ยังใช้แค่ ~16% — เพิ่ม process ต่อการ์ดได้อีก แต่ผลตอบแทนเริ่มลด; ถัดจากนั้นคือสเกลข้ามเครื่อง (Face Core) หรือแยก DB</td></tr>
+  <thead>
+    <tr>
+      <th>วิธี</th>
+      <th>พูดสั้น ๆ</th>
+      <th>ผลที่วัดได้</th>
+      <th>ควรใช้ไหม</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>DPU Monolith · Quad (4 process)</strong></td>
+      <td>ประมวลผลใบหน้าอยู่ใน API เอง แยก 4 โปรเซสใช้ GPU คู่</td>
+      <td>ลงเวลาได้ <strong>24–32 จอ</strong> · หาชื่ออย่างเดียวสูงกว่านี้ได้ถ้าขยายชั่วคราว</td>
+      <td class="ok">แนะนำ — ใช้เป็น production</td>
+    </tr>
+    <tr>
+      <td>DPU Monolith · Hexa (6 process)</td>
+      <td>เพิ่ม process เพื่อดันหาชื่อให้เยอะขึ้น</td>
+      <td>หาชื่อได้สูงถึง ~64–80 จอ แต่<strong>ลงเวลาแย่ลง</strong>ถ้าเปิดถาวร</td>
+      <td>ใช้ชั่วคราวเฉพาะโหมดโชว์ชื่อ</td>
+    </tr>
+    <tr>
+      <td>Face Core แยกบริการ (BFF)</td>
+      <td>แยกบริการ vision ออกจาก DPU ส่งงานผ่านเครือข่าย/HTTP</td>
+      <td>จูนเต็มที่แล้วยังได้แค่ประมาณ <strong>≤ 2 จอ</strong> ภายใต้เกณฑ์ความเร็ว</td>
+      <td class="no">ยังไม่ใช้เพื่อเพิ่มจำนวนจอบนเครื่องนี้</td>
+    </tr>
+  </tbody>
 </table>
-<hr>
-<h2>5. ข้อเสนอแนะเชิงปฏิบัติ</h2>
+
+<div class="warn">
+  <strong>ทำไมไม่เลือก Face Core ตอนนี้:</strong> ไม่ใช่เพราะยังจูนไม่ครบ — จูนคิว / worker / ปัก GPU แล้ว — แต่สถาปัตยกรรม 2 โปรเซสของ Core ไล่ความจุของ Monolith 4–6 โปรเซสไม่ทันบนฮาร์ดแวร์ชุดนี้
+  เหมาะกับงานแยกทีม/หลายโฮสต์ในอนาคต มากกว่าการดันจำนวนคีออสบนเครื่องเดียว
+</div>
+
+<h2>3. ค่าที่ทดสอบได้จริง (ตัวเลขสำคัญ)</h2>
+
+<h3>3.1 ลงเวลาและจำนวนจอพร้อมกัน</h3>
+<table>
+  <thead>
+    <tr><th>สถานการณ์</th><th>จำนวนจอที่ผ่านเกณฑ์</th><th>หมายเหตุ</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ลงเวลาจริง · คนเดียวต่อจอ</td><td><strong>~32 จอ</strong></td><td>เส้นทาง production (Quad)</td></tr>
+    <tr><td>ลงเวลาจริง · หลายคนในเฟรม (~3)</td><td><strong>~24 จอ</strong></td><td>โหลดหนักกว่า · วางแผนชัวร์ที่ 24</td></tr>
+    <tr><td>หาชื่ออย่างเดียว (ไม่ลงเวลา)</td><td>วางแผน ~48 · สูงสุดที่เคยผ่าน ~64–80</td><td>ต้องโครง Hexa ชั่วคราว · อย่าใช้แทนตัวเลขลงเวลา</td></tr>
+    <tr><td>โชว์กรอบหน้าอย่างเดียว</td><td>≥ 48 จอ</td><td>โหลดเบาที่สุด</td></tr>
+  </tbody>
+</table>
+
+<h3>3.2 ช่วงเช้า / เร่งด่วน — “สแกนได้กี่หมื่นใน 20 นาที”</h3>
+<p>วัดด้วยการเปิดจอพร้อมกัน ยิงหาชื่อแบบหน่วงใกล้จอจริง (ทุก ~600 ms) นาน 20 นาที:</p>
+<table>
+  <thead>
+    <tr><th>จำนวนจอ</th><th>หาชื่อสำเร็จใน 20 นาที</th><th>เฉลี่ยต่อนาที</th><th>ความเร็ว p95</th><th>ผล</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>24 จอ</strong></td><td><strong>17,998</strong> ครั้ง</td><td>~900</td><td>211 ms</td><td class="ok">ผ่าน</td></tr>
+    <tr><td><strong>32 จอ</strong></td><td><strong>22,783</strong> ครั้ง</td><td>~1,139</td><td>228 ms</td><td class="ok">ผ่าน</td></tr>
+  </tbody>
+</table>
+<p>
+  <strong>แปลเป็นภาษาธุรกิจ:</strong> ถ้าสาขาเปิดคีออส 24–32 จอพร้อมกันในช่วงเช้า
+  ระบบชุดนี้รองรับการ “รู้ว่าเป็นใคร” ได้ราว <strong>หนึ่งจุดแปดถึงสองจุดสามหมื่นครั้ง ใน 20 นาที</strong>
+  โดยยังเร็วกว่าเกณฑ์คุณภาพมาก
+</p>
+
+<h3>3.3 ลงเวลา (check-in) — ข้อควรเข้าใจ</h3>
+<ul>
+  <li>ระบบมี <strong>กันลงซ้ำ ~5 นาที</strong> ต่อคน (ปกติในโปรดักชัน) — กันพนักงานกด/สแกนรัว ๆ</li>
+  <li>ถ้าเทสด้วยใบหน้าเดิมซ้ำ ๆ ตัวเลข “ลงเวลาใหม่” จะต่ำทั้งที่ระบบยังทำงานเร็ว</li>
+  <li>เมื่อจำลองคนละสมาชิก / ปิดกันซ้ำชั่วคราวเพื่อวัดท่อระบบ ที่ 24 จอ · 10 นาที ได้ check-in สำเร็จราว <strong>21,000</strong> ครั้ง (p95 ~209 ms)</li>
+</ul>
+<p>ดังนั้นเวลาคุยความจุช่วงเช้ากับผู้บริหาร แนะนำใช้ตัวเลข <strong>หาชื่อสำเร็จต่อช่วงเวลา</strong> เป็นหลัก จะสื่อความหมาย “รองรับคิวคนเช้า” ได้ตรงกว่า</p>
+
+<h3>3.4 ฐานข้อมูลใบหน้าใหญ่แค่ไหนถึงมีปัญหา</h3>
+<table>
+  <thead>
+    <tr><th>ขนาดแกลเลอรีโดยประมาณ</th><th>ความเร็วหาชื่อ (p95) ที่ 16 จอ</th><th>ผล</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>~10,000 ใบหน้า</td><td>207 ms</td><td class="ok">ผ่าน</td></tr>
+    <tr><td>~20,000 ใบหน้า</td><td>155 ms</td><td class="ok">ผ่าน</td></tr>
+    <tr><td>~35,000 ใบหน้า</td><td>174 ms</td><td class="ok">ผ่าน</td></tr>
+  </tbody>
+</table>
+<p><strong>สรุป:</strong> บริษัทที่มีพนักงานหลักหมื่นคน (ถึงราว 3.5 หมื่นใบหน้า) <strong>ยังไม่ใช่คอขวด</strong> บนเครื่องนี้ — สิ่งที่จำกัดมากกว่าคือ <strong>จำนวนจอที่เปิดพร้อมกัน</strong></p>
+
+<h3>3.5 หลายบริษัทบนเครื่องเดียว</h3>
+<p>เทสเปรียบเทียบ “20 จอของบริษัทเดียว” กับ “20 บริษัท ๆ ละ 1 จอ” (จอรวมเท่ากัน):</p>
+<ul>
+  <li>ทั้งสองแบบ<strong>ผ่านเกณฑ์ความเร็ว</strong></li>
+  <li>แยกหลายบริษัท<strong>ไม่ได้เพิ่มเพดานจำนวนจอ</strong> — แค่กระจายโหลด</li>
+  <li>วางแผนติดตั้งให้คิดจาก <strong>จอสูงสุดพร้อมกันทั้งเครื่อง</strong> ไม่ใช่จำนวนบริษัท</li>
+</ul>
+
+<h2>4. สเป็คที่แนะนำให้ล็อกใช้ (Production)</h2>
+<table>
+  <thead>
+    <tr><th>รายการ</th><th>ค่าแนะนำ</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>โหมดประมวลผลใบหน้า</td><td><strong>DPU Monolith</strong> (InsightFace ใน API)</td></tr>
+    <tr><td>Face Core BFF</td><td><strong>ปิด</strong> (<code>FACE_CORE_ENABLED=false</code>)</td></tr>
+    <tr><td>จำนวน API process</td><td><strong>4 (Quad)</strong> = 2 โปรเซสต่อ GPU</td></tr>
+    <tr><td>Worker ต่อ process</td><td><strong>3</strong></td></tr>
+    <tr><td>Compose</td><td><code>docker-compose.yml</code> + <code>gpu.yml</code> + <code>gpu-x2.yml</code></td></tr>
+    <tr><td>Whisper (ถ้าอยู่เครื่องเดียวกัน)</td><td>ปัก GPU1 · อย่าแย่ง GPU0 ของคีออสโดยไม่จำเป็น</td></tr>
+    <tr><td>เป้าหมายติดตั้งคีออสลงเวลา</td><td><strong>24 จอ (ชัวร์) / สูงสุด ~32 จอ</strong> เมื่อคนเดียวต่อจอ</td></tr>
+  </tbody>
+</table>
+
+<div class="bad">
+  <strong>สิ่งที่ไม่แนะนำบนฮาร์ดแวร์ชุดนี้:</strong>
+  เปิด Face Core ทั้งเครื่องเพื่อหวังได้จอมากขึ้น · เปิด Hexa เป็นค่าปกติของการลงเวลา ·
+  อ้างตัวเลขทฤษฎีแบบ “80–120 จอพร้อมกันต่ำกว่า 300 ms” โดยไม่มีผลวัดรองรับ
+</div>
+
+<h2>5. ข้อแนะนำเชิงธุรกิจ / ปฏิบัติการ</h2>
 <ol>
-<li><strong>เพดานติดตั้งแนะนำ = 24 จอ</strong> สำหรับการใช้งานจริงแบบหนาแน่นบนเซิร์ฟเวอร์นี้ (เผื่อ margin ใช้ 16–20)</li>
-<li>โซนที่คนส่วนใหญ่ยืนคนละจอ: วางแผนได้ถึง <strong>32 จอ</strong></li>
-<li><strong>ยังไม่ต้องลงทุนแยก Face Core</strong> เพื่อเพิ่มความจุบนเครื่องใบนี้ — งานนั้นเหมาะตอนสเกลหลายเครื่อง</li>
-<li>เก็บเกณฑ์ UX: ตอบสนองกรอบ ≤ ~0.55 วินาที · ทิ้งเฟรม ≤ 5% ในชั่วโมงเร่งด่วน</li>
+  <li><strong>เปิดสาขาใหม่:</strong> วางแผนคีออสลงเวลาที่ <strong>24 จอต่อเครื่องนี้</strong> เป็นค่าเริ่ม · ขึ้นได้ถึง ~32 ถ้าโปรไฟล์ใช้งานเป็นคนเดียวต่อจอและวัดซ้ำได้</li>
+  <li><strong>ช่วงเช้าคนแน่น:</strong> ตรวจว่า process ครบ 4 · GPU ทั้งสองใบมีงาน · อย่าสลับไป Hexa เพราะอยากได้จอโชว์ชื่อแล้วลืมวัดลงเวลา</li>
+  <li><strong>บริษัทใหญ่ / ใบหน้าเยอะ:</strong> ระดับหมื่นถึง ~3.5 หมื่นใบหน้าต่อบริษัทยังโอเค — โฟกัสที่จำนวนจอ peak มากกว่า</li>
+  <li><strong>หลายบริษัท:</strong> นับจากจอรวมสูงสุดของทั้งเครื่อง ไม่ใช่จำนวนบริษัท</li>
+  <li><strong>อยากได้ความจุสูงกว่านี้:</strong> ต้องเพิ่มฮาร์ดแวร์ (GPU/โหนด) หรือลดโหลดฝั่งจอ — <strong>จูนค่า env ซ้ำบนเครื่องนี้ได้ผลจำกัดแล้ว</strong></li>
+  <li><strong>Face Core:</strong> คงไว้สำหรับทดลองแยกบริการในอนาคต · อย่าคาดหวังให้เพิ่มจำนวนจอบนเซิร์ฟเวอร์นี้เกิน Monolith</li>
 </ol>
-<hr>
-<h2>6. สรุปหนึ่งประโยค</h2>
-<p><strong>หลังปรับรอบ 3 (ใช้ GPU สองใบจริง + ลดงานต่อคำขอ + API 4 process) เซิร์ฟเวอร์ Quadro RTX 5000 สองใบนี้รองรับจอคีออสได้อย่างลื่นประมาณ 24 จอในช่วงเร่งด่วนหนาแน่น และราว 32 จอถ้าโดยทั่วไปมีคนละคนต่อจอ — เพิ่มจากจุดเริ่มต้น ~4 เท่าโดยไม่ซื้อฮาร์ดแวร์เพิ่ม</strong></p>
-<hr>
-<p class="footer">จัดทำจากผลการโหลดเทส saturation วันที่ 23 ก.ย. 2026</p>
+
+<h2>6. สรุปหนึ่งหน้าสำหรับผู้บริหาร</h2>
+<table>
+  <thead>
+    <tr><th>คำถาม</th><th>คำตอบ</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>วิธีไหนดีที่สุดตอนนี้?</td><td><strong>Monolith Quad · workers=3 · ปิด Face Core</strong></td></tr>
+    <tr><td>ติดตั้งคีออสลงเวลาได้กี่จอ?</td><td><strong>24–32 จอ</strong> ภายใต้เกณฑ์คุณภาพ</td></tr>
+    <tr><td>เช้า 20 นาทีรองรับคิวได้ประมาณเท่าไร?</td><td><strong>~18,000–23,000</strong> ครั้งหาชื่อสำเร็จ (ที่ 24–32 จอ)</td></tr>
+    <tr><td>ระบบช้าไหมตอนโหลดสูง?</td><td>p95 ราว <strong>210–230 ms</strong> (เกณฑ์ผ่าน 550 ms)</td></tr>
+    <tr><td>พนักงานหมื่นคนกระทบไหม?</td><td>แกลเลอรีถึง ~<strong>35,000</strong> ใบหน้ายังผ่าน · คอขวดคือจอพร้อมกัน</td></tr>
+    <tr><td>ควรลงทุน Face Core เพื่อเพิ่มจอไหม?</td><td><strong>ยังไม่</strong> บนเครื่องนี้ — เพดานวัดได้ ~2 จอ</td></tr>
+    <tr><td>ขั้นถัดไปถ้าต้องการมากกว่านี้?</td><td>เพิ่ม GPU/เซิร์ฟเวอร์ หรือออกแบบโหลดฝั่งสาขาใหม่</td></tr>
+  </tbody>
+</table>
+
+<p class="footer">
+  เอกสารนี้สรุปจากผลการวัดบนเซิร์ฟเวอร์ face-in · รายละเอียดเชิงเทคนิคเต็ม:
+  <code>docs/KIOSK-CAPACITY-GUIDE.md</code>
+  · พิมพ์เป็น PDF ได้จากเบราว์เซอร์ (Print → Save as PDF)
+</p>
+
 </body>
 </html>

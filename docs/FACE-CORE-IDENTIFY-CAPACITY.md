@@ -281,7 +281,24 @@ flowchart TB
 
 หมายเหตุแก้ตอนประกอบ: Face Core `dispatch_gpu_task` เคยส่ง async เข้า `run_in_executor` → enroll 500; แก้ใน `face-core/src/vision/gpu_queue.py` แล้ว · smoke DPU เพิ่ม login JWT
 
-ยังไม่ deploy BFF ขึ้น `10.50.0.117` — production attendance ยัง monolith quad w3
+### 6.6 Server BFF attempt on 10.50.0.117 — rolled back
+
+**24 ก.ย. 2026** — ติดตั้ง `/opt/face-core` (enterprise · dual-GPU + Redis) คู่ `/opt/facescan-timeattendance` แล้ว cutover DPU เป็น BFF (ไม่มี gpu-x2)
+
+| ขั้น | ผล |
+|------|-----|
+| Face Core health (ในคอนเทนเนอร์) | `device=cuda:0` · redis queue workers=1 |
+| DPU `/ready` + queue-stats | `service/source: face-core` |
+| Migrate | mapping บันทึก `backups/migration_mapping.json` (~10k face_encoding ใน DPU ยังอยู่) |
+| `smoke_face_core_bff.py` | **ผ่าน** |
+| Identify ×1@16 | **FAIL** — identify p95 ~4 s · `face_core_down` ×1527 |
+| Identify/rush สูงกว่านั้น | session ต่อไม่ได้ (WS พัง) |
+
+**ตัดสินใจ:** **rollback** กลับ quad + `FACE_GPU_WORKERS=3` · หยุด Face Core containers (เก็บ volume) · attendance production คง monolith
+
+สาเหตุน่าจะเป็น: Face Core Redis GPU workers=1 รับโหลด WS ไม่ไหว + DPU BFF process เดียวรอ Core timeout แล้ว `face_core_down` — ต้องจูน worker/queue หรือทดสอบนอกเวลาก่อนเปิด BFF ถาวร
+
+ยังไม่ลบโค้ด InsightFace ใน DPU
 
 ---
 

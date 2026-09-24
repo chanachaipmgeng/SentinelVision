@@ -48,7 +48,8 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 - Single process with `FACE_DEVICES=cuda:0,cuda:1` is legacy — confirm both GPU UUIDs in `nvidia-smi --query-compute-apps` or prefer dual-API
 - Detect frames use the 320 det-size model (decode may use `IMREAD_REDUCED`); embedding uses 640
 - When `pending >= WS_QUEUE_BACKPRESSURE` the server answers `detect` with `dropped: true`; use `nextCaptureInterval(queueDepth)` to slow the kiosk
-- Capacity ceilings / load scripts: `docs/KIOSK-LOADTEST-SATURATION.md`, `scripts/kiosk-load/`
+- Capacity ceilings / load scripts: `docs/KIOSK-LOADTEST-SATURATION.md` (monolith), `docs/FACE-CORE-IDENTIFY-CAPACITY.md` (Face Core / BFF), `scripts/kiosk-load/`
+- BFF `face_core_down` under load: check Face Core pending/rate limits and GPU pin before blaming the kiosk client
 
 ## Fullscreen chrome
 

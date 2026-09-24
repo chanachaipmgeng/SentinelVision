@@ -300,6 +300,59 @@ flowchart TB
 
 ยังไม่ลบโค้ด InsightFace ใน DPU
 
+### 6.7 A+1 tune — local BFF → Face Core `:8081` (identify concurrent)
+
+**24 ก.ย. 2026** — จูน Face Core บน `10.50.0.117` โดยวัดจาก **local DPU BFF** (`docker-compose.face-core-remote.yml` → `http://10.50.0.117:8081`) · **ไม่** cutover BFF บนเซิร์ฟเวอร์ · attendance ยัง **quad** monolith
+
+#### คอนฟิก Face Core ที่แนะนำ (หลัง A/B)
+
+| พารามิเตอร์ | ค่า |
+|-------------|-----|
+| `FACE_GPU_WORKERS` | **3** ต่อโปรเซส (`face-core-api` + `face-core-gpu1`) |
+| `FACE_GPU_QUEUE_SIZE` | **128** |
+| `FACE_GPU_MAX_PENDING_PER_COMPANY` | **128** (ค่าเดิม 16 ทำให้คิวเต็มเร็ว → 429 → BFF circuit → `face_core_down`) |
+| `RATE_LIMIT_PER_COMPANY_PER_MINUTE` | **6000** (ค่าเดิม 120 เปิด circuit ด้วย) |
+| GPU pin | `face-api` → `device_ids: ["0"]` · `face-core-gpu1` → `device_ids: ["1"]` · ในคอนเทนเนอร์ใช้ `FACE_DEVICE=cuda:0` + `CUDA_VISIBLE_DEVICES=0` |
+| Publish | `0.0.0.0:8081` (อย่าใช้ dual-gpu/prod port reset เป็น `127.0.0.1` อย่างเดียวถ้าต้องเรียกจากเครื่องอื่น) |
+
+ไฟล์บนเซิร์ฟเวอร์: `/opt/face-core/docker-compose.dual-gpu.yml` (สำรอง `.bak-a1`) · `docker-compose.a1-api-tune.yml`
+
+**บั๊กที่เจอตอนจูน:** overlay เดิมตั้ง `FACE_DEVICE=cuda:1` คู่ `NVIDIA_VISIBLE_DEVICES=1` / หรือ `gpus: all` ทำให้ **ทั้งคู่ไปกองบน GPU0** · GPU1 ถูก Whisper (~4 GB) ใช้อยู่ — ต้อง hard-pin `device_ids`
+
+#### ตาราง A/B (identify ×1 · full-rate · hold 30s · 1280 q70)
+
+| คอนฟิก | ×1@4 id p95 | `face_core_down` | session @16 | หมายเหตุ |
+|--------|-------------|------------------|---------------|----------|
+| W0 workers=1 queue=64 pending=16 | ~1260 ms | **446+** | พัง | baseline เดิม |
+| W2 only | ~1148 ms | **622+** | พัง @8 | workers อย่างเดียวไม่พอ |
+| W2 + Q/P/R 128/128/6000 | ~6013 ms | **0** | ผ่าน | session นิ่ง แต่ latency แย่ (ก่อน pin GPU1) |
+| **W3 + Q/P/R + hard pin (ชนะ)** | **~1049 ms** | **0** | ผ่าน | ทั้ง 2 GPU มี Face Core (~1.5 GB/ใบ) |
+
+#### เพดาน (คอนฟิกชนะ)
+
+SLO เข้ม: detect/identify p95 ≤ 550 ms · drop ≤ 5% · `face_core_down` ≈ 0
+
+| โหมด | ผล |
+|------|-----|
+| Full-rate ×1 | **FAIL ตั้งแต่ @4** (id p95 ~1.0 s) · @8/~2.0 s · @16/~5.0 s · @32/~10 s · session นิ่งถึง 32+ |
+| Full-rate ×3 | **FAIL ตั้งแต่ @4** (id p95 ~1.5 s) · session นิ่งถึง 24 |
+| Gated detect 600 ms ×1 | **@2 เกือบผ่าน** (det p95 414 · id p95 **599**) · **@4 FAIL** (id p95 848) |
+
+**สรุปเพดาน OK ภายใต้ SLO:** ประมาณ **≤ 2 จอ** (gated) · full-rate ไม่ผ่านแม้ @4  
+**เพดาน session-stable (ไม่มี `face_core_down`):** ×1 ≥ 32 · ×3 ≥ 24 (latency เกิน SLO ชัด)
+
+เทียบ §6.6 (server BFF · workers=1): @16 พังด้วย `face_core_down` ×1527 → รอบนี้ session นิ่งและไม่มี circuit trip แต่ **latency ยังห่างจาก monolith hexa (~48 จอ)** เพราะ (1) hop local BFF→remote Core (2) GPU1 แชร์กับ Whisper (3) Redis queue + pending/rate ต้องจูน
+
+**Attendance บนเซิร์ฟเวอร์:** ยัง quad monolith · ไม่เปิด DPU BFF
+
+#### ไฟล์ดิบรอบนี้
+
+- `scripts/kiosk-load/.cache/results-a1-w0-*.jsonl`
+- `scripts/kiosk-load/.cache/results-a1-w2*.jsonl`
+- `scripts/kiosk-load/.cache/results-a1-w3*.jsonl`
+- `scripts/kiosk-load/.cache/results-a1-w3pin-*.jsonl`
+- `scripts/kiosk-load/.cache/nvidia-w3pin-watch.txt`
+
 ---
 
 ## 7. วิธีรันซ้ำ

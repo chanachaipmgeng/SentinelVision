@@ -209,6 +209,7 @@ Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (
 | ×3 full / gated | **48** OK / FAIL@56 · gated **64** OK / FAIL@72 |
 | HTTP refine | conc **20** OK (p95 768 · ~35 RPS) · FAIL@25 |
 | Production | **คืน quad w3** สำหรับ attendance (hexa ช่วย identify แต่ทำลาย rush) |
+| **§3c ดัน >48 จนพัง** | ×1 full OK@48 FAIL@56 พังชัด@72+ · ×3 full OK@48 FAIL@52 พังชัด@60+ · gated ×3@72 ค้าง identify |
 
 ---
 

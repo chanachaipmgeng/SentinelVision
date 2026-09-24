@@ -268,6 +268,21 @@ flowchart TB
 - ไม่ย้าย check-in ไป Face Core — จะพา DB ติดไปด้วยและเสียประโยชน์การแยก  
 - **อย่าเปลี่ยน production attendance เป็น hexa** เพื่อดัน identify — คืน/คง **quad w3** สำหรับ rush
 
+### 6.5 Local BFF verified (Phase B บน Docker Desktop)
+
+**24 ก.ย. 2026** — ประกอบ sibling `../face-core` (CPU) + DPU overlay `docker-compose.face-core.yml` บนเครื่อง local:
+
+| ตรวจ | ผล |
+|------|-----|
+| `GET :8081/v1/health` | `service: face-core` · `device: cpu` |
+| `GET :8880/ready` | queue จาก Face Core |
+| `GET /face/queue-stats` (JWT) | `source: face-core` |
+| `smoke_face_core_bff.py` | ผ่าน (add-face · identify · walkby check-in · verify) |
+
+หมายเหตุแก้ตอนประกอบ: Face Core `dispatch_gpu_task` เคยส่ง async เข้า `run_in_executor` → enroll 500; แก้ใน `face-core/src/vision/gpu_queue.py` แล้ว · smoke DPU เพิ่ม login JWT
+
+ยังไม่ deploy BFF ขึ้น `10.50.0.117` — production attendance ยัง monolith quad w3
+
 ---
 
 ## 7. วิธีรันซ้ำ

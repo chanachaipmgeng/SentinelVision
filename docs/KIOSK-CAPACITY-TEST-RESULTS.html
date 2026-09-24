@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ผลการเทสความจุคีออสใบหน้า — ทุกรูปแบบ (พร้อมกราฟ)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --card: #fff;
+      --ink: #1a2332;
+      --muted: #5a6a7a;
+      --brand: #0b3d5c;
+      --accent: #2a9d8f;
+      --ok: #1b7a4a;
+      --warn: #c47f00;
+      --bad: #c0392b;
+      --line: #d8e2ea;
+      --slo: #e74c3c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Sarabun", "Leelawadee UI", "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px 16px 48px; }
+    header.hero {
+      background: linear-gradient(135deg, #0b3d5c 0%, #1a6b7a 55%, #2a9d8f 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 28px 28px 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 28px rgba(11,61,92,.25);
+    }
+    header.hero h1 { margin: 0 0 8px; font-size: 1.65rem; line-height: 1.3; }
+    header.hero .sub { opacity: .92; font-size: .95rem; }
+    header.hero .meta { margin-top: 12px; font-size: .85rem; opacity: .88; }
+    nav.toc {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; flex-wrap: wrap; gap: 8px;
+      background: rgba(244,247,250,.92);
+      backdrop-filter: blur(8px);
+      padding: 10px 0 12px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    nav.toc a {
+      text-decoration: none;
+      color: var(--brand);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: .82rem;
+      font-weight: 600;
+    }
+    nav.toc a:hover { border-color: var(--accent); color: var(--accent); }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin: 16px 0 22px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .card .lbl { font-size: .8rem; color: var(--muted); }
+    .card .val { font-size: 1.45rem; font-weight: 700; color: var(--brand); margin-top: 4px; }
+    .card .hint { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    section.block {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px 22px 24px;
+      margin: 0 0 18px;
+      box-shadow: 0 2px 10px rgba(11,61,92,.04);
+    }
+    section.block h2 {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+      color: var(--brand);
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+    }
+    section.block .lead { color: var(--muted); margin: 0 0 14px; font-size: .92rem; }
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .grid2 { grid-template-columns: 1fr; }
+    }
+    .chart-box {
+      position: relative;
+      height: 280px;
+      margin: 8px 0 4px;
+    }
+    .chart-box.tall { height: 320px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+      margin-top: 8px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: var(--brand); color: #fff; font-weight: 600; }
+    tr:nth-child(even) td { background: #f7fafc; }
+    .ok { color: var(--ok); font-weight: 700; }
+    .no { color: var(--bad); font-weight: 700; }
+    .tag {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .tag-ok { background: #d8f5e7; color: var(--ok); }
+    .tag-warn { background: #fff0d0; color: var(--warn); }
+    .tag-bad { background: #fde2e0; color: var(--bad); }
+    .tag-info { background: #e3f2fd; color: #1565a0; }
+    .callout {
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 12px 0 0;
+      font-size: .92rem;
+    }
+    .callout.best { background: #e8f7f2; border: 1px solid #2a9d8f; }
+    .callout.warn { background: #fff8e8; border-left: 4px solid #e9a825; }
+    .callout.bad { background: #fdeeee; border-left: 4px solid #c0392b; }
+    .legend-note { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+    footer {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .85rem;
+    }
+    footer a { color: var(--brand); }
+    @media print {
+      nav.toc { display: none; }
+      body { background: #fff; }
+      section.block { break-inside: avoid; box-shadow: none; }
+      .chart-box { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>ผลการเทสความจุคีออสใบหน้า<br><span style="font-weight:500;font-size:1.05rem;">ทุกรูปแบบ · พร้อมกราฟเปรียบเทียบ</span></h1>
+  <p class="sub">รวบรวมผลวัดจริงบนเซิร์ฟเวอร์ production candidate — อ่านทีละโหมดเทสได้จากเมนูด้านล่าง</p>
+  <p class="meta">
+    อัปเดต: <strong>25 ก.ย. 2026</strong>
+    · Host: <code>10.50.0.117</code>
+    · GPU: 2× Quadro RTX 5000 16 GB
+    · SLO: p95 ≤ 550 ms · drop ≤ 5%
+  </p>
+</header>
+
+<nav class="toc" aria-label="สารบัญ">
+  <a href="#overview">ภาพรวม</a>
+  <a href="#arch">โครงระบบ</a>
+  <a href="#profiles">โปรไฟล์เทส</a>
+  <a href="#rush">ช่วงเช้า</a>
+  <a href="#gallery">แกลเลอรี</a>
+  <a href="#spike">Spike HTTP</a>
+  <a href="#soak">Soak</a>
+  <a href="#pgvector">pgvector</a>
+  <a href="#verify">ยืนยันหลังจูน</a>
+  <a href="#bandwidth">แบนด์วิดท์</a>
+</nav>
+
+<section id="overview" class="block">
+  <h2>1. ภาพรวมหนึ่งหน้า</h2>
+  <p class="lead">ตัวเลขที่ใช้วางแผนติดตั้งจริง (โหมด production: <strong>Monolith Quad · workers=3 · Face Core ปิด</strong>)</p>
+  <div class="cards">
+    <div class="card">
+      <div class="lbl">ลงเวลา (rush)</div>
+      <div class="val">24–32 จอ</div>
+      <div class="hint">×3 คน/จอ → ~24 · ×1 → ~32</div>
+    </div>
+    <div class="card">
+      <div class="lbl">สแกนเช้า 20 นาที</div>
+      <div class="val">~18k–23k</div>
+      <div class="hint">identify สำเร็จ @24–32 จอ</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Face Core บนเครื่องนี้</div>
+      <div class="val">≤ 2 จอ</div>
+      <div class="hint">จูนเต็มแล้วยังช้ากว่า Monolith</div>
+    </div>
+    <div class="card">
+      <div class="lbl">ยืนยันหลังจูน nginx</div>
+      <div class="val ok">ผ่าน V1–V5</div>
+      <div class="hint">คง max_fails=5 · fail_timeout=10s</div>
+    </div>
+  </div>
+  <div class="callout best">
+    <strong>คำตัดสิน:</strong> ใช้ DPU Monolith Quad เป็น production · อย่าเปิด Face Core เพื่อหวังจอเยอะขึ้นบนฮาร์ดแวร์ชุดนี้ ·
+    จูน nginx upstream แล้วช่วยลด 502 ใต้ spike · ไม่ต้องขยาย DB pool / GPU workers
+  </div>
+</section>
+
+<section id="arch" class="block">
+  <h2>2. เปรียบเทียบโครงระบบ (จำนวนจอที่ผ่าน SLO)</h2>
+  <p class="lead">แกน Y = จำนวนจอสูงสุดโดยประมาณที่ยังผ่านเกณฑ์คุณภาพภายใต้โหลดคีออส (gated / ใกล้ของจริง)</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box tall"><canvas id="chartArch"></canvas></div>
+      <p class="legend-note">เส้นแดงประ = SLO อ้างอิง production ที่แนะนำ (24 จอ ชัวร์)</p>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>โครง</th><th>process</th><th>เพดานโดยประมาณ</th><th>เหมาะกับ</th></tr></thead>
+        <tbody>
+          <tr><td>เริ่มต้น (1 process)</td><td>1</td><td>5–8 จอ</td><td>baseline เก่า</td></tr>
+          <tr><td>Dual-API</td><td>2</td><td>12–24 จอ</td><td>เริ่มใช้ 2 GPU</td></tr>
+          <tr><td><strong>Quad w3 ★</strong></td><td><strong>4</strong></td><td><strong>24–32 จอ</strong></td><td><strong>production ลงเวลา</strong></td></tr>
+          <tr><td>Hexa w2</td><td>6</td><td>identify 64–80 · rush แย่ลง</td><td>หาชื่อชั่วคราวเท่านั้น</td></tr>
+          <tr><td>Face Core BFF</td><td>2 (Core)</td><td class="no">≤ 2 จอ</td><td>ทดลองแยกบริการ</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn" style="margin-top:12px">
+        Hexa ดัน identify ได้สูง แต่<strong>ทำลาย rush (ลงเวลา)</strong> ถ้าเปิดถาวร — เลยไม่ใช่ค่า production
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="profiles" class="block">
+  <h2>3. โปรไฟล์เทสแต่ละแบบทำอะไร</h2>
+  <p class="lead">ความหนักของงานต่างกัน — อ่านตัวเลขให้ตรงโหมดที่สาขาจะใช้จริง</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartProfiles"></canvas></div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>โปรไฟล์</th><th>งาน</th><th>ใกล้ของจริงเมื่อ</th></tr></thead>
+        <tbody>
+          <tr><td><span class="tag tag-info">idle</span></td><td>detect กรอบหน้า</td><td>จอว่าง / โชว์กรอบ</td></tr>
+          <tr><td><span class="tag tag-ok">identify</span></td><td>detect + หาชื่อ</td><td>แสดงชื่อ ไม่ลงเวลา</td></tr>
+          <tr><td><span class="tag tag-warn">rush</span></td><td>detect + หาชื่อ + <strong>ลงเวลา</strong></td><td>เข้างานจริง</td></tr>
+          <tr><td><span class="tag tag-bad">HTTP identify</span></td><td>POST รูปทีละใบ</td><td>แอปมือถือ — คนละแบบกับ WS คีออส</td></tr>
+        </tbody>
+      </table>
+      <p class="legend-note">×1 / ×3 = สมมติคนในเฟรม 1 หรือ 3 คนต่อจอ · gated 600 ms ≈ คีออสมี motion gate</p>
+    </div>
+  </div>
+</section>
+
+<section id="rush" class="block">
+  <h2>4. ช่วงเช้า / เร่งด่วน — identify gated 20 นาที</h2>
+  <p class="lead">เมตริกหลักสำหรับวางแผน “สแกนได้กี่ครั้งในช่วงเช้า” · Quad w3 · Face Core ปิด · interval 600 ms</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartRushScans"></canvas></div>
+    </div>
+    <div>
+      <div class="chart-box"><canvas id="chartRushP95"></canvas></div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>จอ</th><th>identify สำเร็จ / 20 นาที</th><th>ต่อนาที</th><th>p95</th><th>drop</th><th>SLO</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>24</strong></td><td><strong>17,998</strong></td><td>~900</td><td>211 ms</td><td>0.06%</td><td class="ok">ผ่าน</td></tr>
+      <tr><td><strong>32</strong></td><td><strong>22,783</strong></td><td>~1,139</td><td>228 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+    </tbody>
+  </table>
+  <div class="callout best">
+    สาขาเปิด 24–32 จอพร้อมกันในช่วงเช้า → ระบบรองรับราว <strong>1.8–2.3 หมื่นครั้ง identify ใน 20 นาที</strong> ภายใต้ SLO
+    (สมมติคนยืนนิ่ง · ใบหน้า matched)
+  </div>
+  <h3 style="margin-top:1.2em;color:var(--brand)">rush 10 นาที @24 จอ (ลงเวลา) — ระวัง dedupe</h3>
+  <table>
+    <thead><tr><th>เงื่อนไข</th><th>identify/10 นาที</th><th>check-in ใหม่</th><th>duplicate</th><th>p95</th></tr></thead>
+    <tbody>
+      <tr><td>ใบหน้าเดิม · dedupe 300s</td><td>10,549</td><td><strong>4</strong></td><td>21,074</td><td>209 ms</td></tr>
+      <tr><td>สมาชิกหมุน · ปิด dedupe (เทส)</td><td>10,539</td><td><strong>21,049</strong></td><td>0</td><td>209 ms</td></tr>
+    </tbody>
+  </table>
+  <p class="legend-note">วางแผนความจุช่วงเช้าใช้ <strong>identify สำเร็จ</strong> เป็นหลัก — ตัวเลข check-in ใหม่ถูก dedupe กลืนถ้าเทสด้วยใบหน้าเดิม</p>
+</section>
+
+<section id="gallery" class="block">
+  <h2>5. ขนาดแกลเลอรี / หลายบริษัท</h2>
+  <p class="lead">identify @16 จอ · hold 90s · gated — เติม synthetic แล้วลบ · บริษัทฐาน ~10k ใบหน้า</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartGallery"></canvas></div>
+      <p class="legend-note">เส้นประแดง = SLO 550 ms — ทุกจุดยังอยู่ใต้เกณฑ์ชัดเจน</p>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>ใบหน้ารวม</th><th>p95</th><th>drop</th><th>SLO</th></tr></thead>
+        <tbody>
+          <tr><td>~10.3k</td><td>207 ms</td><td>0.5%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>~11.3k</td><td>205 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>~20.3k</td><td>155 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>~35.3k</td><td>174 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+        </tbody>
+      </table>
+      <div class="callout best" style="margin-top:12px">
+        ถึง ~<strong>35,000 ใบหน้า/บริษัท</strong> ยังไม่ใช่คอขวด — โฟกัสที่ <strong>จำนวนจอพร้อมกัน</strong> มากกว่า
+      </div>
+      <h3 style="margin-top:1em;color:var(--brand)">หลายบริษัท · จอรวมคงที่ (~20)</h3>
+      <table>
+        <thead><tr><th>โหมด</th><th>identify ok</th><th>p95</th><th>SLO</th></tr></thead>
+        <tbody>
+          <tr><td>บริษัทเดียว ×20 จอ</td><td>4,625</td><td>199 ms</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>20 บริษัท × 1 จอ</td><td>2,723</td><td>median 84 · max 187</td><td class="ok">ผ่าน</td></tr>
+        </tbody>
+      </table>
+      <p class="legend-note">แยกหลายบริษัท<strong>ไม่เพิ่ม</strong>เพดานจอของเครื่อง</p>
+    </div>
+  </div>
+</section>
+
+<section id="spike" class="block">
+  <h2>6. Spike HTTP identify (แอปยิงทีละรูป)</h2>
+  <p class="lead">คนละแบบกับคีออส WebSocket — ใช้ดูเพดาน <code>POST /face/members/identify</code> และผลจูน nginx upstream</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartSpikeRps"></canvas></div>
+    </div>
+    <div>
+      <div class="chart-box"><canvas id="chartSpike502"></canvas></div>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr><th>รอบ</th><th>conc</th><th>ok/total</th><th>RPS</th><th>p95</th><th>502</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>ก่อนจูน</td><td>50</td><td>500/500</td><td>22.6</td><td>3715 ms</td><td>0</td></tr>
+      <tr><td>ก่อนจูน</td><td>100</td><td>251/500</td><td>14.9</td><td>11318 ms</td><td><strong>9</strong></td></tr>
+      <tr><td>หลังจูน</td><td>20</td><td>500/500</td><td><strong>27.4</strong></td><td>963 ms</td><td>0</td></tr>
+      <tr><td>หลังจูน</td><td>50</td><td>500/500</td><td>22.6</td><td>5617 ms</td><td>0</td></tr>
+      <tr><td>หลังจูน</td><td>100</td><td>260/500</td><td>15.2</td><td>10722 ms</td><td><strong>5</strong> ↓</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    Peak RPS ~23–27 · p95 ข้าม 1s ตั้งแต่ conc ~50 · เพดานที่ใช้วางแผนแอป HTTP ≈ <strong>~20 concurrent</strong> ·
+    DB pool <strong>ไม่ชนเพดาน</strong> (idle ~40 / max 100)
+  </div>
+</section>
+
+<section id="soak" class="block">
+  <h2>7. Soak ความเสถียรระยะยาว</h2>
+  <p class="lead">identify @24 จอ gated — ตรวจ memory leak / VRAM ทั้งสองใบ / เสถียรภาพ session</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartSoakMem"></canvas></div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>รอบ</th><th>ระยะ</th><th>Mem% API</th><th>ผลเด่น</th></tr></thead>
+        <tbody>
+          <tr><td>Soak เต็ม</td><td>2 ชม.</td><td>0.42 → 0.42</td><td>ไม่มี leak · VRAM ทั้งสองใบ · มี ConnectTimeout กลางรอบ (ฮาร์เนส)</td></tr>
+          <tr><td>ยืนยัน V4</td><td>~45 นาที</td><td>0.42 → 0.42</td><td>fail chunks = 0 · mid SM GPU0/1 ≈ 1.8% / 5.2%</td></tr>
+        </tbody>
+      </table>
+      <div class="callout best" style="margin-top:12px">
+        RAM คอนเทนเนอร์<strong>ไม่โตสะสม</strong> · GPU ทั้งสองใบมีโมเดลค้างใช้งาน · หลังเพิ่ม login retry แล้ว soak ไม่ล้มทั้งชุด
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pgvector" class="block">
+  <h2>8. pgvector HNSW concurrent (@20,000 ใบหน้า)</h2>
+  <p class="lead">ยิงค้นหาพร้อมกันหลาย client · pool DB จำกัด ≤32 (กัน TooManyConnections)</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartPgP95"></canvas></div>
+    </div>
+    <div>
+      <div class="chart-box"><canvas id="chartPgQps"></canvas></div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>โหมด</th><th>clients</th><th>searches</th><th>QPS</th><th>p50</th><th>p95</th><th>errors</th></tr></thead>
+    <tbody>
+      <tr><td>read</td><td>100</td><td>2000</td><td>~1770</td><td>6.5 ms</td><td>228 ms</td><td class="ok">0</td></tr>
+      <tr><td>read</td><td>250</td><td>5000</td><td>~3127</td><td>6.3 ms</td><td>681 ms</td><td class="ok">0</td></tr>
+      <tr><td>read</td><td>500</td><td>10000</td><td>~3920</td><td>6.4 ms</td><td>726 ms</td><td class="ok">0</td></tr>
+      <tr><td>R/W mix</td><td>250</td><td>5000</td><td>~2636</td><td>6.2 ms</td><td>181 ms</td><td class="ok">0</td></tr>
+      <tr><td>ยืนยัน V5 @250</td><td>250</td><td>5000</td><td>~2922</td><td>6.9 ms</td><td><strong>524 ms</strong></td><td class="ok">0</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="verify" class="block">
+  <h2>9. แบตเตอรี่ยืนยันหลังจูน nginx (V1–V5)</h2>
+  <p class="lead">จูน <code>max_fails=5 fail_timeout=10s</code> แล้ววัดซ้ำเทียบค่าเดิม · JSON: <code>summary-verify-battery.json</code></p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartVerify"></canvas></div>
+      <p class="legend-note">ค่าใกล้ 100 = ไม่แย่ลง/ผ่านเป้า · ทุกแท่งผ่าน</p>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>#</th><th>เทส</th><th>ผลหลังจูน</th><th>คำตัดสิน</th></tr></thead>
+        <tbody>
+          <tr><td>V1</td><td>id @24 · 10 นาที</td><td>879/min · p95 382 · drop 0%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>V2</td><td>id @32 · 10 นาที</td><td>1103/min · p95 262 · drop 0%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>V3</td><td>spike 20/50/100</td><td>502@100: 9→5 · peak 27.4</td><td class="ok">ไม่แย่ลง</td></tr>
+          <tr><td>V4</td><td>soak ~45 นาที</td><td>Mem คงที่ · fail 0</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>V5</td><td>pgvector @250</td><td>p95 524 ms · err 0</td><td class="ok">ผ่าน</td></tr>
+        </tbody>
+      </table>
+      <div class="callout best" style="margin-top:12px">
+        <strong>overall_ok = true · nginx_tune_keep = true</strong> — คงค่าจูน · ไม่ rollback · ไม่ขยาย pool/workers
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bandwidth" class="block">
+  <h2>10. แบนด์วิดท์ขาเข้าโดยประมาณ</h2>
+  <p class="lead">เฟรม detect ~129 KB · interval 600 ms (ยังไม่รวม crop identify ที่เล็กกว่า/ถี่น้อยกว่า)</p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box" style="height:220px"><canvas id="chartBw"></canvas></div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>จอ</th><th>MB/s</th><th>Mbps</th></tr></thead>
+        <tbody>
+          <tr><td>24</td><td>4.9</td><td>~39</td></tr>
+          <tr><td>32</td><td>6.6</td><td>~52</td></tr>
+        </tbody>
+      </table>
+      <div class="callout best" style="margin-top:12px">LAN ปกติรับได้ · ไม่น่าเป็นคอขวดเทียบกับ CPU/process ของ API</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  แหล่งข้อมูล: ผลวัดบน face-in · สรุปผู้บริหาร
+  <a href="EXEC-SUMMARY-KIOSK-CAPACITY.html">EXEC-SUMMARY-KIOSK-CAPACITY.html</a>
+  · คู่มือเทคนิค
+  <a href="KIOSK-CAPACITY-GUIDE.md">KIOSK-CAPACITY-GUIDE.md</a>
+  · รายงานวิวัฒนาการรอบแรก
+  <a href="KIOSK-CAPACITY-REPORT.html">KIOSK-CAPACITY-REPORT.html</a>
+  <br>
+  สคริปต์เทส: <code>scripts/kiosk-load/</code> · สรุป JSON ใน <code>.cache/summary-*.json</code>
+  · พิมพ์ PDF ได้จากเบราว์เซอร์ (Print → Save as PDF) · ต้องออนไลน์ครั้งแรกเพื่อโหลด Chart.js
+</footer>
+
+</div>
+
+<script>
+const COLORS = {
+  brand: '#0b3d5c',
+  accent: '#2a9d8f',
+  teal: '#1abc9c',
+  blue: '#3498db',
+  orange: '#e67e22',
+  red: '#c0392b',
+  purple: '#8e44ad',
+  gray: '#95a5a6',
+  slo: 'rgba(231,76,60,0.85)'
+};
+
+Chart.defaults.font.family = '"Sarabun","Leelawadee UI","Segoe UI",Tahoma,sans-serif';
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#3a4a5a';
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+const sloGuideLine = {
+  id: 'sloGuideLine',
+  afterDraw(chart) {
+    if (!chart.options.plugins || !chart.options.plugins.sloGuideLine) return;
+    const { value, label } = chart.options.plugins.sloGuideLine;
+    const yScale = chart.scales.y;
+    if (!yScale) return;
+    const y = yScale.getPixelForValue(value);
+    const { left, right } = chart.chartArea;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = COLORS.slo;
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+    ctx.fillStyle = COLORS.slo;
+    ctx.font = '11px Sarabun, sans-serif';
+    ctx.fillText(label || '', right - 150, y - 6);
+    ctx.restore();
+  }
+};
+Chart.register(sloGuideLine);
+
+function bar(ctx, labels, datasets, opts = {}) {
+  return new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: !!opts.legend },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: opts.yTitle ? { display: true, text: opts.yTitle } : undefined,
+          suggestedMax: opts.yMax
+        },
+        x: { ticks: { maxRotation: 0 } }
+      },
+      ...opts.extra
+    }
+  });
+}
+
+function line(ctx, labels, datasets, opts = {}) {
+  return new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: opts.legend !== false },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: opts.yTitle ? { display: true, text: opts.yTitle } : undefined,
+          suggestedMax: opts.yMax
+        }
+      }
+    }
+  });
+}
+
+/* 2. Architecture capacity */
+bar(document.getElementById('chartArch'),
+  ['1 process', 'Dual', 'Quad w3 ★', 'Hexa\n(identify)', 'Face Core'],
+  [{
+    label: 'จอผ่าน SLO (โดยประมาณ)',
+    data: [6, 16, 28, 64, 2],
+    backgroundColor: [
+      COLORS.gray, COLORS.blue, COLORS.accent, COLORS.orange, COLORS.red
+    ],
+    borderRadius: 6
+  }],
+  {
+    yTitle: 'จำนวนจอ',
+    yMax: 80,
+    extra: {
+      plugins: {
+        legend: { display: false },
+        sloGuideLine: { value: 24, label: 'แนะนำ production ≥24 จอ' },
+        tooltip: {
+          callbacks: {
+            afterBody: (items) => {
+              const i = items[0].dataIndex;
+              return [
+                '1 process: rush เริ่มต้น',
+                'Dual: เริ่มใช้ 2 GPU',
+                'Quad: production ลงเวลา',
+                'Hexa: หาชื่อสูง · rush แย่',
+                'Face Core: ≤2 จอหลังจูนเต็ม'
+              ][i];
+            }
+          }
+        }
+      }
+    }
+  }
+);
+
+/* 3. Profiles capacity on Quad */
+bar(document.getElementById('chartProfiles'),
+  ['idle\n(detect)', 'identify\n×1 gated', 'rush ×1', 'rush ×3', 'HTTP id\n~conc'],
+  [{
+    label: 'จอ / concurrent ที่แนะนำ',
+    data: [48, 32, 32, 24, 20],
+    backgroundColor: [COLORS.blue, COLORS.accent, COLORS.teal, COLORS.orange, COLORS.purple],
+    borderRadius: 6
+  }],
+  { yTitle: 'จอ / concurrent', legend: false }
+);
+
+/* 4. Rush scans + p95 */
+bar(document.getElementById('chartRushScans'),
+  ['24 จอ', '32 จอ'],
+  [{
+    label: 'identify สำเร็จ / 20 นาที',
+    data: [17998, 22783],
+    backgroundColor: [COLORS.accent, COLORS.brand],
+    borderRadius: 6
+  }],
+  { yTitle: 'ครั้ง / 20 นาที', legend: false }
+);
+
+bar(document.getElementById('chartRushP95'),
+  ['24 จอ', '32 จอ', 'SLO'],
+  [{
+    label: 'identify p95 (ms)',
+    data: [211, 228, 550],
+    backgroundColor: [COLORS.teal, COLORS.blue, 'rgba(231,76,60,0.35)'],
+    borderRadius: 6
+  }],
+  { yTitle: 'ms', yMax: 600, legend: false }
+);
+
+/* 5. Gallery */
+line(document.getElementById('chartGallery'),
+  ['10.3k', '11.3k', '20.3k', '35.3k'],
+  [
+    {
+      label: 'identify p95 (ms)',
+      data: [207, 205, 155, 174],
+      borderColor: COLORS.brand,
+      backgroundColor: 'rgba(11,61,92,0.12)',
+      fill: true,
+      tension: 0.25,
+      pointRadius: 5,
+      pointBackgroundColor: COLORS.accent
+    },
+    {
+      label: 'SLO 550 ms',
+      data: [550, 550, 550, 550],
+      borderColor: COLORS.slo,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false
+    }
+  ],
+  { yTitle: 'ms', yMax: 600 }
+);
+
+/* 6. Spike RPS + 502 */
+bar(document.getElementById('chartSpikeRps'),
+  ['ก่อน@50', 'ก่อน@100', 'หลัง@20', 'หลัง@50', 'หลัง@100'],
+  [{
+    label: 'RPS (ok)',
+    data: [22.6, 14.9, 27.4, 22.6, 15.2],
+    backgroundColor: [
+      COLORS.gray, COLORS.gray, COLORS.accent, COLORS.accent, COLORS.accent
+    ],
+    borderRadius: 6
+  }],
+  { yTitle: 'req/s', legend: false }
+);
+
+bar(document.getElementById('chartSpike502'),
+  ['ก่อน@50', 'ก่อน@100', 'หลัง@50', 'หลัง@100'],
+  [{
+    label: 'HTTP 502',
+    data: [0, 9, 0, 5],
+    backgroundColor: [
+      COLORS.teal, COLORS.red, COLORS.teal, COLORS.orange
+    ],
+    borderRadius: 6
+  }],
+  { yTitle: 'จำนวน 502 / 500 req', legend: false }
+);
+
+/* 7. Soak mem */
+line(document.getElementById('chartSoakMem'),
+  ['เริ่ม', 'กลาง', 'จบ'],
+  [
+    {
+      label: 'Soak 2 ชม. Mem%',
+      data: [0.42, 0.42, 0.42],
+      borderColor: COLORS.brand,
+      tension: 0.2,
+      pointRadius: 4
+    },
+    {
+      label: 'ยืนยัน 45 นาที Mem%',
+      data: [0.42, 0.42, 0.42],
+      borderColor: COLORS.accent,
+      borderDash: [4, 3],
+      tension: 0.2,
+      pointRadius: 4
+    }
+  ],
+  { yTitle: 'Mem % (dpu-api)', yMax: 1 }
+);
+
+/* 8. pgvector */
+bar(document.getElementById('chartPgP95'),
+  ['100', '250', '500', 'R/W@250', 'V5@250'],
+  [{
+    label: 'p95 (ms)',
+    data: [228, 681, 726, 181, 524],
+    backgroundColor: [COLORS.blue, COLORS.orange, COLORS.orange, COLORS.accent, COLORS.teal],
+    borderRadius: 6
+  }],
+  { yTitle: 'ms', legend: false }
+);
+
+bar(document.getElementById('chartPgQps'),
+  ['100', '250', '500', 'R/W@250'],
+  [{
+    label: 'QPS',
+    data: [1770, 3127, 3920, 2636],
+    backgroundColor: COLORS.brand,
+    borderRadius: 6
+  }],
+  { yTitle: 'queries/s', legend: false }
+);
+
+/* 9. Verify battery score-like */
+bar(document.getElementById('chartVerify'),
+  ['V1\nscans', 'V2\nscans', 'V3\n502↓', 'V4\nsoak', 'V5\npg'],
+  [{
+    label: '% เทียบเป้า (ผ่าน = 100)',
+    data: [
+      Math.min(100, Math.round(878.7 / 900 * 100)),
+      Math.min(100, Math.round(1103.1 / 1139 * 100)),
+      100, // 502 not worse
+      100,
+      100  // p95 better than 681
+    ],
+    backgroundColor: COLORS.accent,
+    borderRadius: 6
+  }],
+  { yTitle: 'คะแนนผ่านเป้า', yMax: 110, legend: false }
+);
+
+/* 10. Bandwidth */
+bar(document.getElementById('chartBw'),
+  ['24 จอ', '32 จอ'],
+  [{
+    label: 'Mbps inbound',
+    data: [39.3, 52.4],
+    backgroundColor: [COLORS.blue, COLORS.brand],
+    borderRadius: 6
+  }],
+  { yTitle: 'Mbps', legend: false }
+);
+</script>
+</body>
+</html>

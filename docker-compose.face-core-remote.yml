@@ -1,0 +1,20 @@
+# Local DPU BFF calling Face Core on a remote host (not face-net).
+# Usage:
+#   FACE_CORE_API_KEY=<same as server BOOTSTRAP> \
+#   docker compose -f docker-compose.yml -f docker-compose.face-core-remote.yml up -d --build
+#
+# Default URL points at 10.50.0.117:8081 — override with FACE_CORE_URL in .env.
+services:
+  api:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile.bff
+      additional_contexts:
+        face_sdk: ../face-core/sdk/python
+    environment:
+      FACE_CORE_ENABLED: "true"
+      FACE_CORE_URL: ${FACE_CORE_URL:-http://10.50.0.117:8081}
+      FACE_CORE_API_KEY: ${FACE_CORE_API_KEY:?set FACE_CORE_API_KEY in .env}
+      FACE_DEVICE: cpu
+      NVIDIA_VISIBLE_DEVICES: ""
+      PYTHONPATH: /opt/face-core-sdk

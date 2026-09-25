@@ -18,6 +18,7 @@ from ..utils.face_engine import (
     verify_liveness_and_get_encoding,
     get_walkby_encoding,
     extract_face_features,
+    extract_face_features_from_crop,
     detect_faces_bytes,
 )
 from ..utils.face_gpu_queue import run_on_face_gpu
@@ -401,20 +402,40 @@ async def check_face_emp(
 
 
 async def identify_face(
-    image_file: UploadFile, companyId: UUID, db: AsyncSession
+    image_file: UploadFile,
+    companyId: UUID,
+    db: AsyncSession,
+    *,
+    pre_cropped: bool = False,
 ):
-    """Fast 1:N identify within company from a single frame (no liveness)."""
+    """Fast 1:N identify within company from a single frame (no liveness).
+
+    When ``pre_cropped`` is True the image is treated as an Edge face crop:
+    skip RetinaFace detect and run ArcFace embed + gallery search only.
+    """
     temp_image_paths: List[str] = []
     try:
         temp_image_paths = await _save_temp_frames([image_file])
-        if face_core_enabled():
+        # Edge crop path stays on local GPU queue (skip Face Core re-detect).
+        if face_core_enabled() and not pre_cropped:
             fc = await _face_core_identify(companyId, temp_image_paths, "fast")
             return await _enrich_face_core_match(db, companyId, fc)
-        features = await run_on_face_gpu(
-            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False),
-            kind="identify",
-            company_id=companyId,
-        )
+        if pre_cropped:
+            features = await run_on_face_gpu(
+                lambda p=temp_image_paths[0]: extract_face_features_from_crop(
+                    p, require_quality=False
+                ),
+                kind="identify",
+                company_id=companyId,
+            )
+        else:
+            features = await run_on_face_gpu(
+                lambda p=temp_image_paths[0]: extract_face_features(
+                    p, require_quality=False
+                ),
+                kind="identify",
+                company_id=companyId,
+            )
         if features is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

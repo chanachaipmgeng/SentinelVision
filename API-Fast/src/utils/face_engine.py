@@ -353,17 +353,44 @@ def extract_face_features_from_crop_bgr(
     blur_threshold: Optional[float] = None,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
     """
-    Embed a pre-cropped face image without running RetinaFace detection.
+    Embed a pre-cropped face image for Edge / Smart Camera clients.
 
-    Intended for Edge / Smart Camera clients that already cut the face box
-    and POST only the crop. Uses recognition on a full-frame bbox + synthetic
-    landmarks.
+    Prefers a cheap det@FACE_DETECT_DET_SIZE pass on the small crop (real
+    keypoints → ArcFace). Falls back to full-crop bbox + synthetic landmarks
+    only if the detector finds nothing (already-aligned square crops).
     """
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
     if height < 32 or width < 32:
         raise ValueError("Crop too small for embedding")
+
+    # Prefer enrollment-compatible det@640 on the *small crop* (still much cheaper
+    # than det@640 on a full kiosk frame). Fall back to fast det@320, then synthetic.
+    try:
+        features = extract_face_features_bgr(
+            image,
+            require_quality=require_quality,
+            blur_threshold=blur_threshold,
+            fast_detect=False,
+        )
+        if features is not None:
+            return features
+    except ValueError:
+        raise
+
+    try:
+        features = extract_face_features_bgr(
+            image,
+            require_quality=require_quality,
+            blur_threshold=blur_threshold,
+            fast_detect=True,
+        )
+        if features is not None:
+            return features
+    except ValueError:
+        raise
+
     bbox = np.asarray([0.0, 0.0, float(width - 1), float(height - 1)], dtype=np.float32)
     if require_quality:
         is_good, message = check_image_quality_bgr(

@@ -330,6 +330,69 @@ def extract_face_features_bgr(
     return embedding.astype(np.float32).tolist(), face.bbox.astype(np.float32)
 
 
+def _synthetic_kps_for_crop(width: int, height: int) -> np.ndarray:
+    """Approximate 5-point landmarks for a tight face crop (InsightFace order)."""
+    w = float(max(width, 1))
+    h = float(max(height, 1))
+    return np.asarray(
+        [
+            [0.30 * w, 0.38 * h],
+            [0.70 * w, 0.38 * h],
+            [0.50 * w, 0.55 * h],
+            [0.35 * w, 0.75 * h],
+            [0.65 * w, 0.75 * h],
+        ],
+        dtype=np.float32,
+    )
+
+
+def extract_face_features_from_crop_bgr(
+    image: np.ndarray,
+    *,
+    require_quality: bool = False,
+    blur_threshold: Optional[float] = None,
+) -> Optional[Tuple[List[float], np.ndarray]]:
+    """
+    Embed a pre-cropped face image without running RetinaFace detection.
+
+    Intended for Edge / Smart Camera clients that already cut the face box
+    and POST only the crop. Uses recognition on a full-frame bbox + synthetic
+    landmarks.
+    """
+    if image is None or not hasattr(image, "shape"):
+        raise ValueError("Could not decode frame")
+    height, width = image.shape[:2]
+    if height < 32 or width < 32:
+        raise ValueError("Crop too small for embedding")
+    bbox = np.asarray([0.0, 0.0, float(width - 1), float(height - 1)], dtype=np.float32)
+    if require_quality:
+        is_good, message = check_image_quality_bgr(
+            image, bbox, blur_threshold=blur_threshold
+        )
+        if not is_good:
+            raise ValueError(message)
+    kps = _synthetic_kps_for_crop(width, height)
+    embedding = _embed_from_det(image, bbox, kps, det_score=1.0)
+    if embedding is None:
+        return None
+    return embedding.astype(np.float32).tolist(), bbox
+
+
+def extract_face_features_from_crop(
+    image_path: str,
+    *,
+    require_quality: bool = False,
+    blur_threshold: Optional[float] = None,
+) -> Optional[Tuple[List[float], np.ndarray]]:
+    """Path-based wrapper for Edge crop identify (skip detector)."""
+    image = _read_bgr(image_path)
+    return extract_face_features_from_crop_bgr(
+        image,
+        require_quality=require_quality,
+        blur_threshold=blur_threshold,
+    )
+
+
 def extract_face_features(
     image_path: str,
     *,

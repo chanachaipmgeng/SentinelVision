@@ -94,12 +94,18 @@ async def identify_face_route(
     request: Request,
     file: UploadFile = File(...),
     companyId: UUID = Form(...),
+    preCropped: str = Form("false"),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
-    """Single-frame identify within company for live name overlay (no timestamp)."""
+    """Single-frame identify within company for live name overlay (no timestamp).
+
+    Set form field ``preCropped=true`` when the client already sent a tight face
+    crop from an Edge camera / Mini PC (skips server-side face detection).
+    """
     await assert_request_company_access(request, db, companyId)
-    return await identify_face(file, companyId, db)
+    pre_cropped = str(preCropped or "").strip().lower() in ("1", "true", "yes", "on")
+    return await identify_face(file, companyId, db, pre_cropped=pre_cropped)
 
 
 @router.post("/members/check-in")

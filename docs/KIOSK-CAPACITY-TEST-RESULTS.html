@@ -207,8 +207,8 @@
 <div class="wrap">
 
 <header class="hero">
-  <h1>ผลการเทสความจุคีออสใบหน้า<br><span style="font-weight:500;font-size:1.05rem;">ทุกรูปแบบ · เทียบ 2 เกณฑ์คุณภาพ · พร้อมกราฟ</span></h1>
-  <p class="sub">เอกสารสำหรับผู้บริหารและทีมเทคนิค — แยกชัด <strong>Target (ลื่น)</strong> กับ <strong>Acceptable (ใช้งานได้)</strong></p>
+  <h1>สรุปผลการทดสอบประสิทธิภาพระบบลงเวลาด้วยใบหน้า<br><span style="font-weight:500;font-size:1.05rem;">Face Kiosk Capacity Summary Report · เทสทุกรูปแบบ · 2 เกณฑ์ · กราฟ</span></h1>
+  <p class="sub">เอกสารสำหรับผู้บริหารและทีมเทคนิค — อ่านสรุปประสิทธิภาพด้านบน แล้วเจาะรายละเอียดเทสด้านล่าง</p>
   <p class="meta">
     อัปเดต: <strong>25 ก.ย. 2026</strong>
     · Host: <code>10.50.0.117</code>
@@ -222,6 +222,7 @@
 </header>
 
 <nav class="toc" aria-label="สารบัญ">
+  <a href="#exec-report">สรุปประสิทธิภาพ</a>
   <a href="#overview">ภาพรวม</a>
   <a href="#slo">2 เกณฑ์</a>
   <a href="#arch">โครงระบบ</a>
@@ -237,8 +238,108 @@
   <a href="#bandwidth">แบนด์วิดท์</a>
 </nav>
 
+<section id="exec-report" class="block">
+  <h2>สรุปผลการทดสอบประสิทธิภาพระบบลงเวลาด้วยใบหน้า<br><span style="font-size:0.92rem;font-weight:600;color:var(--muted)">Face Kiosk Capacity Summary Report</span></h2>
+  <p class="lead">วันที่อัปเดตข้อมูล: <strong>25 กันยายน 2026</strong> · เซิร์ฟเวอร์วัด: face-in (<code>10.50.0.117</code>)</p>
+
+  <h3 style="color:var(--brand);margin-top:1.1em">1. ข้อมูลภาพรวมและสภาพแวดล้อมการทดสอบ (Overview &amp; Environment)</h3>
+  <p>
+    การทดสอบนี้มีวัตถุประสงค์เพื่อประเมินขีดความสามารถสูงสุดของระบบ Face Kiosk บนฮาร์ดแวร์เซิร์ฟเวอร์ปัจจุบัน
+    เพื่อใช้เป็นข้อมูลอ้างอิงในการวางแผนติดตั้งระบบให้กับสาขาหรือบริษัทต่างๆ
+  </p>
+  <table>
+    <thead><tr><th>รายการ</th><th>ค่า</th></tr></thead>
+    <tbody>
+      <tr><td>Host</td><td>face-in · <code>10.50.0.117</code></td></tr>
+      <tr><td>CPU</td><td>32 Cores</td></tr>
+      <tr><td>RAM</td><td>~436 GB</td></tr>
+      <tr><td>GPU</td><td>2 × NVIDIA Quadro RTX 5000 (16 GB)</td></tr>
+    </tbody>
+  </table>
+  <p><strong>เกณฑ์ชี้วัดคุณภาพ (SLO) ที่ใช้ตัดสิน “ผ่าน”</strong></p>
+  <table>
+    <thead>
+      <tr><th>ชั้นเกณฑ์</th><th>Latency (p95)</th><th>Stability (Drop)</th><th>ใช้เมื่อ</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="tier-target">Target (คุณภาพหลัก)</td>
+        <td>≤ <strong>550 ms</strong></td>
+        <td>≤ 5%</td>
+        <td>SLA / สัญญาติดตั้งสาขา</td>
+      </tr>
+      <tr>
+        <td class="tier-accept">Acceptable (ยอมรับได้)</td>
+        <td>≤ <strong>1,000 ms</strong></td>
+        <td>≤ 5%</td>
+        <td>หาเพดานจอสูงสุดที่ยอมหน่วงได้</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="color:var(--brand);margin-top:1.25em">2. สรุปผลลัพธ์และสถาปัตยกรรมที่แนะนำ (Key Findings &amp; Recommended Architecture)</h3>
+  <p>
+    จากผลการทดสอบตัวเลือกระบบหลายรูปแบบ พบว่าสถาปัตยกรรมที่เหมาะสมที่สุดสำหรับ Production บนฮาร์ดแวร์เครื่องนี้ คือ
+    <strong>“DPU Monolith แบบ Quad”</strong>
+    (ประมวลผล 4 process · 3 workers ต่อ process · ปิด Face Core)
+  </p>
+  <div class="callout best">
+    <strong>ประสิทธิภาพภายใต้มาตรฐาน Target (p95 ≤ 550 ms)</strong>
+    <ul style="margin:0.4em 0 0 1.1em;padding:0">
+      <li><strong>Concurrency:</strong> รองรับจุดสแกน <strong>24–32 จอ</strong> พร้อมกัน · วางแผนชัวร์แนะนำ <strong>24 จอ</strong> (กรณีคนเข้ากล้องหลายคนพร้อมกัน)</li>
+      <li><strong>Rush Hour Capacity:</strong> ช่วงเช้า 20 นาที identify สำเร็จ <strong>17,998 – 22,783</strong> ครั้ง (@24–32 จอ) ≈ <strong>900 – 1,139</strong> ครั้ง/นาที</li>
+      <li><strong>Response Time:</strong> p95 ≈ <strong>211–230 ms</strong> — เร็วกว่าเกณฑ์ 550 ms ชัดเจน</li>
+      <li><strong>Drop Rate:</strong> <strong>0.00% – 0.06%</strong></li>
+    </ul>
+  </div>
+  <div class="callout warn">
+    <strong>ขอบบน Acceptable (p95 ≤ 1 วิ):</strong> ลงเวลาหนาแน่น gated ได้ถึงประมาณ <strong>32 จอ</strong> · คนเดียวต่อจอถึง ~40 จอ —
+    ใช้เป็นเพดานที่ยอมรับได้ ไม่แทนที่มาตรฐาน 550 ms
+  </div>
+
+  <h3 style="color:var(--brand);margin-top:1.25em">3. ข้อมูลเชิงลึกจากผลการทดสอบ (Detailed Test Results)</h3>
+  <table>
+    <thead><tr><th>หัวข้อ</th><th>ผลสรุป</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>ขนาดฐานข้อมูลพนักงาน</td>
+        <td>รองรับหลักหมื่นใบหน้าได้ · ที่ ~<strong>35,000</strong> ใบหน้า identify p95 ≈ <strong>174 ms</strong> — <strong>จำนวนพนักงานไม่ใช่คอขวด</strong> · สำคัญคือจำนวนจอพร้อมกัน</td>
+      </tr>
+      <tr>
+        <td>Soak Test (2 ชม.)</td>
+        <td>ไม่พบ Memory Leak · RAM คอนเทนเนอร์ API คงที่ ≈ <strong>0.42%</strong></td>
+      </tr>
+      <tr>
+        <td>Spike HTTP (แอปมือถือ)</td>
+        <td>รองรับประมาณ <strong>~20 concurrent</strong> ก่อน p95 แย่ลง · peak ≈ <strong>~35–38 รูป/วินาที</strong> — น้อยกว่าโหมด WebSocket ของคีออส</td>
+      </tr>
+      <tr>
+        <td>Network Bandwidth</td>
+        <td>24–32 จอใช้ขาเข้าประมาณ <strong>39–52 Mbps</strong> — LAN มาตรฐานรับได้</td>
+      </tr>
+      <tr>
+        <td>Chain Store / Edge</td>
+        <td>รองรับ <code>preCropped=true</code> แล้ว · throughput ที่ผ่าน 1 วิ ≈ <strong>~38 RPS/โหนด</strong> · วางแผนจากรูปที่เข้าพร้อมกัน ไม่ใช่จำนวนกล้องติดตั้ง</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 style="color:var(--brand);margin-top:1.25em">4. ข้อเสนอแนะเพื่อการดำเนินงานธุรกิจ (Business &amp; Operational Recommendations)</h3>
+  <ol>
+    <li><strong>มาตรฐานเปิดสาขาใหม่:</strong> 1 เซิร์ฟเวอร์ (สเปกนี้) เริ่มที่ <strong>≤ 24 จอ</strong> · สูงสุดไม่เกิน <strong>~32 จอ</strong> ภายใต้เกณฑ์ที่ยอมรับได้</li>
+    <li><strong>Multi-Tenancy:</strong> หลายบริษัทบนเครื่องเดียวกันได้ดีและ latency ไม่พัง — แต่<strong>ไม่เพิ่มเพดานจอรวม</strong> (20 บริษัท × 1 จอ ≈ ภาระเท่าบริษัทเดียว 20 จอ)</li>
+    <li><strong>Scaling Up:</strong> ถ้าต้องการมากกว่า ~32 จอพร้อมกัน <strong>อย่าจูนซอฟต์แวร์บนเครื่องเดิมอีก</strong> — เพิ่มโหนดเซิร์ฟเวอร์หรือ GPU</li>
+    <li><strong>Face Core:</strong> <strong>ยังไม่แนะนำ</strong> ในโปรดักชันบนสเปกนี้ (จูนเต็มที่แล้วยังได้ประมาณ 1–2 จอใต้ SLO) — เก็บไว้ R&amp;D แยกโฮสต์</li>
+    <li><strong>Chain Store กล้องเยอะ:</strong> ใช้ Edge ตัดใบหน้าแล้วส่งเข้า API กลาง · คุมอัตรารูปพร้อมกันต่อโหนด และสเกลแนวนอนเมื่อเกิน ~38 RPS</li>
+  </ol>
+  <p class="legend-note">
+    รายละเอียดตาราง/กราฟเทสแต่ละรูปแบบอยู่ด้านล่าง · สรุปผู้บริหารอีกฉบับ:
+    <a href="EXEC-SUMMARY-KIOSK-CAPACITY.html">EXEC-SUMMARY-KIOSK-CAPACITY.html</a>
+  </p>
+</section>
+
 <section id="overview" class="block">
-  <h2>1. ภาพรวมหนึ่งหน้า (สำหรับผู้บริหาร)</h2>
+  <h2>1. ภาพรวมหนึ่งหน้า (การ์ดสรุป)</h2>
   <p class="lead">โหมด production: <strong>Monolith Quad · workers=3 · Face Core ปิด</strong> · วางแผนสาขาอิงคีออสมี motion gate (~600 ms)</p>
   <div class="cards">
     <div class="card target">

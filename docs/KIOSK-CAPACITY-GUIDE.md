@@ -243,6 +243,26 @@ Rollback (ถ้าต้องการคืนค่าเดิม): ตั�
 
 กราฟ/ตารางเต็ม: [KIOSK-CAPACITY-TEST-RESULTS.html](KIOSK-CAPACITY-TEST-RESULTS.html)#ceiling1s
 
+### 3.5 Chain Store / Edge crop identify (25 ก.ย. 2026)
+
+**รองรับแล้ว:** `POST /face/members/identify` รับ form `preCropped=true` — ฝั่งเซิร์ฟเวอร์ใช้เส้นทาง embed บนภาพครอป/เฟรมที่ Edge กรองแล้ว (ไม่บังคับ Face Core)
+
+สคริปต์: `scripts/kiosk-load/edge_crop_identify_load.py` · สรุป `summary-edge-crop-identify.json`
+
+| โหมด | conc ที่ผ่าน Target 550 | conc ที่ผ่าน Acceptable 1s | RPS (ที่ผ่าน 1s สูงสุด) |
+|------|-------------------------|----------------------------|-------------------------|
+| full identify (เดิม) | **10** (p95 ~453) | **20** (p95 ~692 · **38.2 RPS**) | ~38 |
+| `preCropped=true` | **10** (p95 ~357) | **20** (p95 ~661 · **37.7 RPS**) | ~38 |
+
+**คำตัดสิน**
+
+- เปิด Edge path แล้ว **ใช้งานได้** แต่บนเครื่องนี้ **ไม่ได้ดันเป็น 80–100 RPS** — peak ที่ยังผ่าน Acceptable ≈ **~38 รูป/วินาที** (ใกล้ full identify)
+- คอขวดหลักยังเป็น **embed + search + API/CPU** ไม่ใช่แค่ RetinaFace บนเฟรมใหญ่
+- Chain Store ยังไปได้ด้วย **duty cycle**: ที่ ~38 RPS ถ้ายิงเฉลี่ย 1 รูป/30 วิ/กล้อง → ประมาณ **~1,100 กล้องติดตั้ง** ต่อโหนด (อย่าใช้ช่วงเปิดร้านพร้อมกันเป็นค่าเฉลี่ย)
+- ครอปต้องคุณภาพเข้ากับ enroll (ขอบใบหน้าพอ · ความละเอียดพอ) — ครอปเล็ก/ย่อรูปแรงอาจไม่ match
+
+รายละเอียดกราฟ: [KIOSK-CAPACITY-TEST-RESULTS.html](KIOSK-CAPACITY-TEST-RESULTS.html)#chainstore
+
 ---
 
 ## 4. ตารางเปรียบเทียบด้านเดียว (เลือกสเป็ค)
@@ -256,7 +276,8 @@ Rollback (ถ้าต้องการคืนค่าเดิม): ตั�
 | หลายบริษัทช่วยเพิ่มความจุไหม? | **ไม่เพิ่มเพดานจอ** · แค่กระจายโหลด; วัดด้วยจอรวมคงที่แล้ว latency ใกล้เคียง |
 | เปิด Face Core BFF ทั้งเครื่องดีไหม? | **ยังไม่** บนฮาร์ดแวร์นี้ — เพดาน ~2 จอ |
 | อยากได้ความจุสูงกว่านี้? | เพิ่ม GPU/โหนด — **อย่าจูน env/pool ซ้ำ** (§3.2–§3.3 ไม่ชี้คอขวด pool; จูน nginx upstream แล้วคงไว้) |
-| HTTP identify พัน concurrent? | ไม่รองรับภายใต้ 1s · peak ~23–27 RPS · ใช้โหมดคีออส WS แทน |
+| HTTP identify พัน concurrent? | ไม่รองรับภายใต้ 1s · peak ~35–38 RPS · ใช้โหมดคีออส WS หรือ Edge+duty-cycle |
+| Chain Store กล้องหลายร้อยตัว? | รองรับแนว Edge + `preCropped=true` · วางแผนจาก **รูปพร้อมกัน** (~38 RPS/โหนด) ไม่ใช่จำนวนกล้องติดตั้ง (§3.5) |
 
 ---
 

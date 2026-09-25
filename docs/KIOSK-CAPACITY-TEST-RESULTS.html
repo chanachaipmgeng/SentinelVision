@@ -233,6 +233,7 @@
   <a href="#soak">Soak</a>
   <a href="#pgvector">pgvector</a>
   <a href="#verify">ยืนยันหลังจูน</a>
+  <a href="#chainstore">Chain Store</a>
   <a href="#bandwidth">แบนด์วิดท์</a>
 </nav>
 
@@ -679,6 +680,62 @@
   </div>
 </section>
 
+</section>
+
+<section id="chainstore" class="block">
+  <h2>9.1 Chain Store / Edge crop identify</h2>
+  <p class="lead">
+    แนวสาขาเยอะ · ตรวจจับที่ Edge แล้วส่งเข้า API กลางด้วย <code>preCropped=true</code> ·
+    วัด A/B เทียบ identify เต็มเฟรม · เกณฑ์ Target 550 / Acceptable 1s
+  </p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box"><canvas id="chartEdgeRps"></canvas></div>
+      <p class="legend-note">RPS สูงสุดในสเต็ปที่ยังผ่านเกณฑ์ Acceptable (p95 ≤ 1s · error ≤ 5%)</p>
+    </div>
+    <div>
+      <div class="chart-box"><canvas id="chartEdgeCam"></canvas></div>
+      <p class="legend-note">ประมาณการกล้องติดตั้ง = RPS × ช่วงยิงเฉลี่ยต่อกล้อง (สมมติ 1 รูป/30 วิ)</p>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>โหมด</th>
+        <th class="col-target">Target 550</th>
+        <th class="col-accept">Acceptable 1s</th>
+        <th>RPS @Acceptable</th>
+        <th>กล้องประมาณ (1/30วิ)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>full identify</td>
+        <td class="tier-target">conc 10 · p95 ~453</td>
+        <td class="tier-accept">conc 20 · p95 ~692</td>
+        <td><strong>38.2</strong></td>
+        <td>~1,150</td>
+      </tr>
+      <tr>
+        <td><code>preCropped=true</code></td>
+        <td class="tier-target">conc 10 · p95 ~357</td>
+        <td class="tier-accept">conc 20 · p95 ~661</td>
+        <td><strong>37.7</strong></td>
+        <td>~1,130</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout best">
+    <strong>รองรับแล้ว:</strong> API กลางรับงาน Edge ได้ · แต่บนเครื่องนี้ <strong>ไม่ได้เป็น 80–100 RPS</strong> —
+    peak ที่ผ่าน Acceptable ≈ <strong>~38 รูป/วินาที</strong> · คอขวดอยู่ที่ embed/search/API ·
+    Chain Store วางได้หลักร้อย–พันกล้องเมื่อ <strong>ไม่ยิงพร้อมกัน</strong> (duty cycle)
+  </div>
+  <div class="callout warn">
+    ครอปต้องคุณภาพเข้ากับ enroll · ย่อรูปแรง / ตัดใบหน้าแคบเกินอาจไม่ match —
+    Edge ควรส่งครอปมีขอบและรายละเอียดพอ · มี rate limit ต่อสาขาช่วงเปิดร้านพร้อมกัน
+  </div>
+</section>
+
 <section id="bandwidth" class="block">
   <h2>10. แบนด์วิดท์ขาเข้าโดยประมาณ</h2>
   <p class="lead">เฟรม detect ~129 KB · interval 600 ms (ยังไม่รวม crop identify ที่เล็กกว่า/ถี่น้อยกว่า)</p>
@@ -1034,14 +1091,37 @@ bar(document.getElementById('chartVerify'),
     data: [
       Math.min(100, Math.round(878.7 / 900 * 100)),
       Math.min(100, Math.round(1103.1 / 1139 * 100)),
-      100, // 502 not worse
       100,
-      100  // p95 better than 681
+      100,
+      100
     ],
     backgroundColor: COLORS.accent,
     borderRadius: 6
   }],
   { yTitle: 'คะแนนผ่านเป้า', yMax: 110, legend: false }
+);
+
+/* 9.1 Chain Store / Edge */
+bar(document.getElementById('chartEdgeRps'),
+  ['full identify', 'preCropped'],
+  [{
+    label: 'RPS ที่ผ่าน Acceptable 1s',
+    data: [38.2, 37.7],
+    backgroundColor: [COLORS.blue, COLORS.accent],
+    borderRadius: 6
+  }],
+  { yTitle: 'req/s', yMax: 50, legend: false }
+);
+
+bar(document.getElementById('chartEdgeCam'),
+  ['full @1/30s', 'preCropped @1/30s'],
+  [{
+    label: 'กล้องติดตั้งโดยประมาณ',
+    data: [1146, 1131],
+    backgroundColor: [COLORS.brand, '#e9a825'],
+    borderRadius: 6
+  }],
+  { yTitle: 'กล้อง', yMax: 1400, legend: false }
 );
 
 /* 10. Bandwidth */

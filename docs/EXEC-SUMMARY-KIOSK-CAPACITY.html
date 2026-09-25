@@ -270,6 +270,7 @@ tr:nth-child(even) td { background: #f7fafc; }
   <li><strong>Soak 2 ชั่วโมง / ยืนยัน 45 นาที:</strong> RAM คอนเทนเนอร์ API <strong>ไม่โตสะสม</strong> · GPU ทั้งสองใบมี VRAM ค้างใช้งาน</li>
   <li><strong>ค้นหา 20,000 ใบหน้า:</strong> ยิงค้นหาพร้อมกันหลักร้อย–ห้าร้อย รายการยังจบในระดับร้อยมิลลิวินาที (p95) · เขียนพร้อมอ่านไม่ทำให้ค้างล็อก</li>
   <li><strong>แบนด์วิดท์:</strong> 24–32 จอส่งเฟรมรวมราว <strong>40–52 Mbps</strong> — ไม่น่าเป็นคอขวดบน LAN ปกติ</li>
+  <li><strong>Chain Store / Edge (<code>preCropped</code>):</strong> รองรับ API กลางแล้ว · throughput ที่ผ่านเกณฑ์ 1 วิ ≈ <strong>~38 รูป/วินาที</strong> (ใกล้ full identify · ไม่ถึง 80–100) · ประมาณการกล้องติดตั้ง ~<strong>1,100</strong> ตัว/โหนด ถ้าเฉลี่ย 1 รูป/30 วิ</li>
 </ul>
 <div class="best">
   <strong>รอบยืนยันหลังจูน nginx (§3.3):</strong>
@@ -310,6 +311,7 @@ tr:nth-child(even) td { background: #f7fafc; }
   <li><strong>บริษัทใหญ่ / ใบหน้าเยอะ:</strong> ระดับหมื่นถึง ~3.5 หมื่นใบหน้าต่อบริษัทยังโอเค — โฟกัสที่จำนวนจอ peak มากกว่า</li>
   <li><strong>หลายบริษัท:</strong> นับจากจอรวมสูงสุดของทั้งเครื่อง ไม่ใช่จำนวนบริษัท</li>
   <li><strong>อยากได้ความจุสูงกว่านี้:</strong> ต้องเพิ่มฮาร์ดแวร์ (GPU/โหนด) หรือลดโหลดฝั่งจอ — <strong>จูนค่า env ซ้ำบนเครื่องนี้ได้ผลจำกัดแล้ว</strong></li>
+  <li><strong>Chain Store หลายสาขา:</strong> ใช้ Edge ตัดใบหน้าแล้วส่ง <code>preCropped=true</code> · วางแผนจากอัตรารูปพร้อมกัน (~38 RPS/โหนด) ไม่ใช่จำนวนกล้องติดตั้ง</li>
   <li><strong>Face Core:</strong> คงไว้สำหรับทดลองแยกบริการในอนาคต · อย่าคาดหวังให้เพิ่มจำนวนจอบนเซิร์ฟเวอร์นี้เกิน Monolith</li>
 </ol>
 

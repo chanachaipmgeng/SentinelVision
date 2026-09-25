@@ -72,9 +72,51 @@
       border-radius: 12px;
       padding: 14px 16px;
     }
-    .card .lbl { font-size: .8rem; color: var(--muted); }
-    .card .val { font-size: 1.45rem; font-weight: 700; color: var(--brand); margin-top: 4px; }
-    .card .hint { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    .card.target { border-color: #2a9d8f; background: linear-gradient(160deg, #f0fbf8, #fff); }
+    .card.accept { border-color: #e9a825; background: linear-gradient(160deg, #fffbf0, #fff); }
+    .slo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0 8px;
+    }
+    @media (max-width: 700px) { .slo-grid { grid-template-columns: 1fr; } }
+    .slo-box {
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+    }
+    .slo-box.target {
+      background: #e8f7f2;
+      border-color: #2a9d8f;
+    }
+    .slo-box.accept {
+      background: #fff8e8;
+      border-color: #e9a825;
+    }
+    .slo-box h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      color: var(--brand);
+    }
+    .slo-box .big {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--brand);
+      margin: 4px 0 8px;
+    }
+    .slo-box ul { margin: 0.3em 0 0 1.1em; padding: 0; font-size: .88rem; }
+    th.col-target { background: #1b7a4a; }
+    th.col-accept { background: #c47f00; }
+    td.tier-target { background: #f0faf5 !important; font-weight: 600; color: var(--ok); }
+    td.tier-accept { background: #fff8e8 !important; font-weight: 600; color: var(--warn); }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      border-radius: 999px; padding: 4px 12px; font-size: .8rem; font-weight: 700;
+    }
+    .pill.target { background: #d8f5e7; color: var(--ok); }
+    .pill.accept { background: #ffe8b8; color: #8a5a00; }
     section.block {
       background: var(--card);
       border: 1px solid var(--line);
@@ -165,22 +207,27 @@
 <div class="wrap">
 
 <header class="hero">
-  <h1>ผลการเทสความจุคีออสใบหน้า<br><span style="font-weight:500;font-size:1.05rem;">ทุกรูปแบบ · พร้อมกราฟเปรียบเทียบ</span></h1>
-  <p class="sub">รวบรวมผลวัดจริงบนเซิร์ฟเวอร์ production candidate — อ่านทีละโหมดเทสได้จากเมนูด้านล่าง</p>
+  <h1>ผลการเทสความจุคีออสใบหน้า<br><span style="font-weight:500;font-size:1.05rem;">ทุกรูปแบบ · เทียบ 2 เกณฑ์คุณภาพ · พร้อมกราฟ</span></h1>
+  <p class="sub">เอกสารสำหรับผู้บริหารและทีมเทคนิค — แยกชัด <strong>Target (ลื่น)</strong> กับ <strong>Acceptable (ใช้งานได้)</strong></p>
   <p class="meta">
     อัปเดต: <strong>25 ก.ย. 2026</strong>
     · Host: <code>10.50.0.117</code>
     · GPU: 2× Quadro RTX 5000 16 GB
-    · SLO: p95 ≤ 550 ms · drop ≤ 5%
+    · drop ≤ 5% ทุกเกณฑ์
   </p>
+  <div class="pill-row" style="margin-top:14px">
+    <span class="pill target">Target · p95 ≤ 550 ms</span>
+    <span class="pill accept">Acceptable · p95 ≤ 1,000 ms</span>
+  </div>
 </header>
 
 <nav class="toc" aria-label="สารบัญ">
   <a href="#overview">ภาพรวม</a>
+  <a href="#slo">2 เกณฑ์</a>
   <a href="#arch">โครงระบบ</a>
   <a href="#profiles">โปรไฟล์เทส</a>
   <a href="#rush">ช่วงเช้า</a>
-  <a href="#ceiling1s">เพดาน 1วิ</a>
+  <a href="#ceiling1s">เพดานจอ</a>
   <a href="#gallery">แกลเลอรี</a>
   <a href="#spike">Spike HTTP</a>
   <a href="#soak">Soak</a>
@@ -190,39 +237,101 @@
 </nav>
 
 <section id="overview" class="block">
-  <h2>1. ภาพรวมหนึ่งหน้า</h2>
-  <p class="lead">ตัวเลขที่ใช้วางแผนติดตั้งจริง (โหมด production: <strong>Monolith Quad · workers=3 · Face Core ปิด</strong>)</p>
+  <h2>1. ภาพรวมหนึ่งหน้า (สำหรับผู้บริหาร)</h2>
+  <p class="lead">โหมด production: <strong>Monolith Quad · workers=3 · Face Core ปิด</strong> · วางแผนสาขาอิงคีออสมี motion gate (~600 ms)</p>
   <div class="cards">
-    <div class="card">
-      <div class="lbl">ลงเวลา (rush)</div>
-      <div class="val">24–32 จอ</div>
-      <div class="hint">×3 คน/จอ → ~24 · ×1 → ~32</div>
+    <div class="card target">
+      <div class="lbl">Target · ลงเวลาคุณภาพดี (≤550 ms)</div>
+      <div class="val">~20–24 จอ</div>
+      <div class="hint">หนาแน่น (×3) ชัวร์ · คนเดียว/จอสูงกว่านี้ได้</div>
+    </div>
+    <div class="card accept">
+      <div class="lbl">Acceptable · ใช้งานได้ (≤1 วิ)</div>
+      <div class="val">~32 จอ</div>
+      <div class="hint">หนาแน่น gated · คนเดียว/จอถึง ~40</div>
     </div>
     <div class="card">
-      <div class="lbl">สแกนเช้า 20 นาที</div>
+      <div class="lbl">สแกนเช้า 20 นาที (identify)</div>
       <div class="val">~18k–23k</div>
-      <div class="hint">identify สำเร็จ @24–32 จอ</div>
+      <div class="hint">@24–32 จอ · p95 ~210–230 ms (ผ่านทั้ง 2 เกณฑ์)</div>
     </div>
     <div class="card">
-      <div class="lbl">Face Core บนเครื่องนี้</div>
-      <div class="val">≤ 2 จอ</div>
-      <div class="hint">จูนเต็มแล้วยังช้ากว่า Monolith</div>
-    </div>
-    <div class="card">
-      <div class="lbl">ยืนยันหลังจูน nginx</div>
-      <div class="val ok">ผ่าน V1–V5</div>
-      <div class="hint">คง max_fails=5 · fail_timeout=10s</div>
+      <div class="lbl">แนะนำติดตั้งสาขา</div>
+      <div class="val">24 จอ</div>
+      <div class="hint">เป้าหลักที่ Target · เผื่อขึ้น 32 เป็นขอบ Acceptable</div>
     </div>
   </div>
   <div class="callout best">
-    <strong>คำตัดสิน:</strong> ใช้ DPU Monolith Quad เป็น production · อย่าเปิด Face Core เพื่อหวังจอเยอะขึ้นบนฮาร์ดแวร์ชุดนี้ ·
-    จูน nginx upstream แล้วช่วยลด 502 ใต้ spike · ไม่ต้องขยาย DB pool / GPU workers
+    <strong>ข้อความสั้นสำหรับผู้บริหาร:</strong>
+    ระบบผ่านมาตรฐานคุณภาพ <strong>0.55 วินาที</strong> ที่ประมาณ <strong>20–24 จอ</strong> ·
+    ถ้ายอมระดับใช้งานได้ที่ <strong>1 วินาที</strong> จะดันช่วงเร่งด่วนได้ถึงประมาณ <strong>32 จอ</strong> ·
+    จึงแนะนำติดตั้ง <strong>24 จอเป็นค่าหลัก</strong> และถือ 32 เป็นขอบบนที่ยอมรับได้ — ไม่แทนที่เกณฑ์ 550 ms ด้วย 1 วิ
   </div>
 </section>
 
+<section id="slo" class="block">
+  <h2>1.1 สองเกณฑ์คุณภาพที่ใช้ตัดสิน</h2>
+  <p class="lead">ใช้คู่กันเสมอ — <strong>Target = คุณภาพที่สัญญา</strong> · <strong>Acceptable = เพดานที่ยอมรับได้เมื่อต้องการจอเพิ่ม</strong></p>
+  <div class="slo-grid">
+    <div class="slo-box target">
+      <h3><span class="tag tag-ok">Target</span> คุณภาพหลัก</h3>
+      <div class="big">p95 ≤ 550 ms</div>
+      <ul>
+        <li>ความรู้สึก: ตอบเร็ว ลื่น</li>
+        <li>drop ≤ 5%</li>
+        <li>ใช้เป็น SLA / สัญญาติดตั้งสาขา</li>
+        <li>rush ×3 gated ≈ <strong>20–24 จอ</strong></li>
+        <li>rush ×1 gated ≈ <strong>40 จอ</strong></li>
+      </ul>
+    </div>
+    <div class="slo-box accept">
+      <h3><span class="tag tag-warn">Acceptable</span> ยอมรับได้</h3>
+      <div class="big">p95 ≤ 1,000 ms</div>
+      <ul>
+        <li>ความรู้สึก: ใช้งานได้ อาจหน่วงเล็กน้อย</li>
+        <li>drop ≤ 5%</li>
+        <li>ใช้หาเพดานจอสูงสุดที่ยอมได้</li>
+        <li>rush ×3 gated ≈ <strong>32 จอ</strong></li>
+        <li>rush ×1 gated ≈ <strong>40 จอ</strong> (48 ไม่ผ่าน)</li>
+      </ul>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>คำถามผู้บริหาร</th>
+        <th class="col-target">ตอบด้วย Target (550)</th>
+        <th class="col-accept">ตอบด้วย Acceptable (1s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ติดตั้งกี่จอโดยคุณภาพดี?</td>
+        <td class="tier-target">~24 จอ</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>สูงสุดที่ยอมหน่วงถึง 1 วิ?</td>
+        <td>—</td>
+        <td class="tier-accept">~32 จอ (หนาแน่น)</td>
+      </tr>
+      <tr>
+        <td>คนเดียวต่อจอ / มือถือ?</td>
+        <td class="tier-target">ถึง ~40 จอ</td>
+        <td class="tier-accept">ถึง ~40 จอ (เท่ากันในรอบนี้)</td>
+      </tr>
+      <tr>
+        <td>ช่วงเช้า identify @24–32?</td>
+        <td class="tier-target" colspan="2" style="background:#f0faf5!important">ผ่านทั้งสองเกณฑ์ (p95 ~210–380 ms)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="legend-note">เมตริกตัดสินเพดาน rush: worst(detect p95, identify p95) · รายละเอียดรอบวัด §เพดานจอ</p>
+</section>
+
 <section id="arch" class="block">
-  <h2>2. เปรียบเทียบโครงระบบ (จำนวนจอที่ผ่าน SLO)</h2>
-  <p class="lead">แกน Y = จำนวนจอสูงสุดโดยประมาณที่ยังผ่านเกณฑ์คุณภาพภายใต้โหลดคีออส (gated / ใกล้ของจริง)</p>
+  <h2>2. เปรียบเทียบโครงระบบ (จำนวนจอ)</h2>
+  <p class="lead">แกน Y ≈ จอที่ผ่านคุณภาพคีออส (gated) · เส้นแนะนำ production อิง <strong>Target ~24 จอ</strong></p>
   <div class="grid2">
     <div>
       <div class="chart-box tall"><canvas id="chartArch"></canvas></div>
@@ -234,7 +343,7 @@
         <tbody>
           <tr><td>เริ่มต้น (1 process)</td><td>1</td><td>5–8 จอ</td><td>baseline เก่า</td></tr>
           <tr><td>Dual-API</td><td>2</td><td>12–24 จอ</td><td>เริ่มใช้ 2 GPU</td></tr>
-          <tr><td><strong>Quad w3 ★</strong></td><td><strong>4</strong></td><td><strong>24–32 จอ</strong></td><td><strong>production ลงเวลา</strong></td></tr>
+          <tr><td><strong>Quad w3 ★</strong></td><td><strong>4</strong></td><td><strong>Target ~24 · Acceptable ~32</strong></td><td><strong>production ลงเวลา</strong></td></tr>
           <tr><td>Hexa w2</td><td>6</td><td>identify 64–80 · rush แย่ลง</td><td>หาชื่อชั่วคราวเท่านั้น</td></tr>
           <tr><td>Face Core BFF</td><td>2 (Core)</td><td class="no">≤ 2 จอ</td><td>ทดลองแยกบริการ</td></tr>
         </tbody>
@@ -281,16 +390,40 @@
   </div>
   <table>
     <thead>
-      <tr><th>จอ</th><th>identify สำเร็จ / 20 นาที</th><th>ต่อนาที</th><th>p95</th><th>drop</th><th>SLO</th></tr>
+      <tr>
+        <th>จอ</th>
+        <th>identify สำเร็จ / 20 นาที</th>
+        <th>ต่อนาที</th>
+        <th>p95</th>
+        <th>drop</th>
+        <th class="col-target">Target 550</th>
+        <th class="col-accept">Acceptable 1s</th>
+      </tr>
     </thead>
     <tbody>
-      <tr><td><strong>24</strong></td><td><strong>17,998</strong></td><td>~900</td><td>211 ms</td><td>0.06%</td><td class="ok">ผ่าน</td></tr>
-      <tr><td><strong>32</strong></td><td><strong>22,783</strong></td><td>~1,139</td><td>228 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+      <tr>
+        <td><strong>24</strong></td>
+        <td><strong>17,998</strong></td>
+        <td>~900</td>
+        <td>211 ms</td>
+        <td>0.06%</td>
+        <td class="tier-target">ผ่าน</td>
+        <td class="tier-accept">ผ่าน</td>
+      </tr>
+      <tr>
+        <td><strong>32</strong></td>
+        <td><strong>22,783</strong></td>
+        <td>~1,139</td>
+        <td>228 ms</td>
+        <td>0%</td>
+        <td class="tier-target">ผ่าน</td>
+        <td class="tier-accept">ผ่าน</td>
+      </tr>
     </tbody>
   </table>
   <div class="callout best">
-    สาขาเปิด 24–32 จอพร้อมกันในช่วงเช้า → ระบบรองรับราว <strong>1.8–2.3 หมื่นครั้ง identify ใน 20 นาที</strong> ภายใต้ SLO
-    (สมมติคนยืนนิ่ง · ใบหน้า matched)
+    สาขาเปิด 24–32 จอในช่วงเช้า (identify) → ~<strong>1.8–2.3 หมื่นครั้ง / 20 นาที</strong> ·
+    p95 ~210–230 ms จึง<strong>ผ่านทั้ง Target และ Acceptable</strong>
   </div>
   <h3 style="margin-top:1.2em;color:var(--brand)">rush 10 นาที @24 จอ (ลงเวลา) — ระวัง dedupe</h3>
   <table>
@@ -304,27 +437,65 @@
 </section>
 
 <section id="ceiling1s" class="block">
-  <h2>4.1 เพดานจอใต้เกณฑ์ 550 ms vs 1 วินาที (rush)</h2>
-  <p class="lead">รอบ 25 ก.ย. 2026 · เมตริก <code>worst(detect p95, identify p95)</code> · drop ≤ 5% · ใกล้จอจริงดูแถว <strong>gated 600 ms</strong></p>
+  <h2>4.1 เพดานจอลงเวลา — เทียบ Target 550 ms vs Acceptable 1 วิ</h2>
+  <p class="lead">
+    รอบ 25 ก.ย. 2026 · เมตริก <code>worst(detect p95, identify p95)</code> · drop ≤ 5% ·
+    <strong>วางแผนสาขาดูแถว gated 600 ms</strong> (ใกล้คีออสจริง)
+  </p>
+  <div class="pill-row">
+    <span class="pill target">แท่งเขียวเข้ม / คอลัมน์ Target = ≤550 ms</span>
+    <span class="pill accept">แท่งเขียวอมเหลือง / คอลัมน์ Acceptable = ≤1,000 ms</span>
+  </div>
   <div class="grid2">
     <div>
       <div class="chart-box tall"><canvas id="chartCeil1s"></canvas></div>
+      <p class="legend-note">ยิ่งแท่ง Acceptable สูงกว่า Target มาก = การผ่อนเกณฑ์เป็น 1 วิ “ซื้อ” จอเพิ่มได้ชัด (โดยเฉพาะ rush ×3 gated)</p>
     </div>
     <div>
       <table>
-        <thead><tr><th>โปรไฟล์</th><th>ผ่าน 550</th><th>ผ่าน 1s</th><th>FAIL ที่</th></tr></thead>
+        <thead>
+          <tr>
+            <th>โปรไฟล์</th>
+            <th class="col-target">Target 550</th>
+            <th class="col-accept">Acceptable 1s</th>
+            <th>FAIL @1s</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>rush ×3 full</td><td>—</td><td><strong>12</strong></td><td>16</td></tr>
-          <tr><td>rush ×1 full</td><td>12</td><td><strong>24</strong></td><td>32</td></tr>
-          <tr><td>rush ×3 gated</td><td>20</td><td><strong>32</strong></td><td>36</td></tr>
-          <tr><td>rush ×1 gated</td><td>40</td><td><strong>40</strong></td><td>48</td></tr>
+          <tr>
+            <td>rush ×3 full (90 ms)</td>
+            <td class="tier-target">—</td>
+            <td class="tier-accept">12 จอ</td>
+            <td>16</td>
+          </tr>
+          <tr>
+            <td>rush ×1 full</td>
+            <td class="tier-target">12 จอ</td>
+            <td class="tier-accept">24 จอ</td>
+            <td>32</td>
+          </tr>
+          <tr>
+            <td><strong>rush ×3 gated ★</strong></td>
+            <td class="tier-target"><strong>20 จอ</strong></td>
+            <td class="tier-accept"><strong>32 จอ</strong></td>
+            <td>36</td>
+          </tr>
+          <tr>
+            <td><strong>rush ×1 gated ★</strong></td>
+            <td class="tier-target"><strong>40 จอ</strong></td>
+            <td class="tier-accept"><strong>40 จอ</strong></td>
+            <td>48</td>
+          </tr>
         </tbody>
       </table>
       <div class="callout best" style="margin-top:12px">
-        <strong>Acceptable 1 วิ + คีออสมี gating:</strong> ลงเวลาหนาแน่นได้ถึงประมาณ <strong>32 จอ</strong> · คนเดียว/จอ <strong>40 จอ</strong>
+        <strong>สำหรับผู้บริหาร:</strong> ติดตั้งแนะนำ <strong>24 จอ (Target)</strong> ·
+        ขอบบนช่วงเร่งด่วนหนาแน่น <strong>32 จอ (Acceptable 1 วิ)</strong> ·
+        คนเดียวต่อจอถึง ~40 ภายใต้ทั้งสองเกณฑ์ในรอบนี้
       </div>
       <div class="callout warn">
-        ขณะวัดมี Face Core container + Whisper ค้าง GPU1 — full-rate ต่ำกว่าตาราง PERF3 เดิม · ใช้แถว gated เป็นหลักเมื่อวางแผนสาขา
+        ขณะวัดมี Face Core container + Whisper ค้าง GPU1 — แถว full-rate ต่ำกว่า PERF3 เดิม ·
+        <strong>อย่าใช้ full-rate แทนจำนวนจอสาขา</strong>
       </div>
     </div>
   </div>
@@ -336,16 +507,24 @@
   <div class="grid2">
     <div>
       <div class="chart-box"><canvas id="chartGallery"></canvas></div>
-      <p class="legend-note">เส้นประแดง = SLO 550 ms — ทุกจุดยังอยู่ใต้เกณฑ์ชัดเจน</p>
+      <p class="legend-note">เส้นประแดง = Target 550 ms · เส้นประส้ม = Acceptable 1,000 ms — ทุกจุดยังต่ำกว่าทั้งสองเส้น</p>
     </div>
     <div>
       <table>
-        <thead><tr><th>ใบหน้ารวม</th><th>p95</th><th>drop</th><th>SLO</th></tr></thead>
+        <thead>
+          <tr>
+            <th>ใบหน้ารวม</th>
+            <th>p95</th>
+            <th>drop</th>
+            <th class="col-target">Target 550</th>
+            <th class="col-accept">Acceptable 1s</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>~10.3k</td><td>207 ms</td><td>0.5%</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>~11.3k</td><td>205 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>~20.3k</td><td>155 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>~35.3k</td><td>174 ms</td><td>0%</td><td class="ok">ผ่าน</td></tr>
+          <tr><td>~10.3k</td><td>207 ms</td><td>0.5%</td><td class="tier-target">ผ่าน</td><td class="tier-accept">ผ่าน</td></tr>
+          <tr><td>~11.3k</td><td>205 ms</td><td>0%</td><td class="tier-target">ผ่าน</td><td class="tier-accept">ผ่าน</td></tr>
+          <tr><td>~20.3k</td><td>155 ms</td><td>0%</td><td class="tier-target">ผ่าน</td><td class="tier-accept">ผ่าน</td></tr>
+          <tr><td>~35.3k</td><td>174 ms</td><td>0%</td><td class="tier-target">ผ่าน</td><td class="tier-accept">ผ่าน</td></tr>
         </tbody>
       </table>
       <div class="callout best" style="margin-top:12px">
@@ -448,13 +627,49 @@
     </div>
     <div>
       <table>
-        <thead><tr><th>#</th><th>เทส</th><th>ผลหลังจูน</th><th>คำตัดสิน</th></tr></thead>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>เทส</th>
+            <th>ผลหลังจูน</th>
+            <th class="col-target">Target 550</th>
+            <th class="col-accept">Acceptable 1s</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>V1</td><td>id @24 · 10 นาที</td><td>879/min · p95 382 · drop 0%</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>V2</td><td>id @32 · 10 นาที</td><td>1103/min · p95 262 · drop 0%</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>V3</td><td>spike 20/50/100</td><td>502@100: 9→5 · peak 27.4</td><td class="ok">ไม่แย่ลง</td></tr>
-          <tr><td>V4</td><td>soak ~45 นาที</td><td>Mem คงที่ · fail 0</td><td class="ok">ผ่าน</td></tr>
-          <tr><td>V5</td><td>pgvector @250</td><td>p95 524 ms · err 0</td><td class="ok">ผ่าน</td></tr>
+          <tr>
+            <td>V1</td>
+            <td>id @24 · 10 นาที</td>
+            <td>879/min · p95 382 · drop 0%</td>
+            <td class="tier-target">ผ่าน</td>
+            <td class="tier-accept">ผ่าน</td>
+          </tr>
+          <tr>
+            <td>V2</td>
+            <td>id @32 · 10 นาที</td>
+            <td>1103/min · p95 262 · drop 0%</td>
+            <td class="tier-target">ผ่าน</td>
+            <td class="tier-accept">ผ่าน</td>
+          </tr>
+          <tr>
+            <td>V3</td>
+            <td>spike 20/50/100</td>
+            <td>502@100: 9→5 · peak 27.4</td>
+            <td colspan="2" class="ok">ไม่แย่ลง (HTTP คนละเกณฑ์คีออส)</td>
+          </tr>
+          <tr>
+            <td>V4</td>
+            <td>soak ~45 นาที</td>
+            <td>Mem คงที่ · fail 0</td>
+            <td colspan="2" class="ok">ผ่านเสถียรภาพ</td>
+          </tr>
+          <tr>
+            <td>V5</td>
+            <td>pgvector @250</td>
+            <td>p95 524 ms · err 0</td>
+            <td class="tier-target">ผ่าน</td>
+            <td class="tier-accept">ผ่าน</td>
+          </tr>
         </tbody>
       </table>
       <div class="callout best" style="margin-top:12px">
@@ -485,6 +700,9 @@
 </section>
 
 <footer>
+  เกณฑ์คุณภาพในเอกสารนี้ใช้ <strong>2 ชั้น</strong>:
+  Target p95 ≤ 550 ms · Acceptable p95 ≤ 1,000 ms · drop ≤ 5%
+  <br>
   แหล่งข้อมูล: ผลวัดบน face-in · สรุปผู้บริหาร
   <a href="EXEC-SUMMARY-KIOSK-CAPACITY.html">EXEC-SUMMARY-KIOSK-CAPACITY.html</a>
   · คู่มือเทคนิค
@@ -650,34 +868,55 @@ bar(document.getElementById('chartRushScans'),
 );
 
 bar(document.getElementById('chartRushP95'),
-  ['24 จอ', '32 จอ', 'SLO'],
-  [{
-    label: 'identify p95 (ms)',
-    data: [211, 228, 550],
-    backgroundColor: [COLORS.teal, COLORS.blue, 'rgba(231,76,60,0.35)'],
-    borderRadius: 6
-  }],
-  { yTitle: 'ms', yMax: 600, legend: false }
+  ['24 จอ', '32 จอ'],
+  [
+    {
+      label: 'identify p95 (ms)',
+      data: [211, 228],
+      backgroundColor: [COLORS.teal, COLORS.blue],
+      borderRadius: 6
+    },
+    {
+      label: 'Target 550',
+      data: [550, 550],
+      type: 'line',
+      borderColor: COLORS.accent,
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    },
+    {
+      label: 'Acceptable 1000',
+      data: [1000, 1000],
+      type: 'line',
+      borderColor: COLORS.orange,
+      borderDash: [6, 4],
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: false
+    }
+  ],
+  { yTitle: 'ms', yMax: 1100, legend: true }
 );
 
 /* 4.1 Ceiling 550 vs 1000 */
 bar(document.getElementById('chartCeil1s'),
-  ['×3 full', '×1 full', '×3 gated', '×1 gated'],
+  ['×3 full', '×1 full', '×3 gated ★', '×1 gated ★'],
   [
     {
-      label: 'ผ่าน ≤550 ms',
+      label: 'Target ≤550 ms',
       data: [0, 12, 20, 40],
-      backgroundColor: COLORS.blue,
+      backgroundColor: '#1b7a4a',
       borderRadius: 4
     },
     {
-      label: 'ผ่าน ≤1000 ms',
+      label: 'Acceptable ≤1000 ms',
       data: [12, 24, 32, 40],
-      backgroundColor: COLORS.accent,
+      backgroundColor: '#e9a825',
       borderRadius: 4
     }
   ],
-  { yTitle: 'จำนวนจอสูงสุด', yMax: 48, legend: true }
+  { yTitle: 'จำนวนจอสูงสุดที่ผ่าน', yMax: 48, legend: true }
 );
 
 /* 5. Gallery */
@@ -695,15 +934,23 @@ line(document.getElementById('chartGallery'),
       pointBackgroundColor: COLORS.accent
     },
     {
-      label: 'SLO 550 ms',
+      label: 'Target 550 ms',
       data: [550, 550, 550, 550],
-      borderColor: COLORS.slo,
+      borderColor: COLORS.accent,
       borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false
+    },
+    {
+      label: 'Acceptable 1000 ms',
+      data: [1000, 1000, 1000, 1000],
+      borderColor: COLORS.orange,
+      borderDash: [2, 4],
       pointRadius: 0,
       fill: false
     }
   ],
-  { yTitle: 'ms', yMax: 600 }
+  { yTitle: 'ms', yMax: 1100 }
 );
 
 /* 6. Spike RPS + 502 */

@@ -180,6 +180,7 @@
   <a href="#arch">โครงระบบ</a>
   <a href="#profiles">โปรไฟล์เทส</a>
   <a href="#rush">ช่วงเช้า</a>
+  <a href="#ceiling1s">เพดาน 1วิ</a>
   <a href="#gallery">แกลเลอรี</a>
   <a href="#spike">Spike HTTP</a>
   <a href="#soak">Soak</a>
@@ -300,6 +301,33 @@
     </tbody>
   </table>
   <p class="legend-note">วางแผนความจุช่วงเช้าใช้ <strong>identify สำเร็จ</strong> เป็นหลัก — ตัวเลข check-in ใหม่ถูก dedupe กลืนถ้าเทสด้วยใบหน้าเดิม</p>
+</section>
+
+<section id="ceiling1s" class="block">
+  <h2>4.1 เพดานจอใต้เกณฑ์ 550 ms vs 1 วินาที (rush)</h2>
+  <p class="lead">รอบ 25 ก.ย. 2026 · เมตริก <code>worst(detect p95, identify p95)</code> · drop ≤ 5% · ใกล้จอจริงดูแถว <strong>gated 600 ms</strong></p>
+  <div class="grid2">
+    <div>
+      <div class="chart-box tall"><canvas id="chartCeil1s"></canvas></div>
+    </div>
+    <div>
+      <table>
+        <thead><tr><th>โปรไฟล์</th><th>ผ่าน 550</th><th>ผ่าน 1s</th><th>FAIL ที่</th></tr></thead>
+        <tbody>
+          <tr><td>rush ×3 full</td><td>—</td><td><strong>12</strong></td><td>16</td></tr>
+          <tr><td>rush ×1 full</td><td>12</td><td><strong>24</strong></td><td>32</td></tr>
+          <tr><td>rush ×3 gated</td><td>20</td><td><strong>32</strong></td><td>36</td></tr>
+          <tr><td>rush ×1 gated</td><td>40</td><td><strong>40</strong></td><td>48</td></tr>
+        </tbody>
+      </table>
+      <div class="callout best" style="margin-top:12px">
+        <strong>Acceptable 1 วิ + คีออสมี gating:</strong> ลงเวลาหนาแน่นได้ถึงประมาณ <strong>32 จอ</strong> · คนเดียว/จอ <strong>40 จอ</strong>
+      </div>
+      <div class="callout warn">
+        ขณะวัดมี Face Core container + Whisper ค้าง GPU1 — full-rate ต่ำกว่าตาราง PERF3 เดิม · ใช้แถว gated เป็นหลักเมื่อวางแผนสาขา
+      </div>
+    </div>
+  </div>
 </section>
 
 <section id="gallery" class="block">
@@ -630,6 +658,26 @@ bar(document.getElementById('chartRushP95'),
     borderRadius: 6
   }],
   { yTitle: 'ms', yMax: 600, legend: false }
+);
+
+/* 4.1 Ceiling 550 vs 1000 */
+bar(document.getElementById('chartCeil1s'),
+  ['×3 full', '×1 full', '×3 gated', '×1 gated'],
+  [
+    {
+      label: 'ผ่าน ≤550 ms',
+      data: [0, 12, 20, 40],
+      backgroundColor: COLORS.blue,
+      borderRadius: 4
+    },
+    {
+      label: 'ผ่าน ≤1000 ms',
+      data: [12, 24, 32, 40],
+      backgroundColor: COLORS.accent,
+      borderRadius: 4
+    }
+  ],
+  { yTitle: 'จำนวนจอสูงสุด', yMax: 48, legend: true }
 );
 
 /* 5. Gallery */

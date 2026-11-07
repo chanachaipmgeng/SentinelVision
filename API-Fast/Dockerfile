@@ -38,6 +38,8 @@ app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); \
 app.prepare(ctx_id=-1, det_size=(640, 640)); \
 print('InsightFace buffalo_l ready')"
 
+RUN pip install --no-cache-dir --break-system-packages greenlet
+
 COPY . .
 
 RUN mkdir -p enrolled_images uploaded_images temp_images

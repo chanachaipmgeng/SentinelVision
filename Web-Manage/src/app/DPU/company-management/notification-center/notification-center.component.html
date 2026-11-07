@@ -1,0 +1,200 @@
+<div class="dpu-list-page notification-center">
+  <app-page-toolbar [title]="'Notification Center' | translate"></app-page-toolbar>
+  <p class="text-sm text-muted mb-4">กล่องแจ้งเตือนในแอป · Dead-letter · ค่ากำหนดส่วนตัว</p>
+
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button
+      type="button"
+      class="ti-btn"
+      [ngClass]="activeTab === 'inbox' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      (click)="setTab('inbox')"
+    >
+      {{ 'Inbox' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn"
+      [ngClass]="activeTab === 'dead-letter' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      (click)="setTab('dead-letter')"
+    >
+      {{ 'Dead letter' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn"
+      [ngClass]="activeTab === 'prefs' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      (click)="setTab('prefs')"
+    >
+      {{ 'Preferences' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn"
+      [ngClass]="activeTab === 'templates' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      (click)="setTab('templates')"
+    >
+      {{ 'Templates' | translate }}
+    </button>
+  </div>
+
+  <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
+
+  <div *ngIf="!loading && activeTab === 'inbox'" class="box">
+    <div class="box-header flex justify-between items-center">
+      <h6 class="font-semibold m-0">{{ 'Inbox' | translate }} ({{ inbox.length }})</h6>
+      <button type="button" class="ti-btn ti-btn-light" (click)="markAllRead()">
+        {{ 'Mark all read' | translate }}
+      </button>
+    </div>
+    <div class="box-body">
+      <table class="table table-bordered w-full">
+        <thead>
+          <tr>
+            <th>{{ 'Time' | translate }}</th>
+            <th>{{ 'Event' | translate }}</th>
+            <th>{{ 'Title' | translate }}</th>
+            <th>{{ 'Body' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let n of inbox" [class.opacity-60]="!!n.readAt">
+            <td class="text-xs whitespace-nowrap">{{ n.createdAt | date: 'short' }}</td>
+            <td><code>{{ n.event }}</code></td>
+            <td>{{ n.title }}</td>
+            <td>{{ n.body }}</td>
+            <td>
+              <button
+                *ngIf="!n.readAt"
+                type="button"
+                class="ti-btn ti-btn-sm ti-btn-primary-full"
+                (click)="markRead(n)"
+              >
+                {{ 'Mark read' | translate }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="inbox.length === 0">
+            <td colspan="5" class="text-center text-muted">{{ 'No notifications' | translate }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'dead-letter'" class="box">
+    <div class="box-header">
+      <h6 class="font-semibold m-0">{{ 'Dead letter' | translate }} ({{ deadLetter.length }})</h6>
+    </div>
+    <div class="box-body">
+      <table class="table table-bordered w-full">
+        <thead>
+          <tr>
+            <th>{{ 'Time' | translate }}</th>
+            <th>{{ 'Event' | translate }}</th>
+            <th>{{ 'Channel' | translate }}</th>
+            <th>{{ 'Attempts' | translate }}</th>
+            <th>{{ 'Error' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of deadLetter">
+            <td class="text-xs whitespace-nowrap">{{ row.deadLetteredAt || row.createdAt | date: 'short' }}</td>
+            <td><code>{{ row.event }}</code></td>
+            <td>{{ row.channel }}</td>
+            <td>{{ row.attempts }}</td>
+            <td class="text-danger text-xs">{{ row.lastError }}</td>
+            <td>
+              <button type="button" class="ti-btn ti-btn-sm ti-btn-warning-full" (click)="retryDead(row)">
+                {{ 'Retry' | translate }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="deadLetter.length === 0">
+            <td colspan="6" class="text-center text-muted">{{ 'No dead-letter rows' | translate }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'prefs'" class="box">
+    <div class="box-header">
+      <h6 class="font-semibold m-0">{{ 'Preferences' | translate }}</h6>
+    </div>
+    <div class="box-body grid grid-cols-12 gap-4">
+      <label class="col-span-12 md:col-span-4 flex items-center gap-2">
+        <input type="checkbox" [(ngModel)]="prefs.channelInApp" />
+        {{ 'In-app' | translate }}
+      </label>
+      <label class="col-span-12 md:col-span-4 flex items-center gap-2">
+        <input type="checkbox" [(ngModel)]="prefs.channelEmail" />
+        {{ 'Email' | translate }}
+      </label>
+      <label class="col-span-12 md:col-span-4 flex items-center gap-2">
+        <input type="checkbox" [(ngModel)]="prefs.channelLine" />
+        LINE Messaging
+      </label>
+      <div class="col-span-12 md:col-span-6">
+        <label class="form-label">LINE User ID</label>
+        <input class="form-control" [(ngModel)]="prefs.lineUserId" placeholder="Uxxxxxxxx" />
+      </div>
+      <div class="col-span-12 md:col-span-3">
+        <label class="form-label">{{ 'Locale' | translate }}</label>
+        <select class="form-control" [(ngModel)]="prefs.locale">
+          <option value="th">th</option>
+          <option value="en">en</option>
+        </select>
+      </div>
+      <div class="col-span-12">
+        <label class="form-label">{{ 'Muted events' | translate }} (comma-separated)</label>
+        <input class="form-control" [(ngModel)]="mutedRaw" placeholder="attendance.missing, import.finished" />
+      </div>
+      <div class="col-span-12">
+        <button type="button" class="ti-btn ti-btn-primary-full" (click)="savePrefs()">
+          {{ 'Save' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'templates'" class="box">
+    <div class="box-header">
+      <h6 class="font-semibold m-0">{{ 'Templates' | translate }} &amp; i18n keys</h6>
+    </div>
+    <div class="box-body space-y-4">
+      <div>
+        <h6 class="font-semibold">i18n</h6>
+        <ul class="text-sm">
+          <li *ngFor="let e of i18nEntries()">
+            <code>{{ e.event }}</code> → <code>{{ e.key }}</code>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="font-semibold">{{ 'Built-in templates' | translate }}</h6>
+        <table class="table table-bordered w-full text-sm">
+          <thead>
+            <tr>
+              <th>event</th>
+              <th>locale</th>
+              <th>channel</th>
+              <th>subject</th>
+              <th>body</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of templates.builtins">
+              <td><code>{{ t.eventKey }}</code></td>
+              <td>{{ t.locale }}</td>
+              <td>{{ t.channel }}</td>
+              <td>{{ t.subject }}</td>
+              <td>{{ t.bodyTemplate }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

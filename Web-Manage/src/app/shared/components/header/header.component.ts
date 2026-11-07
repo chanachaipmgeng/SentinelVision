@@ -51,9 +51,9 @@ export class HeaderComponent implements OnInit {
     if (!this.tokenService.getToken()) {
       return;
     }
-    this.http.get<{ pending: number }>('/notifications/pending-count').subscribe({
+    this.http.get<{ pending: number; unreadInApp?: number }>('/notifications/pending-count').subscribe({
       next: (res) => {
-        this.notificationCount = res?.pending || 0;
+        this.notificationCount = (res?.unreadInApp || 0) + (res?.pending || 0);
         this.cartItemCount = this.notificationCount;
       },
       error: () => {

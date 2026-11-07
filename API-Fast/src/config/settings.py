@@ -168,7 +168,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
+    # LINE Messaging API (push). Replaces discontinued LINE Notify.
     LINE_CHANNEL_ACCESS_TOKEN: str = ""
+    LINE_MESSAGING_API_BASE: str = "https://api.line.me/v2/bot"
+    # Fernet key for secrets inside notification_outbox.payload (url-safe 32-byte key).
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    OUTBOX_ENCRYPTION_KEY: str = ""
     NOTIFY_POLL_SECONDS: int = 30
     SERVICE_NOTIFY_TOKEN: str = ""
     WEBHOOK_SIGNING_SECRET: str = ""

@@ -133,6 +133,13 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./devices/devices.component').then((m) => m.DevicesComponent),
     },
+    {
+      path: 'company/notification-center',
+      loadComponent: () =>
+        import('./notification-center/notification-center.component').then(
+          (m) => m.NotificationCenterComponent
+        ),
+    },
     ],
   },
 ];

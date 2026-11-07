@@ -26,20 +26,36 @@ async def run_outbox_tick() -> Dict[str, Any]:
 
 async def run_retention_tick() -> Dict[str, Any]:
     """Storage retention (off the event loop), sentinel expiry, import payload clean-up,
-    orphaned import jobs."""
+    orphaned import jobs, and per-company PDPA retention (D4)."""
+    from sqlalchemy import select
+
+    from ..config.database import async_session
+    from ..models.company import Company
     from ..routes.sentinel_routes import expire_sentinel_identities_tick
     from ..services.import_job_service import fail_stale_running_jobs, purge_finished_import_payloads
+    from ..services.pdpa_service import company_retention_tick
     from ..services.storage_service import retention_tick
 
     storage = await asyncio.to_thread(retention_tick)
     sentinel = await expire_sentinel_identities_tick()
     payloads = await purge_finished_import_payloads()
     stale = await fail_stale_running_jobs()
+    pdpa_stats: list[dict] = []
+    async with async_session() as db:
+        company_ids = (
+            await db.execute(select(Company.companyId).where(Company.deletedAt.is_(None)))
+        ).scalars().all()
+        for cid in company_ids:
+            try:
+                pdpa_stats.append({"companyId": str(cid), **(await company_retention_tick(db, cid))})
+            except Exception as exc:  # noqa: BLE001 — one tenant must not stop the tick
+                logger.warning("pdpa retention failed for %s: %s", cid, exc)
     return {
         "storage": storage,
         "sentinel": sentinel,
         "importPayloadsRemoved": payloads,
         "importJobsOrphaned": stale,
+        "pdpa": pdpa_stats,
     }
 
 

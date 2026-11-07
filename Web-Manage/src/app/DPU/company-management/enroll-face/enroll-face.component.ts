@@ -181,6 +181,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   seatNumber: string | null = null;
   vipArrivalName: string | null = null;
 
+  /** D4 PDPA consent gate — blocks kiosk until current policy version is accepted. */
+  consentRequired = false;
+  consentLoading = false;
+  consentPolicy: { version?: string; textTh?: string; textEn?: string } | null = null;
+  private readonly consentStoragePrefix = 'dpu.pdpa.consent.';
+
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
   checkingInCount = 0;
@@ -487,6 +493,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.loadTtsSettings();
     this.loadModuleStationDefaults();
     this.loadZoneAndEventOptions();
+    this.loadConsentPolicy();
     this.prepareLocalDetector();
     this.startVideo();
     this.getCompanyLocation();
@@ -502,6 +509,49 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         this.loadTtsSettings();
       }, 15000);
     });
+  }
+
+  private consentStorageKey(): string {
+    return `${this.consentStoragePrefix}${this.companyId}`;
+  }
+
+  private loadConsentPolicy(): void {
+    if (!this.companyId) {
+      return;
+    }
+    this.consentLoading = true;
+    this.http.get<any>(`/hr/company/${this.companyId}/pdpa/consent-policy`).subscribe({
+      next: (policy) => {
+        this.consentPolicy = policy || null;
+        const accepted = sessionStorage.getItem(this.consentStorageKey());
+        this.consentRequired = !accepted || accepted !== (policy?.version || '1.0');
+        this.consentLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.consentLoading = false;
+        this.consentRequired = false;
+      },
+    });
+  }
+
+  acceptConsentPolicy(): void {
+    if (!this.companyId || !this.consentPolicy) {
+      this.consentRequired = false;
+      return;
+    }
+    const version = this.consentPolicy.version || '1.0';
+    sessionStorage.setItem(this.consentStorageKey(), version);
+    this.consentRequired = false;
+    this.cdr.detectChanges();
+  }
+
+  consentText(): string {
+    const lang = (sessionStorage.getItem('Lang') || 'th').toLowerCase();
+    if (lang.startsWith('en')) {
+      return this.consentPolicy?.textEn || this.consentPolicy?.textTh || '';
+    }
+    return this.consentPolicy?.textTh || this.consentPolicy?.textEn || '';
   }
 
   /** Apply company defaultStationMode / zone / door-relay when route omitted them. */
@@ -723,7 +773,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
 
         // Prefer server-side detection (InsightFace GPU) once the session is acknowledged.
-        if (this.wsConnected && this.wsSessionOk && nowMs >= this.serverDetectPausedUntil) {
+        // Block frames while the PDPA consent overlay is showing (D4).
+        if (
+          !this.consentRequired &&
+          this.wsConnected &&
+          this.wsSessionOk &&
+          nowMs >= this.serverDetectPausedUntil
+        ) {
           this.sendDetectFrame(videoEl);
           return;
         }

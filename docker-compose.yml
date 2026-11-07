@@ -77,6 +77,10 @@ services:
       # true = single-container dev: run the same job loops inside the API process.
       RUN_BACKGROUND_JOBS_IN_API: ${RUN_BACKGROUND_JOBS_IN_API:-false}
       IMPORT_JOB_DIR: /app/import_jobs
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      LINE_MESSAGING_API_BASE: ${LINE_MESSAGING_API_BASE:-https://api.line.me/v2/bot}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
       # B6: OpenTelemetry is a no-op until an OTLP endpoint is set (see docker-compose.observability.yml).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     volumes:
@@ -145,6 +149,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      LINE_MESSAGING_API_BASE: ${LINE_MESSAGING_API_BASE:-https://api.line.me/v2/bot}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-}
       WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     volumes:

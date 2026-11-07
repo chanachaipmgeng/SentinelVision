@@ -358,6 +358,13 @@ export class NavService implements OnDestroy {
         type: 'link',
         moduleId: 'GOVERNANCE',
       },
+      {
+        icon: 'notification',
+        path: '/company/notification-center',
+        title: 'ศูนย์แจ้งเตือน (Notification Center)',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+      },
     ];
   }
 

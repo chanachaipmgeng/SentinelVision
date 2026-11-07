@@ -108,10 +108,24 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 - Default company shift is `09:00` – `18:00` (`Asia/Bangkok`) with `15` minutes grace period. Update per company via `PUT /timestamp/company/{companyId}/shift-settings`.
 - Attendance exports (`GET /timestamp/export/company/{companyId}?format=xlsx|csv`) stream up to 5,000 rows per request.
 
-## Multi-Replica Notification Outbox
-- `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `dpu-api` replicas concurrently without duplicate Email / LINE / Webhook deliveries.
+## Multi-Replica Notification Outbox (D3)
+- `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `worker` replicas concurrently without duplicate Email / LINE Messaging / Webhook deliveries.
+- **LINE Messaging API** (`POST {LINE_MESSAGING_API_BASE}/message/push`) replaced LINE Notify. Needs a channel access token (`LINE_CHANNEL_ACCESS_TOKEN` or per-company setting) **and** a per-user `lineUserId` (stored in `notification_preference`).
+- Secrets in outbox / notify settings (`lineToken`, `webhookSecret`, `lineChannelAccessToken`) are Fernet-sealed when `OUTBOX_ENCRYPTION_KEY` is set (url-safe Fernet key from env — never commit it). Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
 - Daily missing-attendance cutoff state is stored in `system_setting` under `key = "cutoff_sent:{companyId}"`.
-- Since B7 the dispatcher runs in the `worker` service, not in `dpu-api`. A row that fails `OUTBOX_MAX_ATTEMPTS` (5) deliveries is marked `failed` (`dpu_outbox_deliveries_total{result="failed"}`); fix the channel (SMTP / LINE / webhook) then reset it with `UPDATE notification_outbox SET status='pending', attempts=0 WHERE id=...`.
+- Since B7 the dispatcher runs in the `worker` service, not in `dpu-api`. A row that fails `OUTBOX_MAX_ATTEMPTS` (5) deliveries is marked `failed` and stamped `deadLetteredAt`; retry from `/company/notification-center` (Dead letter tab) or `POST /notifications/company/{id}/dead-letter/{outboxId}/retry`.
+- In-app notification center: `/company/notification-center` → Inbox / Dead letter / Preferences / Templates (i18n keys under `notify.*`).
+
+## PDPA / Record of Processing (RoPA) — D4 brief
+| Activity | Data | Purpose | Lawful basis | Retention (default / per-company) | Recipients |
+|---|---|---|---|---|---|
+| Face enrollment | Face image + 512-d embedding + consent version/text | Identify employee for attendance / access | Explicit consent (`biometric_consent_*` on `member`; version+text on kiosk/enroll) | `retention:{companyId}.biometricDays` (default `IMAGE_RETENTION_DAYS`) | GPU face workers (in-process / Face Core); no third-party AI SaaS |
+| Punch photo | JPEG on punch (`employee_timestamp.photoTimestamp`) | Dispute / audit of check-in | Legitimate interest / employment | `punchPhotoDays` | Company admins; payroll export excludes raw images |
+| Sentinel incident snapshot | Frame crop on watchlist/access hit | Security investigation | Legitimate interest / legal obligation | `incidentSnapshotDays` | Company security operators |
+| Notification outbox | Event payload (+ sealed channel secrets) | Deliver LINE/email/webhook alerts | Legitimate interest | Purged after send / dead-letter review | LINE Messaging API, SMTP, customer webhook |
+| Audit log | Actor, path, companyId | Accountability | Legal obligation | Backup retention (see B5) | System / company admins |
+
+**DSAR:** `GET /hr/company/{companyId}/members/{memberId}/dsar-export` (JSON; embeddings flagged present, not exported raw). **Erasure:** `POST .../erasure` or revoke consent — deletes encodings, punch photos, incident snapshots and clears consent fields. Per-type retention is applied by the worker `retention` job via `company_retention_tick`.
 
 ## Background worker (B7)
 - `worker` (same image as `api`, `python -m src.worker`, no GPU) runs four jobs: `outbox` (notification dispatcher + daily attendance cutoff, every `NOTIFY_POLL_SECONDS`), `retention` (temp / uploaded image purge, expired Sentinel identities, finished import payloads older than `IMPORT_JOB_RETENTION_DAYS`, orphaned import jobs; every `WORKER_RETENTION_INTERVAL_SECONDS`), `imports` (Excel + ZIP employee import, polled every `WORKER_IMPORT_POLL_SECONDS`), and `attendance_summary` (C1 nightly recompute of `attendance_daily` for yesterday Asia/Bangkok; every `WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS`, default 6h — punch/leave/holiday hooks also recompute same-day). Select with `WORKER_JOBS=outbox,retention,imports,attendance_summary`; scale with `docker compose up -d --scale worker=2` — every job claims rows with `FOR UPDATE SKIP LOCKED`.

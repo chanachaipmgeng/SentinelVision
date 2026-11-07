@@ -34,6 +34,21 @@ Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them
 
 **Standalone** (no Face Core on same host): use `POSTGRES_PORT=5432` and `HTTP_PORT=80` in `.env`.
 
+### Shared local Postgres (`dev-postgres`)
+
+Local DPU can use the sibling shared instance (schema `dpu` in DB `localdev`) instead of builtin `dpu-db`:
+
+```bash
+docker network create dev-net   # once
+cd ../dev-postgres && docker compose up -d
+# first-time data move: .\scripts\migrate-from-dpu.ps1  (needs old dpu-db running)
+cd ../dpu-project
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+  -f docker-compose.external-db.yml up -d --build
+```
+
+Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localdev` with `DB_SCHEMA=dpu`.
+
 ## Environment
 
 | Variable | Default | Meaning |

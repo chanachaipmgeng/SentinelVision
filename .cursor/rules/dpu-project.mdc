@@ -23,7 +23,13 @@ Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core B
 ## Runtime
 
 ```bash
-# Local InsightFace — dual GPU = api + api-gpu1 (see docker-compose.gpu.yml)
+# Shared local Postgres (sibling ../dev-postgres on dev-net, schema dpu) — preferred for local
+docker network create dev-net   # once
+# cd ../dev-postgres && docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+  -f docker-compose.external-db.yml up -d --build
+
+# Builtin dpu-db (legacy local volume) — omit external-db.yml
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 # Same-host BFF: Face Core on face-net (prefer dual-API for single-host saturation).

@@ -1,0 +1,36 @@
+# Use shared local Postgres (sibling ../dev-postgres on network dev-net).
+# Does not start builtin dpu-db. Migrate data first — see that repo's README.
+#
+#   docker network create dev-net   # once
+#   cd ../dev-postgres && docker compose up -d
+#   .\scripts\migrate-from-dpu.ps1
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#     -f docker-compose.external-db.yml up -d --build
+#
+services:
+  db:
+    profiles: ["builtin-db"]
+
+  api:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${SHARED_PG_USER:-localdev}:${SHARED_PG_PASSWORD:-localdev_secret}@dev-postgres:5432/${SHARED_PG_DB:-localdev}
+      DB_SCHEMA: ${DB_SCHEMA:-dpu}
+    depends_on: !reset {}
+    networks:
+      - default
+      - dev-net
+
+  # Merged when docker-compose.gpu.yml is also on the command line.
+  api-gpu1:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${SHARED_PG_USER:-localdev}:${SHARED_PG_PASSWORD:-localdev_secret}@dev-postgres:5432/${SHARED_PG_DB:-localdev}
+      DB_SCHEMA: ${DB_SCHEMA:-dpu}
+    depends_on: !reset {}
+    networks:
+      - default
+      - dev-net
+
+networks:
+  dev-net:
+    external: true
+    name: dev-net

@@ -91,6 +91,28 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_RECYCLE: int = 1800
     HNSW_EF_SEARCH: int = 40
+    # OpenTelemetry tracing (B6). Off unless an OTLP endpoint is set; the standard OTEL_* env
+    # names are honoured by the SDK too, these only document the knobs and allow .env usage.
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_EXPORTER_OTLP_PROTOCOL: str = "http/protobuf"
+    OTEL_SERVICE_NAME: str = ""
+
+    # Background jobs (B7). The outbox dispatcher, attendance cutoff, storage retention,
+    # sentinel expiry, revocation purge and employee import processing run in the separate
+    # `worker` service (`python -m src.worker`). Set RUN_BACKGROUND_JOBS_IN_API=true for a
+    # single-container dev setup to run the same loops inside the API process instead.
+    RUN_BACKGROUND_JOBS_IN_API: bool = False
+    WORKER_ID: str = ""
+    WORKER_JOBS: str = "outbox,retention,imports"
+    WORKER_METRICS_PORT: int = 9108
+    WORKER_RETENTION_INTERVAL_SECONDS: int = 3600
+    WORKER_IMPORT_POLL_SECONDS: int = 2
+    # A running import whose heartbeat is older than this is considered orphaned (worker died).
+    WORKER_IMPORT_LEASE_SECONDS: int = 900
+    WORKER_SHUTDOWN_GRACE_SECONDS: int = 30
+    # Directory (shared volume between api and worker) holding uploaded import files per job.
+    IMPORT_JOB_DIR: str = "import_jobs"
+    IMPORT_JOB_RETENTION_DAYS: int = 7
 
     # Multi-GPU. Comma list; worker i uses devices[i % len].
     FACE_DEVICES: str = ""

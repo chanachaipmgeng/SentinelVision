@@ -11,7 +11,15 @@ from .security.jwt import assert_secret_configured
 from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
-from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
+from .services.observability import (
+    METRICS_CONTENT_TYPE,
+    RequestIdMiddleware,
+    configure_logging,
+    render_metrics,
+    set_ready_status,
+    setup_tracing,
+    shutdown_tracing,
+)
 from .services import audit_service, notification_service  # noqa: F401  register tables
 
 # Register all ORM models on Base.metadata before create_all
@@ -52,7 +60,7 @@ from .routes import (
 assert_secret_configured()
 assert_oidc_configured()
 assert_face_core_configured()
-configure_logging()
+configure_logging("api")
 logger = logging.getLogger("dpu.api")
 
 app = FastAPI(
@@ -73,6 +81,8 @@ app.add_middleware(
 )
 app.add_middleware(AuthzMiddleware)
 app.add_middleware(RequestIdMiddleware)
+# OTel server spans wrap everything above (no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set).
+setup_tracing(app, engine=engine)
 
 
 @app.exception_handler(Exception)
@@ -142,6 +152,11 @@ async def startup():
     asyncio.create_task(revocation_purge_loop())
 
 
+@app.on_event("shutdown")
+async def shutdown():
+    shutdown_tracing()
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -156,24 +171,31 @@ async def ready():
         async with async_session() as db:
             await db.execute(text("SELECT 1"))
     except Exception as exc:
+        set_ready_status("db", False)
         return JSONResponse({"status": "down", "db": str(exc)}, status_code=503)
+    set_ready_status("db", True)
     queue = {"source": "face-core"} if face_core_enabled() else face_gpu_queue_stats()
     if face_core_enabled():
         try:
             queue = await ping_face_core()
         except Exception as exc:
+            set_ready_status("face_core", False)
             return JSONResponse(
                 {"status": "down", "faceCore": str(exc), "code": "face_core_down"},
                 status_code=503,
             )
+        set_ready_status("face_core", True)
     elif not queue.get("started"):
+        set_ready_status("face_queue", False)
         return JSONResponse({"status": "down", "queue": queue}, status_code=503)
+    else:
+        set_ready_status("face_queue", True)
     return {"status": "ok", "queue": queue}
 
 
 @app.get("/metrics")
 async def metrics():
-    return PlainTextResponse(render_metrics(), media_type="text/plain; version=0.0.4")
+    return PlainTextResponse(render_metrics(), media_type=METRICS_CONTENT_TYPE)
 
 
 @app.get("/")

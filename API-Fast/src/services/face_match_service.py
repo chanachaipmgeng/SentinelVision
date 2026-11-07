@@ -14,7 +14,7 @@ from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding
 from ..models.member import Member, StatusType
 from ..models.sentinel import SentinelIdentity
-from .observability import observe_histogram
+from .observability import observe_face_match
 
 
 async def search_face_pgvector(
@@ -56,7 +56,7 @@ async def search_face_pgvector(
             return None
         return face_encoding_id, member_id, float(distance)
     finally:
-        observe_histogram("dpu_pgvector_search_ms", (time.perf_counter() - t0) * 1000.0)
+        observe_face_match("pgvector_member", time.perf_counter() - t0)
 
 
 async def search_sentinel_identity_pgvector(
@@ -98,4 +98,4 @@ async def search_sentinel_identity_pgvector(
             return None
         return identity_obj, float(distance)
     finally:
-        observe_histogram("dpu_pgvector_search_ms", (time.perf_counter() - t0) * 1000.0)
+        observe_face_match("pgvector_sentinel", time.perf_counter() - t0)

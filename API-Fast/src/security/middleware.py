@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse
 from ..config.database import async_session
 from ..config.settings import settings
 from ..models.member import Member, RoleType
+from ..services.observability import set_company_context
 from ..services.token_revocation_service import is_token_revoked
 from .deps import (
     assert_company_access,
@@ -183,6 +184,7 @@ class AuthzMiddleware(BaseHTTPMiddleware):
                     )
                 request.state.kiosk_company_id = device.companyId
                 request.state.kiosk_device_id = device.deviceId
+                set_company_context(device.companyId)
                 kiosk_ctx = current_kiosk_company_var.set(device.companyId)
                 try:
                     return await call_next(request)
@@ -206,6 +208,8 @@ class AuthzMiddleware(BaseHTTPMiddleware):
             finally:
                 current_member_var.reset(token_ctx)
 
+        # Tenant correlation for JSON logs emitted by the handler (reset by RequestIdMiddleware).
+        set_company_context(_company_id(path) or getattr(request.state, "company_id", None))
         response = await call_next(request)
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
             asyncio.create_task(_audit(request, member, path, response.status_code))

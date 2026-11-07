@@ -24,6 +24,7 @@ from .deps import (
     verify_kiosk_token_db,
 )
 from ..services.approval_gate import assert_company_membership
+from ..services import rbac_service
 from .jwt import decode_token
 
 logger = logging.getLogger("dpu.authz")
@@ -42,11 +43,16 @@ _COMPANY_RES = [
     re.compile(rf"/hr/company/({_UUID})"),
     re.compile(rf"/sentinel/company/({_UUID})"),
 ]
-# C4 thin approval paths: any company member may hit the route; handler enforces approver/boss gate.
+# D1: approval decision / inbox paths — require approve permission (or membership for boss fallback).
+# Self-service create/list paths stay on membership only.
+_APPROVAL_PERM_RES = [
+    (re.compile(rf"/timestamp/company/({_UUID})/{_UUID}/approval/?$"), rbac_service.PERM_ATTENDANCE_APPROVE),
+    (re.compile(rf"/hr/company/({_UUID})/leaves/{_UUID}/approval/?$"), rbac_service.PERM_HR_APPROVE),
+    (re.compile(rf"/hr/company/({_UUID})/approvals(?:/|$)"), rbac_service.PERM_HR_APPROVE),
+    (re.compile(rf"/hr/company/({_UUID})/regularizations/{_UUID}/approval/?$"), rbac_service.PERM_HR_APPROVE),
+    (re.compile(rf"/hr/company/({_UUID})/ot-approvals/{_UUID}/approval/?$"), rbac_service.PERM_HR_APPROVE),
+]
 _APPROVAL_MEMBERSHIP_RES = [
-    re.compile(rf"/timestamp/company/({_UUID})/{_UUID}/approval/?$"),
-    re.compile(rf"/hr/company/({_UUID})/leaves/{_UUID}/approval/?$"),
-    re.compile(rf"/hr/company/({_UUID})/approvals(?:/|$)"),
     re.compile(rf"/hr/company/({_UUID})/regularizations(?:/|$)"),
     re.compile(rf"/hr/company/({_UUID})/ot-approvals(?:/|$)"),
     re.compile(rf"/hr/company/({_UUID})/leave-balances(?:/|$)"),
@@ -278,7 +284,26 @@ async def _authorize(request: Request, db, member: Member, path: str):
             request.state.company_id = resolved
     if cid:
         try:
-            if any(rx.search(path) for rx in _APPROVAL_MEMBERSHIP_RES):
+            perm_hit = next((perm for rx, perm in _APPROVAL_PERM_RES if rx.search(path)), None)
+            if perm_hit is not None:
+                # Permission holders enter; bosses without a role still need membership so the
+                # handler's can_approve_for_employee (boss match) can run.
+                has_perm = await rbac_service.has_permission(
+                    db, member, perm_hit, UUID(cid)
+                )
+                if not has_perm:
+                    # Also accept the sibling approve permission (attendance ↔ hr).
+                    alt = (
+                        rbac_service.PERM_HR_APPROVE
+                        if perm_hit == rbac_service.PERM_ATTENDANCE_APPROVE
+                        else rbac_service.PERM_ATTENDANCE_APPROVE
+                    )
+                    has_perm = await rbac_service.has_permission(db, member, alt, UUID(cid))
+                if has_perm:
+                    pass
+                else:
+                    await assert_company_membership(db, member, UUID(cid))
+            elif any(rx.search(path) for rx in _APPROVAL_MEMBERSHIP_RES):
                 await assert_company_membership(db, member, UUID(cid))
             else:
                 await assert_company_access(db, member, UUID(cid))

@@ -22,6 +22,7 @@ from src.models.department import Department
 from src.models.hr_schedule import KioskDevice
 from src.models.member import Member, RoleType, StatusType
 from src.models.position import Position
+from src.models.rbac import MemberRoleAssignment, RbacRoleCode
 from src.security.jwt import create_access_token, create_kiosk_token, hash_kiosk_token
 from src.security.middleware import AuthzMiddleware
 
@@ -151,25 +152,130 @@ class World:
     a: Tenant
     b: Tenant
     tokens: dict[str, str]
+    rbac_members: dict[str, Member] = field(default_factory=dict)
 
     def auth(self, who: str) -> dict[str, str]:
         return bearer(self.tokens[who])
 
 
+def _assign_role(member_id, company_id, role_code: str, department_id=None) -> MemberRoleAssignment:
+    return MemberRoleAssignment(
+        assignmentId=uuid.uuid4(),
+        memberId=member_id,
+        companyId=company_id,
+        roleCode=role_code,
+        departmentId=department_id,
+    )
+
+
 async def seed_world() -> World:
-    """Two tenants + a system admin. Tokens: sysadmin, admin_a, admin_b, emp_a, emp_b, kiosk_a, kiosk_b."""
+    """Two tenants + a system admin. Tokens: sysadmin, admin_a, admin_b, emp_a, emp_b, kiosk_a, kiosk_b.
+
+    D1 extras: manager_a, approver_a, auditor_a, device_op_a (RBAC role assignments on tenant A).
+    """
     await engine.dispose(close=False)
     tag = uuid.uuid4().hex[:6]
     sysadmin = make_member(f"sysadmin-{tag}", RoleType.ADMIN_SYSTEM)
     a = _tenant_objects(tag, "alpha")
     b = _tenant_objects(tag, "beta")
+    manager = make_member(f"manager-a-{tag}")
+    approver = make_member(f"approver-a-{tag}")
+    auditor = make_member(f"auditor-a-{tag}")
+    device_op = make_member(f"device-a-{tag}")
+    manager_emp = CompanyEmployee(
+        memberId=manager.memberId,
+        companyId=a.company.companyId,
+        departmentId=a.department.departmentId,
+        positionId=a.position.positionId,
+        companyRoleType=CompanyRoleType.EMP,
+        employeeId=f"MGR-{tag}",
+    )
+    approver_emp = CompanyEmployee(
+        memberId=approver.memberId,
+        companyId=a.company.companyId,
+        departmentId=a.department.departmentId,
+        positionId=a.position.positionId,
+        companyRoleType=CompanyRoleType.EMP,
+        employeeId=f"APR-{tag}",
+    )
+    auditor_emp = CompanyEmployee(
+        memberId=auditor.memberId,
+        companyId=a.company.companyId,
+        departmentId=a.department.departmentId,
+        positionId=a.position.positionId,
+        companyRoleType=CompanyRoleType.EMP,
+        employeeId=f"AUD-{tag}",
+    )
+    device_emp = CompanyEmployee(
+        memberId=device_op.memberId,
+        companyId=a.company.companyId,
+        departmentId=a.department.departmentId,
+        positionId=a.position.positionId,
+        companyRoleType=CompanyRoleType.EMP,
+        employeeId=f"DEV-{tag}",
+    )
     async with async_session() as db:
         db.add_all([a.company, b.company, sysadmin])
         await db.flush()
-        db.add_all([a.department, a.position, b.department, b.position, a.admin, a.employee, b.admin, b.employee])
+        db.add_all(
+            [
+                a.department,
+                a.position,
+                b.department,
+                b.position,
+                a.admin,
+                a.employee,
+                b.admin,
+                b.employee,
+                manager,
+                approver,
+                auditor,
+                device_op,
+            ]
+        )
         await db.flush()
-        db.add_all([a.admin_employment, a.employee_employment, b.admin_employment, b.employee_employment])
+        db.add_all(
+            [
+                a.admin_employment,
+                a.employee_employment,
+                b.admin_employment,
+                b.employee_employment,
+                manager_emp,
+                approver_emp,
+                auditor_emp,
+                device_emp,
+            ]
+        )
         db.add_all([a.location, b.location, a.kiosk, b.kiosk])
+        # Ensure seed role rows exist (migration seeds them; insert if missing for create_all DBs).
+        for code in (
+            RbacRoleCode.SYSTEM_ADMIN.value,
+            RbacRoleCode.HR_ADMIN.value,
+            RbacRoleCode.MANAGER.value,
+            RbacRoleCode.APPROVER.value,
+            RbacRoleCode.AUDITOR.value,
+            RbacRoleCode.DEVICE_OPERATOR.value,
+        ):
+            await db.execute(
+                text(
+                    "INSERT INTO rbac_role (code, description) VALUES (:code, :desc) "
+                    "ON CONFLICT (code) DO NOTHING"
+                ),
+                {"code": code, "desc": code},
+            )
+        db.add_all(
+            [
+                _assign_role(manager.memberId, a.company.companyId, RbacRoleCode.MANAGER.value),
+                _assign_role(approver.memberId, a.company.companyId, RbacRoleCode.APPROVER.value),
+                _assign_role(auditor.memberId, a.company.companyId, RbacRoleCode.AUDITOR.value),
+                _assign_role(
+                    device_op.memberId, a.company.companyId, RbacRoleCode.DEVICE_OPERATOR.value
+                ),
+                _assign_role(sysadmin.memberId, None, RbacRoleCode.SYSTEM_ADMIN.value),
+                _assign_role(a.admin.memberId, a.company.companyId, RbacRoleCode.HR_ADMIN.value),
+                _assign_role(b.admin.memberId, b.company.companyId, RbacRoleCode.HR_ADMIN.value),
+            ]
+        )
         await db.commit()
     tokens = {
         "sysadmin": create_access_token(str(sysadmin.memberId), sysadmin.username),
@@ -177,10 +283,26 @@ async def seed_world() -> World:
         "admin_b": create_access_token(str(b.admin.memberId), b.admin.username),
         "emp_a": create_access_token(str(a.employee.memberId), a.employee.username),
         "emp_b": create_access_token(str(b.employee.memberId), b.employee.username),
+        "manager_a": create_access_token(str(manager.memberId), manager.username),
+        "approver_a": create_access_token(str(approver.memberId), approver.username),
+        "auditor_a": create_access_token(str(auditor.memberId), auditor.username),
+        "device_op_a": create_access_token(str(device_op.memberId), device_op.username),
         "kiosk_a": a.kiosk_token,
         "kiosk_b": b.kiosk_token,
     }
-    return World(tag=tag, sysadmin=sysadmin, a=a, b=b, tokens=tokens)
+    return World(
+        tag=tag,
+        sysadmin=sysadmin,
+        a=a,
+        b=b,
+        tokens=tokens,
+        rbac_members={
+            "manager_a": manager,
+            "approver_a": approver,
+            "auditor_a": auditor,
+            "device_op_a": device_op,
+        },
+    )
 
 
 async def teardown_world(world: World) -> None:
@@ -192,6 +314,17 @@ async def teardown_world(world: World) -> None:
             "a": f"%{cids['a']}",
             "b": f"%{cids['b']}",
         })
+        await db.execute(
+            text('DELETE FROM member_role_assignment WHERE "companyId" IN (:a, :b)'),
+            cids,
+        )
+        await db.execute(
+            text(
+                'DELETE FROM member_role_assignment WHERE "memberId" IN '
+                "(SELECT \"memberId\" FROM member WHERE username LIKE :pat)"
+            ),
+            {"pat": f"%-{world.tag}"},
+        )
         for tbl in (
             "leave_balance",
             "regularization_request",

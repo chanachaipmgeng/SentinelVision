@@ -1,0 +1,156 @@
+<div class="box emp-list-panel modern-card glass">
+      @if (listViewMode === 'table' && totalFiltered > 0) {
+        <div class="box-body !p-0">
+          <div class="table-responsive">
+            <table class="table whitespace-nowrap emp-table mb-0">
+              <thead>
+                <tr>
+                  <th scope="col">พนักงาน</th>
+                  <th scope="col">รหัส</th>
+                  <th scope="col">แผนก</th>
+                  <th scope="col">ตำแหน่ง</th>
+                  <th scope="col" class="text-end">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of filterList; track item.company_employeeId; let i = $index) {
+                  <tr class="emp-row" [style.animation-delay.ms]="i * 40">
+                    <td>
+                      <div class="emp-person">
+                        <span class="avatar avatar-md avatar-rounded emp-avatar">
+                          <img [src]="item.member.getPicture()" alt="">
+                        </span>
+                        <div class="min-w-0">
+                          <p class="mb-0 font-semibold text-truncate">
+                            {{ item.member.firstName }} {{ item.member.lastName }}
+                          </p>
+                          <p class="mb-0 text-[0.75rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="emp-code">{{ item.employeeId || '—' }}</span></td>
+                    <td>{{ item.department?.thName || '—' }}</td>
+                    <td>{{ item.position?.thName || '—' }}</td>
+                    <td>
+                      <div class="emp-actions justify-end">
+                        <button type="button" title="แก้ไข" data-hs-overlay="#modal-detail" (click)="viewItem.emit(item)"
+                          class="ti-btn ti-btn-sm ti-btn-primary modern-btn"><i class="ri-edit-line"></i></button>
+                        <button type="button" title="ประวัติลงเวลา"
+                          routerLink="/company/timestamp-log/{{ item.company_employeeId }}"
+                          class="ti-btn ti-btn-sm ti-btn-secondary modern-btn"><i class="ri-time-line"></i></button>
+                        <button type="button" title="ลงทะเบียนใบหน้า" data-hs-overlay="#modal-face"
+                          (click)="enrollFace.emit(item)"
+                          class="ti-btn ti-btn-sm ti-btn-warning modern-btn"><i class="ri-account-circle-line"></i></button>
+                        <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
+                          (click)="manageFace.emit(item)"
+                          class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                        <button type="button" title="ลบ" (click)="deleteItem.emit(item)"
+                          class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+
+      @if (listViewMode === 'cards' && totalFiltered > 0) {
+        <div class="box-body emp-card-grid">
+          @for (item of filterList; track item.company_employeeId; let i = $index) {
+            <article class="emp-card" [style.animation-delay.ms]="i * 45">
+              <div class="emp-card-head emp-card-head--stack">
+                <span class="avatar avatar-xl avatar-rounded emp-avatar">
+                  <img [src]="item.member.getPicture()" alt="">
+                </span>
+                <div class="min-w-0 w-full text-center">
+                  <p class="mb-0 font-semibold text-[0.95rem] text-truncate">
+                    {{ item.member.firstName }} {{ item.member.lastName }}
+                  </p>
+                  <p class="mb-0 text-[0.72rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                </div>
+              </div>
+              <div class="emp-card-meta emp-card-meta--stack">
+                <div>
+                  <span class="emp-meta-label">รหัส</span>
+                  <span class="emp-meta-value">{{ item.employeeId || '—' }}</span>
+                </div>
+                <div>
+                  <span class="emp-meta-label">แผนก</span>
+                  <span class="emp-meta-value">{{ item.department?.thName || '—' }}</span>
+                </div>
+                <div>
+                  <span class="emp-meta-label">ตำแหน่ง</span>
+                  <span class="emp-meta-value">{{ item.position?.thName || '—' }}</span>
+                </div>
+              </div>
+              <div class="emp-actions emp-actions--center">
+                <button type="button" title="แก้ไข" data-hs-overlay="#modal-detail" (click)="viewItem.emit(item)"
+                  class="ti-btn ti-btn-sm ti-btn-primary modern-btn"><i class="ri-edit-line"></i></button>
+                <button type="button" title="ประวัติลงเวลา"
+                  routerLink="/company/timestamp-log/{{ item.company_employeeId }}"
+                  class="ti-btn ti-btn-sm ti-btn-secondary modern-btn"><i class="ri-time-line"></i></button>
+                <button type="button" title="ลงทะเบียนใบหน้า" data-hs-overlay="#modal-face"
+                  (click)="enrollFace.emit(item)"
+                  class="ti-btn ti-btn-sm ti-btn-warning modern-btn"><i class="ri-account-circle-line"></i></button>
+                <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
+                  (click)="manageFace.emit(item)"
+                  class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                <button type="button" title="ลบ" (click)="deleteItem.emit(item)"
+                  class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
+              </div>
+            </article>
+          }
+        </div>
+      }
+
+      @if (totalFiltered === 0) {
+        <div class="emp-empty">
+          <i class="ri-user-search-line"></i>
+          <p class="mb-1 font-semibold">{{ searchTerm ? 'ไม่พบพนักงานที่ค้นหา' : 'ยังไม่มีพนักงาน' }}</p>
+          <p class="mb-0 text-sm text-dpu-muted">
+            {{ searchTerm ? 'ลองเปลี่ยนคำค้นหา หรือล้างช่องค้นหา' : 'กดเพิ่ม หรือนำเข้าจาก Excel เพื่อเริ่มต้น' }}
+          </p>
+        </div>
+      }
+
+      @if (totalFiltered > 0) {
+        <div class="box-footer emp-pager">
+          <div class="text-sm text-dpu-muted">
+            แสดง {{ pageStart }}–{{ pageEnd }} จาก {{ totalFiltered }}
+          </div>
+          <nav aria-label="เปลี่ยนหน้า">
+            <ul class="ti-pagination mb-0">
+              <li class="page-item" [class.disabled]="pageIndex === 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="prevPage.emit()">ก่อนหน้า</a>
+              </li>
+              <li class="page-item" *ngIf="pageIndex - 1 > 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage.emit(pageIndex - 2)">{{ pageIndex - 1 }}</a>
+              </li>
+              <li class="page-item" *ngIf="pageIndex > 0">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage.emit(pageIndex - 1)">{{ pageIndex }}</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link active px-3 py-[0.375rem]" href="javascript:void(0);">{{ pageIndex + 1 }}</a>
+              </li>
+              <li class="page-item" *ngIf="(pageIndex + 1) * pageSize < totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage.emit(pageIndex + 1)">{{ pageIndex + 2 }}</a>
+              </li>
+              <li class="page-item" *ngIf="(pageIndex + 2) * pageSize < totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="goToPage.emit(pageIndex + 2)">{{ pageIndex + 3 }}</a>
+              </li>
+              <li class="page-item" [class.disabled]="(pageIndex + 1) * pageSize >= totalFiltered">
+                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
+                  (click)="nextPage.emit()">ถัดไป</a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      }
+    </div>

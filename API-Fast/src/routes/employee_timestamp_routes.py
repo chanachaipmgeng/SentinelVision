@@ -179,15 +179,29 @@ async def export_timestamps_route(
 
 
 # ดึงข้อมูลการลงเวลาทั้งหมดของพนักงานในบริษัท
-@router.get("/company/{companyId}", response_model=List[EmployeeTimestampResponse])
+# When paged=1 returns {items,total,limit,offset}; otherwise a bare list (legacy callers).
+@router.get("/company/{companyId}")
 async def get_all_timestamps_route(
     companyId: UUID,
     limit: int = Query(500, ge=1, le=2000),
     offset: int = Query(0, ge=0),
+    q: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: str = Query("desc"),
+    paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("attendance.read")),
 ):
-    return await get_all_timestamps(companyId, db, limit=limit, offset=offset)
+    return await get_all_timestamps(
+        companyId,
+        db,
+        limit=limit,
+        offset=offset,
+        q=q,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        paged=paged,
+    )
 
 
 # ดึงข้อมูลการลงเวลาของพนักงานจาก timestampId
@@ -243,7 +257,8 @@ async def delete_timestamp_route(
 
 
 # ค้นหา timestamps ทั้งหมดของพนักงานจาก employeeId และเงื่อนไขอื่น ๆ
-@router.get("/search/company/{companyId}", response_model=List[EmployeeTimestampResponse])
+# When paged=1 returns {items,total,limit,offset}; otherwise a bare list (legacy callers).
+@router.get("/search/company/{companyId}")
 async def search_timestamps_route(
     companyId: str,
     company_employeeId: Optional[str] = Query(None),
@@ -253,6 +268,10 @@ async def search_timestamps_route(
     approvalStatus: Optional[str] = Query(None),
     limit: int = Query(500, ge=1, le=5000),
     offset: int = Query(0, ge=0),
+    q: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None),
+    sort_dir: str = Query("desc"),
+    paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("attendance.read")),
 ):
@@ -267,6 +286,10 @@ async def search_timestamps_route(
         db,
         limit=limit,
         offset=offset,
+        q=_blank(q),
+        sort_by=_blank(sort_by),
+        sort_dir=sort_dir or "desc",
+        paged=paged,
     )
 
 

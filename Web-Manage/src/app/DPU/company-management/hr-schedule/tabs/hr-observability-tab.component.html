@@ -1,0 +1,133 @@
+<!-- Telemetry & Cloud Storage Cards -->
+            <div class="grid grid-cols-12 gap-4" *ngIf="obsSummary">
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div class="text-xs text-gray-500">GPU Face Inference Latency (P95)</div>
+                <div class="text-2xl font-bold mt-1">
+                  {{ obsSummary.histograms?.dpu_face_gpu_latency_ms?.p95Ms || 0 }} ms
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Avg {{ obsSummary.histograms?.dpu_face_gpu_latency_ms?.avgMs || 0 }} ms ({{ obsSummary.histograms?.dpu_face_gpu_latency_ms?.count || 0 }} jobs)
+                </div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-success/5 border border-success/20">
+                <div class="text-xs text-gray-500">pgvector 1:N HNSW Search (P95)</div>
+                <div class="text-2xl font-bold text-success mt-1">
+                  {{ obsSummary.histograms?.dpu_pgvector_search_ms?.p95Ms || 0 }} ms
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Avg {{ obsSummary.histograms?.dpu_pgvector_search_ms?.avgMs || 0 }} ms ({{ obsSummary.histograms?.dpu_pgvector_search_ms?.count || 0 }} queries)
+                </div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-info/5 border border-info/20">
+                <div class="text-xs text-gray-500">HTTP API Latency &amp; Active Kiosks</div>
+                <div class="text-2xl font-bold text-info mt-1">
+                  {{ obsSummary.httpAvgLatencyMs || 0 }} ms
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Active Kiosk WS: {{ obsSummary.activeKioskWebSockets || 0 }} | Total Req: {{ obsSummary.httpRequestsTotal || 0 }}
+                </div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-warning/5 border border-warning/20">
+                <div class="text-xs text-gray-500">Storage Backend (S3 / MinIO / Local)</div>
+                <div class="text-xl font-bold text-warning mt-1 uppercase">
+                  {{ obsSummary.storage?.backend || 'local' }}
+                  <span *ngIf="obsSummary.storage?.s3Enabled" class="badge bg-success/10 text-success text-xs ms-1">S3 Presigned</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Enrolled: {{ obsSummary.storage?.localFileCounts?.enrolled_images || 0 }} | Punches: {{ obsSummary.storage?.localFileCounts?.uploaded_images || 0 }}
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-4">
+              <!-- Signed Outbound Webhook Config -->
+              <div class="col-span-12 lg:col-span-5 p-4 rounded-lg border border-defaultborder space-y-3">
+                <h6 class="font-semibold">ตั้งค่า Signed Outbound Webhook (เชื่อมระบบเงินเดือน Payroll / ERP)</h6>
+                <p class="text-xs text-gray-500">
+                  ส่งข้อมูลลงเวลาเข้า-ออกงานแบบเรียลไทม์พร้อมลายเซ็น <code>X-DPU-Signature-256: v1=&lt;hmac_sha256&gt;</code>
+                </p>
+                <div>
+                  <label class="form-label">Webhook Endpoint URL (SAP / Workday / ERP)</label>
+                  <input
+                    class="form-control"
+                    [(ngModel)]="notifySettings.webhookUrl"
+                    placeholder="https://erp.example.com/webhooks/dpu-attendance"
+                  />
+                </div>
+                <div>
+                  <label class="form-label">
+                    HMAC-SHA256 Signing Secret
+                    <span *ngIf="notifySettings.hasWebhookSecret" class="badge bg-success/10 text-success ms-1">ตั้งค่าแล้ว</span>
+                  </label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    [(ngModel)]="notifySettings.webhookSecret"
+                    placeholder="กรอก Secret Key เพื่อเซ็นรับรอง Payload"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="form-label">เวลาแจ้งเตือนขาดงาน (Cutoff)</label>
+                    <input type="time" class="form-control" [(ngModel)]="notifySettings.cutoff" />
+                  </div>
+                  <div>
+                    <label class="form-label">อีเมลผู้รับแจ้งเตือน</label>
+                    <input class="form-control" [(ngModel)]="notifySettings.email" placeholder="hr@company.com" />
+                  </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                  <button type="button" class="ti-btn ti-btn-primary-full flex-1" (click)="saveNotifySettings()">
+                    บันทึกการตั้งค่า Webhook
+                  </button>
+                  <button type="button" class="ti-btn ti-btn-light" (click)="sendTestWebhook()">
+                    ส่ง Test Webhook
+                  </button>
+                </div>
+              </div>
+
+              <!-- Recent Outbox Delivery Log -->
+              <div class="col-span-12 lg:col-span-7 p-4 rounded-lg border border-defaultborder">
+                <div class="flex items-center justify-between mb-3">
+                  <h6 class="font-semibold">ประวัติการส่ง Outbound Webhook &amp; Notification Outbox ({{ outboxLogs.length }})</h6>
+                  <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="loadObservabilityAndWebhooks()">
+                    รีเฟรช
+                  </button>
+                </div>
+                <div class="table-responsive max-h-80 overflow-y-auto">
+                  <table class="table whitespace-nowrap min-w-full">
+                    <thead>
+                      <tr class="border-b border-defaultborder">
+                        <th class="text-start">เวลา</th>
+                        <th class="text-start">Event</th>
+                        <th class="text-start">ช่องทาง</th>
+                        <th class="text-start">สถานะ (Attempts)</th>
+                        <th class="text-start">หมายเหตุ / Error</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let item of outboxLogs" class="border-b border-defaultborder">
+                        <td class="text-xs">{{ item.createdAt | date: 'dd/MM HH:mm:ss' }}</td>
+                        <td class="font-mono text-xs">{{ item.event }}</td>
+                        <td><span class="badge bg-primary/10 text-primary uppercase">{{ item.channel }}</span></td>
+                        <td>
+                          <span *ngIf="item.status === 'sent'" class="badge bg-success/10 text-success">
+                            SENT ({{ item.attempts }})
+                          </span>
+                          <span *ngIf="item.status === 'pending'" class="badge bg-warning/10 text-warning">
+                            PENDING ({{ item.attempts }})
+                          </span>
+                          <span *ngIf="item.status === 'failed'" class="badge bg-danger/10 text-danger">
+                            FAILED ({{ item.attempts }})
+                          </span>
+                        </td>
+                        <td class="text-xs text-gray-500 max-w-xs truncate">{{ item.lastError || 'OK' }}</td>
+                      </tr>
+                      <tr *ngIf="outboxLogs.length === 0">
+                        <td colspan="5" class="text-center text-gray-500 py-4">ยังไม่มีประวัติการส่งข้อมูลใน Outbox</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>

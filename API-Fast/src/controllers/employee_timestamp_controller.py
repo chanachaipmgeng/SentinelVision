@@ -10,6 +10,7 @@ from fastapi import HTTPException, status
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -18,9 +19,17 @@ from ..models.company_employee import CompanyEmployee
 from ..models.company_location import CompanyLocation
 from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp, TimestampType
 from ..models.hr_schedule import WorkShift
+from ..models.member import Member
 from ..models.system_setting import SystemSetting
 from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate, TimestampApprovalAction
+from ..schemas.page_schema import page_envelope
 from ..utils.geolocation import get_distance_in_km
+
+_TS_SORT_COLUMNS = {
+    "timestamp": EmployeeTimestamp.timestamp,
+    "timestampType": EmployeeTimestamp.timestampType,
+    "approvalStatus": EmployeeTimestamp.approvalStatus,
+}
 
 DEFAULT_SHIFT = {
     "name": "กะปกติ (09:00 - 18:00)",
@@ -301,22 +310,26 @@ async def get_all_timestamps(
     *,
     limit: int = 500,
     offset: int = 0,
+    q: str | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "desc",
+    paged: bool = False,
 ):
-    safe_limit = min(max(1, int(limit or 500)), 2000)
-    safe_offset = max(0, int(offset or 0))
-    result = await db.execute(
-        select(EmployeeTimestamp)
-        .where(EmployeeTimestamp.companyId == companyId)
-        .order_by(EmployeeTimestamp.timestamp.desc())
-        .offset(safe_offset)
-        .limit(safe_limit)
-        .options(
-            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
-            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
-            selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
-        )
+    return await search_timestamps(
+        str(companyId),
+        None,
+        None,
+        None,
+        None,
+        None,
+        db,
+        limit=limit,
+        offset=offset,
+        q=q,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        paged=paged,
     )
-    return [_timestamp_payload(time) for time in result.scalars().all()]
 
 
 async def get_timestamp_by_id(timestampId: UUID, companyId: UUID, db: AsyncSession):
@@ -763,6 +776,10 @@ async def search_timestamps(
     *,
     limit: int = 500,
     offset: int = 0,
+    q: str | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "desc",
+    paged: bool = False,
 ):
     safe_limit = min(max(1, int(limit or 500)), 5000)
     safe_offset = max(0, int(offset or 0))
@@ -783,7 +800,29 @@ async def search_timestamps(
     if approvalStatus:
         query = query.where(EmployeeTimestamp.approvalStatus == approvalStatus)
 
-    query = query.order_by(EmployeeTimestamp.timestamp.desc()).offset(safe_offset).limit(safe_limit)
+    needle = (q or "").strip()
+    if needle:
+        like = f"%{needle}%"
+        query = (
+            query.join(CompanyEmployee, EmployeeTimestamp.company_employeeId == CompanyEmployee.company_employeeId)
+            .join(Member, CompanyEmployee.memberId == Member.memberId)
+            .where(
+                or_(
+                    Member.firstName.ilike(like),
+                    Member.lastName.ilike(like),
+                    Member.username.ilike(like),
+                    CompanyEmployee.employeeId.ilike(like),
+                    EmployeeTimestamp.note.ilike(like),
+                )
+            )
+        )
+
+    count_stmt = select(func.count()).select_from(query.order_by(None).subquery())
+    total = int((await db.execute(count_stmt)).scalar_one() or 0)
+
+    sort_col = _TS_SORT_COLUMNS.get(sort_by or "", EmployeeTimestamp.timestamp)
+    order = asc(sort_col) if (sort_dir or "").lower() == "asc" else desc(sort_col)
+    query = query.order_by(order).offset(safe_offset).limit(safe_limit)
 
     result = await db.execute(
         query.options(
@@ -792,7 +831,10 @@ async def search_timestamps(
             selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.department),
         )
     )
-    return [_timestamp_payload(time) for time in result.scalars().all()]
+    items = [_timestamp_payload(time) for time in result.unique().scalars().all()]
+    if paged:
+        return page_envelope(items, total=total, limit=safe_limit, offset=safe_offset)
+    return items
 
 
 def _type_label(ts_type) -> str:

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -12,6 +12,7 @@ import { TokenService } from '../../../shared/services/token.service';
 import { TimestampModel } from '../../models/timestamp.model';
 import { EmployeeModel } from '../../models/employee.model';
 import { EmployeeService } from '../../services/employee.service';
+import { clampPageIndex } from '../../../shared/utils/data-table-query';
 import swal from 'sweetalert';
 
 @Component({
@@ -32,7 +33,7 @@ import swal from 'sweetalert';
   providers: [FlatpickrDefaults],
   encapsulation: ViewEncapsulation.None,
 })
-export class TimestampLogComponent implements OnInit {
+export class TimestampLogComponent implements OnInit, OnDestroy {
   readonly pageSize = 10;
 
   companyId = '';
@@ -45,16 +46,20 @@ export class TimestampLogComponent implements OnInit {
     to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
   };
 
+  /** Current page from server. */
   itemsList: TimestampModel[] = [];
-  filteredSource: TimestampModel[] = [];
   pageItems: TimestampModel[] = [];
   selectModel?: TimestampModel;
   empList: EmployeeModel[] = [];
+  serverTotal = 0;
+  sortBy: string | null = 'timestamp';
+  sortDir: 'asc' | 'desc' | null = 'desc';
 
   empSelect = '';
   statusSelect = '';
   pageIndex = 0;
   private _searchTerm = '';
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   get searchTerm(): string {
     return this._searchTerm;
@@ -63,33 +68,34 @@ export class TimestampLogComponent implements OnInit {
   set searchTerm(val: string) {
     this._searchTerm = val;
     this.pageIndex = 0;
-    this.applyFilter();
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.getTimestamp(), 250);
   }
 
   get totalFiltered(): number {
-    return this.filteredSource.length;
+    return this.serverTotal;
   }
 
   get totalAll(): number {
-    return this.itemsList.length;
+    return this.serverTotal;
   }
 
   get completeCount(): number {
-    return this.itemsList.filter(
+    return this.pageItems.filter(
       (x) => x.timestampType === 1 || x.timestampType === 2
     ).length;
   }
 
   get checkOutCount(): number {
-    return this.itemsList.filter((x) => x.timestampType === 2).length;
+    return this.pageItems.filter((x) => x.timestampType === 2).length;
   }
 
   get lateCount(): number {
-    return this.itemsList.filter((x) => x.isLate).length;
+    return this.pageItems.filter((x) => x.isLate).length;
   }
 
   get absentCount(): number {
-    return this.itemsList.filter((x) => x.timestampType === 3).length;
+    return this.pageItems.filter((x) => x.timestampType === 3).length;
   }
 
   get pageFrom(): number {
@@ -134,28 +140,43 @@ export class TimestampLogComponent implements OnInit {
     this.getTimestamp();
   }
 
-  getTimestamp() {
+  ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+  }
+
+  getTimestamp(preferId?: string) {
     if (!this.companyId) return;
     this.loading = true;
-    const keepId = this.selectModel?.timestampId;
+    const keepId = preferId || this.selectModel?.timestampId;
     const { from, to } = this.resolveDateRange();
 
     this.timeService
-      .getListsSearch(
-        this.companyId,
-        this.empSelect || '',
-        from.toISOString(),
-        to.toISOString(),
-        this.statusSelect || undefined
-      )
+      .searchPage(this.companyId, {
+        pageIndex: this.pageIndex,
+        pageSize: this.pageSize,
+        q: this._searchTerm,
+        sortBy: this.sortBy,
+        sortDir: this.sortDir || 'desc',
+        company_employeeId: this.empSelect || undefined,
+        startDate: from.toISOString(),
+        endDate: to.toISOString(),
+        timestampType: this.statusSelect || undefined,
+      })
       .subscribe({
-        next: (result) => {
-          this.itemsList = result.sort((a, b) =>
-            (b.timestamp || '').localeCompare(a.timestamp || '')
-          );
-          this.pageIndex = 0;
-          this.applyFilter(keepId);
+        next: (page) => {
+          this.serverTotal = page.total;
+          this.pageIndex = clampPageIndex(this.pageIndex, page.total, this.pageSize);
+          this.itemsList = page.items || [];
+          this.pageItems = this.itemsList;
           this.loading = false;
+          if (!this.pageItems.length) {
+            this.selectModel = undefined;
+            return;
+          }
+          const preferred =
+            (keepId && this.pageItems.find((x) => x.timestampId === keepId)) ||
+            this.pageItems[0];
+          this.view(preferred);
         },
         error: () => {
           this.loading = false;
@@ -209,42 +230,11 @@ export class TimestampLogComponent implements OnInit {
     });
   }
 
-  applyFilter(preferId?: string) {
-    const q = (this._searchTerm || '').trim().toLowerCase();
-    this.filteredSource = !q
-      ? [...this.itemsList]
-      : this.itemsList.filter((x) => this.matchesSearch(x, q));
-
-    const maxPage = Math.max(0, Math.ceil(this.filteredSource.length / this.pageSize) - 1);
-    if (this.pageIndex > maxPage) this.pageIndex = maxPage;
-    this.updatePagedItems();
-
-    if (!this.filteredSource.length) {
-      this.selectModel = undefined;
-      return;
-    }
-
-    const preferred =
-      (preferId &&
-        this.filteredSource.find((x) => x.timestampId === preferId)) ||
-      (this.selectModel &&
-        this.filteredSource.find(
-          (x) => x.timestampId === this.selectModel!.timestampId
-        ));
-
-    this.view(preferred || this.pageItems[0] || this.filteredSource[0]);
-  }
-
-  updatePagedItems() {
-    const start = this.pageIndex * this.pageSize;
-    this.pageItems = this.filteredSource.slice(start, start + this.pageSize);
-  }
-
   goToPage(page: number) {
     const next = Math.max(0, Math.min(page, this.totalPages - 1));
     if (next === this.pageIndex) return;
     this.pageIndex = next;
-    this.updatePagedItems();
+    this.getTimestamp();
   }
 
   prevPage() {
@@ -263,6 +253,7 @@ export class TimestampLogComponent implements OnInit {
     this.empSelect = '';
     this.statusSelect = '';
     this._searchTerm = '';
+    this.pageIndex = 0;
     this.dateRange = {
       from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
       to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
@@ -338,28 +329,6 @@ export class TimestampLogComponent implements OnInit {
         },
       });
     });
-  }
-
-  private matchesSearch(item: TimestampModel, q: string): boolean {
-    const emp = item.employee;
-    const haystack = [
-      emp?.getFullname?.() || '',
-      emp?.employeeId || '',
-      emp?.member?.firstName || '',
-      emp?.member?.lastName || '',
-      emp?.department?.getName?.() || '',
-      emp?.position?.getName?.() || '',
-      item.getLocation?.() || '',
-      item.locationName || '',
-      item.note || '',
-      item.getStatus?.() || '',
-      item.timestampId || '',
-      String(item.latitude ?? ''),
-      String(item.longitude ?? ''),
-    ]
-      .join(' ')
-      .toLowerCase();
-    return haystack.includes(q);
   }
 
   private resolveDateRange(): { from: Date; to: Date } {

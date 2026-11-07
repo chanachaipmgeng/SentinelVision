@@ -1,0 +1,109 @@
+<div class="grid grid-cols-12 gap-6">
+            <!-- Edge AI Sync Card -->
+            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60 space-y-4">
+              <div>
+                <h6 class="font-bold text-base mb-1">
+                  <i class="ri-cpu-line text-teal-700 me-1"></i>
+                  สถานะซิงค์ฐานข้อมูลใบหน้า Edge AI (Offline-First Sync)
+                </h6>
+                <p class="text-xs text-dpu-muted mb-0">
+                  ข้อมูล Manifest สำหรับเครื่องสแกนหน้างาน (Edge Box / Kiosk) เพื่อให้ทำงานได้ต่อเนื่องแม้เน็ตล่ม
+                </p>
+              </div>
+
+              <div *ngIf="edgeManifest" class="space-y-2 text-xs bg-white p-4 rounded-lg border border-defaultborder">
+                <div class="flex justify-between">
+                  <span class="text-dpu-muted">รุ่น Manifest:</span>
+                  <span class="font-mono font-semibold">{{ edgeManifest.manifestVersion }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-dpu-muted">โมเดล Biometric:</span>
+                  <span class="font-semibold">{{ edgeManifest.embeddingModel }}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-dpu-muted">ใบหน้าพนักงาน (Active):</span>
+                  <span class="font-bold text-teal-700">{{ edgeManifest.employeeVectorsCount }} vectors</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-dpu-muted">ใบหน้า Watchlist/Visitor/Event:</span>
+                  <span class="font-bold text-purple-700">{{ edgeManifest.sentinelVectorsCount }} vectors</span>
+                </div>
+                <div class="flex justify-between pt-2 border-t border-defaultborder">
+                  <span class="font-semibold">รวม Vector พร้อมซิงค์ทั้งหมด:</span>
+                  <span class="font-bold text-base text-slate-900">{{ edgeManifest.totalActiveVectors }}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="ti-btn ti-btn-primary-full w-full font-semibold"
+                (click)="loadEdgeManifest()"
+              >
+                <i class="ri-refresh-line me-1"></i> อัปเดต Edge Manifest ล่าสุด
+              </button>
+            </div>
+
+            <!-- Live Building Occupancy / Emergency Muster Roll -->
+            <div class="col-span-12 lg:col-span-8">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                  <h6 class="font-bold text-base mb-0">
+                    รายชื่อบุคคลที่อยู่ในพื้นที่อาคารวันนี้ (Live Occupancy &amp; Emergency Muster Roll)
+                  </h6>
+                  <p class="text-xs text-dpu-muted mb-0">
+                    ใช้ตรวจสอบยอดพนักงานและผู้มาติดต่อในกรณีเกิดเหตุฉุกเฉินหรืออพยพหนีไฟ
+                  </p>
+                </div>
+                <span class="badge bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold">
+                  รวมในพื้นที่วันนี้ {{ (overview?.musterRoll || []).length }} คน
+                </span>
+              </div>
+
+              <div
+                tabindex="0"
+                role="region"
+                aria-label="ตารางรายชื่อบุคคลในอาคารวันนี้ Emergency Muster Roll"
+                class="sv-table-wrapper"
+              >
+                <table class="table whitespace-nowrap">
+                  <thead>
+                    <tr class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">ชื่อ - นามสกุล</th>
+                      <th class="text-start p-3">ประเภทบุคคล</th>
+                      <th class="text-start p-3">รหัสอ้างอิง</th>
+                      <th class="text-start p-3">จุดสแกนล่าสุด</th>
+                      <th class="text-end p-3">เวลาที่พบล่าสุด</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let person of overview?.musterRoll || []"
+                      class="border-b border-defaultborder text-xs"
+                    >
+                      <th class="text-start p-3 font-semibold">{{ person.fullName }}</th>
+                      <td class="p-3">
+                        <span
+                          class="badge px-2 py-0.5 rounded"
+                          [ngClass]="
+                            person.category === 'EMPLOYEE'
+                              ? 'bg-teal-100 text-teal-800'
+                              : 'sv-pill-visitor'
+                          "
+                        >
+                          {{ person.category }}
+                        </span>
+                      </td>
+                      <td class="p-3">{{ person.badgeCode }}</td>
+                      <td class="p-3">{{ person.zoneOrLocation }}</td>
+                      <td class="p-3 text-end">{{ person.lastSeenAt | date:'dd/MM HH:mm:ss' }}</td>
+                    </tr>
+                    <tr *ngIf="!(overview?.musterRoll?.length)">
+                      <td colspan="5" class="text-center text-dpu-muted py-6">
+                        ยังไม่มีประวัติการสแกนเข้าอาคารในวันนี้
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>

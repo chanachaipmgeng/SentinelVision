@@ -1,0 +1,68 @@
+<div class="grid grid-cols-12 gap-4">
+              <div class="col-span-12 lg:col-span-4 p-4 rounded-lg border border-defaultborder space-y-4">
+                <div>
+                  <h6 class="font-semibold mb-3">เพิ่มวันหยุดประจำปีของบริษัท</h6>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="form-label">วันที่หยุด</label>
+                      <input type="date" class="form-control" [(ngModel)]="newHoliday.holidayDate" />
+                    </div>
+                    <div>
+                      <label class="form-label">ชื่อวันหยุด</label>
+                      <input class="form-control" [(ngModel)]="newHoliday.name" placeholder="เช่น วันสงกรานต์ / วันขึ้นปีใหม่" />
+                    </div>
+                    <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="createHoliday()">
+                      + เพิ่มวันหยุดบริษัท
+                    </button>
+                  </div>
+                </div>
+
+                <div class="border-t border-defaultborder pt-4 space-y-3">
+                  <h6 class="font-semibold">นำเข้า / Preset</h6>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" class="ti-btn ti-btn-outline-primary" (click)="applyThaiHolidayPreset()" [disabled]="holidayBusy">
+                      โหลดวันหยุดราชการไทย {{ holidayPresetYear }}
+                    </button>
+                  </div>
+                  <div>
+                    <label class="form-label">นำเข้าไฟล์ CSV หรือ iCal (.ics)</label>
+                    <input type="file" class="form-control" accept=".csv,.ics,.ical,text/csv,text/calendar" (change)="onHolidayFileSelected($event)" />
+                  </div>
+                  <p class="text-xs text-gray-500" *ngIf="holidayImportHint">{{ holidayImportHint }}</p>
+                </div>
+              </div>
+
+              <div class="col-span-12 lg:col-span-8 p-4 rounded-lg border border-defaultborder">
+                <h6 class="font-semibold mb-3">ปฏิทินวันหยุดบริษัท ({{ holidays.length }})</h6>
+                <p class="text-xs text-gray-500 mb-3">
+                  * ระบบแจ้งเตือนขาดงานอัตโนมัติ (Cutoff Notification) และเมตริก Late/OT จะข้ามวันหยุดที่บันทึกไว้ในตารางนี้
+                </p>
+                <div class="table-responsive">
+                  <table class="table whitespace-nowrap min-w-full">
+                    <thead>
+                      <tr class="border-b border-defaultborder">
+                        <th class="text-start">วันที่</th>
+                        <th class="text-start">ชื่อวันหยุด</th>
+                        <th class="text-start">แหล่งที่มา</th>
+                        <th class="text-end">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let h of holidays" class="border-b border-defaultborder">
+                        <td class="font-medium">{{ h.holidayDate }}</td>
+                        <td>{{ h.name }}</td>
+                        <td class="text-xs text-gray-500">{{ holidaySourceLabel(h.source) }}</td>
+                        <td class="text-end">
+                          <button type="button" class="ti-btn ti-btn-sm ti-btn-danger" (click)="deleteHoliday(h.holidayId)">
+                            ลบ
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="holidays.length === 0">
+                        <td colspan="4" class="text-center text-gray-500 py-4">ยังไม่ได้กำหนดวันหยุดประจำปี</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>

@@ -1,0 +1,118 @@
+<div class="grid grid-cols-12 gap-4" *ngIf="pdpaSummary">
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div class="text-xs text-gray-500">พนักงานทั้งหมด</div>
+                <div class="text-2xl font-bold mt-1">{{ pdpaSummary.totalEmployees }} คน</div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-success/5 border border-success/20">
+                <div class="text-xs text-gray-500">ยินยอมใช้ข้อมูลชีวมิติ (PDPA Consent)</div>
+                <div class="text-2xl font-bold text-success mt-1">{{ pdpaSummary.consentedEmployees }} คน</div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-info/5 border border-info/20">
+                <div class="text-xs text-gray-500">ลงทะเบียนใบหน้าแล้ว</div>
+                <div class="text-2xl font-bold text-info mt-1">{{ pdpaSummary.enrolledEmployees }} คน</div>
+              </div>
+              <div class="col-span-12 md:col-span-3 p-4 rounded-lg bg-warning/5 border border-warning/20">
+                <div class="text-xs text-gray-500">นโยบายจัดเก็บภาพถ่ายลงเวลา</div>
+                <div class="text-lg font-bold text-warning mt-1">
+                  {{ pdpaSummary.retentionPolicy?.imageRetentionDays }} วัน (Temp {{ pdpaSummary.retentionPolicy?.tempRetentionHours }} ชม.)
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-lg border border-defaultborder space-y-3" *ngIf="consentPolicy">
+              <h6 class="font-semibold">ข้อความและเวอร์ชันความยินยอม (แสดงบน Kiosk / Enroll)</h6>
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 md:col-span-3">
+                  <label class="form-label text-xs">เวอร์ชัน</label>
+                  <input class="form-control" [(ngModel)]="consentPolicy.version" />
+                </div>
+                <div class="col-span-12 md:col-span-9">
+                  <label class="form-label text-xs">ข้อความ (ไทย)</label>
+                  <textarea class="form-control" rows="3" [(ngModel)]="consentPolicy.textTh"></textarea>
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs">ข้อความ (อังกฤษ)</label>
+                  <textarea class="form-control" rows="3" [(ngModel)]="consentPolicy.textEn"></textarea>
+                </div>
+              </div>
+              <button type="button" class="ti-btn ti-btn-primary-full" (click)="saveConsentPolicy()">บันทึกนโยบายความยินยอม</button>
+            </div>
+
+            <div class="p-4 rounded-lg border border-defaultborder space-y-3" *ngIf="retentionSettings">
+              <h6 class="font-semibold">Retention ต่อชนิดข้อมูล (วัน / ชม.)</h6>
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Biometric (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.biometricDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Punch photo (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.punchPhotoDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Incident snapshot (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.incidentSnapshotDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Temp (ชม.)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.tempHours" />
+                </div>
+              </div>
+              <button type="button" class="ti-btn ti-btn-primary-full" (click)="saveRetentionSettings()">บันทึก Retention</button>
+            </div>
+
+            <div class="p-4 rounded-lg border border-defaultborder">
+              <h6 class="font-semibold mb-3">การจัดการความยินยอมข้อมูลชีวมิติรายบุคคล (PDPA Right to Erasure)</h6>
+              <p class="text-xs text-gray-500 mb-3">
+                * การเพิกถอน/Erasure จะลบ encodings, ภาพ punch และ incident snapshots ของพนักงานทันที
+              </p>
+              <div class="table-responsive">
+                <table class="table whitespace-nowrap min-w-full">
+                  <thead>
+                    <tr class="border-b border-defaultborder">
+                      <th class="text-start">พนักงาน</th>
+                      <th class="text-start">อีเมล</th>
+                      <th class="text-start">วันที่ให้ความยินยอม (PDPA Consent)</th>
+                      <th class="text-end">จัดการข้อมูลชีวมิติ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let emp of employees" class="border-b border-defaultborder">
+                      <td class="font-medium">{{ emp.member?.firstName }} {{ emp.member?.lastName }}</td>
+                      <td>{{ emp.member?.email }}</td>
+                      <td>
+                        <span *ngIf="emp.member?.biometricConsentAt" class="badge bg-success/10 text-success">
+                          {{ emp.member.biometricConsentAt | date: 'dd/MM/yyyy HH:mm' }}
+                        </span>
+                        <span *ngIf="!emp.member?.biometricConsentAt" class="badge bg-gray-100 text-gray-600">
+                          ยังไม่ระบุ / รอลงทะเบียน
+                        </span>
+                      </td>
+                      <td class="text-end space-x-2">
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-light"
+                          (click)="exportDsar(emp.member?.memberId)"
+                        >
+                          DSAR
+                        </button>
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-success"
+                          (click)="grantConsent(emp.member?.memberId)"
+                        >
+                          บันทึกความยินยอม
+                        </button>
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-danger"
+                          (click)="revokeConsent(emp.member?.memberId)"
+                        >
+                          Erasure
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>

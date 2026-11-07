@@ -1,0 +1,97 @@
+<div class="grid grid-cols-12 gap-4">
+              <div class="col-span-12 lg:col-span-4 p-4 rounded-lg border border-defaultborder">
+                <h6 class="font-semibold mb-3">ยื่นใบลา / บันทึกวันลาพนักงาน</h6>
+                <div class="space-y-3">
+                  <div>
+                    <label class="form-label">เลือกพนักงาน</label>
+                    <select class="form-control" [(ngModel)]="newLeave.company_employeeId">
+                      <option value="">-- เลือกพนักงาน --</option>
+                      <option *ngFor="let emp of employees" [value]="emp.company_employeeId">
+                        {{ emp.member?.firstName }} {{ emp.member?.lastName }} ({{ emp.employeeId || emp.member?.email }})
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="form-label">ประเภทการลา</label>
+                    <select class="form-control" [(ngModel)]="newLeave.leaveType">
+                      <option value="ANNUAL">ลาพักร้อน (ANNUAL)</option>
+                      <option value="SICK">ลาป่วย (SICK)</option>
+                      <option value="PERSONAL">ลากิจ (PERSONAL)</option>
+                      <option value="WFH">ปฏิบัติงานนอกสถานที่ (WFH)</option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="form-label">ตั้งแต่วันที่</label>
+                      <input type="date" class="form-control" [(ngModel)]="newLeave.startDate" />
+                    </div>
+                    <div>
+                      <label class="form-label">ถึงวันที่</label>
+                      <input type="date" class="form-control" [(ngModel)]="newLeave.endDate" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="form-label">เหตุผลการลา</label>
+                    <input class="form-control" [(ngModel)]="newLeave.reason" placeholder="ระบุรายละเอียด..." />
+                  </div>
+                  <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="createLeave()">
+                    + บันทึกคำขอลา
+                  </button>
+                </div>
+              </div>
+
+              <div class="col-span-12 lg:col-span-8 p-4 rounded-lg border border-defaultborder">
+                <h6 class="font-semibold mb-3">รายการใบลาและสถานะการอนุมัติ ({{ leaves.length }})</h6>
+                <p class="text-xs text-gray-500 mb-3">
+                  * พนักงานที่ได้รับอนุมัติวันลา (APPROVED) จะถูกยกเว้นจากการแจ้งเตือนขาดงานอัตโนมัติในวันดังกล่าว
+                </p>
+                <div class="table-responsive">
+                  <table class="table whitespace-nowrap min-w-full">
+                    <thead>
+                      <tr class="border-b border-defaultborder">
+                        <th class="text-start">พนักงาน</th>
+                        <th class="text-start">ประเภท</th>
+                        <th class="text-start">ช่วงวันที่</th>
+                        <th class="text-start">เหตุผล</th>
+                        <th class="text-start">สถานะ</th>
+                        <th class="text-end">การอนุมัติ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let l of leaves" class="border-b border-defaultborder">
+                        <td class="font-medium">{{ l.employeeName }} ({{ l.employeeCode || '-' }})</td>
+                        <td><span class="badge bg-primary/10 text-primary">{{ l.leaveType }}</span></td>
+                        <td>{{ l.startDate }} ถึง {{ l.endDate }}</td>
+                        <td>{{ l.reason || '-' }}</td>
+                        <td>
+                          <span *ngIf="l.status === 0" class="badge bg-warning/10 text-warning">รออนุมัติ</span>
+                          <span *ngIf="l.status === 1" class="badge bg-success/10 text-success">อนุมัติแล้ว</span>
+                          <span *ngIf="l.status === 2" class="badge bg-danger/10 text-danger">ไม่อนุมัติ</span>
+                        </td>
+                        <td class="text-end space-x-1">
+                          <button
+                            *ngIf="l.status === 0"
+                            type="button"
+                            class="ti-btn ti-btn-sm ti-btn-success"
+                            (click)="decideLeave(l.leaveId, 1)"
+                          >
+                            อนุมัติ
+                          </button>
+                          <button
+                            *ngIf="l.status === 0"
+                            type="button"
+                            class="ti-btn ti-btn-sm ti-btn-danger"
+                            (click)="decideLeave(l.leaveId, 2)"
+                          >
+                            ปฏิเสธ
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="leaves.length === 0">
+                        <td colspan="6" class="text-center text-gray-500 py-4">ยังไม่มีรายการใบลา</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>

@@ -1,0 +1,151 @@
+<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
+        </h6>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-detail">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <div class="grid grid-cols-12 gap-4">
+          <div class="xl:col-span-12 col-span-12">
+            <div class="mb-0 text-center">
+              <span class="avatar avatar-xxl avatar-rounded">
+                <img [src]="selectModel.getPicture()" alt="" id="profile-img">
+                <span class="badge rounded-full bg-primary avatar-badge">
+                  <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
+                    class="absolute w-full h-full opacity-[0]" id="profile-change">
+                  <i class="fe fe-camera text-[.625rem]"></i>
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ชื่อ</label>
+            <input type="text" class="form-control" id="deal-name" placeholder="ชื่อ"
+              [(ngModel)]="selectModel.member.firstName">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-lead-score" class="form-label">นามสกุล</label>
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
+              [(ngModel)]="selectModel.member.lastName">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label for="company-name" class="form-label">อีเมล <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="company-name" placeholder="เช่น name@company.com"
+              [(ngModel)]="selectModel.member.email">
+            <p class="text-xs text-textmuted mt-1 mb-0">ต้องเป็นรูปแบบอีเมลจริง เช่น name&#64;company.com (ต้องมี &#64; และจุดในโดเมน)</p>
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">วันเริ่มงาน</label>
+            <div class="form-group">
+              <div class="input-group">
+                <input type="text" class="form-control" id="endDate" placeholder="Choose date with time" mwlFlatpickr
+                  [(ngModel)]="selectModel.startDate" [enableTime]="true" [convertModelValue]="true"
+                  [dateFormat]="'Y-m-d H:i'">
+              </div>
+            </div>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-lead-score" class="form-label">รหัสพนักงาน</label>
+            <input type="text" class="form-control" id="deal-lead-score" placeholder="รหัสพนักงาน"
+              [(ngModel)]="selectModel.employeeId">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">วันเกิด</label>
+            <input type="date" class="form-control" [(ngModel)]="selectModel.member.birthDate">
+          </div>
+          <div class="xl:col-span-12 col-span-12">
+            <label class="form-label">ที่อยู่</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="selectModel.member.address"></textarea>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">ผู้ติดต่อฉุกเฉิน</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.member.emergencyContactName">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label class="form-label">เบอร์ติดต่อฉุกเฉิน</label>
+            <input type="text" class="form-control" [(ngModel)]="selectModel.member.emergencyContactPhone">
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">หัวหน้างาน</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.bossId">
+              @for(item of itemsList;track itemsList){
+              <ng-option [value]="item.member.memberId">{{item.member.firstName+"
+                "+item.member.lastName}}</ng-option>
+              }
+            </ng-select>
+          </div>
+
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">แผนก</label>
+            <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.department">
+              @for(item of departmentList;track departmentList){
+              <ng-option [value]="item">{{item.thName}}</ng-option>
+              }
+            </ng-select> -->
+
+            <ng-select #select [items]="departmentList" [searchable]="false" [(ngModel)]="selectModel.department"
+              bindLabel="thName">
+              <ng-template ng-header-tmp>
+                <input style="width: 100%; line-height: 24px" type="text"
+                  (input)="select.filter($any($event.target).value)" />
+              </ng-template>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ตำแหน่ง</label>
+            <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.position.positionId">
+              @for(item of positionList;track positionList){
+              <ng-option [value]="item">{{item.thName}}</ng-option>
+              }
+            </ng-select> -->
+            <ng-select #select2 [items]="positionList" [searchable]="false" [(ngModel)]="selectModel.position"
+              bindLabel="thName">
+              <ng-template ng-header-tmp>
+                <input style="width: 100%; line-height: 24px" type="text"
+                  (input)="select2.filter($any($event.target).value)" />
+              </ng-template>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">ประเภท</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.empType">
+              <ng-option [value]="0">รายวัน</ng-option>
+              <ng-option [value]="1">รายเดือน</ng-option>
+            </ng-select>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">เงินเดือน</label>
+            <input type="text" class="form-control" id="company-name" placeholder="เงินเดือน"
+              [(ngModel)]="selectModel.salary">
+          </div>
+
+          <div class="xl:col-span-6 col-span-12">
+            <label for="deal-name" class="form-label">สิทธิ์การใช้งาน</label>
+            <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
+              [(ngModel)]="selectModel.companyRoleType">
+              <ng-option [value]="0">พนักงาน</ng-option>
+              <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
+            </ng-select>
+          </div>
+        </div>
+      </div>
+      <div class="ti-modal-footer">
+        <button #closeModal type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
+          data-hs-overlay="#modal-detail">
+          ยกเลิก
+        </button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save.emit()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>

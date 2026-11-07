@@ -1,0 +1,200 @@
+<div class="grid grid-cols-12 gap-6">
+            <!-- Unified 1:N Biometric Scan Verifier -->
+            <div class="col-span-12 xl:col-span-5 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h6 class="font-bold text-base mb-0">
+                    <i class="ri-scan-2-line text-teal-700 me-1"></i>
+                    ทดสอบสแกนใบหน้าอัจฉริยะ 1:N (Unified Scan Engine)
+                  </h6>
+                  <p class="text-xs text-dpu-muted mb-0">
+                    ตรวจสอบพร้อมกันทั้ง พนักงาน, Blacklist, VIP, Visitor และผู้ร่วมงาน Event
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">โหมดจุดสแกน (Station Mode)</label>
+                  <select class="form-control" [(ngModel)]="scanForm.stationMode">
+                    <option value="ACCESS_CONTROL">Access Control (ควบคุมประตู)</option>
+                    <option value="WATCHLIST_MONITOR">Watchlist Monitor (กล้องเฝ้าระวัง)</option>
+                    <option value="EVENT_CHECKIN">Event Check-in (ลงทะเบียนเข้างาน)</option>
+                    <option value="ATTENDANCE">Attendance (ลงเวลาทำงาน)</option>
+                  </select>
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">โซนประตู (Access Zone)</label>
+                  <select class="form-control" [(ngModel)]="scanForm.zoneId">
+                    <option value="">-- ไม่ระบุโซน (ตรวจสอบทั่วไป) --</option>
+                    <option *ngFor="let z of zones" [value]="z.zoneId">
+                      {{ z.name }} ({{ z.code }})
+                    </option>
+                  </select>
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">แคมเปญงานอีเวนต์ (ถ้ามี)</label>
+                  <select class="form-control" [(ngModel)]="scanForm.eventId">
+                    <option value="">-- ไม่ระบุงานอีเวนต์ --</option>
+                    <option *ngFor="let ev of events" [value]="ev.eventId">
+                      {{ ev.name }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">รหัส 2FA / PIN (สำหรับโซนความมั่นคงสูง)</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [(ngModel)]="scanForm.totpOrPin"
+                    placeholder="เว้นว่างได้หากโซนไม่บังคับ 2FA"
+                  />
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">เลือกรูปภาพใบหน้าเพื่อจำลองการสแกนหน้า Kiosk/กล้อง</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="form-control"
+                    (change)="onScanFileSelected($event)"
+                  />
+                </div>
+                <div class="col-span-12">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-primary-full w-full font-semibold"
+                    [disabled]="!scanSelectedFile || isScanning"
+                    (click)="runUnifiedScan()"
+                  >
+                    <i class="ri-qr-scan-2-line me-1"></i>
+                    {{ isScanning ? 'กำลังประมวลผลด้วย InsightFace GPU...' : 'เริ่มตรวจสอบใบหน้า 1:N ทันที' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Scan Result Box -->
+              <div
+                *ngIf="lastScanResult"
+                class="mt-4 p-4 rounded-xl border"
+                [ngClass]="
+                  lastScanResult.decision === 'BLACKLIST_BLOCKED'
+                    ? 'bg-red-50 border-red-300 text-red-900'
+                    : lastScanResult.accessGranted
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : 'bg-amber-50 border-amber-300 text-amber-900'
+                "
+              >
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-bold text-sm">
+                    {{ lastScanResult.message }}
+                  </span>
+                  <span class="badge bg-white/80 text-slate-800 px-2 py-0.5 text-xs">
+                    {{ lastScanResult.decision }}
+                  </span>
+                </div>
+                <div class="text-xs space-y-1 opacity-90">
+                  <div *ngIf="lastScanResult.subjectName">
+                    <strong>ชื่อ-นามสกุล:</strong> {{ lastScanResult.subjectName }} ({{ lastScanResult.identityType }})
+                  </div>
+                  <div *ngIf="lastScanResult.confidencePercent != null">
+                    <strong>ความแม่นยำ (Confidence):</strong> {{ lastScanResult.confidencePercent }}%
+                  </div>
+                  <div *ngIf="lastScanResult.seatNumber">
+                    <strong>ที่นั่ง / โต๊ะงานอีเวนต์:</strong> {{ lastScanResult.seatNumber }}
+                  </div>
+                  <div *ngIf="lastScanResult.alertNote">
+                    <strong>หมายเหตุเฝ้าระวัง:</strong> {{ lastScanResult.alertNote }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Security Incident Log -->
+            <div class="col-span-12 xl:col-span-7">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                  <h6 class="font-bold text-base mb-0">
+                    รายการแจ้งเตือนความปลอดภัยและการเข้า-ออกล่าสุด (Security &amp; Access Feed)
+                  </h6>
+                  <p class="text-xs text-dpu-muted mb-0">
+                    บันทึกทุกเหตุการณ์ Blacklist, VIP, ประตู Access Control และการเช็คอินงานอีเวนต์
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <select class="form-control !py-1 !text-xs !w-auto" [(ngModel)]="incidentFilterSeverity" (change)="loadIncidents()">
+                    <option value="">ทุกระดับความสำคัญ</option>
+                    <option value="CRITICAL">CRITICAL (ฉุกเฉิน/Blacklist)</option>
+                    <option value="WARNING">WARNING (ปฏิเสธสิทธิ์)</option>
+                    <option value="INFO">INFO (ผ่านปกติ/VIP)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div
+                tabindex="0"
+                role="region"
+                aria-label="ตารางเหตุการณ์ความปลอดภัยและการเข้า-ออก"
+                class="sv-table-wrapper"
+              >
+                <table class="table whitespace-nowrap">
+                  <thead>
+                    <tr class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">บุคคล / ตัวตน</th>
+                      <th class="text-start p-3">ประเภทเหตุการณ์</th>
+                      <th class="text-start p-3">จุดสแกน / โซน</th>
+                      <th class="text-start p-3">ความแม่นยำ</th>
+                      <th class="text-start p-3">เวลา</th>
+                      <th class="text-end p-3">สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let inc of incidents" class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">
+                        <div class="font-semibold text-slate-900">{{ inc.subjectName || 'Unknown' }}</div>
+                        <div class="text-[0.7rem] text-dpu-muted">{{ inc.identityType || '-' }}</div>
+                      </th>
+                      <td class="p-3">
+                        <span
+                          class="badge px-2 py-0.5 rounded"
+                          [ngClass]="
+                            inc.severity === 'CRITICAL'
+                              ? 'sv-pill-critical'
+                              : inc.severity === 'WARNING'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          "
+                        >
+                          {{ inc.eventType }}
+                        </span>
+                        <div class="text-[0.7rem] text-dpu-muted mt-0.5">{{ inc.actionTaken }}</div>
+                      </td>
+                      <td class="p-3">{{ inc.zoneName || '-' }}</td>
+                      <td class="p-3">
+                        <span *ngIf="inc.confidencePercent != null">{{ inc.confidencePercent }}%</span>
+                        <span *ngIf="inc.confidencePercent == null" class="text-dpu-muted">-</span>
+                      </td>
+                      <td class="p-3">{{ inc.occurredAt | date:'dd/MM HH:mm:ss' }}</td>
+                      <td class="p-3 text-end">
+                        <button
+                          *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-primary-full"
+                          (click)="acknowledgeIncident(inc.incidentId)"
+                        >
+                          รับทราบเหตุ
+                        </button>
+                        <span *ngIf="inc.acknowledgedAt" class="text-[0.7rem] text-emerald-700 font-semibold">
+                          รับทราบแล้ว
+                        </span>
+                      </td>
+                    </tr>
+                    <tr *ngIf="incidents.length === 0">
+                      <td colspan="6" class="text-center text-dpu-muted py-6">
+                        ยังไม่มีเหตุการณ์แจ้งเตือนในหมวดนี้
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>

@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Callable, Optional
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from ..config.database import get_db
 from ..models.company_employee import CompanyEmployee, CompanyRoleType
 from ..models.hr_schedule import KioskDevice
 from ..models.member import Member, RoleType
+from ..services import rbac_service
 from .jwt import decode_token, hash_kiosk_token
 
 _bearer = HTTPBearer(auto_error=False)
@@ -23,11 +24,7 @@ current_kiosk_company_var: ContextVar[Optional[UUID]] = ContextVar("current_kios
 
 
 def _is_system_admin(member: Member) -> bool:
-    role = member.role
-    if role == RoleType.ADMIN_SYSTEM:
-        return True
-    value = getattr(role, "value", role)
-    return value == 99 or value == RoleType.ADMIN_SYSTEM.value
+    return rbac_service.is_system_admin_member(member)
 
 
 async def verify_kiosk_token_db(token: str, db: AsyncSession) -> KioskDevice:
@@ -42,6 +39,16 @@ async def verify_kiosk_token_db(token: str, db: AsyncSession) -> KioskDevice:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kiosk device token has been revoked")
     if device.tokenHash != hash_kiosk_token(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid kiosk device token")
+    # D5: refuse kiosk traffic for suspended/offboarded tenants.
+    from ..models.company import Company, LifecycleStatus
+
+    company = await db.get(Company, company_id)
+    if company is not None:
+        life = (company.lifecycleStatus or LifecycleStatus.ACTIVE).upper()
+        if life == LifecycleStatus.SUSPENDED:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is suspended")
+        if life == LifecycleStatus.OFFBOARDED:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is offboarded")
     device.lastSeenAt = datetime.now(timezone.utc)
     await db.commit()
     return device
@@ -76,6 +83,7 @@ async def require_system_admin(member: Member = Depends(get_current_member)) -> 
 
 
 async def assert_company_access(db: AsyncSession, member: Optional[Member], company_id) -> None:
+    """Elevated company access: system admin, legacy ADMIN_COMPANY, or any D1 RBAC role."""
     cid = UUID(str(company_id))
     kiosk_cid = current_kiosk_company_var.get()
     if kiosk_cid is not None:
@@ -86,19 +94,17 @@ async def assert_company_access(db: AsyncSession, member: Optional[Member], comp
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
     if _is_system_admin(member):
         return
-    result = await db.execute(
-        select(CompanyEmployee.companyRoleType).where(
-            CompanyEmployee.memberId == member.memberId,
-            CompanyEmployee.companyId == cid,
-            CompanyEmployee.deletedAt.is_(None),
-        )
-    )
-    role = result.scalar_one_or_none()
-    if role is None:
+    emp = await rbac_service.get_company_employment(db, member.memberId, cid)
+    if emp is None:
+        # Still allow members with an explicit company-scoped RBAC assignment (no emp row).
+        if await rbac_service.has_any_elevated_company_access(db, member, cid):
+            return
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No access to this company")
-    role_val = getattr(role, "value", role)
-    if role != CompanyRoleType.ADMIN_COMPANY and role_val not in (1, "ADMIN_COMPANY"):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company admin required")
+    if rbac_service.is_legacy_company_admin(emp.companyRoleType):
+        return
+    if await rbac_service.has_any_elevated_company_access(db, member, cid):
+        return
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company admin required")
 
 
 async def assert_request_company_access(request, db: AsyncSession, company_id) -> Optional[Member]:
@@ -171,8 +177,12 @@ async def assert_member_company_access(request, db: AsyncSession, target_member_
         )
     )
     for (role,) in caller_admin_res.all():
-        role_val = getattr(role, "value", role)
-        if role == CompanyRoleType.ADMIN_COMPANY or role_val in (1, "ADMIN_COMPANY"):
+        if rbac_service.is_legacy_company_admin(role):
+            return
+    for cid in target_cids:
+        if await rbac_service.has_permission(
+            db, member, rbac_service.PERM_EMPLOYEES_WRITE, cid
+        ) or await rbac_service.has_any_elevated_company_access(db, member, cid):
             return
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company admin required for this member")
 
@@ -273,3 +283,70 @@ async def require_company_access(
 ) -> Member:
     await assert_company_access(db, member, companyId)
     return member
+
+
+def _path_uuid(request: Request, name: str) -> Optional[UUID]:
+    raw = request.path_params.get(name) or request.query_params.get(name)
+    if raw is None:
+        return None
+    try:
+        return UUID(str(raw))
+    except (TypeError, ValueError):
+        return None
+
+
+def require_permission(
+    permission: str,
+    *,
+    company_param: str = "companyId",
+    department_param: Optional[str] = None,
+) -> Callable:
+    """FastAPI dependency factory: enforce a D1 RBAC permission for the path company.
+
+    Usage::
+
+        @router.get("/company/{companyId}/…")
+        async def handler(..., _: Member = Depends(require_permission("employees.read"))):
+            ...
+    """
+
+    async def _dep(
+        request: Request,
+        member: Member = Depends(get_current_member),
+        db: AsyncSession = Depends(get_db),
+    ) -> Member:
+        company_id = _path_uuid(request, company_param)
+        department_id = _path_uuid(request, department_param) if department_param else None
+        return await rbac_service.assert_permission(
+            db,
+            member,
+            permission,
+            company_id,
+            department_id=department_id,
+        )
+
+    _dep.__name__ = f"require_permission_{permission.replace('.', '_')}"
+    _dep.__doc__ = f"Requires permission `{permission}`."
+    return _dep
+
+
+async def assert_request_permission(
+    request: Request,
+    db: AsyncSession,
+    permission: str,
+    company_id,
+    *,
+    department_id=None,
+) -> Optional[Member]:
+    """Permission check for handlers that already resolve the member via AuthzMiddleware."""
+    cid = UUID(str(company_id)) if company_id is not None else None
+    dept = UUID(str(department_id)) if department_id is not None else None
+    kiosk_cid = getattr(request.state, "kiosk_company_id", None) or current_kiosk_company_var.get()
+    if kiosk_cid is not None:
+        if cid is not None and UUID(str(kiosk_cid)) != cid:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kiosk token scoped to a different company")
+        return None
+    member = getattr(request.state, "member", None) or current_member_var.get()
+    return await rbac_service.assert_permission(
+        db, member, permission, cid, department_id=dept
+    )

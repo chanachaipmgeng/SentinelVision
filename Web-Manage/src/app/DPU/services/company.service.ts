@@ -105,4 +105,30 @@ export class CompanyService {
     return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.companyId);
   }
 
+  /** D5 tenant lifecycle / quotas (system admin). */
+  suspend(companyId: string) {
+    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/suspend`, {});
+  }
+
+  resume(companyId: string) {
+    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/resume`, {});
+  }
+
+  offboard(companyId: string, purgeDevices = true) {
+    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/offboard`, { purgeDevices });
+  }
+
+  getQuotas(companyId: string) {
+    return this.http.get<any>(`${this.apiBaseUrl}/${companyId}/quotas`);
+  }
+
+  putQuotas(companyId: string, body: {
+    packageCode?: string | null;
+    maxDevices?: number | null;
+    maxEmployees?: number | null;
+    gpuPriority?: number;
+  }) {
+    return this.http.put<any>(`${this.apiBaseUrl}/${companyId}/quotas`, body);
+  }
+
 }

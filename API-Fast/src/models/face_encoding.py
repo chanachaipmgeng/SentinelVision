@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Index
+from sqlalchemy import Column, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -7,6 +7,8 @@ from uuid import uuid4
 from datetime import datetime
 
 FACE_EMBEDDING_DIM = 512
+# Default InsightFace pack pin; overridable via FACE_MODEL_VERSION env.
+DEFAULT_FACE_MODEL_VERSION = "buffalo_l"
 
 
 class FaceEncoding(Base):
@@ -23,6 +25,8 @@ class FaceEncoding(Base):
     )
     # InsightFace buffalo_l ArcFace embedding (512-d, L2-normalized)
     embedding = Column(Vector(FACE_EMBEDDING_DIM), nullable=False)
+    # D8: embedding model / pack version used at enroll time (A/B + FAR/FRR slices).
+    modelVersion = Column(String(64), nullable=True, default=DEFAULT_FACE_MODEL_VERSION)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     member = relationship("Member", back_populates="face_encodings")

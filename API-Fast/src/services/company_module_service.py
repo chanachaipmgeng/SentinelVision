@@ -42,6 +42,13 @@ VALID_STATION_MODES = (
 )
 VALID_UNKNOWN_FACE_ACTIONS = ("IGNORE", "LOG_INCIDENT")
 
+# Package → allowed toggleable modules (D5 atop modules:{companyId}).
+PACKAGE_PRESETS_MODULES: dict[str, list[str]] = {
+    "STARTER": ["ATTENDANCE"],
+    "PRO": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR"],
+    "ENTERPRISE": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR", "EVENTS"],
+}
+
 DEFAULT_COMPANY_MODULE_CONFIG: dict[str, Any] = {
     "enabledModules": [
         "ATTENDANCE",
@@ -53,6 +60,12 @@ DEFAULT_COMPANY_MODULE_CONFIG: dict[str, Any] = {
     "defaultStationMode": "ATTENDANCE",
     "defaultZoneId": None,
     "defaultEventId": None,
+    "packageCode": None,
+    "quotas": {
+        "maxDevices": None,
+        "maxEmployees": None,
+        "gpuPriority": 0,
+    },
     "scanActionRules": {
         "enableBlacklistSilentAlarm": True,
         "enableVipGreeting": True,
@@ -119,6 +132,17 @@ def merge_module_config(stored: Optional[dict]) -> dict:
         unknown = "IGNORE"
     rules["unknownFaceAction"] = unknown
     merged["alwaysOnModules"] = list(ALWAYS_ON_MODULES)
+    pkg = merged.get("packageCode")
+    if pkg not in (None, ""):
+        merged["packageCode"] = str(pkg).strip().upper()
+    else:
+        merged["packageCode"] = None
+    quotas = merged.get("quotas") if isinstance(merged.get("quotas"), dict) else {}
+    merged["quotas"] = {
+        "maxDevices": quotas.get("maxDevices"),
+        "maxEmployees": quotas.get("maxEmployees"),
+        "gpuPriority": int(quotas.get("gpuPriority") or 0),
+    }
     return merged
 
 
@@ -173,11 +197,36 @@ def normalize_module_config(payload: dict) -> dict:
         raise HTTPException(status_code=400, detail="moduleSettings must be an object")
     module_settings = _deep_merge(DEFAULT_COMPANY_MODULE_CONFIG["moduleSettings"], settings_in)
 
+    package_code = payload.get("packageCode")
+    if package_code not in (None, ""):
+        package_code = str(package_code).strip().upper()
+        if package_code not in PACKAGE_PRESETS_MODULES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"packageCode must be one of {', '.join(PACKAGE_PRESETS_MODULES)}",
+            )
+        allowed = set(PACKAGE_PRESETS_MODULES[package_code])
+        enabled = [m for m in enabled if m in allowed]
+    else:
+        package_code = None
+
+    quotas_in = payload.get("quotas") or {}
+    if quotas_in is not None and not isinstance(quotas_in, dict):
+        raise HTTPException(status_code=400, detail="quotas must be an object")
+    defaults_q = DEFAULT_COMPANY_MODULE_CONFIG["quotas"]
+    quotas = {
+        "maxDevices": quotas_in.get("maxDevices", defaults_q["maxDevices"]),
+        "maxEmployees": quotas_in.get("maxEmployees", defaults_q["maxEmployees"]),
+        "gpuPriority": int(quotas_in.get("gpuPriority", defaults_q["gpuPriority"]) or 0),
+    }
+
     return {
         "enabledModules": enabled,
         "defaultStationMode": mode,
         "defaultZoneId": _clean_uuid(payload.get("defaultZoneId"), field="defaultZoneId"),
         "defaultEventId": _clean_uuid(payload.get("defaultEventId"), field="defaultEventId"),
+        "packageCode": package_code,
+        "quotas": quotas,
         "scanActionRules": rules,
         "moduleSettings": module_settings,
     }

@@ -168,6 +168,10 @@ async def register_member(
             status_code=404,
             detail="Company not found"
         )
+    from ..services.tenant_quota_service import assert_employee_quota, assert_tenant_active
+
+    await assert_tenant_active(db, company.companyId)
+    await assert_employee_quota(db, company)
 
     # ตรวจสอบว่ามี Member ในระบบหรือไม่
     result = await db.execute(

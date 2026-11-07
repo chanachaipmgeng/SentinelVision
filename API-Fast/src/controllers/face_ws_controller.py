@@ -764,13 +764,13 @@ async def _reject(
         pass
 
 
-async def _authenticate_session(data: dict) -> Tuple[UUID, int]:
-    """Resolve (companyId, token_exp) from a `session` payload; raises on any failure."""
+async def _authenticate_session(data: dict) -> Tuple[UUID, int, Optional[UUID]]:
+    """Resolve (companyId, token_exp, kiosk_device_id) from a `session` payload."""
     from ..config.settings import settings as _settings
 
     raw_cid = data.get("companyId")
     if not _settings.FACE_ROUTES_REQUIRE_JWT:
-        return UUID(str(raw_cid)), 0
+        return UUID(str(raw_cid)), 0, None
 
     from ..config.database import async_session as _async_session
     from ..security.deps import (
@@ -793,11 +793,12 @@ async def _authenticate_session(data: dict) -> Tuple[UUID, int]:
             device = await verify_kiosk_token_db(token, db)
             if raw_cid and UUID(str(raw_cid)) != device.companyId:
                 raise HTTPException(status_code=403, detail="Kiosk token companyId mismatch")
-            return device.companyId, token_exp
+            # Bind device stationMode/zoneId from provisioned device when session omits them.
+            return device.companyId, token_exp, device.deviceId
         company_id = UUID(str(raw_cid))
         member = await member_from_token(token, db)
         await assert_company_access(db, member, company_id)
-        return company_id, token_exp
+        return company_id, token_exp, None
 
 
 async def kiosk_websocket(websocket: WebSocket) -> None:
@@ -830,6 +831,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     session_zone_id: Optional[str] = None
     session_event_id: Optional[str] = None
     session_totp_or_pin: Optional[str] = None
+    kiosk_device_id: Optional[UUID] = None
     send_lock = asyncio.Lock()
     task_sem = asyncio.Semaphore(4)
     token_exp = 0
@@ -910,7 +912,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         session_event_id = str(data.get("eventId") or "").strip() or None
                     if data.get("totpOrPin") is not None:
                         session_totp_or_pin = str(data.get("totpOrPin") or "").strip() or None
-                    new_company_id, new_token_exp = await _authenticate_session(data)
+                    new_company_id, new_token_exp, new_device_id = await _authenticate_session(data)
                 except Exception as exc:
                     detail = getattr(exc, "detail", None) or "Invalid session payload"
                     if not authenticated:
@@ -952,14 +954,35 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
 
                 company_id = new_company_id
                 token_exp = new_token_exp
+                kiosk_device_id = new_device_id
                 token_warned = False
                 authenticated = True
+                # Apply provisioned stationMode/zoneId when session omitted them.
+                if kiosk_device_id is not None and (
+                    session_station_mode is None or session_zone_id is None
+                ):
+                    try:
+                        from ..config.database import async_session as _async_session
+                        from ..models.hr_schedule import KioskDevice
+
+                        async with _async_session() as db:
+                            device = await db.get(KioskDevice, kiosk_device_id)
+                            if device is not None:
+                                if session_station_mode is None and device.stationMode:
+                                    session_station_mode = device.stationMode
+                                if session_zone_id is None and device.zoneId:
+                                    session_zone_id = str(device.zoneId)
+                    except Exception:
+                        logger.exception("failed to load device station binding")
                 await _send(
                     websocket,
                     {
                         "type": "session_ok",
                         "companyId": str(company_id),
                         "companyCode": str(company_id),
+                        "deviceId": str(kiosk_device_id) if kiosk_device_id else None,
+                        "stationMode": session_station_mode,
+                        "zoneId": session_zone_id,
                         "queue": await _face_core_queue_stats(company_id),
                     },
                     lock=send_lock,
@@ -974,6 +997,53 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     send_lock=send_lock,
                 )
                 return
+
+            if msg_type == "heartbeat":
+                if kiosk_device_id is None or company_id is None:
+                    await _send(
+                        websocket,
+                        {
+                            "type": "error",
+                            "code": "heartbeat_unsupported",
+                            "detail": "Heartbeat requires a paired kiosk device session",
+                        },
+                        lock=send_lock,
+                    )
+                    continue
+                try:
+                    from ..config.database import async_session as _async_session
+                    from ..services import device_service as _device_svc
+
+                    async with _async_session() as db:
+                        row = await _device_svc.record_heartbeat(
+                            db,
+                            company_id,
+                            kiosk_device_id,
+                            {
+                                "fingerprint": data.get("fingerprint"),
+                                "appVersion": data.get("appVersion"),
+                                "config": data.get("config") if isinstance(data.get("config"), dict) else None,
+                            },
+                        )
+                    await _send(
+                        websocket,
+                        {
+                            "type": "heartbeat_ok",
+                            "deviceId": row["deviceId"],
+                            "heartbeatAt": row.get("heartbeatAt").isoformat()
+                            if row.get("heartbeatAt")
+                            else None,
+                        },
+                        lock=send_lock,
+                    )
+                except Exception as exc:
+                    detail = getattr(exc, "detail", None) or str(exc)
+                    await _send(
+                        websocket,
+                        {"type": "error", "code": "heartbeat_failed", "detail": str(detail)},
+                        lock=send_lock,
+                    )
+                continue
 
             if msg_type == "ping":
                 await _send(

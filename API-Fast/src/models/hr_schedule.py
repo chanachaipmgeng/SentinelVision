@@ -95,6 +95,18 @@ class KioskDevice(Base):
     )
     locationId = Column("location_id", UUID(as_uuid=True), nullable=True)
     name = Column(String(120), nullable=False)
+    # Human-readable site label (building/floor); distinct from GPS company_location.
+    locationLabel = Column("location_label", String(255), nullable=True)
+    # Device hardware / browser fingerprint reported by the kiosk client.
+    fingerprint = Column(String(255), nullable=True)
+    appVersion = Column("app_version", String(64), nullable=True)
+    # Explicit WS/HTTP heartbeat timestamp (lastSeenAt also updates on auth touches).
+    heartbeatAt = Column("heartbeat_at", DateTime(timezone=True), nullable=True)
+    # Per-device runtime config (display, TTS, camera prefs, …).
+    config = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"), default=dict)
+    # Bound scan mode / access zone (SEN-21 stationMode wiring).
+    stationMode = Column("station_mode", String(40), nullable=True)
+    zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
     # sha256 of the current device token; NULL until the kiosk completes pairing.
     tokenHash = Column("token_hash", String(128), nullable=True)
     # ``fam`` claim shared by the device token + its refresh token; revoked on re-pair / revoke.
@@ -109,6 +121,13 @@ class KioskDevice(Base):
 
     __table_args__ = (
         Index("kiosk_device_company_idx", "companyId", "revoked_at"),
+        Index("kiosk_device_station_mode_idx", "companyId", "station_mode"),
+        Index(
+            "kiosk_device_zone_idx",
+            "companyId",
+            "zone_id",
+            postgresql_where=text("zone_id IS NOT NULL"),
+        ),
         Index(
             "kiosk_device_pairing_code_idx",
             "pairing_code_hash",

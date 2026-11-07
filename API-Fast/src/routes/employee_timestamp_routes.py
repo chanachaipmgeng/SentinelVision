@@ -27,7 +27,14 @@ from ..schemas.employee_timestamp_schema import (
     EmployeeTimestampBase,
     TimestampApprovalAction,
 )
-from ..security.deps import assert_request_company_access, assert_request_company_membership
+from ..security.deps import (
+    assert_request_company_access,
+    assert_request_company_membership,
+    assert_request_permission,
+    require_permission,
+)
+from ..models.member import Member
+from ..services.idempotency_service import idempotent_json
 from ..services.payroll_export_service import (
     build_payroll_xlsx_bytes,
     iter_payroll_csv_chunks,
@@ -79,13 +86,20 @@ def _parse_int(v: Optional[str]) -> Optional[int]:
 
 
 @router.get("/company/{companyId}/shift-settings")
-async def get_shift_settings_route(companyId: UUID, db: AsyncSession = Depends(get_db)):
+async def get_shift_settings_route(
+    companyId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("hr.shifts")),
+):
     return await get_company_shift_settings(companyId, db)
 
 
 @router.put("/company/{companyId}/shift-settings")
 async def put_shift_settings_route(
-    companyId: UUID, payload: Dict[str, Any], db: AsyncSession = Depends(get_db)
+    companyId: UUID,
+    payload: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("hr.shifts")),
 ):
     return await update_company_shift_settings(companyId, payload, db)
 
@@ -114,6 +128,9 @@ async def export_timestamps_route(
 
     # C5 payroll path: stream summary + detail, no 5000 in-memory cap.
     if export_mode in ("payroll", "summary", "full"):
+        await assert_request_permission(request, db, "payroll.export", companyId)
+    else:
+        await assert_request_permission(request, db, "attendance.export", companyId)
         if fmt == "csv":
             return StreamingResponse(
                 iter_payroll_csv_chunks(db, UUID(str(companyId)), start_d, end_d, emp_uuid),
@@ -168,31 +185,59 @@ async def get_all_timestamps_route(
     limit: int = Query(500, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.read")),
 ):
     return await get_all_timestamps(companyId, db, limit=limit, offset=offset)
 
 
 # ดึงข้อมูลการลงเวลาของพนักงานจาก timestampId
 @router.get("/company/{companyId}/{timestampId}", response_model=EmployeeTimestampResponse)
-async def get_timestamp_by_id_route(companyId: UUID, timestampId: UUID, db: AsyncSession = Depends(get_db)):
+async def get_timestamp_by_id_route(
+    companyId: UUID,
+    timestampId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.read")),
+):
     return await get_timestamp_by_id(timestampId, companyId, db)
 
 
-# สร้างข้อมูลการลงเวลาของพนักงานใหม่
+# สร้างข้อมูลการลงเวลาของพนักงานใหม่ (Idempotency-Key supported)
 @router.post("/company/{companyId}", response_model=EmployeeTimestampResponse)
-async def create_timestamp_route(companyId: UUID, timestamp: EmployeeTimestampCreate, db: AsyncSession = Depends(get_db)):
-    return await create_timestamp(timestamp.dict(), companyId, db)
+async def create_timestamp_route(
+    request: Request,
+    companyId: UUID,
+    timestamp: EmployeeTimestampCreate,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.write")),
+):
+    async def _run():
+        return await create_timestamp(timestamp.dict(), companyId, db)
+
+    return await idempotent_json(
+        request, scope="timestamp.punch", company_id=str(companyId), compute=_run
+    )
 
 
 # อัปเดตข้อมูลการลงเวลาของพนักงาน
 @router.put("/company/{companyId}/{timestampId}", response_model=EmployeeTimestampBase)
-async def update_timestamp_route(companyId: UUID, timestampId: UUID, timestamp: EmployeeTimestampUpdate, db: AsyncSession = Depends(get_db)):
+async def update_timestamp_route(
+    companyId: UUID,
+    timestampId: UUID,
+    timestamp: EmployeeTimestampUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.write")),
+):
     return await update_timestamp(timestampId, companyId, timestamp, db)
 
 
 # ลบข้อมูลการลงเวลาของพนักงาน
 @router.delete("/company/{companyId}/{timestampId}")
-async def delete_timestamp_route(companyId: UUID, timestampId: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_timestamp_route(
+    companyId: UUID,
+    timestampId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.write")),
+):
     await delete_timestamp(timestampId, companyId, db)
     return {"detail": "Timestamp deleted successfully"}
 
@@ -209,6 +254,7 @@ async def search_timestamps_route(
     limit: int = Query(500, ge=1, le=5000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("attendance.read")),
 ):
     """Empty query strings (from Angular) are treated as omitted filters."""
     return await search_timestamps(

@@ -16,4 +16,6 @@ from . import (  # noqa: F401
     import_job,
     attendance_daily,
     approvals_payroll,
+    rbac,
+    notification_platform,
 )

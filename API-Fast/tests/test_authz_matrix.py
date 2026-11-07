@@ -232,3 +232,75 @@ async def test_disabled_member_is_403(world):
                 update(Member).where(Member.memberId == world.b.employee.memberId).values(status=StatusType.ENABLE)
             )
             await db.commit()
+
+
+# ------------------------------------------------------------------ D1 RBAC permission matrix
+@pytest.mark.parametrize(
+    "who,path,expected",
+    [
+        ("manager_a", "/employees/company/{cid}", 200),
+        ("manager_a", "/timestamp/company/{cid}", 200),
+        ("manager_a", "/hr/company/{cid}/kiosk-devices", 403),
+        ("approver_a", "/employees/company/{cid}", 403),
+        ("approver_a", "/timestamp/company/{cid}", 200),
+        ("approver_a", "/companys/{cid}/audit-logs", 403),
+        ("auditor_a", "/employees/company/{cid}", 200),
+        ("auditor_a", "/companys/{cid}/audit-logs", 200),
+        ("auditor_a", "/hr/company/{cid}/kiosk-devices", 403),
+        ("auditor_a", "/timestamp/export/company/{cid}?format=csv", 200),
+        ("device_op_a", "/hr/company/{cid}/kiosk-devices", 200),
+        ("device_op_a", "/employees/company/{cid}", 403),
+        ("device_op_a", "/companys/{cid}/audit-logs", 403),
+        ("emp_a", "/employees/company/{cid}", 403),
+        ("admin_a", "/employees/company/{cid}", 200),
+        ("admin_a", "/hr/company/{cid}/kiosk-devices", 200),
+    ],
+)
+async def test_rbac_permission_matrix(world, who, path, expected):
+    url = path.format(cid=world.a.company_id)
+    async with client(world.app) as c:
+        r = await c.get(url, headers=world.auth(who))
+    assert r.status_code == expected, f"{who} GET {url} → {r.status_code} {r.text[:240]}"
+
+
+async def test_rbac_cross_tenant_role_denied(world):
+    """A manager of company A cannot read company B even with elevated RBAC."""
+    async with client(world.app) as c:
+        r = await c.get(
+            f"/employees/company/{world.b.company_id}",
+            headers=world.auth("manager_a"),
+        )
+    assert r.status_code == 403
+
+
+async def test_me_permissions_endpoint(world):
+    from src.routes import auth_routes
+
+    app = build_app((auth_routes.router, "/auth"))
+    async with client(app) as c:
+        r = await c.get(
+            f"/auth/me/permissions?companyId={world.a.company_id}",
+            headers=world.auth("manager_a"),
+        )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "employees.read" in body["permissions"]
+    assert "attendance.approve" in body["permissions"]
+    assert "devices.manage" not in body["permissions"]
+    assert any(role["role"] == "MANAGER" for role in body["roles"])
+
+
+async def test_legacy_company_admin_maps_to_hr_permissions(world):
+    from src.routes import auth_routes
+
+    app = build_app((auth_routes.router, "/auth"))
+    async with client(app) as c:
+        r = await c.get(
+            f"/auth/me/permissions?companyId={world.a.company_id}",
+            headers=world.auth("admin_a"),
+        )
+    assert r.status_code == 200, r.text
+    perms = set(r.json()["permissions"])
+    assert "employees.write" in perms
+    assert "devices.manage" in perms
+    assert "system.admin" not in perms

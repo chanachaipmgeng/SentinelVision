@@ -23,12 +23,14 @@ from ..config.database import Base, async_session
 from ..config.settings import settings
 from ..models.import_job import ImportJob  # noqa: F401  re-exported for existing importers (B7 moved it)
 from ..models.system_setting import SystemSetting
+from .notification_templates import builtin_template, render_template
 from .observability import (
     outbox_claims_total,
     outbox_deliveries_total,
     outbox_delivery_duration_seconds,
     set_outbox_backlog,
 )
+from .outbox_crypto import seal_payload_secrets, unseal_payload_secrets
 
 logger = logging.getLogger("dpu.notify")
 
@@ -45,8 +47,12 @@ class NotificationOutbox(Base):
     attempts = Column(Integer, nullable=False, default=0)
     lastError = Column(String, nullable=True)
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
+    deadLetteredAt = Column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (Index("notification_outbox_status_created_idx", "status", "createdAt"),)
+    __table_args__ = (
+        Index("notification_outbox_status_created_idx", "status", "createdAt"),
+        Index("notification_outbox_dead_letter_idx", "status", "deadLetteredAt"),
+    )
 
 
 def compute_webhook_signature(secret: str, timestamp_str: str, body_bytes: bytes) -> str:
@@ -83,6 +89,26 @@ def verify_webhook_signature(
     return hmac.compare_digest(expected, signature_header.strip())
 
 
+def _prepare_payload(
+    event: str,
+    payload: dict[str, Any] | None,
+    *,
+    company_id: Optional[str] = None,
+) -> dict[str, Any]:
+    """Merge metadata, render template body when missing, and Fernet-seal secrets."""
+    raw = {**(payload or {}), "event": event, "companyId": str(company_id) if company_id else None}
+    if not raw.get("body"):
+        locale = str(raw.get("locale") or "th")
+        channel_hint = str(raw.get("templateChannel") or "line")
+        tmpl = builtin_template(event, locale=locale, channel=channel_hint)
+        if tmpl:
+            data = raw.get("data") if isinstance(raw.get("data"), dict) else raw
+            raw["subject"] = raw.get("subject") or tmpl.get("subject")
+            raw["body"] = render_template(tmpl["bodyTemplate"], data)  # type: ignore[arg-type]
+            raw["i18nKey"] = f"notify.{event}"
+    return seal_payload_secrets(raw)
+
+
 async def enqueue(
     event: str,
     channel: str,
@@ -90,13 +116,14 @@ async def enqueue(
     *,
     company_id: Optional[str] = None,
 ) -> None:
+    sealed = _prepare_payload(event, payload, company_id=company_id)
     async with async_session() as db:
         db.add(
             NotificationOutbox(
                 companyId=UUID(str(company_id)) if company_id else None,
                 event=event,
                 channel=channel,
-                payload={**(payload or {}), "event": event, "companyId": str(company_id) if company_id else None},
+                payload=sealed,
                 status="pending",
                 attempts=0,
             )
@@ -125,20 +152,23 @@ async def emit_company_webhook_event(
             if event not in subscribed and "*" not in subscribed:
                 return False
         webhook_secret = str(cfg.get("webhookSecret") or settings.WEBHOOK_SIGNING_SECRET or "").strip()
+        sealed = _prepare_payload(
+            event,
+            {
+                "webhookUrl": webhook_url,
+                "webhookSecret": webhook_secret,
+                "subject": f"DPU Attendance Event: {event}",
+                "body": f"Event {event} triggered for company {cid_str}",
+                "data": data,
+            },
+            company_id=cid_str,
+        )
         db.add(
             NotificationOutbox(
                 companyId=UUID(cid_str),
                 event=event,
                 channel="webhook",
-                payload={
-                    "webhookUrl": webhook_url,
-                    "webhookSecret": webhook_secret,
-                    "event": event,
-                    "companyId": cid_str,
-                    "subject": f"DPU Attendance Event: {event}",
-                    "body": f"Event {event} triggered for company {cid_str}",
-                    "data": data,
-                },
+                payload=sealed,
                 status="pending",
                 attempts=0,
             )
@@ -165,23 +195,48 @@ def _send_email(payload: dict) -> None:
 
 
 def _send_line(payload: dict) -> None:
-    token = payload.get("lineToken") or settings.LINE_CHANNEL_ACCESS_TOKEN
+    """Deliver via LINE Messaging API push (replaces retired LINE Notify).
+
+    Expects ``lineUserId`` (LINE user mid) and a channel access token
+    (``lineToken`` / ``lineChannelAccessToken`` / ``LINE_CHANNEL_ACCESS_TOKEN``).
+    """
+    token = (
+        payload.get("lineChannelAccessToken")
+        or payload.get("lineToken")
+        or settings.LINE_CHANNEL_ACCESS_TOKEN
+    )
     if not token:
-        logger.info("notify line skipped (no token)")
+        logger.info("notify line skipped (no channel access token)")
         return
-    form = urllib.parse.urlencode({"message": payload.get("body") or ""}).encode()
+    to_user = str(payload.get("lineUserId") or payload.get("to") or "").strip()
+    if not to_user:
+        # Company-level token without a user id: skip rather than hit Notify API.
+        logger.info("notify line skipped (no lineUserId for Messaging API push)")
+        return
+    base = (settings.LINE_MESSAGING_API_BASE or "https://api.line.me/v2/bot").rstrip("/")
+    body = json_bytes(
+        {
+            "to": to_user,
+            "messages": [
+                {
+                    "type": "text",
+                    "text": (payload.get("body") or payload.get("subject") or "DPU Attendance")[:5000],
+                }
+            ],
+        }
+    )
     req = urllib.request.Request(
-        "https://notify-api.line.me/api/notify",
-        data=form,
+        f"{base}/message/push",
+        data=body,
         headers={
             "Authorization": f"Bearer {token}",
-            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Type": "application/json",
         },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=20) as resp:
         if resp.status >= 300:
-            raise RuntimeError(f"LINE notify HTTP {resp.status}")
+            raise RuntimeError(f"LINE Messaging API HTTP {resp.status}")
 
 
 def _send_webhook(payload: dict, *, delivery_id: str = "") -> None:
@@ -328,21 +383,35 @@ async def attendance_cutoff_tick() -> int:
             _cutoff_sent.add(marker)
             if int(missing or 0) <= 0:
                 continue
+            from .outbox_crypto import decrypt_secret
+
+            line_tok = ""
+            try:
+                line_tok = decrypt_secret(
+                    str(value.get("lineChannelAccessToken") or value.get("lineToken") or "")
+                )
+            except RuntimeError:
+                line_tok = ""
+            webhook_secret = ""
+            try:
+                webhook_secret = decrypt_secret(str(value.get("webhookSecret") or ""))
+            except RuntimeError:
+                webhook_secret = str(value.get("webhookSecret") or "")
             channel = (
                 "webhook"
                 if value.get("webhookUrl")
-                else ("line" if value.get("lineToken") else "email")
+                else ("line" if line_tok else "email")
             )
             await enqueue(
                 "attendance.missing",
                 channel,
                 {
                     "to": value.get("email") or "",
-                    "lineToken": value.get("lineToken") or "",
+                    "lineToken": line_tok,
+                    "lineChannelAccessToken": line_tok,
                     "webhookUrl": value.get("webhookUrl") or "",
-                    "webhookSecret": value.get("webhookSecret") or "",
+                    "webhookSecret": webhook_secret,
                     "subject": "DPU missing check-in",
-                    "body": f"{missing} employees have no check-in today",
                     "data": {"missingCount": int(missing), "date": day},
                 },
                 company_id=company_id,
@@ -380,6 +449,40 @@ async def refresh_outbox_backlog() -> tuple[int, Optional[datetime]]:
     return int(pending or 0), oldest
 
 
+async def _deliver_in_app(db, row: NotificationOutbox, payload: dict) -> None:
+    from ..models.notification_platform import InAppNotification
+
+    member_raw = payload.get("memberId")
+    if not member_raw:
+        raise RuntimeError("in_app channel requires memberId")
+    company_raw = row.companyId or payload.get("companyId")
+    if not company_raw:
+        raise RuntimeError("in_app channel requires companyId")
+    db.add(
+        InAppNotification(
+            companyId=UUID(str(company_raw)),
+            memberId=UUID(str(member_raw)),
+            event=row.event,
+            title=str(payload.get("subject") or row.event)[:255],
+            body=str(payload.get("body") or ""),
+        )
+    )
+
+
+async def retry_dead_letter(outbox_id: UUID) -> bool:
+    """Re-queue a failed outbox row (dead-letter UI)."""
+    async with async_session() as db:
+        row = await db.get(NotificationOutbox, outbox_id)
+        if not row or row.status != "failed":
+            return False
+        row.status = "pending"
+        row.attempts = 0
+        row.lastError = None
+        row.deadLetteredAt = None
+        await db.commit()
+        return True
+
+
 async def drain_outbox(limit: int = 20) -> int:
     """Claim up to `limit` pending rows (``FOR UPDATE SKIP LOCKED`` — safe across replicas /
     worker instances) and deliver them. Runs in the worker service, or in the API process when
@@ -404,24 +507,29 @@ async def drain_outbox(limit: int = 20) -> int:
             row.attempts = int(row.attempts or 0) + 1
             t0 = time.perf_counter()
             try:
+                delivery_payload = unseal_payload_secrets(row.payload or {})
                 if row.channel == "email":
-                    await asyncio.to_thread(_send_email, row.payload or {})
+                    await asyncio.to_thread(_send_email, delivery_payload)
                 elif row.channel == "line":
-                    await asyncio.to_thread(_send_line, row.payload or {})
+                    await asyncio.to_thread(_send_line, delivery_payload)
                 elif row.channel == "webhook":
                     await asyncio.to_thread(
-                        _send_webhook, row.payload or {}, delivery_id=str(row.id)
+                        _send_webhook, delivery_payload, delivery_id=str(row.id)
                     )
+                elif row.channel == "in_app":
+                    await _deliver_in_app(db, row, delivery_payload)
                 else:
                     raise RuntimeError(f"unknown channel {row.channel}")
                 row.status = "sent"
                 row.lastError = None
+                row.deadLetteredAt = None
                 sent += 1
                 outbox_deliveries_total.labels(channel=row.channel, result="sent").inc()
             except Exception as exc:
                 row.lastError = str(exc)[:500]
                 if row.attempts >= OUTBOX_MAX_ATTEMPTS:
                     row.status = "failed"
+                    row.deadLetteredAt = datetime.now(timezone.utc)
                     outbox_deliveries_total.labels(channel=row.channel, result="failed").inc()
                 else:
                     outbox_deliveries_total.labels(channel=row.channel, result="retry").inc()

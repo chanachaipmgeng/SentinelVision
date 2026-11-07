@@ -27,6 +27,15 @@ export type StationMode =
   | 'EVENT_CHECKIN'
   | 'UNIFIED_HYBRID';
 
+export const VALID_STATION_MODES: readonly StationMode[] = [
+  'ATTENDANCE',
+  'ACCESS_CONTROL',
+  'WATCHLIST_MONITOR',
+  'VISITOR_CHECKIN',
+  'EVENT_CHECKIN',
+  'UNIFIED_HYBRID',
+] as const;
+
 export type UnknownFaceAction = 'IGNORE' | 'LOG_INCIDENT';
 
 export interface ScanActionRules {

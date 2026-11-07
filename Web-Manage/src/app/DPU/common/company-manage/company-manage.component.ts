@@ -73,6 +73,17 @@ export class CompanyManageComponent implements OnInit {
   get publicCount(): number {
     return this.itemsList.filter((x) => x.status === 1).length;
   }
+  get suspendedCount(): number {
+    return this.itemsList.filter((x) => (x.lifecycleStatus || 'ACTIVE') === 'SUSPENDED').length;
+  }
+  readonly packages = ['STARTER', 'PRO', 'ENTERPRISE'];
+  quotaDraft = {
+    packageCode: '' as string,
+    maxDevices: null as number | null,
+    maxEmployees: null as number | null,
+    gpuPriority: 0,
+  };
+  quotaUsage: { devices?: number; employees?: number } | null = null;
 
   constructor(
     private comService: CompanyService,
@@ -186,6 +197,94 @@ export class CompanyManageComponent implements OnInit {
   view(item: CompanyModel) {
     this.action = 'edit';
     this.selectModel = new CompanyModel(item);
+    this.quotaDraft = {
+      packageCode: item.packageCode || '',
+      maxDevices: item.maxDevices ?? null,
+      maxEmployees: item.maxEmployees ?? null,
+      gpuPriority: item.gpuPriority ?? 0,
+    };
+    this.quotaUsage = null;
+    this.comService.getQuotas(item.companyId).subscribe({
+      next: (t) => {
+        this.quotaUsage = t?.usage || null;
+        this.quotaDraft = {
+          packageCode: t?.packageCode || '',
+          maxDevices: t?.quotas?.maxDevices ?? null,
+          maxEmployees: t?.quotas?.maxEmployees ?? null,
+          gpuPriority: t?.quotas?.gpuPriority ?? 0,
+        };
+      },
+      error: () => {},
+    });
+  }
+
+  lifecycleLabel(item: CompanyModel): string {
+    return (item.lifecycleStatus || 'ACTIVE').toUpperCase();
+  }
+
+  suspend(item: CompanyModel) {
+    swal({
+      title: 'ระงับบริษัทนี้?',
+      text: item.companyName || '',
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'ระงับ'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      this.comService.suspend(item.companyId).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'ระงับบริษัทแล้ว', 'success');
+          this.load();
+        },
+        error: (err) => swal('Error', err?.error?.detail || 'ระงับไม่สำเร็จ', 'error'),
+      });
+    });
+  }
+
+  resume(item: CompanyModel) {
+    this.comService.resume(item.companyId).subscribe({
+      next: () => {
+        swal('สำเร็จ', 'เปิดใช้งานบริษัทแล้ว', 'success');
+        this.load();
+      },
+      error: (err) => swal('Error', err?.error?.detail || 'เปิดใช้งานไม่สำเร็จ', 'error'),
+    });
+  }
+
+  offboard(item: CompanyModel) {
+    swal({
+      title: 'Offboard บริษัทนี้?',
+      text: 'จะเพิกถอนอุปกรณ์ kiosk ทั้งหมดและล็อกเทแนนท์',
+      icon: 'warning',
+      dangerMode: true,
+      buttons: ['ยกเลิก', 'Offboard'],
+    }).then((ok: any) => {
+      if (!ok) return;
+      this.comService.offboard(item.companyId, true).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'Offboard แล้ว', 'success');
+          this.load();
+        },
+        error: (err) => swal('Error', err?.error?.detail || 'Offboard ไม่สำเร็จ', 'error'),
+      });
+    });
+  }
+
+  saveQuotas() {
+    if (!this.selectModel.companyId) return;
+    this.comService
+      .putQuotas(this.selectModel.companyId, {
+        packageCode: this.quotaDraft.packageCode || null,
+        maxDevices: this.quotaDraft.maxDevices,
+        maxEmployees: this.quotaDraft.maxEmployees,
+        gpuPriority: this.quotaDraft.gpuPriority,
+      })
+      .subscribe({
+        next: () => {
+          swal('สำเร็จ', 'บันทึกโควตาแล้ว', 'success');
+          this.load();
+        },
+        error: (err) => swal('Error', err?.error?.detail || 'บันทึกโควตาไม่สำเร็จ', 'error'),
+      });
   }
 
   save() {

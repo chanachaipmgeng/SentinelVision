@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 from typing import Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
@@ -25,7 +25,7 @@ from ..models.approvals_payroll import (
     RegularizationRequest,
 )
 from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp
-from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest, WorkShift
+from ..models.hr_schedule import CompanyHoliday, LeaveRequest, WorkShift
 from ..models.member import Member
 from ..schemas.hr_schema import (
     AssignShiftBody,
@@ -39,10 +39,8 @@ from ..security.deps import (
     assert_member_company_access,
     assert_request_company_access,
     assert_request_company_membership,
+    assert_request_permission,
 )
-from ..security.jwt import kiosk_refresh_ttl
-from ..security.kiosk_pairing import generate_pairing_code, hash_pairing_code, pairing_code_expiry
-from ..services import token_revocation_service as revocation
 from ..services.approval_gate import assert_can_approve_for_employee, can_approve_for_employee
 from ..services.attendance_summary_service import (
     recompute_company_holiday,
@@ -61,6 +59,7 @@ from ..services.holiday_service import (
     upsert_holidays,
 )
 from ..services.notification_service import emit_company_webhook_event
+from ..services import pdpa_service
 from ..services.payroll_period_service import (
     assert_date_not_locked,
     assert_range_not_locked,
@@ -159,7 +158,7 @@ async def list_company_shifts(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.list_shifts(companyId, db)
 
 
@@ -170,7 +169,7 @@ async def create_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.create_shift(companyId, body, db)
 
 
@@ -182,7 +181,7 @@ async def update_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.update_shift(companyId, shiftId, body, db)
 
 
@@ -193,7 +192,7 @@ async def delete_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.delete_shift(companyId, shiftId, db)
 
 
@@ -221,7 +220,7 @@ async def list_company_holidays(
     end: Optional[date] = None,
 ):
     """List active holidays. Optional ``start``/``end`` (YYYY-MM-DD) for metrics consumers (C2)."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.holidays", companyId)
     rows = await list_active_holidays(db, companyId, start=start, end=end)
     return [serialize_holiday(r) for r in rows]
 
@@ -671,13 +670,19 @@ async def get_pdpa_summary(
             }
         )
 
+    retention = await pdpa_service.get_retention_settings(db, companyId)
+    consent_policy = await pdpa_service.get_consent_policy(db, companyId)
     return {
         "totalEmployees": len(records),
         "consentedEmployees": consented_count,
         "enrolledEmployees": enrolled_count,
+        "consentPolicy": consent_policy,
         "retentionPolicy": {
-            "imageRetentionDays": int(settings.IMAGE_RETENTION_DAYS),
-            "tempRetentionHours": int(settings.TEMP_RETENTION_HOURS),
+            "imageRetentionDays": int(retention["punchPhotoDays"]),
+            "tempRetentionHours": int(retention["tempHours"]),
+            "biometricDays": int(retention["biometricDays"]),
+            "punchPhotoDays": int(retention["punchPhotoDays"]),
+            "incidentSnapshotDays": int(retention["incidentSnapshotDays"]),
             "storageBackend": settings.STORAGE_BACKEND,
         },
         "summary": {
@@ -687,6 +692,78 @@ async def get_pdpa_summary(
         },
         "employees": records,
     }
+
+
+@router.get("/company/{companyId}/pdpa/consent-policy")
+async def get_consent_policy(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Public-to-tenant consent version/text for kiosk + enroll screens."""
+    await assert_request_company_membership(request, db, companyId)
+    return await pdpa_service.get_consent_policy(db, companyId)
+
+
+@router.put("/company/{companyId}/pdpa/consent-policy")
+async def put_consent_policy(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.put_consent_policy(db, companyId, body or {})
+
+
+@router.get("/company/{companyId}/pdpa/retention")
+async def get_pdpa_retention(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.get_retention_settings(db, companyId)
+
+
+@router.put("/company/{companyId}/pdpa/retention")
+async def put_pdpa_retention(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.put_retention_settings(db, companyId, body or {})
+
+
+@router.get("/company/{companyId}/members/{memberId}/dsar-export")
+async def dsar_export(
+    companyId: UUID,
+    memberId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """PDPA subject-access request: export personal data for one member (no raw embeddings)."""
+    await assert_request_company_access(request, db, companyId)
+    await assert_member_company_access(request, db, memberId)
+    payload = await pdpa_service.build_dsar_export(db, companyId, memberId)
+    if payload.get("error") == "member_not_found":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    return payload
+
+
+@router.post("/company/{companyId}/members/{memberId}/erasure")
+async def erase_member_data(
+    companyId: UUID,
+    memberId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """PDPA right-to-erasure: punch photos, encodings, incident snapshots + clear consent."""
+    await assert_request_company_access(request, db, companyId)
+    await assert_member_company_access(request, db, memberId)
+    return await pdpa_service.erase_member_personal_data(db, companyId, memberId)
 
 
 @router.post("/company/{companyId}/members/{memberId}/biometric-consent")
@@ -701,13 +778,15 @@ async def grant_biometric_consent(
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    member.biometricConsentAt = datetime.now(timezone.utc)
-    await db.commit()
-    return {
-        "memberId": str(memberId),
-        "biometricConsentAt": member.biometricConsentAt,
-        "hasConsent": True,
-    }
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    locale = str((body or {}).get("locale") or "th")
+    return await pdpa_service.record_biometric_consent(
+        db, member, companyId, locale=locale
+    )
 
 
 @router.delete("/company/{companyId}/members/{memberId}/biometric-consent")
@@ -717,68 +796,28 @@ async def revoke_biometric_consent(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Revoke PDPA biometric consent and immediately purge all enrolled face encodings."""
+    """Revoke PDPA biometric consent and erase biometric + punch/incident media."""
     await assert_request_company_access(request, db, companyId)
     await assert_member_company_access(request, db, memberId)
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    cleared = await clear_member_face_encodings(memberId, db)
-    member.biometricConsentAt = None
-    await db.commit()
+    result = await pdpa_service.erase_member_personal_data(
+        db, companyId, memberId, clear_consent=True
+    )
     return {
         "memberId": str(memberId),
         "biometricConsentAt": None,
         "hasConsent": False,
-        "deletedEncodings": cleared.get("deleted", 0),
+        **result,
     }
 
 
 # ---------------------------------------------------------------------------
-# Kiosk Device Provisioning: one-time pairing code → device-scoped token (see /auth/kiosk/pair)
+# Kiosk Device Provisioning — thin legacy aliases → device_service (D2)
+# Prefer /devices/company/{companyId}/devices going forward.
 # ---------------------------------------------------------------------------
-def _serialize_kiosk_device(r: KioskDevice) -> dict:
-    now = datetime.now(timezone.utc)
-    pairing_exp = r.pairingExpiresAt
-    if pairing_exp is not None and pairing_exp.tzinfo is None:
-        pairing_exp = pairing_exp.replace(tzinfo=timezone.utc)
-    return {
-        "deviceId": str(r.deviceId),
-        "companyId": str(r.companyId),
-        "locationId": str(r.locationId) if r.locationId else None,
-        "name": r.name,
-        "lastSeenAt": r.lastSeenAt,
-        "pairedAt": r.pairedAt,
-        "isPaired": r.tokenHash is not None and r.revokedAt is None,
-        "pairingPending": bool(r.pairingCodeHash) and pairing_exp is not None and pairing_exp > now,
-        "pairingExpiresAt": r.pairingExpiresAt if r.pairingCodeHash else None,
-        "revokedAt": r.revokedAt,
-        "isActive": r.revokedAt is None,
-        "createdAt": r.createdAt,
-    }
-
-
-def _issue_pairing_code(device: KioskDevice) -> str:
-    code = generate_pairing_code()
-    device.pairingCodeHash = hash_pairing_code(code)
-    device.pairingExpiresAt = pairing_code_expiry()
-    return code
-
-
-async def _get_company_device(db: AsyncSession, companyId: UUID, deviceId: UUID) -> KioskDevice:
-    device = await db.get(KioskDevice, deviceId)
-    if not device or device.companyId != companyId:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kiosk device not found")
-    return device
-
-
-async def _revoke_device_tokens(db: AsyncSession, device: KioskDevice, *, reason: str) -> None:
-    if device.tokenFamily:
-        await revocation.revoke_family(
-            db, device.tokenFamily, datetime.now(timezone.utc) + kiosk_refresh_ttl(), reason=reason
-        )
-    device.tokenHash = None
-    device.tokenFamily = None
+from ..services import device_service as _device_svc  # noqa: E402
 
 
 @router.get("/company/{companyId}/kiosk-devices")
@@ -787,15 +826,8 @@ async def list_kiosk_devices(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
-    rows = (
-        await db.execute(
-            select(KioskDevice)
-            .where(KioskDevice.companyId == companyId)
-            .order_by(KioskDevice.createdAt.desc())
-        )
-    ).scalars().all()
-    return [_serialize_kiosk_device(r) for r in rows]
+    await assert_request_permission(request, db, "devices.manage", companyId)
+    return await _device_svc.list_devices(db, companyId)
 
 
 @router.post("/company/{companyId}/kiosk-devices")
@@ -806,24 +838,8 @@ async def register_kiosk_device(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a device and return its one-time pairing code (shown once, never stored in clear)."""
-    await assert_request_company_access(request, db, companyId)
-    name = str(body.get("name") or "").strip()
-    if not name:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Device name is required")
-    loc_raw = body.get("locationId")
-    loc_uuid = UUID(str(loc_raw)) if loc_raw else None
-
-    device = KioskDevice(deviceId=uuid4(), companyId=companyId, locationId=loc_uuid, name=name)
-    code = _issue_pairing_code(device)
-    db.add(device)
-    await db.commit()
-    await db.refresh(device)
-    return {
-        **_serialize_kiosk_device(device),
-        "pairingCode": code,
-        "pairingCodeTtlMinutes": int(settings.KIOSK_PAIRING_CODE_TTL_MINUTES),
-        "pairUrl": "/kiosk/pair",
-    }
+    await assert_request_permission(request, db, "devices.manage", companyId)
+    return await _device_svc.create_device(db, companyId, body or {})
 
 
 @router.post("/company/{companyId}/kiosk-devices/{deviceId}/pairing-code")
@@ -834,20 +850,8 @@ async def reissue_kiosk_pairing_code(
     db: AsyncSession = Depends(get_db),
 ):
     """Re-pair an existing device: invalidates its current token family and issues a new code."""
-    await assert_request_company_access(request, db, companyId)
-    device = await _get_company_device(db, companyId, deviceId)
-    if device.revokedAt is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Kiosk device is revoked; register a new device")
-    await _revoke_device_tokens(db, device, reason=revocation.REASON_REPAIR)
-    code = _issue_pairing_code(device)
-    await db.commit()
-    await db.refresh(device)
-    return {
-        **_serialize_kiosk_device(device),
-        "pairingCode": code,
-        "pairingCodeTtlMinutes": int(settings.KIOSK_PAIRING_CODE_TTL_MINUTES),
-        "pairUrl": "/kiosk/pair",
-    }
+    await assert_request_permission(request, db, "devices.manage", companyId)
+    return await _device_svc.reissue_pairing_code(db, companyId, deviceId)
 
 
 @router.delete("/company/{companyId}/kiosk-devices/{deviceId}")
@@ -858,18 +862,8 @@ async def revoke_kiosk_device(
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke the device: its token family is denied immediately and no pairing code remains."""
-    await assert_request_company_access(request, db, companyId)
-    device = await _get_company_device(db, companyId, deviceId)
-    await _revoke_device_tokens(db, device, reason=revocation.REASON_DEVICE_REVOKED)
-    device.pairingCodeHash = None
-    device.pairingExpiresAt = None
-    device.revokedAt = datetime.now(timezone.utc)
-    await db.commit()
-    return {
-        "deviceId": str(deviceId),
-        "revokedAt": device.revokedAt,
-        "isActive": False,
-    }
+    await assert_request_permission(request, db, "devices.manage", companyId)
+    return await _device_svc.revoke_device(db, companyId, deviceId)
 
 
 # ---------------------------------------------------------------------------

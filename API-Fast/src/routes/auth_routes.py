@@ -18,6 +18,7 @@ from ..models.hr_schedule import KioskDevice
 from ..models.member import Member
 from ..schemas.auth_schema import LoginRequest, Token
 from ..security.deps import assert_company_access, get_current_member
+from ..services import rbac_service
 from ..security.jwt import (
     ALGORITHM,
     TYP_ACCESS,
@@ -42,6 +43,7 @@ from ..security.passwords import assert_not_locked, hash_password, register_fail
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
 from ..services import token_revocation_service as revocation
+from ..services.rate_limit_service import rate_limit_login
 from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
 
 router = APIRouter()
@@ -121,7 +123,11 @@ def _tokens(member: Member, *, family: Optional[str] = None) -> dict:
 
 
 @router.post("/login", response_model=Token)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_login),
+):
     result = await db.execute(select(Member).where(Member.username == request.username))
     member = result.scalars().first()
     if not member or getattr(member, "deletedAt", None) is not None:
@@ -528,6 +534,31 @@ async def sso_oidc_callback(body: OidcCallbackRequest, db: AsyncSession = Depend
     if txn.return_to:
         issued["returnTo"] = txn.return_to
     return issued
+
+
+@router.get("/me/permissions")
+async def my_permissions(
+    companyId: Optional[UUID] = None,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Server-driven RBAC snapshot for the signed-in member (never trust localStorage)."""
+    if companyId is not None and not rbac_service.is_system_admin_member(member):
+        # Caller must at least belong to the company (or hold a role there).
+        emp = await rbac_service.get_company_employment(db, member.memberId, companyId)
+        assignments = await rbac_service.list_role_assignments(db, member.memberId, companyId)
+        if emp is None and not assignments:
+            raise HTTPException(status_code=403, detail="No access to this company")
+    perms = sorted(
+        await rbac_service.permissions_for_member(db, member, companyId)
+    )
+    roles = await rbac_service.roles_for_member(db, member, companyId)
+    return {
+        "memberId": str(member.memberId),
+        "companyId": str(companyId) if companyId else None,
+        "roles": roles,
+        "permissions": perms,
+    }
 
 
 @router.get("/sso/policy/{companyId}")

@@ -25,6 +25,11 @@ export const App_Route: Route[] = [
       import('./authentication/kiosk-pair/kiosk-pair.component').then((m) => m.KioskPairComponent),
   },
   {
+    path: 'auth/sso/callback',
+    loadComponent: () =>
+      import('./authentication/sso-callback/sso-callback.component').then((m) => m.SsoCallbackComponent),
+  },
+  {
     path: 'auth/change-password',
     canActivate: [AuthGuard],
     loadComponent: () =>

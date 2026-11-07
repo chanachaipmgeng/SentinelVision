@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>คู่มือการใช้งานระบบ SentinelVision v4.0 — Unified Biometric Identity, Attendance & Smart Security Platform</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --primary: #4f46e5;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text);
+      background: #f8fafc;
+      line-height: 1.65;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+      color: #fff;
+      padding: 3.5rem 2rem;
+      text-align: center;
+    }
+    .hero .badge {
+      display: inline-block;
+      background: rgba(99, 102, 241, 0.25);
+      border: 1px solid rgba(129, 140, 248, 0.45);
+      color: #c7d2fe;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 0.9rem;
+    }
+    .hero h1 {
+      margin: 0 0 0.75rem;
+      font-size: 2.2rem;
+      font-weight: 800;
+    }
+    .hero p {
+      max-width: 780px;
+      margin: 0 auto;
+      color: #cbd5e1;
+      font-size: 1rem;
+    }
+    .container {
+      max-width: 1120px;
+      margin: 2rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+      page-break-inside: avoid;
+    }
+    .section-card h2 {
+      margin-top: 0;
+      color: #1e1b4b;
+      font-size: 1.4rem;
+      border-bottom: 2px solid #eef2ff;
+      padding-bottom: 0.65rem;
+    }
+    .screenshot-frame {
+      margin: 1.25rem 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    }
+    .screenshot-frame img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .steps {
+      padding-left: 1.25rem;
+      color: #334155;
+    }
+    .steps li {
+      margin-bottom: 0.5rem;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      font-size: 0.88em;
+      color: #4338ca;
+    }
+    @media print {
+      body { background: #fff; }
+      .section-card { box-shadow: none; border: 1px solid #cbd5e1; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <span class="badge">SentinelVision v4.0 • Enterprise User Manual</span>
+    <h1>คู่มือการใช้งานระบบ SentinelVision v4.0</h1>
+    <p>แพลตฟอร์มระบุตัวตนด้วยใบหน้าอัจฉริยะ ลงเวลาเข้า-ออกงาน ควบคุมประตูอัตโนมัติ แจ้งเตือนบุคคลเฝ้าระวัง (Watchlist/Blacklist/VIP) ระบบผู้มาติดต่อ และงานอีเวนต์ครบวงจร</p>
+  </header>
+
+  <main class="container">
+    <section class="section-card">
+      <h2>1. การเข้าสู่ระบบและเลือกองค์กร (Authentication &amp; Multi-Tenancy)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/01-login.png" alt="หน้าเข้าสู่ระบบ SentinelVision" />
+      </div>
+      <ol class="steps">
+        <li>เปิดเบราว์เซอร์ไปที่หน้าเข้าสู่ระบบ (เช่น <code>http://localhost:8880/auth/login</code>)</li>
+        <li>กรอกชื่อผู้ใช้และรหัสผ่าน (เช่น ผู้ดูแลองค์กร <code>admin</code> / <code>Password123!</code> หรือผู้ดูแลระบบสูงสุด <code>sysadmin</code> / <code>Password123!</code>)</li>
+        <li>ระบบตรวจสอบสิทธิ์ JWT และแยกพื้นที่ข้อมูลตามองค์กร (Multi-Company Isolation) โดยอัตโนมัติ</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>2. แดชบอร์ดภาพรวมองค์กรและการลงเวลา (Executive Attendance Dashboard)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/02-dashboard.png" alt="แดชบอร์ดภาพรวมองค์กร" />
+      </div>
+      <ol class="steps">
+        <li>แสดงสรุปจำนวนพนักงานทั้งหมด พนักงานที่ลงทะเบียนใบหน้าแล้ว และสถิติการเข้างานประจำวัน (ตรงเวลา / มาสาย / ลางาน)</li>
+        <li>มีแบนเนอร์ทางลัดเข้าสู่ <strong>SentinelVision Security &amp; Access Center</strong> ได้ในคลิกเดียว</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>3. ศูนย์บัญชาการ SentinelVision &amp; ทดสอบสแกนใบหน้า 1:N (Command Center)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/03-sentinel-command.png" alt="ศูนย์บัญชาการ SentinelVision Command Center" />
+      </div>
+      <ol class="steps">
+        <li>แสดงตัวชี้วัดความปลอดภัยทั้ง 6 มิติ (Watchlist/Blacklist, VIP, Active Visitors, Access Zones, Events, In-Building Muster)</li>
+        <li><strong>Unified 1:N Biometric Simulator (ซ้าย):</strong> เลือกโซนประตูหรืออีเวนต์ แล้วอัปโหลดภาพใบหน้าเพื่อตรวจสอบสิทธิ์แบบ 1:N พร้อมแสดงผล <code>GRANT</code>, <code>DENY</code>, <code>ALERT_WATCHLIST</code> หรือ <code>VIP_WELCOME</code></li>
+        <li><strong>Real-Time Incident Feed (ขวา):</strong> ติดตามเหตุการณ์ล่าสุดและกดปุ่ม <code>Ack</code> เพื่อรับทราบเหตุการณ์</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>4. การจัดการบัญชีเฝ้าระวัง Watchlist / Blacklist / VIP</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/04-sentinel-watchlist.png" alt="การจัดการบัญชีเฝ้าระวัง Watchlist / Blacklist / VIP" />
+      </div>
+      <ol class="steps">
+        <li>ลงทะเบียนบุคคลในกลุ่ม <code>BLACKLIST</code> (บุคคลต้องห้าม), <code>WATCHLIST</code> (เฝ้าระวังพิเศษ) หรือ <code>VIP</code> (แขกคนสำคัญ) พร้อมภาพถ่ายใบหน้า</li>
+        <li>ระบบสกัดเวกเตอร์ใบหน้า 512 มิติเก็บใน PostgreSQL <code>pgvector</code> ทันที และแจ้งเตือนอัตโนมัติเมื่อพบหน้ากล้อง</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>5. การควบคุมประตูและโซนพื้นที่อัจฉริยะ (Smart Access Control Zones)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/05-sentinel-access.png" alt="การควบคุมประตูและโซนพื้นที่อัจฉริยะ" />
+      </div>
+      <ol class="steps">
+        <li>สร้างโซนประตู กำหนดระดับความเข้มงวด (<code>LOW</code> ถึง <code>CRITICAL</code>) และกลุ่มบุคคลที่ได้รับอนุญาตให้ผ่าน</li>
+        <li>กดปุ่ม <strong>สั่งปลดล็อกประตู (Remote Unlock)</strong> เพื่อส่งสัญญาณเปิดประตูระยะไกลพร้อมบันทึก Audit Trail</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>6. ระบบบัตรผู้มาติดต่อด้วยใบหน้า &amp; ลิงก์ลงทะเบียนล่วงหน้า (Visitor Face Pass)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/06-sentinel-visitors.png" alt="ระบบบัตรผู้มาติดต่อด้วยใบหน้า Visitor Face Pass" />
+      </div>
+      <ol class="steps">
+        <li>คัดลอก <strong>ลิงก์ลงทะเบียนล่วงหน้า (Self-Service Registration Link)</strong> ส่งให้ผู้มาติดต่อลงทะเบียนใบหน้าด้วยตนเอง</li>
+        <li>หรือออกบัตร Visitor Pass หน้าเคาน์เตอร์พร้อมกำหนดชั่วโมงอนุญาต ระบบจะตัดสิทธิ์อัตโนมัติเมื่อหมดเวลา</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>7. การจัดการงานอีเวนต์และค้นหาที่นั่งด้วยใบหน้า (Smart Events &amp; Seat Lookup)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/07-sentinel-events.png" alt="การจัดการงานอีเวนต์และค้นหาที่นั่งด้วยใบหน้า" />
+      </div>
+      <ol class="steps">
+        <li>สร้างงานสัมมนา/อีเวนต์ และลงทะเบียนผู้เข้าร่วมงานพร้อมระบุหมายเลขโต๊ะ/ที่นั่ง (เช่น <code>VIP-A01</code>)</li>
+        <li>เมื่อสแกนใบหน้าหน้างาน ระบบจะแสดงข้อความต้อนรับพร้อมหมายเลขที่นั่งและนับยอด Checked-In ทันที</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>8. บัญชีรวมพลฉุกเฉิน เส้นทางข้ามกล้อง และซิงก์ Edge AI (Muster Roll &amp; Journey Trail)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/08-sentinel-muster.png" alt="บัญชีรวมพลฉุกเฉินและเส้นทางข้ามกล้อง" />
+      </div>
+      <ol class="steps">
+        <li><strong>Emergency Muster Roll:</strong> ตรวจสอบรายชื่อพนักงานและผู้มาติดต่อที่ยังอยู่ในอาคารยามฉุกเฉิน</li>
+        <li><strong>Cross-Camera Person Journey Trail:</strong> ค้นหาไทม์ไลน์การเดินผ่านจุดสแกนต่างๆ ของบุคคลภายในองค์กร</li>
+        <li><strong>Edge AI Offline Sync:</strong> ดึง Manifest เวกเตอร์ใบหน้า 512 มิติไปแคชบนกล่อง Edge AI เพื่อทำงานแบบ Offline</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>9. การจัดการกะเวลาทำงาน วันหยุด การลา และ PDPA (HR Schedule &amp; PDPA)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/09-hr-schedule.png" alt="การจัดการกะเวลาทำงาน วันหยุด และการลา" />
+      </div>
+      <ol class="steps">
+        <li>กำหนดกะเวลาทำงาน (Work Shifts) เพื่อใช้คำนวณมาสายและ OT อัตโนมัติ</li>
+        <li>จัดการปฏิทินวันหยุดประจำปี และอนุมัติ/ปฏิเสธใบลาของพนักงาน</li>
+      </ol>
+    </section>
+
+    <section class="section-card">
+      <h2>10. จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่มเรียลไทม์ (Multi-Face WebSocket Kiosk)</h2>
+      <div class="screenshot-frame">
+        <img src="./screenshots/10-face-kiosk.png" alt="จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่ม Multi-Face Kiosk" />
+      </div>
+      <ol class="steps">
+        <li>รองรับการตรวจจับและระบุตัวตนหลายใบหน้าพร้อมกันแบบเรียลไทม์ผ่าน WebSocket (<code>/face/ws/kiosk</code>)</li>
+        <li>เชื่อมต่อกับระบบแจ้งเตือน Watchlist/Blacklist/VIP ของ SentinelVision โดยอัตโนมัติในทุกการสแกน</li>
+      </ol>
+    </section>
+  </main>
+</body>
+</html>

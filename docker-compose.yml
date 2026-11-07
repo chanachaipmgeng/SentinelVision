@@ -80,6 +80,10 @@ services:
     container_name: dpu-admin
     expose:
       - "80"
+    environment:
+      # Written to /usr/share/nginx/html/assets/config.json on start (Web-Manage/docker/40-runtime-config.sh)
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-DEMO_MAP_ID}
     restart: unless-stopped
     logging:
       driver: json-file

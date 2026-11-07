@@ -69,8 +69,18 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
 | `FACE_CORE_URL` | `http://host.docker.internal:8081` | Face Core base URL |
 | `FACE_CORE_API_KEY` | (empty) | Bearer key for Face Core tenant |
+| `GOOGLE_MAPS_API_KEY` | (empty) | Web-Manage Google Maps JS key; written to `assets/config.json` by the `admin` container entrypoint. Empty = OSM fallback |
+| `GOOGLE_MAPS_MAP_ID` | `DEMO_MAP_ID` | Map ID for AdvancedMarkerElement |
 
 Frontends in Docker use `baseUrl: ''` (same origin through nginx).
+
+### Web-Manage runtime config (no keys in the bundle)
+
+The SPA reads `assets/config.json` at startup (`src/app/shared/runtime-config.ts`) and injects the Google Maps SDK `<script>` from it. The file is git-ignored; `assets/config.example.json` is the template.
+
+- **Docker:** nothing to do — `Web-Manage/docker/40-runtime-config.sh` writes the file from `GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_MAP_ID` on each start.
+- **Local `ng serve`:** `cp Web-Manage/src/assets/config.example.json Web-Manage/src/assets/config.json` and fill in your own key. Never commit it.
+- `src/environments/environment*.ts` must not contain real keys (Firebase block is an unused placeholder). See `docs/SECRETS-REMEDIATION.md`.
 
 ## Face Core BFF (optional)
 
@@ -146,7 +156,7 @@ ports:
   - "8000:8000"
 ```
 
-Then `ng serve` with `environment.ts` → `http://localhost:8000`.
+Then `ng serve` with `environment.ts` → `http://localhost:8000`. For Google Maps locally, create `src/assets/config.json` from `config.example.json` (git-ignored).
 
 ## Demo seed + smoke tests
 

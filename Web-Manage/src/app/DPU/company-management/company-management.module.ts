@@ -128,6 +128,13 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./audit-log/audit-log.component').then((m) => m.AuditLogComponent),
     },
+    {
+      path: 'company/notification-center',
+      loadComponent: () =>
+        import('./notification-center/notification-center.component').then(
+          (m) => m.NotificationCenterComponent
+        ),
+    },
     ],
   },
 ];

@@ -31,6 +31,19 @@
     {{ toastMessage }}
   </div>
 
+  <div *ngIf="consentRequired" class="dpu-kiosk__consent" role="dialog" aria-modal="true">
+    <div class="dpu-kiosk__consent-card">
+      <h2>ความยินยอมข้อมูลชีวภาพ (PDPA)</h2>
+      <p class="dpu-kiosk__consent-version">
+        เวอร์ชันนโยบาย: {{ consentPolicy?.version || '1.0' }}
+      </p>
+      <div class="dpu-kiosk__consent-text">{{ consentText() }}</div>
+      <button type="button" class="dpu-kiosk__consent-accept" (click)="acceptConsentPolicy()">
+        ยอมรับและดำเนินการต่อ
+      </button>
+    </div>
+  </div>
+
   <header class="dpu-kiosk__top">
     <div class="dpu-kiosk__brand">
       <p class="dpu-kiosk__eyebrow">{{ companyName }} • SENTINELVISION AI • {{ stationMode }}</p>

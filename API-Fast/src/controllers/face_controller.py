@@ -204,8 +204,14 @@ async def add_face(
     if not face_core_enabled():
         owner_company_id = await resolve_enroll_company_id(db, memberId, company_id, actor)
 
+    # D4: do not imply consent on enroll — kiosk/admin must POST biometric-consent
+    # with the current policy version/text first. Legacy rows without a version are
+    # still allowed through once so existing fleets are not bricked mid-rollout.
     if getattr(member, "biometricConsentAt", None) is None:
-        member.biometricConsentAt = datetime.now(timezone.utc)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="biometric_consent_required",
+        )
 
     temp_dir = Path("temp_images")
     temp_dir.mkdir(exist_ok=True)

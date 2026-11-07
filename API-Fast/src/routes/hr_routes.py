@@ -61,6 +61,7 @@ from ..services.holiday_service import (
     upsert_holidays,
 )
 from ..services.notification_service import emit_company_webhook_event
+from ..services import pdpa_service
 from ..services.payroll_period_service import (
     assert_date_not_locked,
     assert_range_not_locked,
@@ -671,13 +672,19 @@ async def get_pdpa_summary(
             }
         )
 
+    retention = await pdpa_service.get_retention_settings(db, companyId)
+    consent_policy = await pdpa_service.get_consent_policy(db, companyId)
     return {
         "totalEmployees": len(records),
         "consentedEmployees": consented_count,
         "enrolledEmployees": enrolled_count,
+        "consentPolicy": consent_policy,
         "retentionPolicy": {
-            "imageRetentionDays": int(settings.IMAGE_RETENTION_DAYS),
-            "tempRetentionHours": int(settings.TEMP_RETENTION_HOURS),
+            "imageRetentionDays": int(retention["punchPhotoDays"]),
+            "tempRetentionHours": int(retention["tempHours"]),
+            "biometricDays": int(retention["biometricDays"]),
+            "punchPhotoDays": int(retention["punchPhotoDays"]),
+            "incidentSnapshotDays": int(retention["incidentSnapshotDays"]),
             "storageBackend": settings.STORAGE_BACKEND,
         },
         "summary": {
@@ -687,6 +694,78 @@ async def get_pdpa_summary(
         },
         "employees": records,
     }
+
+
+@router.get("/company/{companyId}/pdpa/consent-policy")
+async def get_consent_policy(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Public-to-tenant consent version/text for kiosk + enroll screens."""
+    await assert_request_company_membership(request, db, companyId)
+    return await pdpa_service.get_consent_policy(db, companyId)
+
+
+@router.put("/company/{companyId}/pdpa/consent-policy")
+async def put_consent_policy(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.put_consent_policy(db, companyId, body or {})
+
+
+@router.get("/company/{companyId}/pdpa/retention")
+async def get_pdpa_retention(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.get_retention_settings(db, companyId)
+
+
+@router.put("/company/{companyId}/pdpa/retention")
+async def put_pdpa_retention(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await pdpa_service.put_retention_settings(db, companyId, body or {})
+
+
+@router.get("/company/{companyId}/members/{memberId}/dsar-export")
+async def dsar_export(
+    companyId: UUID,
+    memberId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """PDPA subject-access request: export personal data for one member (no raw embeddings)."""
+    await assert_request_company_access(request, db, companyId)
+    await assert_member_company_access(request, db, memberId)
+    payload = await pdpa_service.build_dsar_export(db, companyId, memberId)
+    if payload.get("error") == "member_not_found":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    return payload
+
+
+@router.post("/company/{companyId}/members/{memberId}/erasure")
+async def erase_member_data(
+    companyId: UUID,
+    memberId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """PDPA right-to-erasure: punch photos, encodings, incident snapshots + clear consent."""
+    await assert_request_company_access(request, db, companyId)
+    await assert_member_company_access(request, db, memberId)
+    return await pdpa_service.erase_member_personal_data(db, companyId, memberId)
 
 
 @router.post("/company/{companyId}/members/{memberId}/biometric-consent")
@@ -701,13 +780,15 @@ async def grant_biometric_consent(
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    member.biometricConsentAt = datetime.now(timezone.utc)
-    await db.commit()
-    return {
-        "memberId": str(memberId),
-        "biometricConsentAt": member.biometricConsentAt,
-        "hasConsent": True,
-    }
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    locale = str((body or {}).get("locale") or "th")
+    return await pdpa_service.record_biometric_consent(
+        db, member, companyId, locale=locale
+    )
 
 
 @router.delete("/company/{companyId}/members/{memberId}/biometric-consent")
@@ -717,20 +798,20 @@ async def revoke_biometric_consent(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Revoke PDPA biometric consent and immediately purge all enrolled face encodings."""
+    """Revoke PDPA biometric consent and erase biometric + punch/incident media."""
     await assert_request_company_access(request, db, companyId)
     await assert_member_company_access(request, db, memberId)
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    cleared = await clear_member_face_encodings(memberId, db)
-    member.biometricConsentAt = None
-    await db.commit()
+    result = await pdpa_service.erase_member_personal_data(
+        db, companyId, memberId, clear_consent=True
+    )
     return {
         "memberId": str(memberId),
         "biometricConsentAt": None,
         "hasConsent": False,
-        "deletedEncodings": cleared.get("deleted", 0),
+        **result,
     }
 
 

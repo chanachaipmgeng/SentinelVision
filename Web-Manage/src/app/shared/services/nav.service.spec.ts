@@ -32,6 +32,7 @@ describe('NavService', () => {
     expect(paths).toContain('/company/visitors/passes');
     expect(paths).toContain('/company/events/campaigns');
     expect(paths).toContain('/company/audit-log');
+    expect(paths).toContain('/company/notification-center');
   });
 
   it('always keeps COMMAND, CORE, and GOVERNANCE when filtering', () => {

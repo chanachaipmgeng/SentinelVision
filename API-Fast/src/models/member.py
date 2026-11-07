@@ -38,6 +38,8 @@ class Member(Base):
     failedLoginCount = Column("failed_login_count", Integer, nullable=False, default=0, server_default="0")
     lockedUntil = Column("locked_until", DateTime(timezone=True), nullable=True)
     biometricConsentAt = Column("biometric_consent_at", DateTime(timezone=True), nullable=True)
+    biometricConsentVersion = Column("biometric_consent_version", String(40), nullable=True)
+    biometricConsentText = Column("biometric_consent_text", Text, nullable=True)
     totpSecret = Column("totp_secret", String(128), nullable=True)
     totpEnabled = Column("totp_enabled", Boolean, nullable=False, default=False, server_default="false")
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)

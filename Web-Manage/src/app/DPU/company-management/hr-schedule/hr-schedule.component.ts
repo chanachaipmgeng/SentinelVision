@@ -436,10 +436,52 @@ import { TokenService } from '../../../shared/services/token.service';
               </div>
             </div>
 
+            <div class="p-4 rounded-lg border border-defaultborder space-y-3" *ngIf="consentPolicy">
+              <h6 class="font-semibold">ข้อความและเวอร์ชันความยินยอม (แสดงบน Kiosk / Enroll)</h6>
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 md:col-span-3">
+                  <label class="form-label text-xs">เวอร์ชัน</label>
+                  <input class="form-control" [(ngModel)]="consentPolicy.version" />
+                </div>
+                <div class="col-span-12 md:col-span-9">
+                  <label class="form-label text-xs">ข้อความ (ไทย)</label>
+                  <textarea class="form-control" rows="3" [(ngModel)]="consentPolicy.textTh"></textarea>
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs">ข้อความ (อังกฤษ)</label>
+                  <textarea class="form-control" rows="3" [(ngModel)]="consentPolicy.textEn"></textarea>
+                </div>
+              </div>
+              <button type="button" class="ti-btn ti-btn-primary-full" (click)="saveConsentPolicy()">บันทึกนโยบายความยินยอม</button>
+            </div>
+
+            <div class="p-4 rounded-lg border border-defaultborder space-y-3" *ngIf="retentionSettings">
+              <h6 class="font-semibold">Retention ต่อชนิดข้อมูล (วัน / ชม.)</h6>
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Biometric (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.biometricDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Punch photo (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.punchPhotoDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Incident snapshot (วัน)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.incidentSnapshotDays" />
+                </div>
+                <div class="col-span-6 md:col-span-3">
+                  <label class="form-label text-xs">Temp (ชม.)</label>
+                  <input type="number" class="form-control" [(ngModel)]="retentionSettings.tempHours" />
+                </div>
+              </div>
+              <button type="button" class="ti-btn ti-btn-primary-full" (click)="saveRetentionSettings()">บันทึก Retention</button>
+            </div>
+
             <div class="p-4 rounded-lg border border-defaultborder">
               <h6 class="font-semibold mb-3">การจัดการความยินยอมข้อมูลชีวมิติรายบุคคล (PDPA Right to Erasure)</h6>
               <p class="text-xs text-gray-500 mb-3">
-                * การเพิกถอนความยินยอม (Revoke Consent) จะลบข้อมูลเวกเตอร์ใบหน้า (512-d Embeddings) และภาพใบหน้าตั้งต้นของพนักงานออกจากฐานข้อมูลและ Object Storage ทันที
+                * การเพิกถอน/Erasure จะลบ encodings, ภาพ punch และ incident snapshots ของพนักงานทันที
               </p>
               <div class="table-responsive">
                 <table class="table whitespace-nowrap min-w-full">
@@ -466,6 +508,13 @@ import { TokenService } from '../../../shared/services/token.service';
                       <td class="text-end space-x-2">
                         <button
                           type="button"
+                          class="ti-btn ti-btn-sm ti-btn-light"
+                          (click)="exportDsar(emp.member?.memberId)"
+                        >
+                          DSAR
+                        </button>
+                        <button
+                          type="button"
                           class="ti-btn ti-btn-sm ti-btn-success"
                           (click)="grantConsent(emp.member?.memberId)"
                         >
@@ -476,7 +525,7 @@ import { TokenService } from '../../../shared/services/token.service';
                           class="ti-btn ti-btn-sm ti-btn-danger"
                           (click)="revokeConsent(emp.member?.memberId)"
                         >
-                          เพิกถอนและลบใบหน้า
+                          Erasure
                         </button>
                       </td>
                     </tr>
@@ -778,6 +827,13 @@ export class HrScheduleComponent implements OnInit {
   holidayImportHint = '';
   holidayPresetYear = new Date().getFullYear();
   pdpaSummary: any = null;
+  consentPolicy: any = { version: '1.0', textTh: '', textEn: '' };
+  retentionSettings: any = {
+    biometricDays: 90,
+    punchPhotoDays: 90,
+    incidentSnapshotDays: 90,
+    tempHours: 24,
+  };
   kioskDevices: any[] = [];
   newKioskName = '';
   issuedKiosk: any = null;
@@ -922,6 +978,53 @@ export class HrScheduleComponent implements OnInit {
   loadPdpaSummary(): void {
     this.http.get<any>(`/hr/company/${this.companyId}/pdpa-summary`).subscribe((res) => {
       this.pdpaSummary = res;
+      if (res?.consentPolicy) {
+        this.consentPolicy = { ...this.consentPolicy, ...res.consentPolicy };
+      }
+      if (res?.retentionPolicy) {
+        this.retentionSettings = {
+          biometricDays: res.retentionPolicy.biometricDays ?? this.retentionSettings.biometricDays,
+          punchPhotoDays: res.retentionPolicy.punchPhotoDays ?? res.retentionPolicy.imageRetentionDays,
+          incidentSnapshotDays:
+            res.retentionPolicy.incidentSnapshotDays ?? this.retentionSettings.incidentSnapshotDays,
+          tempHours: res.retentionPolicy.tempRetentionHours ?? this.retentionSettings.tempHours,
+        };
+      }
+    });
+    this.http.get<any>(`/hr/company/${this.companyId}/pdpa/consent-policy`).subscribe((res) => {
+      if (res) this.consentPolicy = { ...this.consentPolicy, ...res };
+    });
+    this.http.get<any>(`/hr/company/${this.companyId}/pdpa/retention`).subscribe((res) => {
+      if (res) this.retentionSettings = { ...this.retentionSettings, ...res };
+    });
+  }
+
+  saveConsentPolicy(): void {
+    this.http
+      .put(`/hr/company/${this.companyId}/pdpa/consent-policy`, this.consentPolicy)
+      .subscribe((res) => {
+        this.consentPolicy = { ...this.consentPolicy, ...res };
+      });
+  }
+
+  saveRetentionSettings(): void {
+    this.http
+      .put(`/hr/company/${this.companyId}/pdpa/retention`, this.retentionSettings)
+      .subscribe((res) => {
+        this.retentionSettings = { ...this.retentionSettings, ...res };
+        this.loadPdpaSummary();
+      });
+  }
+
+  exportDsar(memberId?: string): void {
+    if (!memberId) return;
+    this.http.get(`/hr/company/${this.companyId}/members/${memberId}/dsar-export`).subscribe((data) => {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `dsar-${memberId}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
     });
   }
 

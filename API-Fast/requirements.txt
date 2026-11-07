@@ -18,6 +18,8 @@ numpy
 httpx
 # OIDC SSO relying party (JWKS / RS256 / ES256 / CodeIDToken claim validation)
 authlib==1.9.5
+# Fernet for notification_outbox secret sealing (D3); also used by OIDC tests.
+cryptography>=42
 alembic
 psycopg[binary]
 # Observability (B6): Prometheus exposition + optional OpenTelemetry tracing (OTLP/HTTP).

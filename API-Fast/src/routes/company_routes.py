@@ -1,20 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..config.database import get_db
 from ..controllers.company_controller import (
     get_all_companies,
     get_company_by_id,
     create_company,
-    update_company,
-    delete_company
+    update_company
 )
 from ..schemas.company_schema import CompanyUpdate, CompanyResponse , CompanyBase
-from typing import List, Optional
-from datetime import datetime
+from typing import List
 
 from sqlalchemy import select
 from ..services.audit_service import AuditLog
-from ..services.notification_service import enqueue
 
 router = APIRouter()
 

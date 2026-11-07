@@ -9,12 +9,7 @@ from ..schemas.company_employee_schema import CompanyEmployeePost, CompanyEmploy
 from ..models.company_employee import CompanyEmployee
 from ..models.member import Member, RoleType, StatusType
 from ..models.company import Company
-from ..models.position import Position
-from ..models.department import Department
-from fastapi import Depends, HTTPException, status
-from ..config.database import get_db
-from ..schemas.member_schema import MemberCreate, MemberResponse
-from uuid import UUID, uuid4
+from fastapi import HTTPException, status
 
 def _member_dict(member: Member) -> dict:
     return {

@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import pytest

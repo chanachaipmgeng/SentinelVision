@@ -1,24 +1,109 @@
+# GitLab mirror of .github/workflows/ci.yml (Phase B3). Same gates, same commands, no allow_failure.
+# Baselines: API-Fast/pyproject.toml (ruff/mypy), Web-Manage/.eslintrc.json (eslint), .trivyignore.yaml (trivy).
+
 stages:
-  - lint
   - test
+  - security
   - build
 
-lint:
-  stage: lint
-  image: node:20
-  script:
-    - cd Web-Manage && npm ci && npx eslint "src/app/shared/services/**/*.ts" || true
-  allow_failure: true
+variables:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  TRIVY_VERSION: "v0.76.2"
 
-test:
+backend:
   stage: test
   image: python:3.11
+  services:
+    - name: pgvector/pgvector:pg16
+      alias: postgres
+  variables:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: dpu_test
+    TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/dpu_test
+    DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/dpu_test
+    AUTH_FAIL_FAST: "false"
+    MIGRATE_ON_STARTUP: "false"
+  cache:
+    key: pip-$CI_COMMIT_REF_SLUG
+    paths: [.cache/pip]
+  before_script:
+    - cd API-Fast
+    - grep -v -E '^(insightface|onnxruntime|onnx)([-=<>! \[]|$)' requirements.txt > /tmp/requirements-ci.txt
+    - grep -v -E '^pgserver' requirements-dev.txt > /tmp/requirements-dev-ci.txt
+    - pip install --cache-dir ../.cache/pip -r /tmp/requirements-ci.txt -r /tmp/requirements-dev-ci.txt ruff mypy
+    - pip check
   script:
-    - cd API-Fast && pip install -r requirements.txt && AUTH_FAIL_FAST=false pytest -q tests/test_security.py tests/test_oidc.py
+    - ruff check .
+    - mypy
+    - alembic upgrade head && alembic check && alembic downgrade -1 && alembic upgrade head
+    - python -m pytest -q -p no:cacheprovider --durations=15
 
-build:
-  stage: build
+frontend:
+  stage: test
+  image: node:20-bookworm
+  variables:
+    NODE_OPTIONS: --max-old-space-size=6144
+    CHROME_BIN: /usr/bin/chromium
+  cache:
+    key: npm-$CI_COMMIT_REF_SLUG
+    paths: [.cache/npm]
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends chromium > /dev/null
+    - cd Web-Manage
+    - npm ci --cache ../.cache/npm
   script:
-    - docker compose -f docker-compose.yml config
-  rules:
-    - if: $CI_COMMIT_BRANCH
+    - npm run lint
+    - npm run test:ci
+    - '[ -f src/assets/config.json ] || cp src/assets/config.example.json src/assets/config.json'
+    - npm run build:prod
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths: [Web-Manage/coverage]
+
+trivy-fs:
+  stage: security
+  image:
+    name: aquasec/trivy:0.76.2
+    entrypoint: [""]
+  cache:
+    key: trivy-db
+    paths: [.cache/trivy]
+  variables:
+    TRIVY_CACHE_DIR: .cache/trivy
+  script:
+    - trivy fs --config trivy.yaml --scanners vuln,secret,misconfig .
+
+images:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  needs: [backend, frontend, trivy-fs]
+  parallel:
+    matrix:
+      - NAME: api
+        CONTEXT: ./API-Fast
+        DOCKERFILE: ./API-Fast/Dockerfile.cpu
+      - NAME: admin
+        CONTEXT: ./Web-Manage
+        DOCKERFILE: ./Web-Manage/Dockerfile
+      - NAME: nginx
+        CONTEXT: ./docker/nginx
+        DOCKERFILE: ./docker/nginx/Dockerfile
+  before_script:
+    - apk add --no-cache curl
+    - curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin "$TRIVY_VERSION"
+  script:
+    - docker build -f "$DOCKERFILE" -t "dpu/$NAME:ci" "$CONTEXT"
+    - trivy image --config trivy.yaml --scanners vuln "dpu/$NAME:ci"
+
+compose-config:
+  stage: build
+  image: docker:27
+  script:
+    - docker compose -f docker-compose.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.cpu.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.gpu.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q

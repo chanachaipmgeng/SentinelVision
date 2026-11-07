@@ -1,10 +1,8 @@
-from sqlalchemy import Column, String, Integer, DateTime, Enum , Float
+from sqlalchemy import Column, String, DateTime, Enum , Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from ..config.database import Base
 import uuid
-from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
 class PublicType(enum.Enum):

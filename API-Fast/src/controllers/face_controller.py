@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status, UploadFile
 from pathlib import Path
@@ -9,7 +9,7 @@ import uuid
 import shutil
 from typing import List, Optional
 
-from ..models.member import Member, StatusType as MemberStatus
+from ..models.member import Member
 from ..models.face_encoding import FaceEncoding
 from ..models.company_employee import CompanyEmployee, CompanyRoleType
 from ..models.employee_timestamp import EmployeeTimestamp, TimestampType

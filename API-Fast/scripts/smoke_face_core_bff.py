@@ -200,7 +200,7 @@ def main() -> int:
         raise Fail("GET encodings empty")
     ok(f"GET encodings ({len(encodings)} face(s) from Face Core)")
 
-    print(f"\nAll Face Core BFF smoke checks passed.")
+    print("\nAll Face Core BFF smoke checks passed.")
     return 0
 
 

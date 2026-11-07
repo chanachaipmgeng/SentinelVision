@@ -1,4 +1,3 @@
-import os
 from fastapi import UploadFile
 from pathlib import Path
 

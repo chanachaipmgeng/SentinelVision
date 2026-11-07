@@ -259,6 +259,15 @@ npm run build:prod    # ng build --configuration production
 (`e2e/smoke.spec.ts` + `playwright.config.ts` are placeholders; `@playwright/test` is not a dependency) — follow-up
 tracked in docs/BACKLOG.md.
 
+Static checks that CI also runs (Phase B3; config in `API-Fast/pyproject.toml`, `trivy.yaml`, `.trivyignore.yaml`):
+
+```bash
+cd API-Fast && pip install ruff mypy && ruff check . && mypy
+cd .. && trivy fs --config trivy.yaml --scanners vuln,secret,misconfig .
+```
+
+The full gate list and the lint/CVE baselines are documented in `docs/RUNBOOK.md` → "CI gates and lint baselines".
+
 ```bash
 docker compose logs -f api
 docker compose ps

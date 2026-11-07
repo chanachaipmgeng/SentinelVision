@@ -29,7 +29,7 @@ from src.services.notification_service import (  # noqa: E402
     emit_company_webhook_event,
 )
 
-pytestmark = pytest.mark.asyncio(loop_scope="module")
+db_test = pytest.mark.asyncio(loop_scope="module")
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module", autouse=True)
@@ -125,6 +125,7 @@ async def _rows(ids: list[uuid.UUID]) -> dict[uuid.UUID, NotificationOutbox]:
         return {r.id: r for r in res.scalars().all()}
 
 
+@db_test
 async def test_drain_marks_sent_and_passes_delivery_id(monkeypatch):
     rec = _Recorder()
     monkeypatch.setattr(ns, "_send_webhook", rec)
@@ -141,6 +142,7 @@ async def test_drain_marks_sent_and_passes_delivery_id(monkeypatch):
         await _purge(ids)
 
 
+@db_test
 async def test_drain_failure_increments_attempts_then_fails_after_five(monkeypatch):
     rec = _Recorder(fail=True)
     monkeypatch.setattr(ns, "_send_webhook", rec)
@@ -170,6 +172,7 @@ async def test_drain_failure_increments_attempts_then_fails_after_five(monkeypat
         await _purge(ids)
 
 
+@db_test
 async def test_unknown_channel_is_recorded_as_error(monkeypatch):
     monkeypatch.setattr(ns, "_send_webhook", _Recorder())
     ids = await _enqueue(1, channel="pigeon")
@@ -181,6 +184,7 @@ async def test_unknown_channel_is_recorded_as_error(monkeypatch):
         await _purge(ids)
 
 
+@db_test
 async def test_rows_locked_by_another_worker_are_skipped(monkeypatch):
     rec = _Recorder()
     monkeypatch.setattr(ns, "_send_webhook", rec)
@@ -204,6 +208,7 @@ async def test_rows_locked_by_another_worker_are_skipped(monkeypatch):
         await _purge(ids)
 
 
+@db_test
 async def test_concurrent_drains_deliver_each_row_exactly_once(monkeypatch):
     rec = _Recorder(delay=0.05)
     monkeypatch.setattr(ns, "_send_webhook", rec)
@@ -220,6 +225,7 @@ async def test_concurrent_drains_deliver_each_row_exactly_once(monkeypatch):
         await _purge(ids)
 
 
+@db_test
 async def test_drain_respects_limit_and_fifo_order(monkeypatch):
     rec = _Recorder()
     monkeypatch.setattr(ns, "_send_webhook", rec)
@@ -234,6 +240,7 @@ async def test_drain_respects_limit_and_fifo_order(monkeypatch):
 
 
 # ---------------------------------------------------------------- enqueue rules
+@db_test
 async def test_emit_company_webhook_event_honours_settings():
     cid = uuid.uuid4()
     key = f"notify:{cid}"

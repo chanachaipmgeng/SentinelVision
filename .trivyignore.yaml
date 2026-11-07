@@ -1,0 +1,89 @@
+# Trivy allow-list for the CI security gate (.github/workflows/ci.yml, job "security").
+#
+# Rules:
+#   * every entry needs a `statement` (why it is acceptable) and an `expired_at` date — when the
+#     date passes the gate fails again and the entry must be re-justified or the finding fixed;
+#   * never allow-list a finding that is actually fixable in place (bump the dependency instead);
+#   * keep the list short. Fixing beats ignoring.
+#
+# Format: https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml
+
+vulnerabilities:
+  # swiper is consumed as SCSS only (src/styles.scss imports swiper/scss*); the JavaScript that
+  # carries the prototype-pollution bug is never bundled. Removing the dependency means
+  # re-styling the landing/auth carousels — tracked in docs/BACKLOG.md "Lint debt / deps".
+  - id: CVE-2026-27212
+    paths:
+      - Web-Manage/package-lock.json
+    statement: "swiper@8 is used for its SCSS only; the vulnerable JS is not shipped."
+    expired_at: 2027-03-31
+
+  # Angular 17.3.x (EOL) framework advisories. Fixes exist only in Angular >= 19; the upgrade is a
+  # dedicated project (standalone APIs, control flow, Material 3 migration) tracked in
+  # docs/BACKLOG.md "Open — Phase B follow-ups". Exposure is limited: the admin UI is served
+  # behind the same origin as the API (no cross-origin XSRF leak), does not use HttpTransferCache,
+  # hydration, i18n attribute bindings or SVG animation templates, and only authenticated users
+  # reach it.
+  - id: CVE-2025-66035
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2025-66412
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-22610
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-27970
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-32635
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-50170
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-50171
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-54266
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-54267
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-54268
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-68945
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-69151
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-101896
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+  - id: CVE-2026-111752
+    paths: [Web-Manage/package-lock.json]
+    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
+    expired_at: 2027-03-31
+
+misconfigurations:
+  # Dockerfiles still run as root. Non-root users for api/admin/nginx images are part of
+  # phase-b/hardening-backup (B4); drop this entry once that branch is merged.
+  - id: DS-0002
+    statement: "Non-root container users land with Phase B hardening (B4)."
+    expired_at: 2027-01-31

@@ -1,0 +1,224 @@
+# Phase B3 CI gates. Every job is blocking: no `|| true`, no `continue-on-error`.
+#
+#   backend   ruff + mypy + alembic upgrade/check + pytest against PostgreSQL 16 + pgvector
+#   frontend  npm ci + eslint + Karma/Jasmine on ChromeHeadless + production build
+#   security  trivy fs (vulnerabilities, secrets, Dockerfile misconfig) with .trivyignore.yaml
+#   images    docker build api (CPU image), admin, nginx + trivy image scan, compose config check
+#
+# Lint baselines (pre-existing debt that is silenced explicitly, not by disabling the gate):
+#   API-Fast/pyproject.toml   [tool.ruff.lint] ignore / per-file-ignores, [tool.mypy] overrides
+#   Web-Manage/.eslintrc.json rules switched "off" at the end of the *.ts block
+#   .trivyignore.yaml         CVE / misconfig allow-list with statement + expiry
+name: CI
+
+on:
+  push:
+    branches: [main, "integration/**", "phase-*/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+  TRIVY_VERSION: "v0.76.2"
+
+jobs:
+  backend:
+    name: Backend (ruff, mypy, alembic, pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: API-Fast
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dpu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d dpu_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      # conftest exports TEST_DATABASE_URL as DATABASE_URL; alembic/env.py rewrites +asyncpg → +psycopg.
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/dpu_test
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/dpu_test
+      AUTH_FAIL_FAST: "false"
+      MIGRATE_ON_STARTUP: "false"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            API-Fast/requirements.txt
+            API-Fast/requirements-dev.txt
+
+      - name: Install dependencies
+        # The GPU runtime (insightface / onnxruntime-gpu / onnx) is not needed for tests —
+        # tests/conftest.py stubs those modules — and pgserver is replaced by the service container.
+        run: |
+          grep -v -E '^(insightface|onnxruntime|onnx)([-=<>! \[]|$)' requirements.txt > /tmp/requirements-ci.txt
+          grep -v -E '^pgserver' requirements-dev.txt > /tmp/requirements-dev-ci.txt
+          python -m pip install -r /tmp/requirements-ci.txt -r /tmp/requirements-dev-ci.txt ruff mypy
+          python -m pip check
+
+      - name: ruff
+        run: ruff check --output-format github .
+
+      - name: mypy
+        run: mypy
+
+      - name: Alembic upgrade head on an empty database, then check for drift
+        run: |
+          alembic upgrade head
+          alembic check
+          alembic downgrade -1
+          alembic upgrade head
+
+      - name: pytest
+        run: python -m pytest -q -p no:cacheprovider --durations=15
+
+  frontend:
+    name: Frontend (eslint, ng test, production build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Web-Manage
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
+      # Karma launcher ChromeHeadlessCI; ubuntu runners ship Google Chrome on PATH.
+      CHROME_BIN: google-chrome
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Web-Manage/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: eslint
+        run: npm run lint
+
+      - name: ng test (ChromeHeadless)
+        run: npm run test:ci
+
+      - name: ng build --configuration production
+        run: |
+          [ -f src/assets/config.json ] || cp src/assets/config.example.json src/assets/config.json
+          npm run build:prod
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-manage-coverage
+          path: Web-Manage/coverage
+          if-no-files-found: ignore
+          retention-days: 7
+
+  security:
+    name: Security (trivy fs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin "${TRIVY_VERSION}"
+          trivy --version
+
+      - name: Cache trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: trivy-db-${{ runner.os }}-
+
+      - name: trivy fs (vuln + secret + misconfig; HIGH/CRITICAL fail)
+        run: trivy fs --config trivy.yaml --scanners vuln,secret,misconfig .
+
+  images:
+    name: Docker images (build + trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [backend, frontend, security]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: ./API-Fast
+            dockerfile: ./API-Fast/Dockerfile.cpu
+          - name: admin
+            context: ./Web-Manage
+            dockerfile: ./Web-Manage/Dockerfile
+          - name: nginx
+            context: ./docker/nginx
+            dockerfile: ./docker/nginx/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: dpu/${{ matrix.name }}:ci
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,scope=${{ matrix.name }},mode=max
+
+      - name: Install trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin "${TRIVY_VERSION}"
+
+      - name: Cache trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: trivy-db-${{ runner.os }}-
+
+      - name: trivy image dpu/${{ matrix.name }}:ci (HIGH/CRITICAL fail)
+        run: trivy image --config trivy.yaml --scanners vuln dpu/${{ matrix.name }}:ci
+
+  compose:
+    name: docker compose config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose files
+        # All interpolations have `${VAR:-default}` fallbacks, so no .env is needed here.
+        run: |
+          docker compose -f docker-compose.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.cpu.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.gpu.yml config -q
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q

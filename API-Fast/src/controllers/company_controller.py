@@ -2,7 +2,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from ..models.company import Company
 from fastapi import HTTPException, status
-import bcrypt
 
 # ฟังก์ชันเพื่อดึงข้อมูลบริษัททั้งหมด
 async def get_all_companies(db: AsyncSession, include_deleted: bool = False):

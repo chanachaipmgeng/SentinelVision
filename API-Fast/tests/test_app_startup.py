@@ -30,6 +30,7 @@ if not os.environ.get("DPU_TEST_DB_READY"):
 import src.config.settings as settings_mod  # noqa: E402
 from src.config import migrations  # noqa: E402
 from src.config.database import engine  # noqa: E402
+from src.utils.face_gpu_queue import stop_face_gpu_workers_for_tests  # noqa: E402
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -54,6 +55,8 @@ def main_module():
 def _dispose():
     async def _d():
         await engine.dispose()
+        # TestClient ran the real startup, which spawned face GPU workers on its (now closed) loop.
+        await stop_face_gpu_workers_for_tests()
 
     asyncio.run(_d())
 

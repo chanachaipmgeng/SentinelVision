@@ -195,7 +195,22 @@ def seed(db_env):
             await db.commit()
 
     _run(_seed())
-    return data
+    yield data
+
+    # Remove what this module created so a reused TEST_DATABASE_URL does not accumulate companies
+    # without picture/ownerName (the /companys listing in test_authz_matrix validates every row).
+    async def _cleanup():
+        from sqlalchemy import text
+
+        cid = {"cid": str(data["companyId"])}
+        async with async_session() as db:
+            for tbl in ("kiosk_device", "company_employee", "department", "position", "company_location"):
+                await db.execute(text(f'DELETE FROM "{tbl}" WHERE "companyId" = :cid'), cid)
+            await db.execute(text('DELETE FROM company WHERE "companyId" = :cid'), cid)
+            await db.execute(text("DELETE FROM member WHERE username = :u"), {"u": data["username"]})
+            await db.commit()
+
+    _run(_cleanup())
 
 
 def _client(app):

@@ -117,10 +117,15 @@ async def start_face_gpu_workers(
 async def stop_face_gpu_workers_for_tests() -> None:
     """Cancel workers and clear buckets (test harness only)."""
     global _started, _worker_count, _active, _completed, _pending_total, _wake, _worker_tasks
+    # Workers started by an earlier app startup (e.g. TestClient in another test module) live on a
+    # loop that is already closed; awaiting them from the current loop would raise, so drop them.
+    running = asyncio.get_running_loop()
+    awaitable = [t for t in _worker_tasks if t.get_loop() is running and not running.is_closed()]
     for task in _worker_tasks:
-        task.cancel()
-    if _worker_tasks:
-        await asyncio.gather(*_worker_tasks, return_exceptions=True)
+        if task.get_loop() is running:
+            task.cancel()
+    if awaitable:
+        await asyncio.gather(*awaitable, return_exceptions=True)
     _worker_tasks = []
     for kind in _KIND_ORDER:
         for dq in list(_buckets[kind].values()):

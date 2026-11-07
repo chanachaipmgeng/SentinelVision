@@ -43,7 +43,7 @@ All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks 
 - `SECRET_KEY` ≥ 32 chars and `POSTGRES_PASSWORD` — compose has **no defaults** (`${VAR:?}`); `api` exits at import on a weak secret or, in `APP_ENV=production` (default), an example DB password (`security/startup_checks.py`)
 - Dual-GPU overlay sets `FACE_DEVICES=cuda:0` + `CUDA_VISIBLE_DEVICES` per service; override `FACE_GPU_WORKERS` (default 2, ONNX can oversubscribe)
 - `EXPOSE_API_DOCS=false` in production; nginx renders `/docs`, `/redoc`, `/openapi.json` as 404 unless the same var is true, and gates them + `/metrics` by `INTERNAL_ALLOW_CIDRS`
-- Overlays: `prod.yml` (no DB port, limits, read-only admin/nginx), `tls.yml` (certs in `TLS_CERT_DIR`, 8443), `api-readonly.yml` (opt-in)
+- Overlays: `prod.yml` (no DB port, limits, read-only admin/nginx), `tls.yml` (certs in `TLS_CERT_DIR`, 8443), `api-readonly.yml` (opt-in), `backup.yml` (sidecar)
 
 ## Rebuild matrix
 
@@ -73,4 +73,5 @@ API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only �
 - API healthcheck hits `/ready` (DB ping + GPU queue started)
 - After recreate: `GET /health` → 200, `GET /ready` → 200, `GET /companys` without token → 401, then `GET /face/queue-stats` with a Bearer token
 - Dual-GPU: expect both `dpu-api` and `dpu-api-gpu1` healthy; `nvidia-smi --query-compute-apps` should show a python process on **each** GPU after first inference
+- Backups: `scripts/backup.sh` (pg_dump -Fc + image volumes + manifest), `scripts/restore.sh`, `scripts/restore-drill.sh`, sidecar `docker-compose.backup.yml`; see `docs/RUNBOOK.md`
 - Non-root check after rebuild: `docker exec dpu-api id` → `uid=10001(app)`; root-owned legacy volumes → chown once (RUNBOOK "Upgrade to non-root")

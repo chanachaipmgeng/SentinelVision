@@ -1,8 +1,47 @@
 # Runbook
 
-## RPO / RTO
-- RPO: 24 hours when `scripts/backup.sh` runs once a day.
-- RTO: time to `psql` restore the dump plus copy `api_uploaded` / `api_enrolled` volumes.
+## Backup, restore & drill (B5)
+
+### Targets
+| | Target | How it is met |
+|---|---|---|
+| RPO | **24 h** (1 h possible) | `docker-compose.backup.yml` sidecar runs `scripts/backup.sh` every `BACKUP_INTERVAL_SECONDS` (default 86400; set 3600 for hourly). Punch photos are also written to `uploaded_images` on the volume, so a lost day = one day of punches/enrolments. |
+| RTO | **≤ 30 min** on the same host, **≤ 2 h** on a fresh host | `scripts/restore.sh STAMP --yes --stop-api` (pg_restore + untar; minutes for a DB of thousands of members), plus `docker compose up` on a new host and pulling the backup set from the offsite copy. |
+| Retention | 14 days local (`BACKUP_KEEP_DAYS`), offsite per bucket lifecycle | `find -mtime` rotation in `backup.sh`; offsite copy via `BACKUP_RCLONE_REMOTE` / `BACKUP_S3_URI`. |
+| Drill | weekly, automated | sidecar runs `restore-drill.sh` after every `BACKUP_DRILL_EVERY` (7) backups; a failed drill logs `DRILL FAILED` and posts `backup.drill.fail` to `/notifications/system` when `SERVICE_NOTIFY_TOKEN` is set. |
+
+### What a backup set contains
+`BACKUP_DIR/dpu-<STAMP>.dump` (pg_dump custom format, `--no-owner`, whole `public` schema or `--schema=$DB_SCHEMA`), `dpu-<STAMP>-images.tar.gz` (`uploaded_images` + `enrolled_images`; `temp_images` is scratch), `dpu-<STAMP>.manifest.json` (row count of every table, file counts, sha256) and `dpu-<STAMP>.sha256`. `face-core-<STAMP>.dump` is added when a `face-core-db` container is running on the same host. All credentials come from `.env` / the environment — after rotating `POSTGRES_PASSWORD` nothing else needs to change.
+
+### Run it
+```bash
+# sidecar (daily + weekly drill); BACKUP_DIR must be writable by BACKUP_UID:BACKUP_GID
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.backup.yml up -d --build backup
+docker compose ... run --rm backup backup.sh          # one-off backup
+docker compose ... run --rm backup restore-drill.sh   # one-off drill into a scratch DB on dpu-db
+# or from the host with the docker CLI (reads .env; runs pg_dump inside dpu-db)
+scripts/backup.sh                 # → ./backups
+scripts/restore-drill.sh          # newest set, scratch pgvector container
+```
+Offsite: set `BACKUP_RCLONE_REMOTE=backup:bucket/dpu` and `RCLONE_CONFIG_BACKUP_*` in `.env` (S3-compatible, including MinIO via `RCLONE_CONFIG_BACKUP_ENDPOINT`). Host cron alternative: `0 2 * * * cd /opt/SentinelVision && scripts/backup.sh >> /var/log/dpu-backup.log 2>&1`.
+
+### Drill procedure (what `restore-drill.sh` proves)
+1. `sha256sum -c` on the set.
+2. Restore into a scratch target: a throw-away `pgvector/pgvector:pg16` container with a random password (`DRILL_TARGET=container`, host default) or `dpu_drill_<ts>` on the live server (`DRILL_TARGET=database`, sidecar default). Production data is never touched.
+3. Every table's `count(*)` must equal the manifest.
+4. Face match query: the newest `face_encoding` row must be its own top-1 under `ORDER BY embedding <=> …` with cosine similarity ≥ 0.999 and the HNSW index must exist — proves pgvector and the index restored.
+5. `tar tzf` file count must equal `uploadedFiles + enrolledFiles` from the manifest.
+6. Scratch target dropped (keep it with `DRILL_KEEP=1`). Exit 0 only if every step passed.
+
+Record each manual drill (date, stamp, duration, result) in the ops log; the sidecar's automated runs are in `docker logs dpu-backup`.
+
+### Real restore
+```bash
+scripts/restore-drill.sh 20260107-020000            # rehearse first
+scripts/restore.sh 20260107-020000 --yes --stop-api # stops dpu-api/dpu-api-gpu1, pg_restore --clean, untar, chown 10001, starts API
+curl -s localhost/ready && docker logs --tail 50 dpu-api
+```
+Then enrol one face and perform one check-in. `--db-only` / `--images-only` restore one half; on a fresh host start `db` first (`docker compose up -d db api`) so the volumes exist, then restore. Restoring to a different `DB_SCHEMA` requires `CREATE EXTENSION vector` first (the drill does this automatically).
 
 ## 502 after recreate
 `docker compose up -d --build nginx` so the gateway re-resolves `api`. Check `GET /ready`.

@@ -114,6 +114,9 @@ Frontends in Docker use `baseUrl: ''` (same origin through nginx).
 - **TLS in the stack:** add `-f docker-compose.tls.yml` with `fullchain.pem` / `privkey.pem` in `TLS_CERT_DIR` (readable by uid 101). nginx listens on `HTTPS_PORT` (TLS 1.2/1.3, HSTS) and redirects HTTP → HTTPS except the loopback healthcheck. Renewal = replace files + `docker compose ... exec nginx nginx -s reload`. Keep `docker/nginx/tls-edge.example.conf` when a host nginx terminates TLS instead.
 - **Local dev ergonomics:** nothing changes in the commands — `.env.example` carries `APP_ENV=development` and the example DB password; Postgres stays reachable from the host on `127.0.0.1:${POSTGRES_PORT}`; `EXPOSE_API_DOCS=true` in `.env` enables Swagger from the LAN.
 
+## Backups (B5)
+
+Add `-f docker-compose.backup.yml` to run the `backup` sidecar (daily `pg_dump -Fc` + image-volume archive + manifest into `BACKUP_DIR`, weekly restore drill, optional rclone/S3 copy). Set `BACKUP_UID`/`BACKUP_GID` to the owner of `BACKUP_DIR` on the host. From a host with the docker CLI, `scripts/backup.sh` and `scripts/restore-drill.sh` do the same without the sidecar. Procedures, RPO/RTO targets and the real-restore command are in `docs/RUNBOOK.md` → "Backup, restore & drill".
 
 ### Web-Manage runtime config (no keys in the bundle)
 

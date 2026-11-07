@@ -65,7 +65,7 @@ Expect:
 - each queue `"started": true`, `devices=['cuda:0']`, `workers` = `FACE_GPU_WORKERS`
 - after first inference: `nvidia-smi --query-compute-apps` shows a python process on **GPU0 and GPU1**
 
-Stack services: `db`, `api`, `api-gpu1`, `admin`, `nginx` (no mobile app).
+Stack services: `db`, `api`, `api-gpu1`, `admin`, `nginx` (no mobile app). Optional `backup` sidecar via `-f docker-compose.backup.yml` (`docker compose ... run --rm backup backup.sh` / `restore-drill.sh`; host: `scripts/backup.sh`, `scripts/restore-drill.sh`, `scripts/restore.sh STAMP --yes --stop-api`). Rebuild `backup` after editing `scripts/backup.sh`, `scripts/restore*.sh`, `scripts/lib/` or `docker/backup/`.
 
 API logs are JSON lines (`{"level": ..., "logger": ..., "message": ...}`); each response carries `x-request-id`. Look for `provider_options` / `Face GPU queue started` on both APIs.
 

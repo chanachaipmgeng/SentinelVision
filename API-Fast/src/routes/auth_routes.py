@@ -1,22 +1,28 @@
+import logging
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import bcrypt
-import jwt as pyjwt
 from passlib.context import CryptContext
 
 from ..config.database import get_db
 from ..config.settings import settings
 from ..models.member import Member
 from ..schemas.auth_schema import LoginRequest, Token
-from ..security.deps import get_current_member
+from ..security.deps import assert_company_access, get_current_member
 from ..security.jwt import create_access_token, create_refresh_token, decode_token
+from ..security.oidc import OidcError, OidcProvider, extract_email, get_provider, oidc_enabled
 from ..security.passwords import assert_not_locked, hash_password, register_failure, register_success
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
+from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
 
 router = APIRouter()
+logger = logging.getLogger("dpu.auth")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -45,8 +51,22 @@ class MfaVerifyRequest(BaseModel):
     code: str
 
 
-class OidcLoginRequest(BaseModel):
-    idToken: str
+class OidcStartRequest(BaseModel):
+    companyId: str | None = None
+    returnTo: str | None = None
+
+
+class OidcCallbackRequest(BaseModel):
+    code: str = Field(min_length=1)
+    state: str = Field(min_length=1)
+    txn: str = Field(min_length=1)
+
+
+class SsoPolicyRequest(BaseModel):
+    jitProvisioning: bool = False
+    allowedEmailDomains: list[str] = Field(default_factory=list)
+    defaultDepartmentId: str | None = None
+    defaultPositionId: str | None = None
 
 
 def _tokens(member: Member) -> dict:
@@ -139,7 +159,7 @@ async def mfa_status(member: Member = Depends(get_current_member)):
         "memberId": str(member.memberId),
         "username": member.username,
         "totpEnabled": bool(getattr(member, "totpEnabled", False)),
-        "oidcConfigured": bool((settings.OIDC_ISSUER or "").strip()),
+        "oidcConfigured": oidc_enabled(),
     }
 
 
@@ -191,32 +211,128 @@ async def mfa_disable(
     return {"totpEnabled": False}
 
 
-@router.post("/sso/oidc", response_model=Token)
-async def sso_oidc_login(body: OidcLoginRequest, db: AsyncSession = Depends(get_db)):
-    issuer = (settings.OIDC_ISSUER or "").strip()
-    if not issuer:
-        raise HTTPException(status_code=501, detail="OIDC SSO is not configured on this server")
+# --------------------------------------------------------------------------- OIDC SSO
+# Authorization Code + PKCE relying party (src/security/oidc.py). The legacy
+# `POST /auth/sso/oidc` that accepted a self-signed HS256 `idToken` is gone; the
+# path now behaves exactly like `/auth/sso/oidc/callback`.
+
+
+def _require_oidc() -> OidcProvider:
+    if not oidc_enabled():
+        raise HTTPException(status_code=501, detail="OIDC SSO is not enabled on this server")
+    return get_provider()
+
+
+def _oidc_http_error(exc: OidcError) -> HTTPException:
+    return HTTPException(status_code=exc.status_code, detail=exc.detail)
+
+
+async def _audit_sso(**kwargs) -> None:
+    # Audit must never turn a successful SSO login into a 500.
     try:
-        claims = pyjwt.decode(
-            body.idToken,
-            settings.SECRET_KEY,
-            algorithms=["HS256"],
-            options={"verify_aud": False},
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=f"Invalid OIDC token: {exc}")
-    if claims.get("iss") != issuer:
-        raise HTTPException(status_code=401, detail="OIDC issuer mismatch")
-    email = (claims.get("email") or claims.get("upn") or "").strip()
-    if not email:
-        raise HTTPException(status_code=400, detail="OIDC token missing email claim")
-    result = await db.execute(select(Member).where(Member.email == email))
+        await write_audit(**kwargs)
+    except Exception:
+        logger.warning("sso audit write failed", exc_info=True)
+
+
+@router.get("/sso/oidc/status")
+async def sso_oidc_status():
+    enabled = oidc_enabled()
+    return {
+        "enabled": enabled,
+        "issuer": (settings.OIDC_ISSUER or "").strip() if enabled else None,
+        "flow": "authorization_code+pkce" if enabled else None,
+    }
+
+
+@router.post("/sso/oidc/start")
+async def sso_oidc_start(body: OidcStartRequest | None = None):
+    provider = _require_oidc()
+    body = body or OidcStartRequest()
+    company_id = None
+    if body.companyId:
+        try:
+            company_id = str(UUID(str(body.companyId)))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid companyId")
+    return_to = (body.returnTo or "").strip() or None
+    if return_to and (not return_to.startswith("/") or return_to.startswith("//")):
+        # only same-origin paths may be used as a post-login redirect
+        raise HTTPException(status_code=400, detail="returnTo must be a relative path")
+    try:
+        return await provider.build_authorization_request(company_id=company_id, return_to=return_to)
+    except OidcError as exc:
+        raise _oidc_http_error(exc)
+
+
+@router.post("/sso/oidc", response_model=Token)
+@router.post("/sso/oidc/callback", response_model=Token)
+async def sso_oidc_callback(body: OidcCallbackRequest, db: AsyncSession = Depends(get_db)):
+    provider = _require_oidc()
+    try:
+        claims, txn = await provider.login_with_code(body.code, body.state, body.txn)
+        email = extract_email(claims)
+    except OidcError as exc:
+        await _audit_sso(action="SSO_LOGIN_FAIL", path="/auth/sso/oidc/callback", status_code=exc.status_code)
+        raise _oidc_http_error(exc)
+
+    result = await db.execute(select(Member).where(func.lower(Member.email) == email))
     member = result.scalars().first()
-    if not member or getattr(member, "deletedAt", None) is not None:
+    provisioned = False
+    if member is None:
+        member = await jit_provision_member(db, claims=claims, email=email, company_id=txn.company_id)
+        provisioned = True
+    elif getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=404, detail="No active member linked to this SSO email")
+
     assert_not_locked(member)
     status_val = getattr(member.status, "value", member.status)
     if status_val in (0, "DISABLED"):
         raise HTTPException(status_code=403, detail="Account disabled")
-    await write_audit(actor=member, action="SSO_LOGIN_OK", path="/auth/sso/oidc", status_code=200)
-    return _tokens(member)
+
+    register_success(member)
+    await db.commit()
+    await db.refresh(member)
+    if provisioned:
+        await _audit_sso(
+            actor=member,
+            action="SSO_JIT_PROVISIONED",
+            path="/auth/sso/oidc/callback",
+            status_code=200,
+            company_id=txn.company_id,
+            entity_type="member",
+            entity_id=str(member.memberId),
+            detail={"issuer": claims.get("iss"), "sub": claims.get("sub")},
+        )
+    await _audit_sso(
+        actor=member,
+        action="SSO_LOGIN_OK",
+        path="/auth/sso/oidc/callback",
+        status_code=200,
+        detail={"issuer": claims.get("iss"), "sub": claims.get("sub")},
+    )
+    issued = _tokens(member)
+    if txn.return_to:
+        issued["returnTo"] = txn.return_to
+    return issued
+
+
+@router.get("/sso/policy/{companyId}")
+async def get_company_sso_policy(
+    companyId: UUID,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_company_access(db, member, companyId)
+    return await get_sso_policy(db, companyId)
+
+
+@router.put("/sso/policy/{companyId}")
+async def put_company_sso_policy(
+    companyId: UUID,
+    body: SsoPolicyRequest,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_company_access(db, member, companyId)
+    return await save_sso_policy(db, companyId, body.model_dump())

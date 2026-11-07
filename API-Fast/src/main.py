@@ -8,6 +8,7 @@ import logging
 from .config.database import engine, Base, async_session, ensure_db_schema
 from .config.settings import settings
 from .security.jwt import assert_secret_configured
+from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
 from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
@@ -48,6 +49,7 @@ from .routes import (
 )
 
 assert_secret_configured()
+assert_oidc_configured()
 assert_face_core_configured()
 configure_logging()
 logger = logging.getLogger("dpu.api")

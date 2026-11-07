@@ -14,7 +14,7 @@ test:
   stage: test
   image: python:3.11
   script:
-    - cd API-Fast && pip install -r requirements.txt && AUTH_FAIL_FAST=false pytest -q tests/test_security.py
+    - cd API-Fast && pip install -r requirements.txt && AUTH_FAIL_FAST=false pytest -q tests/test_security.py tests/test_oidc.py
 
 build:
   stage: build

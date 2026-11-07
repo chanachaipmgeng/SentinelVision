@@ -52,8 +52,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
     KIOSK_TOKEN_EXPIRE_DAYS: int = 365
+    # OIDC SSO relying party (Authorization Code + PKCE). Fail-fast when enabled but incomplete.
+    OIDC_ENABLED: bool = False
     OIDC_ISSUER: str = ""
     OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    OIDC_REDIRECT_URI: str = ""
+    OIDC_SCOPES: str = "openid profile email"
+    OIDC_HTTP_TIMEOUT_SECONDS: float = 10.0
+    OIDC_JWKS_CACHE_SECONDS: int = 3600
+    OIDC_LOGIN_TXN_TTL_SECONDS: int = 600
+    OIDC_CLOCK_SKEW_SECONDS: int = 60
     CORS_ORIGINS: str = (
         "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,"
         "http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,"

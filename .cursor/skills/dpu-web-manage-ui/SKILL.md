@@ -33,7 +33,7 @@ Admin CRUD lists, homes, dashboard polish, header/sidebar shell, face-management
 ## Auth-aware pages
 
 - New company page → add under `companyRoutes[0].children` in `company-management.module.ts` (guarded by `RoleGuard`, `data.area='company'`); admin page → `admin[0].children` in `common.module.ts`
-- Do not add HTTP calls that bypass `HttpRequestInterceptor` (no raw `fetch`); `<img src>` for API images must use `?token=`
+- Do not add HTTP calls that bypass `HttpRequestInterceptor` (no raw `fetch`); `<img src>` for protected API images must go through `AuthedImageService.urlFor()` (blob URL), never `?token=`
 - Header badge is `GET /notifications/pending-count`; do not hard-code counts
 - Reference for a lightweight standalone page with CSV export: `company-management/audit-log/`
 

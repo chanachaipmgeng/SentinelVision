@@ -23,7 +23,9 @@ from ..models.face_encoding import FaceEncoding
 from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest, WorkShift
 from ..models.member import Member
 from ..security.deps import assert_member_company_access, assert_request_company_access
-from ..security.jwt import create_kiosk_token, hash_kiosk_token
+from ..security.jwt import kiosk_refresh_ttl
+from ..security.kiosk_pairing import generate_pairing_code, hash_pairing_code, pairing_code_expiry
+from ..services import token_revocation_service as revocation
 
 router = APIRouter()
 
@@ -601,8 +603,52 @@ async def revoke_biometric_consent(
 
 
 # ---------------------------------------------------------------------------
-# Phase 4: Kiosk Device Provisioning & Scoped Device Tokens
+# Kiosk Device Provisioning: one-time pairing code → device-scoped token (see /auth/kiosk/pair)
 # ---------------------------------------------------------------------------
+def _serialize_kiosk_device(r: KioskDevice) -> dict:
+    now = datetime.now(timezone.utc)
+    pairing_exp = r.pairingExpiresAt
+    if pairing_exp is not None and pairing_exp.tzinfo is None:
+        pairing_exp = pairing_exp.replace(tzinfo=timezone.utc)
+    return {
+        "deviceId": str(r.deviceId),
+        "companyId": str(r.companyId),
+        "locationId": str(r.locationId) if r.locationId else None,
+        "name": r.name,
+        "lastSeenAt": r.lastSeenAt,
+        "pairedAt": r.pairedAt,
+        "isPaired": r.tokenHash is not None and r.revokedAt is None,
+        "pairingPending": bool(r.pairingCodeHash) and pairing_exp is not None and pairing_exp > now,
+        "pairingExpiresAt": r.pairingExpiresAt if r.pairingCodeHash else None,
+        "revokedAt": r.revokedAt,
+        "isActive": r.revokedAt is None,
+        "createdAt": r.createdAt,
+    }
+
+
+def _issue_pairing_code(device: KioskDevice) -> str:
+    code = generate_pairing_code()
+    device.pairingCodeHash = hash_pairing_code(code)
+    device.pairingExpiresAt = pairing_code_expiry()
+    return code
+
+
+async def _get_company_device(db: AsyncSession, companyId: UUID, deviceId: UUID) -> KioskDevice:
+    device = await db.get(KioskDevice, deviceId)
+    if not device or device.companyId != companyId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kiosk device not found")
+    return device
+
+
+async def _revoke_device_tokens(db: AsyncSession, device: KioskDevice, *, reason: str) -> None:
+    if device.tokenFamily:
+        await revocation.revoke_family(
+            db, device.tokenFamily, datetime.now(timezone.utc) + kiosk_refresh_ttl(), reason=reason
+        )
+    device.tokenHash = None
+    device.tokenFamily = None
+
+
 @router.get("/company/{companyId}/kiosk-devices")
 async def list_kiosk_devices(
     companyId: UUID,
@@ -617,19 +663,7 @@ async def list_kiosk_devices(
             .order_by(KioskDevice.createdAt.desc())
         )
     ).scalars().all()
-    return [
-        {
-            "deviceId": str(r.deviceId),
-            "companyId": str(r.companyId),
-            "locationId": str(r.locationId) if r.locationId else None,
-            "name": r.name,
-            "lastSeenAt": r.lastSeenAt,
-            "revokedAt": r.revokedAt,
-            "isActive": r.revokedAt is None,
-            "createdAt": r.createdAt,
-        }
-        for r in rows
-    ]
+    return [_serialize_kiosk_device(r) for r in rows]
 
 
 @router.post("/company/{companyId}/kiosk-devices")
@@ -639,40 +673,48 @@ async def register_kiosk_device(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """Create a device and return its one-time pairing code (shown once, never stored in clear)."""
     await assert_request_company_access(request, db, companyId)
     name = str(body.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Device name is required")
     loc_raw = body.get("locationId")
     loc_uuid = UUID(str(loc_raw)) if loc_raw else None
-    expires_days = max(1, int(body.get("expiresDays", settings.KIOSK_TOKEN_EXPIRE_DAYS) or 365))
 
-    device_id = uuid4()
-    token = create_kiosk_token(
-        str(device_id),
-        str(companyId),
-        location_id=str(loc_uuid) if loc_uuid else None,
-        expires_days=expires_days,
-    )
-    device = KioskDevice(
-        deviceId=device_id,
-        companyId=companyId,
-        locationId=loc_uuid,
-        name=name,
-        tokenHash=hash_kiosk_token(token),
-    )
+    device = KioskDevice(deviceId=uuid4(), companyId=companyId, locationId=loc_uuid, name=name)
+    code = _issue_pairing_code(device)
     db.add(device)
     await db.commit()
     await db.refresh(device)
     return {
-        "deviceId": str(device.deviceId),
-        "companyId": str(device.companyId),
-        "locationId": str(device.locationId) if device.locationId else None,
-        "name": device.name,
-        "kioskToken": token,
-        "kioskUrl": f"/company/timestamp-face?kioskToken={token}",
-        "isActive": True,
-        "createdAt": device.createdAt,
+        **_serialize_kiosk_device(device),
+        "pairingCode": code,
+        "pairingCodeTtlMinutes": int(settings.KIOSK_PAIRING_CODE_TTL_MINUTES),
+        "pairUrl": "/kiosk/pair",
+    }
+
+
+@router.post("/company/{companyId}/kiosk-devices/{deviceId}/pairing-code")
+async def reissue_kiosk_pairing_code(
+    companyId: UUID,
+    deviceId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-pair an existing device: invalidates its current token family and issues a new code."""
+    await assert_request_company_access(request, db, companyId)
+    device = await _get_company_device(db, companyId, deviceId)
+    if device.revokedAt is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Kiosk device is revoked; register a new device")
+    await _revoke_device_tokens(db, device, reason=revocation.REASON_REPAIR)
+    code = _issue_pairing_code(device)
+    await db.commit()
+    await db.refresh(device)
+    return {
+        **_serialize_kiosk_device(device),
+        "pairingCode": code,
+        "pairingCodeTtlMinutes": int(settings.KIOSK_PAIRING_CODE_TTL_MINUTES),
+        "pairUrl": "/kiosk/pair",
     }
 
 
@@ -683,10 +725,12 @@ async def revoke_kiosk_device(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """Revoke the device: its token family is denied immediately and no pairing code remains."""
     await assert_request_company_access(request, db, companyId)
-    device = await db.get(KioskDevice, deviceId)
-    if not device or device.companyId != companyId:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kiosk device not found")
+    device = await _get_company_device(db, companyId, deviceId)
+    await _revoke_device_tokens(db, device, reason=revocation.REASON_DEVICE_REVOKED)
+    device.pairingCodeHash = None
+    device.pairingExpiresAt = None
     device.revokedAt = datetime.now(timezone.utc)
     await db.commit()
     return {

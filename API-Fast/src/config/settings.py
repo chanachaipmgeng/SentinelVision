@@ -51,7 +51,18 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
-    KIOSK_TOKEN_EXPIRE_DAYS: int = 365
+    # Device-scoped kiosk token (short, refreshable) + kiosk refresh token lifetime.
+    KIOSK_TOKEN_EXPIRE_HOURS: int = 12
+    KIOSK_REFRESH_EXPIRE_DAYS: int = 30
+    # One-time pairing code shown to the admin; the kiosk exchanges it at /auth/kiosk/pair.
+    KIOSK_PAIRING_CODE_TTL_MINUTES: int = 10
+    KIOSK_PAIR_MAX_ATTEMPTS_PER_MINUTE: int = 10
+    # Deprecated: accept `?token=` in the query string. Leaks tokens into access logs; off by default.
+    AUTH_ALLOW_QUERY_TOKEN: bool = False
+    # Negative-cache TTL for the revocation lookup (seconds). Revocations propagate to other
+    # replicas within this window.
+    AUTH_REVOCATION_CACHE_SECONDS: int = 30
+    AUTH_REVOCATION_PURGE_SECONDS: int = 3600
     OIDC_ISSUER: str = ""
     OIDC_CLIENT_ID: str = ""
     CORS_ORIGINS: str = (

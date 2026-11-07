@@ -21,7 +21,7 @@ docker compose up --build
 |-----|--------|
 | `http://localhost/` | SentinelVision Admin Console (`Web-Manage` — Angular 17) |
 | `http://localhost/company/sentinel-center` | **SentinelVision Security & Access Command Center** (Watchlist, Access Zones, Visitor Pass, Smart Events, Muster Roll & 1:N Scanner) |
-| `http://localhost/company/timestamp-face` | Kiosk สแกนใบหน้าแบบ Multi-person Realtime (WebSocket + `?kioskToken=...`) |
+| `http://localhost/company/timestamp-face` | Kiosk สแกนใบหน้าแบบ Multi-person Realtime (WebSocket; จับคู่อุปกรณ์ด้วยรหัสครั้งเดียวที่ `/kiosk/pair`) |
 | `http://localhost/company/hr-schedule` | ศูนย์จัดการกะงาน / ใบลา / วันหยุด / PDPA / Kiosk & 2FA / Payroll Webhook & Cloud Metrics |
 | `http://localhost/docs` | API Swagger (เมื่อตั้ง `EXPOSE_API_DOCS=true`) |
 | `http://localhost/health` / `/ready` / `/metrics` | Liveness, Readiness และ Prometheus Histograms (`dpu_face_gpu_latency_ms`, `dpu_pgvector_search_ms`) |

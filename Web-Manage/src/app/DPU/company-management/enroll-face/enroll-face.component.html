@@ -33,14 +33,14 @@
 
   <header class="dpu-kiosk__top">
     <div class="dpu-kiosk__brand">
-      <p class="dpu-kiosk__eyebrow">{{ companyName }} • SENTINELVISION AI</p>
-      <h1 class="dpu-kiosk__title">สแกนใบหน้าอัจฉริยะ (Attendance &amp; Access)</h1>
+      <p class="dpu-kiosk__eyebrow">{{ companyName }} • SENTINELVISION AI • {{ stationMode }}</p>
+      <h1 class="dpu-kiosk__title">{{ kioskTitle }}</h1>
     </div>
     <div class="dpu-kiosk__top-actions">
       @if (!isKioskDevice) {
-        <a routerLink="/company/sentinel-center" class="dpu-kiosk__home-btn" title="เปิดศูนย์ความปลอดภัย SentinelVision">
-          <i class="ri-shield-flash-line"></i>
-          <span>Sentinel Center</span>
+        <a routerLink="/company/scan-hub" class="dpu-kiosk__home-btn" title="Scan & Action Hub">
+          <i class="ri-radar-line"></i>
+          <span>Scan Hub</span>
         </a>
         <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" title="กลับหน้าหลัก">
           <i class="ri-home-5-line"></i>
@@ -59,59 +59,151 @@
     </div>
   </header>
 
-  <div class="dpu-kiosk__chips" aria-label="สถานะระบบและโหมดลงเวลา">
-    <!-- Hybrid Punch Mode Selector -->
-    <button
-      type="button"
-      class="dpu-kiosk__chip"
-      [class.is-on]="punchMode === 'AUTO'"
-      (click)="setPunchMode('AUTO')"
-      title="อัตโนมัติ: เข้างาน → พักนอก → พักเข้า → ออกงาน">
-      <i class="ri-magic-line"></i>
-      อัตโนมัติ (Hybrid)
-    </button>
-    <button
-      type="button"
-      class="dpu-kiosk__chip"
-      [class.is-ok]="punchMode === 'CHECK_IN'"
-      (click)="setPunchMode('CHECK_IN')"
-      title="บังคับลงเวลาเข้างาน (Check-In)">
-      <i class="ri-login-box-line"></i>
-      เข้างาน
-    </button>
-    <button
-      type="button"
-      class="dpu-kiosk__chip"
-      [class.is-on]="punchMode === 'BREAK_OUT'"
-      (click)="setPunchMode('BREAK_OUT')"
-      title="บังคับพักนอก (Break-Out)">
-      <i class="ri-cup-line"></i>
-      พักนอก
-    </button>
-    <button
-      type="button"
-      class="dpu-kiosk__chip"
-      [class.is-on]="punchMode === 'BREAK_IN'"
-      (click)="setPunchMode('BREAK_IN')"
-      title="บังคับพักเข้า (Break-In)">
-      <i class="ri-cup-fill"></i>
-      พักเข้า
-    </button>
-    <button
-      type="button"
-      class="dpu-kiosk__chip"
-      [class.is-warn]="punchMode === 'CHECK_OUT'"
-      (click)="setPunchMode('CHECK_OUT')"
-      title="บังคับลงเวลาออกงาน (Check-Out)">
-      <i class="ri-logout-box-r-line"></i>
-      ออกงาน
-    </button>
+  <div class="dpu-kiosk__chips" aria-label="สถานะระบบและโหมดสแกน">
+    <!-- Attendance / UNIFIED_HYBRID: punch chips -->
+    <ng-container *ngIf="showPunchChips">
+      <button
+        type="button"
+        class="dpu-kiosk__chip"
+        [class.is-on]="punchMode === 'AUTO'"
+        (click)="setPunchMode('AUTO')"
+        title="อัตโนมัติ: เข้างาน → พักนอก → พักเข้า → ออกงาน">
+        <i class="ri-magic-line"></i>
+        อัตโนมัติ (Hybrid)
+      </button>
+      <button
+        type="button"
+        class="dpu-kiosk__chip"
+        [class.is-ok]="punchMode === 'CHECK_IN'"
+        (click)="setPunchMode('CHECK_IN')"
+        title="บังคับลงเวลาเข้างาน (Check-In)">
+        <i class="ri-login-box-line"></i>
+        เข้างาน
+      </button>
+      <button
+        type="button"
+        class="dpu-kiosk__chip"
+        [class.is-on]="punchMode === 'BREAK_OUT'"
+        (click)="setPunchMode('BREAK_OUT')"
+        title="บังคับพักนอก (Break-Out)">
+        <i class="ri-cup-line"></i>
+        พักนอก
+      </button>
+      <button
+        type="button"
+        class="dpu-kiosk__chip"
+        [class.is-on]="punchMode === 'BREAK_IN'"
+        (click)="setPunchMode('BREAK_IN')"
+        title="บังคับพักเข้า (Break-In)">
+        <i class="ri-cup-fill"></i>
+        พักเข้า
+      </button>
+      <button
+        type="button"
+        class="dpu-kiosk__chip"
+        [class.is-warn]="punchMode === 'CHECK_OUT'"
+        (click)="setPunchMode('CHECK_OUT')"
+        title="บังคับลงเวลาออกงาน (Check-Out)">
+        <i class="ri-logout-box-r-line"></i>
+        ออกงาน
+      </button>
+    </ng-container>
+
+    <!-- Access / UNIFIED_HYBRID: zone + 2FA + emergency unlock -->
+    <ng-container *ngIf="showAccessChrome">
+      <label class="dpu-kiosk__chip dpu-kiosk__chip--select" title="Access Zone">
+        <i class="ri-door-lock-line"></i>
+        <select
+          class="dpu-kiosk__inline-select"
+          [ngModel]="zoneId || ''"
+          (ngModelChange)="onZoneChange($event)">
+          <option value="">เลือกโซน</option>
+          <option *ngFor="let z of zones" [value]="z.zoneId">{{ z.name || z.zoneId }}</option>
+        </select>
+      </label>
+      <label class="dpu-kiosk__chip dpu-kiosk__chip--select" *ngIf="zoneRequires2FA" title="2FA / PIN">
+        <i class="ri-key-2-line"></i>
+        <input
+          class="dpu-kiosk__inline-input"
+          type="password"
+          [(ngModel)]="totpOrPin"
+          placeholder="PIN / 2FA"
+          autocomplete="one-time-code" />
+      </label>
+      <button type="button" class="dpu-kiosk__chip is-warn" (click)="emergencyUnlock()" title="ปลดล็อกฉุกเฉิน">
+        <i class="ri-alarm-warning-line"></i>
+        ปลดล็อกฉุกเฉิน
+      </button>
+      <span
+        class="dpu-kiosk__chip"
+        [class.is-ok]="doorStatus === 'unlocked'"
+        [class.is-warn]="doorStatus === 'denied'">
+        <i class="ri-door-open-line"></i>
+        {{ doorStatus === 'unlocked' ? 'DOOR UNLOCKED' : doorStatus === 'denied' ? 'ACCESS DENIED' : 'DOOR IDLE' }}
+      </span>
+    </ng-container>
+
+    <!-- Watchlist HUD -->
+    <ng-container *ngIf="showWatchlistChrome">
+      <span class="dpu-kiosk__chip is-on">
+        <i class="ri-radar-line"></i>
+        Walk-by Screening
+      </span>
+      <span class="dpu-kiosk__chip is-ok" *ngIf="vipArrivalName">
+        <i class="ri-vip-crown-line"></i>
+        VIP {{ vipArrivalName }}
+      </span>
+    </ng-container>
+
+    <!-- Visitor -->
+    <ng-container *ngIf="showVisitorChrome">
+      <label class="dpu-kiosk__chip dpu-kiosk__chip--select" title="โซนผู้มาติดต่อ">
+        <i class="ri-user-shared-line"></i>
+        <select
+          class="dpu-kiosk__inline-select"
+          [ngModel]="zoneId || ''"
+          (ngModelChange)="onZoneChange($event)">
+          <option value="">จุดรับรอง / โซน</option>
+          <option *ngFor="let z of zones" [value]="z.zoneId">{{ z.name || z.zoneId }}</option>
+        </select>
+      </label>
+      <a routerLink="/company/sentinel-center" class="dpu-kiosk__chip" title="ออกบัตร Visitor">
+        <i class="ri-id-card-line"></i>
+        ออกบัตรใหม่
+      </a>
+    </ng-container>
+
+    <!-- Event -->
+    <ng-container *ngIf="showEventChrome">
+      <label class="dpu-kiosk__chip dpu-kiosk__chip--select" title="แคมเปญอีเวนต์">
+        <i class="ri-calendar-event-line"></i>
+        <select
+          class="dpu-kiosk__inline-select"
+          [ngModel]="eventId || ''"
+          (ngModelChange)="onEventChange($event)">
+          <option value="">เลือกอีเวนต์</option>
+          <option *ngFor="let ev of events" [value]="ev.eventId">{{ ev.name || ev.eventId }}</option>
+        </select>
+      </label>
+      <span class="dpu-kiosk__chip" *ngIf="selectedEvent as ev">
+        <i class="ri-group-line"></i>
+        {{ ev.checkedInCount || 0 }}{{ ev.capacity != null ? ' / ' + ev.capacity : '' }}
+      </span>
+      <span class="dpu-kiosk__chip is-ok" *ngIf="seatNumber">
+        <i class="ri-armchair-line"></i>
+        ที่นั่ง {{ seatNumber }}
+      </span>
+    </ng-container>
 
     <span class="dpu-kiosk__chip" [class.is-on]="wsConnected" [class.is-off]="!wsConnected">
       <i class="ri-wifi-line"></i>
       {{ wsConnected ? 'Stream พร้อม' : 'กำลังเชื่อม…' }}
     </span>
-    <span class="dpu-kiosk__chip" [class.is-ok]="inArea" [class.is-warn]="!inArea">
+    <span
+      class="dpu-kiosk__chip"
+      *ngIf="showPunchChips"
+      [class.is-ok]="inArea"
+      [class.is-warn]="!inArea">
       <i class="ri-map-pin-line"></i>
       {{ areaLabel }}
     </span>
@@ -121,7 +213,7 @@
     </span>
     <span class="dpu-kiosk__chip is-busy" *ngIf="checkingInCount > 0">
       <i class="ri-loader-4-line"></i>
-      ลงเวลา {{ checkingInCount }}
+      ประมวลผล {{ checkingInCount }}
     </span>
     <span class="dpu-kiosk__chip" *ngIf="queuePending > 0">
       <i class="ri-cpu-line"></i>
@@ -135,10 +227,16 @@
         <em class="is-err" *ngIf="errorCount">{{ errorCount }}</em>
       </span>
     </span>
-    <span class="dpu-kiosk__chip is-ok" *ngIf="attendance">
+    <span class="dpu-kiosk__chip is-ok" *ngIf="showAttendancePanel && attendance">
       <i class="ri-checkbox-circle-line"></i>
       วันนี้ {{ checkedInCount }}
     </span>
+  </div>
+
+  <div class="dpu-kiosk__mode-banner" *ngIf="welcomeBanner || (showWatchlistChrome && vipArrivalName)">
+    <p *ngIf="welcomeBanner">{{ welcomeBanner }}</p>
+    <p *ngIf="!welcomeBanner && vipArrivalName">ยินดีต้อนรับ {{ vipArrivalName }}</p>
+    <p *ngIf="seatNumber">ที่นั่ง / โต๊ะ {{ seatNumber }}</p>
   </div>
 
   <div class="dpu-kiosk__layout">
@@ -150,9 +248,9 @@
         <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
 
         <div class="dpu-kiosk__hud">
-          <p class="dpu-kiosk__hud-msg" *ngIf="!wsConnected || !locationReady; else readyHud">
+          <p class="dpu-kiosk__hud-msg" *ngIf="!wsConnected || (showPunchChips && !locationReady); else readyHud">
             <span *ngIf="!wsConnected">กำลังเชื่อม stream…</span>
-            <span *ngIf="wsConnected && !locationReady">{{ errorMessage || 'รอพิกัด GPS…' }}</span>
+            <span *ngIf="wsConnected && showPunchChips && !locationReady">{{ errorMessage || 'รอพิกัด GPS…' }}</span>
           </p>
           <ng-template #readyHud>
             <p class="dpu-kiosk__hud-msg">{{ captureMessage }}</p>
@@ -197,65 +295,73 @@
     </section>
 
     <aside class="dpu-kiosk__feed-panel">
-      <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
-        <div>
-          <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">วันนี้</h2>
-          <p class="dpu-kiosk__subtitle">รายชื่อที่ลงเวลาแล้ว</p>
-        </div>
-        <button type="button" class="dpu-kiosk__icon-btn" (click)="loadAttendance()" title="รีเฟรช">
-          <i class="ri-refresh-line"></i>
-        </button>
-      </header>
-
-      <div class="dpu-kiosk__summary" *ngIf="attendance as att">
-        <div class="dpu-kiosk__summary-card">
-          <span class="dpu-kiosk__summary-val">{{ att.summary.checkedInCount }}</span>
-          <span class="dpu-kiosk__summary-label">ลงแล้ว</span>
-        </div>
-        <div class="dpu-kiosk__summary-card">
-          <span class="dpu-kiosk__summary-val">{{ att.summary.inAreaCount }}</span>
-          <span class="dpu-kiosk__summary-label">ในพื้นที่</span>
-        </div>
-        <div class="dpu-kiosk__summary-card is-warn">
-          <span class="dpu-kiosk__summary-val">{{ att.summary.outsideCount }}</span>
-          <span class="dpu-kiosk__summary-label">นอกพื้นที่</span>
-        </div>
-      </div>
-
-      <ul class="dpu-kiosk__roster" *ngIf="rosterList.length">
-        <li
-          *ngFor="let person of rosterList; trackBy: trackByRosterId"
-          class="dpu-kiosk__roster-item"
-          [class.is-warn]="isOutside(person) || person.isLate">
-          <img class="dpu-kiosk__roster-avatar" [src]="personPhoto(person)" alt="" loading="lazy" />
-          <div class="dpu-kiosk__roster-body">
-            <div class="dpu-kiosk__roster-row">
-              <strong>{{ person.employeeName }}</strong>
-              <time *ngIf="person.timestamp">{{ person.timestamp | date: 'HH:mm' }}</time>
-            </div>
-            <p class="dpu-kiosk__meta mb-0">
-              {{ person.employeeId || '—' }}
-              · {{ person.department || '—' }}
-            </p>
-            <p class="dpu-kiosk__meta mb-0">
-              <span *ngIf="isOutside(person)">นอกพื้นที่</span>
-              <span *ngIf="!isOutside(person) && isCheckedOut(person)">ออกงาน</span>
-              <span *ngIf="!isOutside(person) && !isCheckedOut(person)">เข้างาน</span>
-              <span *ngIf="person.isLate"> · สาย {{ person.lateMinutes }} นาที</span>
-              <span *ngIf="person.overtimeMinutes && person.overtimeMinutes > 0"> · OT {{ person.overtimeMinutes }} นาที</span>
-              <span *ngIf="person.locationName"> · {{ person.locationName }}</span>
-            </p>
+      <ng-container *ngIf="showAttendancePanel">
+        <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
+          <div>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">วันนี้</h2>
+            <p class="dpu-kiosk__subtitle">รายชื่อที่ลงเวลาแล้ว</p>
           </div>
-        </li>
-      </ul>
+          <button type="button" class="dpu-kiosk__icon-btn" (click)="loadAttendance()" title="รีเฟรช">
+            <i class="ri-refresh-line"></i>
+          </button>
+        </header>
 
-      <div class="dpu-kiosk__empty dpu-kiosk__empty--sm" *ngIf="attendance && !rosterList.length">
-        <p>ยังไม่มีใครลงเวลาวันนี้</p>
-      </div>
+        <div class="dpu-kiosk__summary" *ngIf="attendance as att">
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ att.summary.checkedInCount }}</span>
+            <span class="dpu-kiosk__summary-label">ลงแล้ว</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ att.summary.inAreaCount }}</span>
+            <span class="dpu-kiosk__summary-label">ในพื้นที่</span>
+          </div>
+          <div class="dpu-kiosk__summary-card is-warn">
+            <span class="dpu-kiosk__summary-val">{{ att.summary.outsideCount }}</span>
+            <span class="dpu-kiosk__summary-label">นอกพื้นที่</span>
+          </div>
+        </div>
 
-      <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--spaced">
+        <ul class="dpu-kiosk__roster" *ngIf="rosterList.length">
+          <li
+            *ngFor="let person of rosterList; trackBy: trackByRosterId"
+            class="dpu-kiosk__roster-item"
+            [class.is-warn]="isOutside(person) || person.isLate">
+            <img class="dpu-kiosk__roster-avatar" [src]="personPhoto(person)" alt="" loading="lazy" />
+            <div class="dpu-kiosk__roster-body">
+              <div class="dpu-kiosk__roster-row">
+                <strong>{{ person.employeeName }}</strong>
+                <time *ngIf="person.timestamp">{{ person.timestamp | date: 'HH:mm' }}</time>
+              </div>
+              <p class="dpu-kiosk__meta mb-0">
+                {{ person.employeeId || '—' }}
+                · {{ person.department || '—' }}
+              </p>
+              <p class="dpu-kiosk__meta mb-0">
+                <span *ngIf="isOutside(person)">นอกพื้นที่</span>
+                <span *ngIf="!isOutside(person) && isCheckedOut(person)">ออกงาน</span>
+                <span *ngIf="!isOutside(person) && !isCheckedOut(person)">เข้างาน</span>
+                <span *ngIf="person.isLate"> · สาย {{ person.lateMinutes }} นาที</span>
+                <span *ngIf="person.overtimeMinutes && person.overtimeMinutes > 0"> · OT {{ person.overtimeMinutes }} นาที</span>
+                <span *ngIf="person.locationName"> · {{ person.locationName }}</span>
+              </p>
+            </div>
+          </li>
+        </ul>
+
+        <div class="dpu-kiosk__empty dpu-kiosk__empty--sm" *ngIf="attendance && !rosterList.length">
+          <p>ยังไม่มีใครลงเวลาวันนี้</p>
+        </div>
+      </ng-container>
+
+      <header class="dpu-kiosk__panel-head" [class.dpu-kiosk__panel-head--spaced]="showAttendancePanel">
         <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">ผลล่าสุด</h2>
-        <p class="dpu-kiosk__subtitle">อัปเดตทันทีเมื่อลงเวลาสำเร็จ / Warning / ซ้ำ</p>
+        <p class="dpu-kiosk__subtitle">
+          <ng-container *ngIf="showAccessChrome && !showPunchChips">สถานะประตูและรายการผ่านโซน</ng-container>
+          <ng-container *ngIf="showWatchlistChrome">VIP Arrival / การแจ้งเตือนเฝ้าระวัง</ng-container>
+          <ng-container *ngIf="showVisitorChrome">ข้อมูลผู้มาติดต่อและ Host</ng-container>
+          <ng-container *ngIf="showEventChrome">ต้อนรับผู้ร่วมงานและเลขที่นั่ง</ng-container>
+          <ng-container *ngIf="showAttendancePanel">อัปเดตทันทีเมื่อลงเวลาสำเร็จ / Warning / ซ้ำ</ng-container>
+        </p>
       </header>
 
       <div *ngIf="latestResult" class="dpu-kiosk__latest dpu-kiosk__latest--detail" [ngClass]="'is-' + latestResult.statusKind">

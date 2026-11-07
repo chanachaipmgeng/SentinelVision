@@ -56,10 +56,21 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./timestamp-log/timestamp-log.component').then((m) => m.TimestampLogComponent),
     },
+    // Legacy kiosk path — kept as alias; Phase 3 owns stationMode chrome on enroll-face.
     {
       path: 'company/timestamp-face',
       loadComponent: () =>
         import('./enroll-face/enroll-face.component').then((m) => m.EnrollFaceComponent),
+    },
+    {
+      path: 'company/scan/:stationMode',
+      loadComponent: () =>
+        import('./enroll-face/enroll-face.component').then((m) => m.EnrollFaceComponent),
+    },
+    {
+      path: 'company/scan-hub',
+      loadComponent: () =>
+        import('./scan-hub/scan-hub.component').then((m) => m.ScanHubComponent),
     },
     {
       path: 'company/warning-timestamp-log',
@@ -67,15 +78,44 @@ export const companyRoutes: Routes = [
         import('./warning-timetamp/warning-timetamp.component').then((m) => m.WarningTimetampComponent),
     },
     {
-      path: 'company/approval-inbox',
-      loadComponent: () =>
-        import('./approval-inbox/approval-inbox.component').then((m) => m.ApprovalInboxComponent),
-    },
-    {
       path: 'company/hr-schedule',
       loadComponent: () =>
         import('./hr-schedule/hr-schedule.component').then((m) => m.HrScheduleComponent),
     },
+    // Param-driven thin views over sentinel-center (module workspaces).
+    {
+      path: 'company/access-control/:section',
+      loadComponent: () =>
+        import('./sentinel-center/sentinel-center.component').then(
+          (m) => m.SentinelCenterComponent
+        ),
+      data: { moduleWorkspace: 'ACCESS_CONTROL' },
+    },
+    {
+      path: 'company/watchlist/:section',
+      loadComponent: () =>
+        import('./sentinel-center/sentinel-center.component').then(
+          (m) => m.SentinelCenterComponent
+        ),
+      data: { moduleWorkspace: 'WATCHLIST' },
+    },
+    {
+      path: 'company/visitors/:section',
+      loadComponent: () =>
+        import('./sentinel-center/sentinel-center.component').then(
+          (m) => m.SentinelCenterComponent
+        ),
+      data: { moduleWorkspace: 'VISITOR' },
+    },
+    {
+      path: 'company/events/:section',
+      loadComponent: () =>
+        import('./sentinel-center/sentinel-center.component').then(
+          (m) => m.SentinelCenterComponent
+        ),
+      data: { moduleWorkspace: 'EVENTS' },
+    },
+    // Legacy monolith; ?tab= redirects into module routes inside the component.
     {
       path: 'company/sentinel-center',
       loadComponent: () =>

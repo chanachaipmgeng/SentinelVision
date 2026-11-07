@@ -5,18 +5,25 @@
  * then accepts detect/identify/checkin frames (anything earlier is refused and the socket is
  * closed with 1008). Token problems arrive either as `token_expiring` (proactive rotation) or as
  * `error` frames; both are handled by rotating the device token and re-sending `session`.
+ *
+ * Phase 3: session (and checkin) may carry `stationMode`, `zoneId`, `eventId` for modular scanners.
  */
 
 /** WebSocket.OPEN without touching the global (keeps these helpers trivially unit-testable). */
 export const KIOSK_WS_OPEN = 1;
 
-/** Kiosk WebSocket session payload. */
-export function buildKioskSession(opts: {
+export interface KioskSessionOpts {
   companyId: string;
   token: string | null;
   latitude?: number;
   longitude?: number;
-}): Record<string, unknown> {
+  stationMode?: string | null;
+  zoneId?: string | null;
+  eventId?: string | null;
+}
+
+/** Kiosk WebSocket session payload. */
+export function buildKioskSession(opts: KioskSessionOpts): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     type: 'session',
     companyId: opts.companyId,
@@ -26,7 +33,43 @@ export function buildKioskSession(opts: {
     payload['latitude'] = opts.latitude;
     payload['longitude'] = opts.longitude;
   }
+  if (opts.stationMode) {
+    payload['stationMode'] = opts.stationMode;
+  }
+  if (opts.zoneId) {
+    payload['zoneId'] = opts.zoneId;
+  }
+  if (opts.eventId) {
+    payload['eventId'] = opts.eventId;
+  }
   return payload;
+}
+
+/** Optional modular fields merged into a `checkin` frame. */
+export function buildKioskCheckinExtras(opts: {
+  stationMode?: string | null;
+  zoneId?: string | null;
+  eventId?: string | null;
+  enableDoorRelay?: boolean;
+  totpOrPin?: string | null;
+}): Record<string, unknown> {
+  const extras: Record<string, unknown> = {};
+  if (opts.stationMode) {
+    extras['stationMode'] = opts.stationMode;
+  }
+  if (opts.zoneId) {
+    extras['zoneId'] = opts.zoneId;
+  }
+  if (opts.eventId) {
+    extras['eventId'] = opts.eventId;
+  }
+  if (opts.enableDoorRelay) {
+    extras['enableDoorRelay'] = true;
+  }
+  if (opts.totpOrPin) {
+    extras['totpOrPin'] = opts.totpOrPin;
+  }
+  return extras;
 }
 
 export type KioskWsSessionAction =

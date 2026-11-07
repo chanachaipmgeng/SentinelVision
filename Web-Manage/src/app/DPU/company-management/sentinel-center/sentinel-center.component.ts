@@ -2,9 +2,41 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
+
+/** Legacy ?tab= values → dedicated module routes. */
+const LEGACY_TAB_REDIRECTS: Record<string, string> = {
+  command: '/company/scan-hub',
+  watchlist: '/company/watchlist/identities',
+  access: '/company/access-control/zones',
+  visitors: '/company/visitors/passes',
+  events: '/company/events/campaigns',
+  muster: '/company/visitors/muster-roll',
+};
+
+type SentinelTab = 'command' | 'watchlist' | 'access' | 'visitors' | 'events' | 'muster';
+
+/** Map `/company/{module}/:section` → active sentinel tab. */
+function tabFromModuleSection(
+  workspace: string | null | undefined,
+  section: string | null | undefined
+): SentinelTab | null {
+  if (!workspace) return null;
+  switch (workspace) {
+    case 'ACCESS_CONTROL':
+      return 'access';
+    case 'WATCHLIST':
+      return 'watchlist';
+    case 'VISITOR':
+      return section === 'muster-roll' ? 'muster' : 'visitors';
+    case 'EVENTS':
+      return 'events';
+    default:
+      return null;
+  }
+}
 
 @Component({
   selector: 'app-sentinel-center',
@@ -137,7 +169,11 @@ import { TokenService } from '../../../shared/services/token.service';
       <!-- Navigation Workspace Tabs -->
       <div class="box modern-card glass">
         <div class="box-header flex flex-wrap items-center justify-between gap-3">
-          <nav class="sv-nav-tabs" aria-label="SentinelVision Workspaces">
+          <nav
+            *ngIf="!moduleScoped"
+            class="sv-nav-tabs"
+            aria-label="SentinelVision Workspaces"
+          >
             <button
               type="button"
               class="sv-nav-tab"
@@ -193,6 +229,9 @@ import { TokenService } from '../../../shared/services/token.service';
               <span>เช็คยอดคนในอาคาร &amp; Edge AI</span>
             </button>
           </nav>
+          <div *ngIf="moduleScoped" class="text-sm font-semibold text-slate-700">
+            {{ moduleWorkspaceLabel }}
+          </div>
 
           <span
             *ngIf="toastMessage"
@@ -1178,7 +1217,10 @@ import { TokenService } from '../../../shared/services/token.service';
 })
 export class SentinelCenterComponent implements OnInit {
   companyId = '';
-  activeTab: 'command' | 'watchlist' | 'access' | 'visitors' | 'events' | 'muster' = 'command';
+  activeTab: SentinelTab = 'command';
+  /** True when opened via `/company/{module}/:section` thin routes. */
+  moduleScoped = false;
+  moduleWorkspaceLabel = '';
   isLoading = false;
   isScanning = false;
   toastMessage = '';
@@ -1252,23 +1294,51 @@ export class SentinelCenterComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private tokenService: TokenService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     const company = this.tokenService.getSelectCompany();
     this.companyId = company?.companyId || '';
-    this.route.queryParamMap.subscribe((params) => {
-      const tab = params.get('tab') as any;
-      if (
-        tab &&
-        ['command', 'watchlist', 'access', 'visitors', 'events', 'muster'].includes(tab)
-      ) {
-        this.activeTab = tab;
+
+    const workspace = this.route.snapshot.data['moduleWorkspace'] as string | undefined;
+    const section = this.route.snapshot.paramMap.get('section');
+    const mapped = tabFromModuleSection(workspace, section);
+    if (mapped) {
+      this.moduleScoped = true;
+      this.activeTab = mapped;
+      this.moduleWorkspaceLabel = this.labelForWorkspace(workspace!, section);
+      if (mapped === 'muster' && !this.edgeManifest) {
+        // defer until companyId reload; loadEdgeManifest runs via reloadAll
       }
-    });
+    } else {
+      // Legacy `/company/sentinel-center?tab=` → dedicated module routes.
+      const tab = this.route.snapshot.queryParamMap.get('tab');
+      if (tab && LEGACY_TAB_REDIRECTS[tab]) {
+        this.router.navigateByUrl(LEGACY_TAB_REDIRECTS[tab], { replaceUrl: true });
+        return;
+      }
+    }
+
     if (this.companyId) {
       this.reloadAll();
+    }
+  }
+
+  private labelForWorkspace(workspace: string, section: string | null): string {
+    const sectionLabel = section ? ` / ${section}` : '';
+    switch (workspace) {
+      case 'ACCESS_CONTROL':
+        return `Access Control${sectionLabel}`;
+      case 'WATCHLIST':
+        return `Watchlist${sectionLabel}`;
+      case 'VISITOR':
+        return `Visitor${sectionLabel}`;
+      case 'EVENTS':
+        return `Events${sectionLabel}`;
+      default:
+        return workspace;
     }
   }
 
@@ -1286,7 +1356,10 @@ export class SentinelCenterComponent implements OnInit {
     return this.identities.filter((i) => i.identityType === 'EVENT_ATTENDEE');
   }
 
-  setTab(tab: 'command' | 'watchlist' | 'access' | 'visitors' | 'events' | 'muster'): void {
+  setTab(tab: SentinelTab): void {
+    if (this.moduleScoped) {
+      return;
+    }
     this.activeTab = tab;
     if (tab === 'muster' && !this.edgeManifest) {
       this.loadEdgeManifest();

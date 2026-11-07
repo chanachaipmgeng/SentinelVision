@@ -1,5 +1,6 @@
 import {
   KIOSK_WS_OPEN,
+  buildKioskCheckinExtras,
   buildKioskSession,
   canSendKioskFrame,
   kioskWsSessionAction,
@@ -32,6 +33,27 @@ describe('kiosk-ws-client', () => {
       const zero = buildKioskSession({ companyId: 'c1', token: 't', latitude: 0, longitude: 0 });
       expect(zero['latitude']).toBe(0);
       expect(zero['longitude']).toBe(0);
+    });
+
+    it('includes stationMode / zoneId / eventId when provided', () => {
+      expect(
+        buildKioskSession({
+          companyId: 'c1',
+          token: 't',
+          stationMode: 'ACCESS_CONTROL',
+          zoneId: 'z1',
+          eventId: 'e1',
+        }),
+      ).toEqual(
+        jasmine.objectContaining({
+          stationMode: 'ACCESS_CONTROL',
+          zoneId: 'z1',
+          eventId: 'e1',
+        }),
+      );
+      const bare = buildKioskSession({ companyId: 'c1', token: 't' });
+      expect('stationMode' in bare).toBeFalse();
+      expect('zoneId' in bare).toBeFalse();
     });
   });
 
@@ -68,6 +90,25 @@ describe('kiosk-ws-client', () => {
       expect(kioskWsSessionAction(null)).toBe('none');
       expect(kioskWsSessionAction(undefined)).toBe('none');
       expect(kioskWsSessionAction('session_ok')).toBe('none');
+    });
+  });
+
+  describe('buildKioskCheckinExtras', () => {
+    it('omits empty optional fields and flags door relay', () => {
+      expect(buildKioskCheckinExtras({})).toEqual({});
+      expect(
+        buildKioskCheckinExtras({
+          stationMode: 'UNIFIED_HYBRID',
+          zoneId: 'z1',
+          enableDoorRelay: true,
+          totpOrPin: '1234',
+        }),
+      ).toEqual({
+        stationMode: 'UNIFIED_HYBRID',
+        zoneId: 'z1',
+        enableDoorRelay: true,
+        totpOrPin: '1234',
+      });
     });
   });
 

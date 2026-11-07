@@ -24,10 +24,13 @@ def test_sentinel_company_id_extraction_and_kiosk_scope():
     assert _company_id(f"/sentinel/company/{cid}/identities") == cid
     assert _company_id(f"/sentinel/company/{cid}/scan") == cid
 
-    # Kiosk tokens can POST /scan and GET /edge-sync or /zones, but CANNOT delete or mutate identities
+    # Kiosk tokens can POST /scan and GET edge-sync/zones/events/module-config; cannot mutate identities
     assert _is_kiosk_path_allowed("POST", f"/sentinel/company/{cid}/scan") is True
     assert _is_kiosk_path_allowed("GET", f"/sentinel/company/{cid}/edge-sync") is True
     assert _is_kiosk_path_allowed("GET", f"/sentinel/company/{cid}/zones") is True
+    assert _is_kiosk_path_allowed("GET", f"/sentinel/company/{cid}/events") is True
+    assert _is_kiosk_path_allowed("GET", f"/sentinel/company/{cid}/module-config") is True
+    assert _is_kiosk_path_allowed("PUT", f"/sentinel/company/{cid}/module-config") is False
     assert _is_kiosk_path_allowed("DELETE", f"/sentinel/company/{cid}/identities/123") is False
     assert _is_kiosk_path_allowed("POST", f"/sentinel/company/{cid}/identities") is False
 

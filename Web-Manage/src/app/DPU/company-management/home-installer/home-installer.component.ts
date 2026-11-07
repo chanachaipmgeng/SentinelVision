@@ -9,12 +9,14 @@ import { CompanyModel } from '../../models/company.model';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { companyHomeScanHubLink } from '../scan-hub/scan-hub.helpers';
 
 interface QuickLink {
   label: string;
   icon: string;
   route: string;
   hint: string;
+  featured?: boolean;
 }
 
 @Component({
@@ -38,15 +40,10 @@ export class HomeInstallerComponent implements OnInit {
   loading = true;
   error: string | null = null;
 
-  readonly links: QuickLink[] = [
-    { label: 'แดชบอร์ด', icon: 'ri-dashboard-line', route: '/company/dashboard', hint: 'ภาพรวมลงเวลา' },
-    { label: 'พนักงาน', icon: 'ri-team-line', route: '/company/company-emp', hint: 'จัดการพนักงานและใบหน้า' },
-    { label: 'ข้อมูลการลงเวลา', icon: 'ri-time-line', route: '/company/timestamp-log', hint: 'ประวัติการลงเวลา' },
-    { label: 'อนุมัติการลงเวลา', icon: 'ri-checkbox-circle-line', route: '/company/warning-timestamp-log', hint: 'คิว Warning' },
-    { label: 'Kiosk ใบหน้า', icon: 'ri-camera-line', route: '/company/timestamp-face', hint: 'ลงเวลาด้วยกล้อง' },
-    { label: 'สถานที่ลงเวลา', icon: 'ri-map-pin-line', route: '/company/company-location', hint: 'จุดลงเวลา / พื้นที่' },
-    { label: 'ข้อมูลบริษัท', icon: 'ri-building-2-line', route: '/company/company-info', hint: 'โปรไฟล์บริษัท' },
-  ];
+  /** Primary CTA — Scan & Action Hub (Phase 3). */
+  scanHubLink = '/company/scan-hub';
+
+  links: QuickLink[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -54,6 +51,29 @@ export class HomeInstallerComponent implements OnInit {
     private tokenService: TokenService
   ) {
     this.companyId = this.route.snapshot.paramMap.get('companyId') || '';
+    this.scanHubLink = companyHomeScanHubLink(this.companyId);
+    this.links = [
+      {
+        label: 'Scan & Action Hub',
+        icon: 'ri-radar-line',
+        route: this.scanHubLink,
+        hint: 'เปิด/ปิดโมดูล ตั้งค่า Action และเปิดจุดสแกน',
+        featured: true,
+      },
+      { label: 'แดชบอร์ด', icon: 'ri-dashboard-line', route: '/company/dashboard', hint: 'ภาพรวมลงเวลา' },
+      { label: 'พนักงาน', icon: 'ri-team-line', route: '/company/company-emp', hint: 'จัดการพนักงานและใบหน้า' },
+      { label: 'ข้อมูลการลงเวลา', icon: 'ri-time-line', route: '/company/timestamp-log', hint: 'ประวัติการลงเวลา' },
+      { label: 'อนุมัติการลงเวลา', icon: 'ri-checkbox-circle-line', route: '/company/warning-timestamp-log', hint: 'คิว Warning' },
+      { label: 'Kiosk ใบหน้า', icon: 'ri-camera-line', route: '/company/timestamp-face', hint: 'ลงเวลาด้วยกล้อง (เดิม)' },
+      {
+        label: 'สแกนลงเวลา (โมดูลาร์)',
+        icon: 'ri-qr-scan-2-line',
+        route: companyHomeScanHubLink(this.companyId, 'ATTENDANCE'),
+        hint: 'Deep-link ไป Hub แล้วเปิดโหมด Attendance',
+      },
+      { label: 'สถานที่ลงเวลา', icon: 'ri-map-pin-line', route: '/company/company-location', hint: 'จุดลงเวลา / พื้นที่' },
+      { label: 'ข้อมูลบริษัท', icon: 'ri-building-2-line', route: '/company/company-info', hint: 'โปรไฟล์บริษัท' },
+    ];
   }
 
   ngOnInit(): void {

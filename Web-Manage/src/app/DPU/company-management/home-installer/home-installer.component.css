@@ -70,6 +70,11 @@
   color: var(--dpu-brand-deep, #0b4f4a);
 }
 
+.dpu-company-home__link--featured {
+  border-color: rgba(15, 118, 110, 0.45);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.95));
+}
+
 .dpu-company-home__link > i:first-child {
   width: 2.4rem;
   height: 2.4rem;

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +13,7 @@ from .security.startup_checks import assert_runtime_secrets_configured
 from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
+from .schemas.error_schema import error_body, http_exception_code, sanitize_public_message
 from .services.observability import (
     METRICS_CONTENT_TYPE,
     RequestIdMiddleware,
@@ -21,6 +23,7 @@ from .services.observability import (
     setup_tracing,
     shutdown_tracing,
 )
+from .utils.api_paths import API_V1_PREFIX
 from .config import schema as _schema  # noqa: F401  registers every ORM mapper on Base.metadata
 from .routes import (
     member_routes,
@@ -69,13 +72,53 @@ app.add_middleware(RequestIdMiddleware)
 setup_tracing(app, engine=engine)
 
 
+def _request_id(request: Request):
+    return getattr(request.state, "request_id", None)
+
+
+@app.exception_handler(HTTPException)
+async def http_error(request: Request, exc: HTTPException):
+    detail = exc.detail
+    message = sanitize_public_message(detail, status_code=exc.status_code)
+    details = detail if isinstance(detail, (list, dict)) and exc.status_code < 500 else None
+    headers = dict(exc.headers) if exc.headers else None
+    return JSONResponse(
+        error_body(
+            code=http_exception_code(exc.status_code, detail if isinstance(detail, str) else None),
+            message=message,
+            status_code=exc.status_code,
+            request_id=_request_id(request),
+            details=details,
+        ),
+        status_code=exc.status_code,
+        headers=headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        error_body(
+            code="validation_error",
+            message="Validation failed",
+            status_code=422,
+            request_id=_request_id(request),
+            details=exc.errors(),
+        ),
+        status_code=422,
+    )
+
+
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
-    if isinstance(exc, HTTPException):
-        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
     logger.exception("unhandled %s", request.url.path)
     return JSONResponse(
-        {"detail": "Internal error", "requestId": getattr(request.state, "request_id", None)},
+        error_body(
+            code="internal_error",
+            message="Internal error",
+            status_code=500,
+            request_id=_request_id(request),
+        ),
         status_code=500,
     )
 
@@ -205,26 +248,45 @@ async def root():
             else "InsightFace buffalo_l + pgvector"
         ),
     }
-app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
-app.include_router(member_routes.router, prefix="/members", tags=["Members"])
-app.include_router(company_routes.router, prefix="/companys", tags=["Companys"])
-app.include_router(device_routes.router, prefix="/devices", tags=["Kiosk Devices"])
-app.include_router(
-    company_location_routes.router, prefix="/company-locations", tags=["Locations"]
-)
-app.include_router(department_routes.router, prefix="/departments", tags=["Departments"])
-app.include_router(position_routes.router, prefix="/positions", tags=["Positions"])
-app.include_router(employee_routes.router, prefix="/employees", tags=["Employees"])
-app.include_router(
-    employee_timestamp_routes.router, prefix="/timestamp", tags=["Timestamps"]
-)
-app.include_router(face_routes.router, prefix="/face", tags=["Face Recognition"])
+def _mount_api(prefix: str = "") -> None:
+    """Mount the public HTTP surface at ``prefix`` ('' or '/api/v1')."""
+    p = prefix.rstrip("/")
+    app.include_router(auth_routes.router, prefix=f"{p}/auth", tags=["Authentication"])
+    app.include_router(member_routes.router, prefix=f"{p}/members", tags=["Members"])
+    # D6: keep /companys (legacy typo) and add /companies as the canonical spelling.
+    app.include_router(company_routes.router, prefix=f"{p}/companys", tags=["Companys"])
+    app.include_router(company_routes.router, prefix=f"{p}/companies", tags=["Companies"])
+    app.include_router(device_routes.router, prefix=f"{p}/devices", tags=["Kiosk Devices"])
+    app.include_router(
+        company_location_routes.router, prefix=f"{p}/company-locations", tags=["Locations"]
+    )
+    app.include_router(department_routes.router, prefix=f"{p}/departments", tags=["Departments"])
+    app.include_router(position_routes.router, prefix=f"{p}/positions", tags=["Positions"])
+    app.include_router(employee_routes.router, prefix=f"{p}/employees", tags=["Employees"])
+    app.include_router(
+        employee_timestamp_routes.router, prefix=f"{p}/timestamp", tags=["Timestamps"]
+    )
+    app.include_router(face_routes.router, prefix=f"{p}/face", tags=["Face Recognition"])
+    app.include_router(system_routes.router, prefix=f"{p}/system")
+    app.include_router(dashboard_routes.router, prefix=f"{p}/dashboard")
+    app.include_router(
+        notification_routes.router, prefix=f"{p}/notifications", tags=["Notifications"]
+    )
+    app.include_router(hr_routes.router, prefix=f"{p}/hr", tags=["HR Schedule & PDPA"])
+    app.include_router(
+        sentinel_routes.router, prefix=f"{p}/sentinel", tags=["SentinelVision Security & Access"]
+    )
+
+
+# Legacy root paths (SPA / kiosk continue to work unchanged).
+_mount_api("")
+# D6 versioned alias — identical handlers under /api/v1.
+_mount_api(API_V1_PREFIX)
+# File upload stays under /api (and /api/v1/api would be awkward); mount once at /api.
 app.include_router(file_upload_router.router, prefix="/api", tags=["File Upload"])
-app.include_router(system_routes.router, prefix="/system")
-app.include_router(dashboard_routes.router, prefix="/dashboard")
-app.include_router(notification_routes.router, prefix="/notifications", tags=["Notifications"])
-app.include_router(hr_routes.router, prefix="/hr", tags=["HR Schedule & PDPA"])
-app.include_router(sentinel_routes.router, prefix="/sentinel", tags=["SentinelVision Security & Access"])
+app.include_router(
+    file_upload_router.router, prefix=f"{API_V1_PREFIX}/files", tags=["File Upload"]
+)
 
 app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
 app.mount("/enrolled_images", StaticFiles(directory="enrolled_images"), name="enrolled_images")

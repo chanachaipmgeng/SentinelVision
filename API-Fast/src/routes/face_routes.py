@@ -8,6 +8,7 @@ from ..security.deps import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from ..config.database import get_db
+from ..services.rate_limit_service import rate_limit_identify
 from ..controllers.face_controller import (
     add_face,
     detect_faces_upload,
@@ -111,6 +112,7 @@ async def identify_face_route(
     preCropped: str = Form("false"),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
+    _rl=Depends(rate_limit_identify),
 ):
     """Single-frame identify within company for live name overlay (no timestamp).
 

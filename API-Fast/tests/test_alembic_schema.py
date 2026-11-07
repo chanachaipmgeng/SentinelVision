@@ -84,6 +84,7 @@ def test_revision_ids_fit_alembic_version_column():
     assert "0014_rbac" in ids
     assert "0015_devices_tenant" in ids
     assert "0016_notify_pdpa" in ids
+    assert "0017_face_assurance" in ids
 
 
 def test_single_linear_head():

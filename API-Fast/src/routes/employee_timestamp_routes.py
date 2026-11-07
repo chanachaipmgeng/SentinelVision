@@ -34,6 +34,7 @@ from ..security.deps import (
     require_permission,
 )
 from ..models.member import Member
+from ..services.idempotency_service import idempotent_json
 from ..services.payroll_export_service import (
     build_payroll_xlsx_bytes,
     iter_payroll_csv_chunks,
@@ -200,15 +201,21 @@ async def get_timestamp_by_id_route(
     return await get_timestamp_by_id(timestampId, companyId, db)
 
 
-# สร้างข้อมูลการลงเวลาของพนักงานใหม่
+# สร้างข้อมูลการลงเวลาของพนักงานใหม่ (Idempotency-Key supported)
 @router.post("/company/{companyId}", response_model=EmployeeTimestampResponse)
 async def create_timestamp_route(
+    request: Request,
     companyId: UUID,
     timestamp: EmployeeTimestampCreate,
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("attendance.write")),
 ):
-    return await create_timestamp(timestamp.dict(), companyId, db)
+    async def _run():
+        return await create_timestamp(timestamp.dict(), companyId, db)
+
+    return await idempotent_json(
+        request, scope="timestamp.punch", company_id=str(companyId), compute=_run
+    )
 
 
 # อัปเดตข้อมูลการลงเวลาของพนักงาน

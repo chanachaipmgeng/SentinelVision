@@ -117,6 +117,28 @@ face_match_duration_seconds = Histogram(
     ["source"],
     buckets=_LATENCY_BUCKETS,
 )
+# D8 face assurance: decision counts + labeled FAR/FRR hooks (when expected identity known).
+face_match_decisions_total = Counter(
+    "dpu_face_match_decisions_total",
+    "Face match accept/reject decisions by source",
+    ["source", "decision"],
+)
+face_far_events_total = Counter(
+    "dpu_face_far_events_total",
+    "Labeled false-accept events (impostor matched under threshold)",
+    ["source"],
+)
+face_frr_events_total = Counter(
+    "dpu_face_frr_events_total",
+    "Labeled false-reject events (genuine above threshold or unmatched)",
+    ["source"],
+)
+face_match_distance = Histogram(
+    "dpu_face_match_distance",
+    "Cosine distance of the top face candidate (whether accepted or not)",
+    ["source", "decision"],
+    buckets=(0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.8, 1.0),
+)
 ws_kiosk_connections = Gauge(
     "dpu_ws_kiosk_connections", "Open kiosk WebSocket connections on this process"
 )
@@ -191,6 +213,38 @@ def observe_face_gpu_job(
 
 def observe_face_match(source: str, seconds: float) -> None:
     face_match_duration_seconds.labels(source=source or "pgvector").observe(max(0.0, seconds))
+
+
+def observe_face_match_decision(
+    source: str,
+    *,
+    accepted: bool,
+    distance: Optional[float] = None,
+    expected_member_id: Optional[str] = None,
+    matched_member_id: Optional[str] = None,
+) -> None:
+    """Record accept/reject + optional labeled FAR/FRR when ground truth is known.
+
+    Pass ``expected_member_id`` on 1:1 verify (or labeled eval harness) to emit
+    ``dpu_face_far_events_total`` / ``dpu_face_frr_events_total``.
+    """
+    src = source or "pgvector"
+    decision = "accept" if accepted else "reject"
+    face_match_decisions_total.labels(source=src, decision=decision).inc()
+    if distance is not None:
+        face_match_distance.labels(source=src, decision=decision).observe(max(0.0, float(distance)))
+    if not expected_member_id:
+        return
+    exp = str(expected_member_id)
+    matched = str(matched_member_id) if matched_member_id else ""
+    if accepted:
+        if matched and matched != exp:
+            # Impostor accepted under threshold (FAR) and genuine identity missed (FRR).
+            face_far_events_total.labels(source=src).inc()
+            face_frr_events_total.labels(source=src).inc()
+    else:
+        # Labeled genuine probe that did not match.
+        face_frr_events_total.labels(source=src).inc()
 
 
 def set_outbox_backlog(pending: int, oldest_created_at: Optional[datetime]) -> None:

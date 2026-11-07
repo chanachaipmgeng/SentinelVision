@@ -27,6 +27,7 @@ ignore = [
 "scripts/seed_demo_data.py" = ["E402"]
 "src/security/oidc.py" = ["E402"]
 "tests/test_face_ws_auth_gating.py" = ["E402"]
+"tests/test_company_module_config.py" = ["E402"]
 "tests/test_kiosk_blacklist_exposure.py" = ["E402"]
 # DB-backed test modules skip at import time (`pytest.skip(allow_module_level=True)`) before importing src.
 "tests/test_authz_matrix.py" = ["E402"]

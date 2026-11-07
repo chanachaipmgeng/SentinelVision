@@ -29,6 +29,11 @@ from ..models.sentinel import (
     SentinelIncidentLog,
 )
 from ..security.deps import assert_request_company_access, current_member_var
+from ..services.company_module_service import (
+    VALID_STATION_MODES as MODULE_STATION_MODES,
+    get_company_module_config,
+    save_company_module_config,
+)
 from ..services.face_match_service import (
     search_face_pgvector,
     search_sentinel_identity_pgvector,
@@ -42,7 +47,7 @@ logger = logging.getLogger("dpu.sentinel")
 
 VALID_IDENTITY_TYPES = {"BLACKLIST", "POI", "VIP", "VISITOR", "EVENT_ATTENDEE"}
 VALID_SEVERITIES = {"LOW", "MEDIUM", "HIGH", "CRITICAL"}
-VALID_STATION_MODES = {"ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST_MONITOR", "EVENT_CHECKIN"}
+VALID_STATION_MODES = set(MODULE_STATION_MODES)
 
 
 def _bangkok_tz():
@@ -199,6 +204,28 @@ def _is_within_schedule(start_hhmm: str, end_hhmm: str, now_local: datetime) -> 
         return cur_m >= start_m or cur_m <= end_m
     except Exception:
         return True
+
+
+@router.get("/company/{companyId}/module-config")
+async def get_company_module_config_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Per-company enabled modules, default station mode, and scanActionRules."""
+    await assert_request_company_access(request, db, companyId)
+    return await get_company_module_config(db, companyId)
+
+
+@router.put("/company/{companyId}/module-config")
+async def put_company_module_config_route(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await save_company_module_config(db, companyId, body or {})
 
 
 @router.get("/company/{companyId}/overview")
@@ -886,6 +913,372 @@ async def delete_sentinel_event(
 # ---------------------------------------------------------------------------
 
 
+async def resolve_scan_zone(
+    db: AsyncSession,
+    company_id: UUID,
+    zone_id: Optional[str],
+    station_mode: str,
+) -> tuple[Optional[SentinelAccessZone], str]:
+    """Load an access zone owned by the company; may override stationMode from the zone."""
+    mode = str(station_mode or "ACCESS_CONTROL").strip().upper() or "ACCESS_CONTROL"
+    zone: Optional[SentinelAccessZone] = None
+    if zone_id and str(zone_id).strip():
+        try:
+            z = await db.get(SentinelAccessZone, UUID(str(zone_id).strip()))
+            if z and z.companyId == company_id and z.deletedAt is None:
+                zone = z
+                mode = z.stationMode or mode
+        except Exception:
+            pass
+    return zone, mode
+
+
+async def maybe_dispatch_zone_relay(
+    zone: Optional[SentinelAccessZone],
+    *,
+    subject_name: str,
+    identity_type: str = "EMPLOYEE",
+) -> bool:
+    if not zone or not zone.relayWebhookUrl:
+        return False
+    return await _dispatch_relay_webhook_async(
+        zone.relayWebhookUrl,
+        zone.relaySecret,
+        {
+            "event": "door.access_granted",
+            "subjectName": subject_name,
+            "identityType": identity_type,
+            "zoneCode": zone.code,
+        },
+    )
+
+
+async def evaluate_unified_scan_decision(
+    db: AsyncSession,
+    company_id: UUID,
+    encoding: List[float],
+    *,
+    station_mode: str = "ACCESS_CONTROL",
+    zone_id: Optional[str] = None,
+    event_id: Optional[str] = None,
+    totp_or_pin: Optional[str] = None,
+    snapshot_url: Optional[str] = None,
+    scan_action_rules: Optional[dict] = None,
+) -> dict:
+    """
+    Shared Decision Engine for HTTP /scan and WS station modes other than plain ATTENDANCE.
+    Returns a dict with matched/accessGranted/decision/… suitable for API or WS frames.
+    """
+    zone, station_mode = await resolve_scan_zone(db, company_id, zone_id, station_mode)
+    rules = scan_action_rules or {}
+    silent_alarm = bool(rules.get("enableBlacklistSilentAlarm", True))
+    unknown_action = str(rules.get("unknownFaceAction") or "IGNORE").strip().upper()
+
+    event_uuid: Optional[UUID] = None
+    if event_id and str(event_id).strip():
+        try:
+            event_uuid = UUID(str(event_id).strip())
+        except Exception:
+            event_uuid = None
+
+    threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+    sentinel_match = await search_sentinel_identity_pgvector(
+        db, encoding, threshold, companyId=company_id
+    )
+    emp_match = await search_face_pgvector(
+        db, encoding, threshold, companyId=company_id
+    )
+
+    chosen_kind: Optional[str] = None
+    matched_ident: Optional[SentinelIdentity] = None
+    best_distance: float = 1.0
+
+    if sentinel_match is not None:
+        ident_obj, s_dist = sentinel_match
+        if ident_obj.identityType in ("BLACKLIST", "POI"):
+            chosen_kind = "SENTINEL"
+            matched_ident = ident_obj
+            best_distance = s_dist
+        elif emp_match is not None:
+            _, _, e_dist = emp_match
+            if s_dist <= e_dist:
+                chosen_kind = "SENTINEL"
+                matched_ident = ident_obj
+                best_distance = s_dist
+            else:
+                chosen_kind = "EMPLOYEE"
+                best_distance = e_dist
+        else:
+            chosen_kind = "SENTINEL"
+            matched_ident = ident_obj
+            best_distance = s_dist
+    elif emp_match is not None:
+        chosen_kind = "EMPLOYEE"
+        best_distance = emp_match[2]
+
+    if chosen_kind is None:
+        if unknown_action != "LOG_INCIDENT":
+            return {
+                "matched": False,
+                "accessGranted": False,
+                "decision": "UNKNOWN_FACE",
+                "stationMode": station_mode,
+                "message": "ไม่พบข้อมูลใบหน้าในระบบ (ไม่อนุญาตให้ผ่าน)",
+                "incident": None,
+            }
+        inc = SentinelIncidentLog(
+            companyId=company_id,
+            eventType="ACCESS_DENIED",
+            severity="WARNING",
+            subjectName="Unknown Person",
+            identityType="UNKNOWN",
+            zoneId=zone.zoneId if zone else None,
+            zoneName=zone.name if zone else station_mode,
+            snapshotUrl=snapshot_url,
+            actionTaken="Face not registered in company database",
+        )
+        db.add(inc)
+        await db.commit()
+        await db.refresh(inc)
+        return {
+            "matched": False,
+            "accessGranted": False,
+            "decision": "UNKNOWN_FACE",
+            "stationMode": station_mode,
+            "message": "ไม่พบข้อมูลใบหน้าในระบบ (ไม่อนุญาตให้ผ่าน)",
+            "incident": _serialize_incident(inc),
+        }
+
+    confidence_pct = round(max(0.0, min(1.0, 1.0 - float(best_distance))) * 100.0, 2)
+
+    if chosen_kind == "SENTINEL" and matched_ident is not None:
+        itype = matched_ident.identityType
+
+        if itype in ("BLACKLIST", "POI"):
+            inc = SentinelIncidentLog(
+                companyId=company_id,
+                eventType="BLACKLIST_ALERT",
+                severity="CRITICAL" if itype == "BLACKLIST" else "WARNING",
+                identityId=matched_ident.identityId,
+                subjectName=matched_ident.fullName,
+                identityType=itype,
+                zoneId=zone.zoneId if zone else None,
+                zoneName=zone.name if zone else station_mode,
+                confidencePercent=confidence_pct,
+                distance=round(float(best_distance), 6),
+                snapshotUrl=snapshot_url,
+                actionTaken=f"Silent Security Alert Dispatched ({matched_ident.alertNote or 'Watchlist match'})",
+            )
+            db.add(inc)
+            if silent_alarm:
+                db.add(
+                    NotificationOutbox(
+                        companyId=company_id,
+                        event="sentinel.blacklist_detected",
+                        channel="webhook",
+                        payload={
+                            "subjectName": matched_ident.fullName,
+                            "identityType": itype,
+                            "severity": matched_ident.severity,
+                            "alertNote": matched_ident.alertNote,
+                            "zoneName": zone.name if zone else station_mode,
+                            "confidencePercent": confidence_pct,
+                            "snapshotUrl": snapshot_url,
+                        },
+                    )
+                )
+            await db.commit()
+            await db.refresh(inc)
+            return {
+                "matched": True,
+                "accessGranted": False,
+                "decision": "BLACKLIST_BLOCKED",
+                "stationMode": station_mode,
+                "identityType": itype,
+                "subjectName": matched_ident.fullName,
+                "confidencePercent": confidence_pct,
+                "alertNote": matched_ident.alertNote,
+                "message": f"แจ้งเตือนความปลอดภัย: ตรวจพบบุคคลเฝ้าระวัง ({matched_ident.fullName})",
+                "incident": _serialize_incident(inc),
+            }
+
+        if station_mode == "EVENT_CHECKIN" or itype == "EVENT_ATTENDEE":
+            ev_obj = (
+                await db.get(SentinelEvent, event_uuid or matched_ident.eventId)
+                if (event_uuid or matched_ident.eventId)
+                else None
+            )
+            welcome_msg = (
+                ev_obj.welcomeMessage
+                if ev_obj and ev_obj.welcomeMessage
+                else f"ยินดีต้อนรับคุณ {matched_ident.fullName}"
+            )
+            inc = SentinelIncidentLog(
+                companyId=company_id,
+                eventType="EVENT_CHECKIN",
+                severity="INFO",
+                identityId=matched_ident.identityId,
+                subjectName=matched_ident.fullName,
+                identityType=itype,
+                zoneId=zone.zoneId if zone else None,
+                zoneName=zone.name if zone else (ev_obj.name if ev_obj else "Event Gate"),
+                eventId=ev_obj.eventId if ev_obj else matched_ident.eventId,
+                confidencePercent=confidence_pct,
+                distance=round(float(best_distance), 6),
+                snapshotUrl=snapshot_url,
+                actionTaken=f"Checked in • Seat: {matched_ident.seatNumber or 'General'}",
+            )
+            db.add(inc)
+            await db.commit()
+            await db.refresh(inc)
+            return {
+                "matched": True,
+                "accessGranted": True,
+                "decision": "EVENT_WELCOME",
+                "stationMode": station_mode,
+                "identityType": itype,
+                "subjectName": matched_ident.fullName,
+                "seatNumber": matched_ident.seatNumber or "General Admission",
+                "welcomeMessage": welcome_msg,
+                "confidencePercent": confidence_pct,
+                "message": f"{welcome_msg} (ที่นั่ง: {matched_ident.seatNumber or 'General'})",
+                "incident": _serialize_incident(inc),
+            }
+
+        now_local = datetime.now(_bangkok_tz())
+        allowed = True
+        deny_reason = ""
+        if zone is not None:
+            if itype not in (zone.allowedIdentityTypes or ["EMPLOYEE", "VIP", "VISITOR"]):
+                allowed = False
+                deny_reason = f"ประเภทตัวตน {itype} ไม่ได้รับสิทธิ์เข้าโซน {zone.name}"
+            elif not _is_within_schedule(zone.scheduleStart, zone.scheduleEnd, now_local):
+                allowed = False
+                deny_reason = f"อยู่นอกช่วงเวลาที่อนุญาตของโซน ({zone.scheduleStart}-{zone.scheduleEnd})"
+            elif matched_ident.allowedZoneIds and str(zone.zoneId) not in [
+                str(z) for z in matched_ident.allowedZoneIds
+            ]:
+                allowed = False
+                deny_reason = f"บัตร Visitor นี้ไม่ได้รับอนุญาตสำหรับโซน {zone.name}"
+
+        relay_ok = False
+        if allowed:
+            relay_ok = await maybe_dispatch_zone_relay(
+                zone, subject_name=matched_ident.fullName, identity_type=itype
+            )
+
+        event_type = (
+            "VIP_ARRIVAL"
+            if (allowed and itype == "VIP")
+            else ("VISITOR_CHECKIN" if allowed else "ACCESS_DENIED")
+        )
+        inc = SentinelIncidentLog(
+            companyId=company_id,
+            eventType=event_type,
+            severity="INFO" if allowed else "WARNING",
+            identityId=matched_ident.identityId,
+            subjectName=matched_ident.fullName,
+            identityType=itype,
+            zoneId=zone.zoneId if zone else None,
+            zoneName=zone.name if zone else station_mode,
+            confidencePercent=confidence_pct,
+            distance=round(float(best_distance), 6),
+            snapshotUrl=snapshot_url,
+            actionTaken=(
+                f"Access Granted ({itype})"
+                + (" + Door Unlocked" if relay_ok else "")
+                if allowed
+                else deny_reason
+            ),
+        )
+        db.add(inc)
+        await db.commit()
+        await db.refresh(inc)
+        return {
+            "matched": True,
+            "accessGranted": allowed,
+            "decision": "ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
+            "stationMode": station_mode,
+            "identityType": itype,
+            "subjectName": matched_ident.fullName,
+            "confidencePercent": confidence_pct,
+            "message": (
+                f"อนุญาตให้ผ่าน: {matched_ident.fullName} ({itype})"
+                if allowed
+                else deny_reason
+            ),
+            "incident": _serialize_incident(inc),
+        }
+
+    _, matched_member_id, _ = emp_match
+    matched_member = await db.get(Member, matched_member_id)
+    emp_name = (
+        f"{matched_member.firstName or ''} {matched_member.lastName or ''}".strip()
+        or matched_member.username
+        if matched_member
+        else "Employee"
+    )
+
+    now_local = datetime.now(_bangkok_tz())
+    allowed = True
+    deny_reason = ""
+    if zone is not None:
+        if "EMPLOYEE" not in (zone.allowedIdentityTypes or ["EMPLOYEE"]):
+            allowed = False
+            deny_reason = f"โซน {zone.name} ไม่อนุญาตสำหรับพนักงานทั่วไป"
+        elif not _is_within_schedule(zone.scheduleStart, zone.scheduleEnd, now_local):
+            allowed = False
+            deny_reason = f"อยู่นอกช่วงเวลาเปิดทำการของโซน ({zone.scheduleStart}-{zone.scheduleEnd})"
+        elif zone.require2FA and not (totp_or_pin and str(totp_or_pin).strip()):
+            allowed = False
+            deny_reason = "โซนความมั่นคงสูง: กรุณาระบุรหัส 2FA / PIN ร่วมกับการสแกนใบหน้า"
+
+    relay_ok = False
+    if allowed:
+        relay_ok = await maybe_dispatch_zone_relay(
+            zone, subject_name=emp_name, identity_type="EMPLOYEE"
+        )
+
+    inc = SentinelIncidentLog(
+        companyId=company_id,
+        eventType="ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
+        severity="INFO" if allowed else "WARNING",
+        memberId=matched_member_id,
+        subjectName=emp_name,
+        identityType="EMPLOYEE",
+        zoneId=zone.zoneId if zone else None,
+        zoneName=zone.name if zone else station_mode,
+        confidencePercent=confidence_pct,
+        distance=round(float(best_distance), 6),
+        snapshotUrl=snapshot_url,
+        actionTaken=(
+            "Employee Verified & Access Granted"
+            + (" + Door Unlocked" if relay_ok else "")
+            if allowed
+            else deny_reason
+        ),
+    )
+    db.add(inc)
+    await db.commit()
+    await db.refresh(inc)
+    return {
+        "matched": True,
+        "accessGranted": allowed,
+        "decision": "ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
+        "stationMode": station_mode,
+        "identityType": "EMPLOYEE",
+        "subjectName": emp_name,
+        "confidencePercent": confidence_pct,
+        "doorRelayTriggered": relay_ok,
+        "message": (
+            f"ยืนยันตัวตนสำเร็จ: {emp_name} (พนักงาน)"
+            if allowed
+            else deny_reason
+        ),
+        "incident": _serialize_incident(inc),
+    }
+
+
 @router.post("/company/{companyId}/scan")
 async def unified_sentinel_scan(
     companyId: UUID,
@@ -901,28 +1294,10 @@ async def unified_sentinel_scan(
     Unified 1:N Biometric Scan:
     1. Extracts 512-d InsightFace embedding on GPU worker.
     2. Queries both `sentinel_identity` (BLACKLIST, POI, VIP, VISITOR, EVENT_ATTENDEE) and Employee `face_encoding`.
-    3. Evaluates priority:
-       - Priority 1: BLACKLIST / POI -> Silent Alarm + CRITICAL Incident + Outbox dispatch + Access Denied.
-       - Priority 2: Zone / Mode evaluation (ACCESS_CONTROL, EVENT_CHECKIN, WATCHLIST_MONITOR, ATTENDANCE).
+    3. Evaluates priority via ``evaluate_unified_scan_decision``.
     """
     await assert_request_company_access(request, db, companyId)
-
-    zone: Optional[SentinelAccessZone] = None
-    if zoneId and str(zoneId).strip():
-        try:
-            z = await db.get(SentinelAccessZone, UUID(str(zoneId).strip()))
-            if z and z.companyId == companyId and z.deletedAt is None:
-                zone = z
-                stationMode = z.stationMode or stationMode
-        except Exception:
-            pass
-
-    event_uuid: Optional[UUID] = None
-    if eventId and str(eventId).strip():
-        try:
-            event_uuid = UUID(str(eventId).strip())
-        except Exception:
-            event_uuid = None
+    module_cfg = await get_company_module_config(db, companyId)
 
     temp_dir = Path("temp_images")
     temp_dir.mkdir(exist_ok=True)
@@ -946,315 +1321,22 @@ async def unified_sentinel_scan(
                 detail="ไม่พบใบหน้าในภาพ กรุณาหันหน้าเข้าหากล้อง",
             )
 
-        threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
-
-        # Search both SentinelIdentity and Employee FaceEncoding
-        sentinel_match = await search_sentinel_identity_pgvector(
-            db, encoding, threshold, companyId=companyId
-        )
-        emp_match = await search_face_pgvector(
-            db, encoding, threshold, companyId=companyId
-        )
-
-        # Save snapshot for incident audit trail
         snap_name = f"incident_{uuid4()}.jpg"
         store_image_file("uploaded_images", snap_name, temp_path, move=True)
         snapshot_saved = True
         snapshot_url = f"/images/{snap_name}"
 
-        # Determine best match (or prioritize BLACKLIST if matched within threshold)
-        chosen_kind: Optional[str] = None
-        matched_ident: Optional[SentinelIdentity] = None
-        matched_member: Optional[Member] = None
-        best_distance: float = 1.0
-
-        if sentinel_match is not None:
-            ident_obj, s_dist = sentinel_match
-            if ident_obj.identityType in ("BLACKLIST", "POI"):
-                chosen_kind = "SENTINEL"
-                matched_ident = ident_obj
-                best_distance = s_dist
-            elif emp_match is not None:
-                _, _, e_dist = emp_match
-                if s_dist <= e_dist:
-                    chosen_kind = "SENTINEL"
-                    matched_ident = ident_obj
-                    best_distance = s_dist
-                else:
-                    chosen_kind = "EMPLOYEE"
-                    best_distance = e_dist
-            else:
-                chosen_kind = "SENTINEL"
-                matched_ident = ident_obj
-                best_distance = s_dist
-        elif emp_match is not None:
-            chosen_kind = "EMPLOYEE"
-            best_distance = emp_match[2]
-
-        if chosen_kind is None:
-            inc = SentinelIncidentLog(
-                companyId=companyId,
-                eventType="ACCESS_DENIED",
-                severity="WARNING",
-                subjectName="Unknown Person",
-                identityType="UNKNOWN",
-                zoneId=zone.zoneId if zone else None,
-                zoneName=zone.name if zone else stationMode,
-                snapshotUrl=snapshot_url,
-                actionTaken="Face not registered in company database",
-            )
-            db.add(inc)
-            await db.commit()
-            await db.refresh(inc)
-            return {
-                "matched": False,
-                "accessGranted": False,
-                "decision": "UNKNOWN_FACE",
-                "message": "ไม่พบข้อมูลใบหน้าในระบบ (ไม่อนุญาตให้ผ่าน)",
-                "incident": _serialize_incident(inc),
-            }
-
-        confidence_pct = round(max(0.0, min(1.0, 1.0 - float(best_distance))) * 100.0, 2)
-
-        # Case A: Matched SentinelIdentity (BLACKLIST / POI / VIP / VISITOR / EVENT_ATTENDEE)
-        if chosen_kind == "SENTINEL" and matched_ident is not None:
-            itype = matched_ident.identityType
-
-            # Priority 1: BLACKLIST or POI -> Immediate silent alarm & deny door
-            if itype in ("BLACKLIST", "POI"):
-                inc = SentinelIncidentLog(
-                    companyId=companyId,
-                    eventType="BLACKLIST_ALERT",
-                    severity="CRITICAL" if itype == "BLACKLIST" else "WARNING",
-                    identityId=matched_ident.identityId,
-                    subjectName=matched_ident.fullName,
-                    identityType=itype,
-                    zoneId=zone.zoneId if zone else None,
-                    zoneName=zone.name if zone else stationMode,
-                    confidencePercent=confidence_pct,
-                    distance=round(float(best_distance), 6),
-                    snapshotUrl=snapshot_url,
-                    actionTaken=f"Silent Security Alert Dispatched ({matched_ident.alertNote or 'Watchlist match'})",
-                )
-                db.add(inc)
-                db.add(
-                    NotificationOutbox(
-                        companyId=companyId,
-                        event="sentinel.blacklist_detected",
-                        channel="webhook",
-                        payload={
-                            "subjectName": matched_ident.fullName,
-                            "identityType": itype,
-                            "severity": matched_ident.severity,
-                            "alertNote": matched_ident.alertNote,
-                            "zoneName": zone.name if zone else stationMode,
-                            "confidencePercent": confidence_pct,
-                            "snapshotUrl": snapshot_url,
-                        },
-                    )
-                )
-                await db.commit()
-                await db.refresh(inc)
-                return {
-                    "matched": True,
-                    "accessGranted": False,
-                    "decision": "BLACKLIST_BLOCKED",
-                    "identityType": itype,
-                    "subjectName": matched_ident.fullName,
-                    "confidencePercent": confidence_pct,
-                    "alertNote": matched_ident.alertNote,
-                    "message": f"แจ้งเตือนความปลอดภัย: ตรวจพบบุคคลเฝ้าระวัง ({matched_ident.fullName})",
-                    "incident": _serialize_incident(inc),
-                }
-
-            # Event Check-in Mode
-            if stationMode == "EVENT_CHECKIN" or itype == "EVENT_ATTENDEE":
-                ev_obj = (
-                    await db.get(SentinelEvent, event_uuid or matched_ident.eventId)
-                    if (event_uuid or matched_ident.eventId)
-                    else None
-                )
-                welcome_msg = (
-                    ev_obj.welcomeMessage
-                    if ev_obj and ev_obj.welcomeMessage
-                    else f"ยินดีต้อนรับคุณ {matched_ident.fullName}"
-                )
-                inc = SentinelIncidentLog(
-                    companyId=companyId,
-                    eventType="EVENT_CHECKIN",
-                    severity="INFO",
-                    identityId=matched_ident.identityId,
-                    subjectName=matched_ident.fullName,
-                    identityType=itype,
-                    zoneId=zone.zoneId if zone else None,
-                    zoneName=zone.name if zone else (ev_obj.name if ev_obj else "Event Gate"),
-                    eventId=ev_obj.eventId if ev_obj else matched_ident.eventId,
-                    confidencePercent=confidence_pct,
-                    distance=round(float(best_distance), 6),
-                    snapshotUrl=snapshot_url,
-                    actionTaken=f"Checked in • Seat: {matched_ident.seatNumber or 'General'}",
-                )
-                db.add(inc)
-                await db.commit()
-                await db.refresh(inc)
-                return {
-                    "matched": True,
-                    "accessGranted": True,
-                    "decision": "EVENT_WELCOME",
-                    "identityType": itype,
-                    "subjectName": matched_ident.fullName,
-                    "seatNumber": matched_ident.seatNumber or "General Admission",
-                    "welcomeMessage": welcome_msg,
-                    "confidencePercent": confidence_pct,
-                    "message": f"{welcome_msg} (ที่นั่ง: {matched_ident.seatNumber or 'General'})",
-                    "incident": _serialize_incident(inc),
-                }
-
-            # VIP or VISITOR Access Evaluation
-            now_local = datetime.now(_bangkok_tz())
-            allowed = True
-            deny_reason = ""
-            if zone is not None:
-                if itype not in (zone.allowedIdentityTypes or ["EMPLOYEE", "VIP", "VISITOR"]):
-                    allowed = False
-                    deny_reason = f"ประเภทตัวตน {itype} ไม่ได้รับสิทธิ์เข้าโซน {zone.name}"
-                elif not _is_within_schedule(zone.scheduleStart, zone.scheduleEnd, now_local):
-                    allowed = False
-                    deny_reason = f"อยู่นอกช่วงเวลาที่อนุญาตของโซน ({zone.scheduleStart}-{zone.scheduleEnd})"
-                elif matched_ident.allowedZoneIds and str(zone.zoneId) not in [
-                    str(z) for z in matched_ident.allowedZoneIds
-                ]:
-                    allowed = False
-                    deny_reason = f"บัตร Visitor นี้ไม่ได้รับอนุญาตสำหรับโซน {zone.name}"
-
-            relay_ok = False
-            if allowed and zone and zone.relayWebhookUrl:
-                relay_ok = await _dispatch_relay_webhook_async(
-                    zone.relayWebhookUrl,
-                    zone.relaySecret,
-                    {
-                        "event": "door.access_granted",
-                        "subjectName": matched_ident.fullName,
-                        "identityType": itype,
-                        "zoneCode": zone.code,
-                    },
-                )
-
-            event_type = (
-                "VIP_ARRIVAL"
-                if (allowed and itype == "VIP")
-                else ("VISITOR_CHECKIN" if allowed else "ACCESS_DENIED")
-            )
-            inc = SentinelIncidentLog(
-                companyId=companyId,
-                eventType=event_type,
-                severity="INFO" if allowed else "WARNING",
-                identityId=matched_ident.identityId,
-                subjectName=matched_ident.fullName,
-                identityType=itype,
-                zoneId=zone.zoneId if zone else None,
-                zoneName=zone.name if zone else stationMode,
-                confidencePercent=confidence_pct,
-                distance=round(float(best_distance), 6),
-                snapshotUrl=snapshot_url,
-                actionTaken=(
-                    f"Access Granted ({itype})"
-                    + (" + Door Unlocked" if relay_ok else "")
-                    if allowed
-                    else deny_reason
-                ),
-            )
-            db.add(inc)
-            await db.commit()
-            await db.refresh(inc)
-            return {
-                "matched": True,
-                "accessGranted": allowed,
-                "decision": "ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
-                "identityType": itype,
-                "subjectName": matched_ident.fullName,
-                "confidencePercent": confidence_pct,
-                "message": (
-                    f"อนุญาตให้ผ่าน: {matched_ident.fullName} ({itype})"
-                    if allowed
-                    else deny_reason
-                ),
-                "incident": _serialize_incident(inc),
-            }
-
-        # Case B: Matched Company Employee (`Member`)
-        _, matched_member_id, _ = emp_match
-        matched_member = await db.get(Member, matched_member_id)
-        emp_name = (
-            f"{matched_member.firstName or ''} {matched_member.lastName or ''}".strip()
-            or matched_member.username
-            if matched_member
-            else "Employee"
+        return await evaluate_unified_scan_decision(
+            db,
+            companyId,
+            encoding,
+            station_mode=stationMode,
+            zone_id=zoneId,
+            event_id=eventId,
+            totp_or_pin=totpOrPin,
+            snapshot_url=snapshot_url,
+            scan_action_rules=module_cfg.get("scanActionRules"),
         )
-
-        now_local = datetime.now(_bangkok_tz())
-        allowed = True
-        deny_reason = ""
-        if zone is not None:
-            if "EMPLOYEE" not in (zone.allowedIdentityTypes or ["EMPLOYEE"]):
-                allowed = False
-                deny_reason = f"โซน {zone.name} ไม่อนุญาตสำหรับพนักงานทั่วไป"
-            elif not _is_within_schedule(zone.scheduleStart, zone.scheduleEnd, now_local):
-                allowed = False
-                deny_reason = f"อยู่นอกช่วงเวลาเปิดทำการของโซน ({zone.scheduleStart}-{zone.scheduleEnd})"
-            elif zone.require2FA and not (totpOrPin and str(totpOrPin).strip()):
-                allowed = False
-                deny_reason = "โซนความมั่นคงสูง: กรุณาระบุรหัส 2FA / PIN ร่วมกับการสแกนใบหน้า"
-
-        relay_ok = False
-        if allowed and zone and zone.relayWebhookUrl:
-            relay_ok = await _dispatch_relay_webhook_async(
-                zone.relayWebhookUrl,
-                zone.relaySecret,
-                {
-                    "event": "door.access_granted",
-                    "subjectName": emp_name,
-                    "identityType": "EMPLOYEE",
-                    "zoneCode": zone.code,
-                },
-            )
-
-        inc = SentinelIncidentLog(
-            companyId=companyId,
-            eventType="ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
-            severity="INFO" if allowed else "WARNING",
-            memberId=matched_member_id,
-            subjectName=emp_name,
-            identityType="EMPLOYEE",
-            zoneId=zone.zoneId if zone else None,
-            zoneName=zone.name if zone else stationMode,
-            confidencePercent=confidence_pct,
-            distance=round(float(best_distance), 6),
-            snapshotUrl=snapshot_url,
-            actionTaken=(
-                "Employee Verified & Access Granted"
-                + (" + Door Unlocked" if relay_ok else "")
-                if allowed
-                else deny_reason
-            ),
-        )
-        db.add(inc)
-        await db.commit()
-        await db.refresh(inc)
-        return {
-            "matched": True,
-            "accessGranted": allowed,
-            "decision": "ACCESS_GRANTED" if allowed else "ACCESS_DENIED",
-            "identityType": "EMPLOYEE",
-            "subjectName": emp_name,
-            "confidencePercent": confidence_pct,
-            "message": (
-                f"ยืนยันตัวตนสำเร็จ: {emp_name} (พนักงาน)"
-                if allowed
-                else deny_reason
-            ),
-            "incident": _serialize_incident(inc),
-        }
     finally:
         if not snapshot_saved and temp_path.exists():
             temp_path.unlink(missing_ok=True)

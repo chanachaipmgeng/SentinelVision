@@ -8,6 +8,7 @@ import logging
 from .config.database import engine, Base, async_session, ensure_db_schema
 from .config.settings import settings
 from .security.jwt import assert_secret_configured
+from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
 from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
@@ -26,6 +27,7 @@ from .models import (  # noqa: F401
     system_setting,
     hr_schedule,
     sentinel,
+    revoked_token,
 )
 from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
 from .utils.schema_migrate import ensure_profile_and_approval_columns
@@ -48,6 +50,7 @@ from .routes import (
 )
 
 assert_secret_configured()
+assert_oidc_configured()
 assert_face_core_configured()
 configure_logging()
 logger = logging.getLogger("dpu.api")
@@ -134,6 +137,9 @@ async def startup():
         )
     asyncio.create_task(_retention_loop())
     asyncio.create_task(_notify_loop())
+    from .services.token_revocation_service import revocation_purge_loop
+
+    asyncio.create_task(revocation_purge_loop())
 
 
 @app.get("/health")

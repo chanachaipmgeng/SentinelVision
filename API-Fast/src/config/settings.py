@@ -51,9 +51,29 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
-    KIOSK_TOKEN_EXPIRE_DAYS: int = 365
+    # Device-scoped kiosk token (short, refreshable) + kiosk refresh token lifetime.
+    KIOSK_TOKEN_EXPIRE_HOURS: int = 12
+    KIOSK_REFRESH_EXPIRE_DAYS: int = 30
+    # One-time pairing code shown to the admin; the kiosk exchanges it at /auth/kiosk/pair.
+    KIOSK_PAIRING_CODE_TTL_MINUTES: int = 10
+    KIOSK_PAIR_MAX_ATTEMPTS_PER_MINUTE: int = 10
+    # Deprecated: accept `?token=` in the query string. Leaks tokens into access logs; off by default.
+    AUTH_ALLOW_QUERY_TOKEN: bool = False
+    # Negative-cache TTL for the revocation lookup (seconds). Revocations propagate to other
+    # replicas within this window.
+    AUTH_REVOCATION_CACHE_SECONDS: int = 30
+    AUTH_REVOCATION_PURGE_SECONDS: int = 3600
+    # OIDC SSO relying party (Authorization Code + PKCE). Fail-fast when enabled but incomplete.
+    OIDC_ENABLED: bool = False
     OIDC_ISSUER: str = ""
     OIDC_CLIENT_ID: str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    OIDC_REDIRECT_URI: str = ""
+    OIDC_SCOPES: str = "openid profile email"
+    OIDC_HTTP_TIMEOUT_SECONDS: float = 10.0
+    OIDC_JWKS_CACHE_SECONDS: int = 3600
+    OIDC_LOGIN_TXN_TTL_SECONDS: int = 600
+    OIDC_CLOCK_SKEW_SECONDS: int = 60
     CORS_ORIGINS: str = (
         "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,"
         "http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,"
@@ -84,6 +104,15 @@ class Settings(BaseSettings):
     FACE_IDENTIFY_CACHE_SECONDS: float = 3.0
     # WS identify/check-in: detect at FACE_DETECT_DET_SIZE then embed (skip 640 det).
     FACE_FAST_EMBED_DETECT: bool = True
+
+    # Kiosk WebSocket hardening. A socket that has not completed a valid `session`
+    # within this many seconds is closed (1008). Any non-`session` message before
+    # auth also closes the socket, so unauthenticated clients never reach the GPU.
+    WS_KIOSK_AUTH_TIMEOUT_SECONDS: float = 5.0
+    # Per-process concurrent kiosk sockets per client IP / per company (0 = unlimited).
+    # nginx `limit_conn` on /face/ws/ is the gateway-level counterpart (see docker/nginx).
+    WS_KIOSK_MAX_CONN_PER_IP: int = 16
+    WS_KIOSK_MAX_CONN_PER_COMPANY: int = 64
 
     # Phase-5 Cloud Storage (Local / S3 / MinIO)
     STORAGE_BACKEND: str = "local"

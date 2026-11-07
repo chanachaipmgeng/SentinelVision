@@ -457,9 +457,11 @@ import { TokenService } from '../../../shared/services/token.service';
           <div class="box-body space-y-6" *ngIf="activeTab === 'security'">
             <div class="grid grid-cols-12 gap-4">
               <div class="col-span-12 lg:col-span-6 p-4 rounded-lg border border-defaultborder space-y-4">
-                <h6 class="font-semibold">ลงทะเบียนตู้ Kiosk ประจำจุดสแกน (Scoped Kiosk Token)</h6>
+                <h6 class="font-semibold">ลงทะเบียนตู้ Kiosk ประจำจุดสแกน (จับคู่ด้วยรหัสครั้งเดียว)</h6>
                 <p class="text-xs text-gray-500">
-                  ออก Token เฉพาะสำหรับแท็บเล็ตหน้าประตูที่จำกัดสิทธิ์เฉพาะการสแกนใบหน้าลงเวลา ไม่สามารถเข้าถึงเมนูจัดการพนักงานหรือตั้งค่าบริษัทได้
+                  สร้างอุปกรณ์แล้วนำรหัสจับคู่ 8 หลักไปกรอกบนแท็บเล็ตที่หน้า <span class="font-mono">/kiosk/pair</span>
+                  อุปกรณ์จะได้รับ Token เฉพาะเครื่องอายุสั้น (ต่ออายุอัตโนมัติ) ที่จำกัดสิทธิ์เฉพาะการสแกนใบหน้าลงเวลา
+                  ไม่สามารถเข้าถึงเมนูจัดการพนักงานหรือตั้งค่าบริษัทได้ และไม่มี Token ปรากฏใน URL
                 </p>
                 <div class="flex gap-2">
                   <input
@@ -468,14 +470,19 @@ import { TokenService } from '../../../shared/services/token.service';
                     placeholder="ชื่อจุดติดตั้ง เช่น ตู้ Kiosk อาคาร 1 ชั้น 1"
                   />
                   <button type="button" class="ti-btn ti-btn-primary-full whitespace-nowrap" (click)="createKioskDevice()">
-                    + ออก Kiosk Token
+                    + สร้างอุปกรณ์และรหัสจับคู่
                   </button>
                 </div>
 
-                <div *ngIf="issuedKiosk" class="p-3 rounded bg-success/10 border border-success/30 text-xs space-y-1">
-                  <div class="font-semibold text-success">สร้าง Kiosk Token สำเร็จ (คัดลอกลิงก์นี้ไปเปิดบนแท็บเล็ต):</div>
-                  <div class="font-mono break-all bg-white dark:bg-bodybg p-2 rounded border">
-                    {{ issuedKiosk.kioskUrl }}
+                <div *ngIf="issuedKiosk" class="p-3 rounded bg-success/10 border border-success/30 text-xs space-y-2">
+                  <div class="font-semibold text-success">
+                    รหัสจับคู่สำหรับ "{{ issuedKiosk.name }}" (แสดงครั้งเดียว ใช้ได้ {{ issuedKiosk.pairingCodeTtlMinutes || 10 }} นาที):
+                  </div>
+                  <div class="font-mono text-2xl tracking-[0.35em] text-center bg-white dark:bg-bodybg p-3 rounded border select-all">
+                    {{ issuedKiosk.pairingCode }}
+                  </div>
+                  <div class="text-gray-500">
+                    บนแท็บเล็ต: เปิด <span class="font-mono">{{ pairPageUrl }}</span> แล้วกรอกรหัสนี้ หากหมดอายุให้กด "ออกรหัสใหม่" ที่แถวอุปกรณ์
                   </div>
                 </div>
 
@@ -494,10 +501,25 @@ import { TokenService } from '../../../shared/services/token.service';
                         <td class="font-medium">{{ kd.name }}</td>
                         <td>{{ kd.lastSeenAt ? (kd.lastSeenAt | date: 'dd/MM/yyyy HH:mm') : 'ยังไม่เชื่อมต่อ' }}</td>
                         <td>
-                          <span *ngIf="kd.isActive" class="badge bg-success/10 text-success">ใช้งานได้</span>
                           <span *ngIf="!kd.isActive" class="badge bg-danger/10 text-danger">เพิกถอนแล้ว</span>
+                          <span *ngIf="kd.isActive && kd.isPaired" class="badge bg-success/10 text-success">จับคู่แล้ว</span>
+                          <span *ngIf="kd.isActive && !kd.isPaired && kd.pairingPending" class="badge bg-warning/10 text-warning">
+                            รอจับคู่ (หมดอายุ {{ kd.pairingExpiresAt | date: 'HH:mm' }})
+                          </span>
+                          <span *ngIf="kd.isActive && !kd.isPaired && !kd.pairingPending" class="badge bg-gray-200/60 text-gray-600">
+                            ยังไม่จับคู่ / รหัสหมดอายุ
+                          </span>
                         </td>
-                        <td class="text-end">
+                        <td class="text-end space-x-1">
+                          <button
+                            *ngIf="kd.isActive"
+                            type="button"
+                            class="ti-btn ti-btn-sm ti-btn-outline-primary"
+                            (click)="reissueKioskPairingCode(kd.deviceId)"
+                            title="ยกเลิก Token เดิมของอุปกรณ์นี้และออกรหัสจับคู่ใหม่"
+                          >
+                            ออกรหัสใหม่
+                          </button>
                           <button
                             *ngIf="kd.isActive"
                             type="button"
@@ -723,6 +745,7 @@ export class HrScheduleComponent implements OnInit {
   kioskDevices: any[] = [];
   newKioskName = '';
   issuedKiosk: any = null;
+  readonly pairPageUrl = `${window.location.origin}/kiosk/pair`;
   mfaStatus: any = null;
   mfaSetupData: any = null;
   mfaVerifyCode = '';
@@ -996,12 +1019,25 @@ export class HrScheduleComponent implements OnInit {
         this.issuedKiosk = res;
         this.newKioskName = '';
         this.loadKioskDevices();
-        this.flash('ออก Kiosk Token สำเร็จ');
+        this.flash('สร้างอุปกรณ์และรหัสจับคู่สำเร็จ');
+      });
+  }
+
+  reissueKioskPairingCode(deviceId: string): void {
+    this.http
+      .post(`/hr/company/${this.companyId}/kiosk-devices/${deviceId}/pairing-code`, {})
+      .subscribe((res) => {
+        this.issuedKiosk = res;
+        this.loadKioskDevices();
+        this.flash('ออกรหัสจับคู่ใหม่แล้ว Token เดิมของอุปกรณ์ถูกยกเลิก');
       });
   }
 
   revokeKioskDevice(deviceId: string): void {
     this.http.delete(`/hr/company/${this.companyId}/kiosk-devices/${deviceId}`).subscribe(() => {
+      if (this.issuedKiosk?.deviceId === deviceId) {
+        this.issuedKiosk = null;
+      }
       this.loadKioskDevices();
       this.flash('เพิกถอนสิทธิ์อุปกรณ์ Kiosk แล้ว');
     });

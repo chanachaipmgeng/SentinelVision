@@ -11,7 +11,7 @@ from typing import List, Optional
 
 from ..models.member import Member, StatusType as MemberStatus
 from ..models.face_encoding import FaceEncoding
-from ..models.company_employee import CompanyEmployee
+from ..models.company_employee import CompanyEmployee, CompanyRoleType
 from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
 from ..utils.face_engine import (
     generate_face_encoding,
@@ -28,6 +28,19 @@ from ..controllers.employee_timestamp_controller import create_timestamp
 from ..clients.face_core_client import face_core_enabled, get_face_core_client, bff_enrolled_image_url
 
 UPLOAD_DIR = Path("./uploaded_images")
+
+# Shown on the public kiosk screen when a watchlist (BLACKLIST/POI) hit denies access.
+# Must stay generic: the full alert (identity, list type, snapshot) goes to
+# sentinel_incident_log + notification_outbox in evaluate_kiosk_sentinel_match.
+KIOSK_ACCESS_DENIED_MESSAGE = "ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่"
+
+
+def kiosk_access_denied() -> HTTPException:
+    """Generic 403 for kiosk-facing responses; carries no identity or list-type fields."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=KIOSK_ACCESS_DENIED_MESSAGE,
+    )
 
 
 def _company_code(company_id: UUID) -> str:
@@ -131,11 +144,65 @@ async def _enrich_face_core_match(
     }
 
 
-async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
+async def resolve_enroll_company_id(
+    db: AsyncSession,
+    member_id: UUID,
+    requested_company_id: Optional[UUID],
+    actor: Optional[Member],
+) -> UUID:
+    """Pick the tenant that owns a new FaceEncoding row.
+
+    - explicit ``companyId`` wins, but the member must be an active employee there;
+    - otherwise, if the member has exactly one active company, use it;
+    - otherwise prefer a company where the acting member is ADMIN_COMPANY (an admin
+      enrolling "their" employee), falling back to the oldest employment.
+    """
+    company_ids = await _member_company_ids(db, member_id)
+    if not company_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Member is not linked to any company; cannot enroll face.",
+        )
+    if requested_company_id is not None:
+        if requested_company_id not in company_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Member is not an active employee of this company",
+            )
+        return requested_company_id
+    if len(company_ids) == 1:
+        return company_ids[0]
+    if actor is not None:
+        admin_rows = await db.execute(
+            select(CompanyEmployee.companyId)
+            .where(
+                CompanyEmployee.memberId == actor.memberId,
+                CompanyEmployee.companyId.in_(company_ids),
+                CompanyEmployee.companyRoleType == CompanyRoleType.ADMIN_COMPANY,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+            .order_by(CompanyEmployee.createdAt)
+        )
+        for (cid,) in admin_rows.all():
+            return cid
+    return company_ids[0]
+
+
+async def add_face(
+    memberId: UUID,
+    image_file: UploadFile,
+    db: AsyncSession,
+    company_id: Optional[UUID] = None,
+    actor: Optional[Member] = None,
+):
     """Create InsightFace embedding, store in pgvector, save enrolled image."""
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    owner_company_id: Optional[UUID] = None
+    if not face_core_enabled():
+        owner_company_id = await resolve_enroll_company_id(db, memberId, company_id, actor)
 
     if getattr(member, "biometricConsentAt", None) is None:
         member.biometricConsentAt = datetime.now(timezone.utc)
@@ -183,6 +250,7 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
 
         new_face_encoding = FaceEncoding(
             memberId=member.memberId,
+            companyId=owner_company_id,
             embedding=encoding,
         )
         db.add(new_face_encoding)
@@ -338,13 +406,13 @@ async def _resolve_match_response(
         except Exception:
             sentinel_meta = None
 
+    # Watchlist denial wins over an employee match: the incident + outbox alert were
+    # already written by evaluate_kiosk_sentinel_match; the kiosk only sees a generic refusal.
+    if sentinel_meta is not None and not sentinel_meta.get("accessGranted", True):
+        raise kiosk_access_denied()
+
     if not match:
         if sentinel_meta is not None:
-            if not sentinel_meta.get("accessGranted", True):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Security Watchlist Alert: {sentinel_meta.get('fullName')} ({sentinel_meta.get('identityType')})",
-                )
             return {
                 "memberId": sentinel_meta["identityId"],
                 "faceEncodingId": sentinel_meta["identityId"],
@@ -983,6 +1051,7 @@ async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
         {
             "faceEncodingId": str(enc.faceEncodingId),
             "memberId": str(enc.memberId),
+            "companyId": str(enc.companyId) if enc.companyId else None,
             "createdAt": enc.createdAt,
             "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg",
         }

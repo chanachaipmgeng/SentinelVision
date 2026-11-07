@@ -103,6 +103,18 @@
             เข้าสู่ระบบ
           </button>
         </div>
+        @if (ssoEnabled) {
+          <div class="col-span-12">
+            <button
+              type="button"
+              class="ti-btn ti-btn-light modern-btn w-full !py-3"
+              [disabled]="ssoBusy"
+              (click)="loginWithSso()">
+              <i class="ri-shield-keyhole-line align-middle me-1"></i>
+              เข้าสู่ระบบด้วย SSO องค์กร
+            </button>
+          </div>
+        }
       </div>
     </form>
   </div>

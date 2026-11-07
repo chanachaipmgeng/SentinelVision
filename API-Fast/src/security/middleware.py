@@ -12,7 +12,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from ..config.database import async_session
+from ..config.settings import settings
 from ..models.member import Member, RoleType
+from ..services.token_revocation_service import is_token_revoked
 from .deps import (
     assert_company_access,
     current_kiosk_company_var,
@@ -42,6 +44,9 @@ _OPEN_PREFIXES = (
     "/auth/login",
     "/auth/refresh",
     "/auth/refresh-token",
+    "/auth/logout",
+    "/auth/kiosk/pair",
+    "/auth/kiosk/refresh",
     "/auth/sso/oidc",
     "/health",
     "/ready",
@@ -62,6 +67,14 @@ _KIOSK_ALLOWED_PREFIXES = (
     "/system/tts-settings",
 )
 _MEMBER_SELF = re.compile(rf"/employees/member/({_UUID})/")
+# Routes keyed by a tenant-owned resource id (no companyId in the path). The owning
+# company is resolved from the row so the caller can be bound to it like /…/company/{id}.
+_RESOURCE_RES = (
+    (re.compile(rf"^/departments/({_UUID})$"), "department"),
+    (re.compile(rf"^/positions/({_UUID})$"), "position"),
+)
+# Collection listings that span every tenant — system admin only.
+_SYSTEM_ADMIN_LISTINGS = frozenset({"/departments", "/positions"})
 
 
 def _company_id(path: str) -> Optional[str]:
@@ -69,6 +82,27 @@ def _company_id(path: str) -> Optional[str]:
         m = rx.search(path)
         if m:
             return m.group(1)
+    return None
+
+
+async def _resource_company_id(db, path: str) -> Optional[UUID]:
+    """Resolve the owning companyId for /departments/{id} and /positions/{id}."""
+    for rx, kind in _RESOURCE_RES:
+        m = rx.match(path)
+        if not m:
+            continue
+        rid = UUID(m.group(1))
+        if kind == "department":
+            from ..models.department import Department
+
+            row = await db.get(Department, rid)
+        else:
+            from ..models.position import Position
+
+            row = await db.get(Position, rid)
+        if row is None:
+            return None
+        return row.companyId
     return None
 
 
@@ -125,6 +159,9 @@ class AuthzMiddleware(BaseHTTPMiddleware):
             detail = getattr(exc, "detail", "Invalid token")
             return JSONResponse({"detail": detail}, status_code=code)
 
+        if await is_token_revoked(raw_payload):
+            return JSONResponse({"detail": "Token has been revoked"}, status_code=401)
+
         if raw_payload.get("typ") == "kiosk":
             if not _is_kiosk_path_allowed(request.method, path):
                 return JSONResponse(
@@ -179,7 +216,13 @@ def _token_from(request: Request) -> str:
     header = request.headers.get("authorization") or ""
     if header.lower().startswith("bearer "):
         return header.split(" ", 1)[1].strip()
-    return (request.query_params.get("token") or "").strip()
+    # `?token=` leaks credentials into proxy/browser logs. Only honoured behind the
+    # deprecation flag AUTH_ALLOW_QUERY_TOKEN (default off); will be removed.
+    query_token = (request.query_params.get("token") or "").strip()
+    if query_token and settings.AUTH_ALLOW_QUERY_TOKEN:
+        logger.warning("deprecated ?token= used path=%s ip=%s", request.url.path, _client_ip(request))
+        return query_token
+    return ""
 
 
 async def _authorize(request: Request, db, member: Member, path: str):
@@ -200,6 +243,9 @@ async def _authorize(request: Request, db, member: Member, path: str):
     if path == "/companys" and request.method == "GET" and not _is_system_admin(member):
         return JSONResponse({"detail": "System admin required"}, status_code=403)
 
+    if path in _SYSTEM_ADMIN_LISTINGS and request.method == "GET" and not _is_system_admin(member):
+        return JSONResponse({"detail": "System admin required"}, status_code=403)
+
     self_m = _MEMBER_SELF.search(path)
     if self_m and not _is_system_admin(member):
         if str(member.memberId) != self_m.group(1):
@@ -207,6 +253,13 @@ async def _authorize(request: Request, db, member: Member, path: str):
         return None
 
     cid = _company_id(path)
+    if not cid:
+        # /departments/{id}, /positions/{id}: bind through the row's companyId.
+        # Unknown ids fall through so the handler returns its usual 404.
+        resolved = await _resource_company_id(db, path)
+        if resolved is not None:
+            cid = str(resolved)
+            request.state.company_id = resolved
     if cid:
         try:
             await assert_company_access(db, member, UUID(cid))
@@ -229,7 +282,7 @@ async def _audit(request: Request, member: Member, path: str, status_code: int) 
             ip=_client_ip(request),
             user_agent=request.headers.get("user-agent"),
             request_id=getattr(request.state, "request_id", None),
-            company_id=_company_id(path),
+            company_id=_company_id(path) or getattr(request.state, "company_id", None),
         )
     except Exception:
         logger.exception("audit write failed")

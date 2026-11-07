@@ -12,6 +12,7 @@
 - [x] Enforce account lockout (`assert_not_locked`) and active status check on both `/auth/login` and `/auth/refresh`
 - [x] Offload synchronous `generate_face_encoding` and `verify_liveness_and_get_encoding` to `run_on_face_gpu` so the FastAPI `asyncio` event loop never blocks
 - [x] Per-connection WebSocket task semaphore (`asyncio.Semaphore(4)`) and continuous JWT expiration enforcement in `/face/ws/kiosk`
+- [x] `/face/ws/kiosk` auth gating: reject every message before an authenticated `session` (close 1008), 5 s auth deadline, per-IP / per-company connection caps (`WS_KIOSK_*`), nginx `limit_conn` on `/face/ws/` (A3)
 - [x] Non-blocking Audit Log writes (`asyncio.create_task`) + real client IP extraction from `X-Forwarded-For` / `X-Real-IP`
 - [x] Multi-replica safe Notification Outbox (`SELECT ... FOR UPDATE SKIP LOCKED`), non-blocking SMTP/LINE/Webhook dispatch (`asyncio.to_thread`), and persistent daily cutoff markers (`cutoff_sent:{companyId}`)
 - [x] Standardized `Asia/Bangkok` business day boundaries across Kiosk, Dashboard, and Cutoff ticks
@@ -30,9 +31,9 @@
 
 ## Completed — Phase 4: Enterprise Identity (SSO / MFA), Kiosk Device Tokens & Passive Anti-Spoofing
 - [x] **TOTP Two-Factor Authentication (RFC 6238) & OIDC SSO:** Standard-library RFC 6238 TOTP (`src/security/totp.py`), `/auth/mfa/{status,setup,enable,disable}`, `/auth/sso/oidc`, and 6-digit `totpCode` verification on `/auth/login` (`MFA_REQUIRED` challenge in `LoginComponent`)
-- [x] **Dedicated Kiosk Device Provisioning & Scoped Tokens (`KioskDevice`):** Revocable, company-bound `typ="kiosk"` JWTs (`kiosk_device` table with `token_hash`, `last_seen_at`, `revoked_at`), strict route & WebSocket scope isolation (`AuthzMiddleware` + `/face/ws/kiosk`), and automatic `?kioskToken=` hydration in `AuthGuard`
+- [x] **Dedicated Kiosk Device Provisioning & Scoped Tokens (`KioskDevice`):** Revocable, company-bound `typ="kiosk"` JWTs (`kiosk_device` table with `token_hash`, `last_seen_at`, `revoked_at`), strict route & WebSocket scope isolation (`AuthzMiddleware` + `/face/ws/kiosk`), and one-time pairing codes (`/kiosk/pair` → `/auth/kiosk/pair`, replaced the former `?kioskToken=` URL flow in A5)
 - [x] **Single-Frame Passive Anti-Spoofing (`check_passive_antispoof_bgr`):** YCrCb skin chrominance variance + specular screen glare/reflection checks integrated into both walk-by (`get_walkby_encoding_frames`) and multi-frame (`verify_liveness_and_get_encoding`) face recognition paths
-- [x] **Admin UI Tab 5 (`อุปกรณ์ Kiosk & 2FA`):** Provision/revoke Kiosk devices with one-click Kiosk URL copy + setup/enable/disable TOTP 2FA in `HrScheduleComponent`
+- [x] **Admin UI Tab 5 (`อุปกรณ์ Kiosk & 2FA`):** Provision/revoke/re-pair Kiosk devices with a one-time pairing code + setup/enable/disable TOTP 2FA in `HrScheduleComponent`
 
 ## Completed — Phase 5: Cloud-Native Observability, Object Storage (S3/MinIO) & Signed Payroll Webhooks
 - [x] **S3 / MinIO Object Storage (`src/services/storage_service.py`):** AWS Signature V4 (`AWS4-HMAC-SHA256`) object storage client and presigned URL generator (`generate_presigned_url`, `store_image_bytes`, `store_image_file`, `read_image_bytes`, `delete_stored_image`) integrated across enrollment, check-in photos, file uploads, and PDPA erasure

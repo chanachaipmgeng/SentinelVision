@@ -1,4 +1,9 @@
-"""WebSocket kiosk stream: identify + walk-by check-in via GPU queue (supports Member JWT and Kiosk Device Token)."""
+"""WebSocket kiosk stream: identify + walk-by check-in via GPU queue (supports Member JWT and Kiosk Device Token).
+
+Auth contract: the first message must be a valid ``session`` (within
+``WS_KIOSK_AUTH_TIMEOUT_SECONDS``). Anything else before that closes the socket
+with 1008 so unauthenticated clients can never reach the GPU queue.
+"""
 
 from __future__ import annotations
 
@@ -547,10 +552,130 @@ async def _run_bounded(sem: asyncio.Semaphore, coro) -> None:
         await coro
 
 
+# RFC 6455 close code for "policy violation" — used for every auth/limit rejection.
+WS_CLOSE_POLICY_VIOLATION = 1008
+
+# Per-process connection registry (keyed by client IP / companyId). Each API replica
+# counts only its own sockets; nginx `limit_conn` on /face/ws/ is the gateway-wide cap.
+_conn_by_ip: Dict[str, int] = {}
+_conn_by_company: Dict[str, int] = {}
+
+
+def _acquire_slot(table: Dict[str, int], key: str, limit: int) -> bool:
+    current = table.get(key, 0)
+    if limit > 0 and current >= limit:
+        return False
+    table[key] = current + 1
+    return True
+
+
+def _release_slot(table: Dict[str, int], key: str) -> None:
+    remaining = table.get(key, 0) - 1
+    if remaining <= 0:
+        table.pop(key, None)
+    else:
+        table[key] = remaining
+
+
+def kiosk_ws_connection_counts() -> Dict[str, Dict[str, int]]:
+    """Snapshot of live kiosk sockets per IP and per company (this process only)."""
+    return {"byIp": dict(_conn_by_ip), "byCompany": dict(_conn_by_company)}
+
+
+def _client_ip(websocket: WebSocket) -> str:
+    # nginx sets X-Real-IP from $remote_addr (after realip recovery behind a TLS edge).
+    # X-Forwarded-For is only consulted as a fallback; both are trusted only because
+    # the API port is not published outside the compose network.
+    real_ip = (websocket.headers.get("x-real-ip") or "").strip()
+    if real_ip:
+        return real_ip
+    forwarded = (websocket.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    client = websocket.client
+    return client.host if client and client.host else "unknown"
+
+
+async def _reject(
+    websocket: WebSocket,
+    *,
+    code: str,
+    detail: str,
+    send_lock: Optional[asyncio.Lock] = None,
+) -> None:
+    """Send a final error frame, then close with 1008 so the client knows not to retry blindly."""
+    try:
+        await _send(
+            websocket, {"type": "error", "code": code, "detail": detail}, lock=send_lock
+        )
+    except Exception:
+        pass
+    try:
+        await websocket.close(code=WS_CLOSE_POLICY_VIOLATION, reason=code)
+    except Exception:
+        pass
+
+
+async def _authenticate_session(data: dict) -> Tuple[UUID, int]:
+    """Resolve (companyId, token_exp) from a `session` payload; raises on any failure."""
+    from ..config.settings import settings as _settings
+
+    raw_cid = data.get("companyId")
+    if not _settings.FACE_ROUTES_REQUIRE_JWT:
+        return UUID(str(raw_cid)), 0
+
+    from ..config.database import async_session as _async_session
+    from ..security.deps import (
+        assert_company_access,
+        member_from_token,
+        verify_kiosk_token_db,
+    )
+    from ..security.jwt import decode_token
+    from ..services.token_revocation_service import is_token_revoked
+
+    token = str(data.get("token") or "")
+    decoded = decode_token(token, expected_typ=None)
+    if await is_token_revoked(decoded):
+        raise HTTPException(status_code=401, detail="Token has been revoked")
+    token_exp = int(decoded.get("exp") or 0)
+    if token_exp and time.time() > token_exp:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    async with _async_session() as db:
+        if decoded.get("typ") == "kiosk":
+            device = await verify_kiosk_token_db(token, db)
+            if raw_cid and UUID(str(raw_cid)) != device.companyId:
+                raise HTTPException(status_code=403, detail="Kiosk token companyId mismatch")
+            return device.companyId, token_exp
+        company_id = UUID(str(raw_cid))
+        member = await member_from_token(token, db)
+        await assert_company_access(db, member, company_id)
+        return company_id, token_exp
+
+
 async def kiosk_websocket(websocket: WebSocket) -> None:
+    from ..config.settings import settings as _settings
+
+    client_ip = _client_ip(websocket)
+    max_per_ip = int(_settings.WS_KIOSK_MAX_CONN_PER_IP)
+    max_per_company = int(_settings.WS_KIOSK_MAX_CONN_PER_COMPANY)
+    auth_timeout = float(_settings.WS_KIOSK_AUTH_TIMEOUT_SECONDS)
+
+    if not _acquire_slot(_conn_by_ip, client_ip, max_per_ip):
+        await websocket.accept()
+        logger.warning("Kiosk websocket rejected: per-IP limit (%s) reached for %s", max_per_ip, client_ip)
+        await _reject(
+            websocket,
+            code="too_many_connections",
+            detail=f"Too many kiosk connections from this address (limit {max_per_ip})",
+        )
+        return
+
     await websocket.accept()
     inc_gauge("dpu_ws_active_kiosks", 1.0)
     company_id: Optional[UUID] = None
+    company_key: Optional[str] = None
+    authenticated = False
+    auth_deadline = time.monotonic() + auth_timeout
     latitude = 0.0
     longitude = 0.0
     send_lock = asyncio.Lock()
@@ -560,86 +685,115 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     last_detect_at: Dict[str, float] = {"t": 0.0}
     identify_cache = _IdentifyCache()
 
-    await _send(
-        websocket,
-        {
-            "type": "ready",
-            "message": "Send session then identify/checkin frames",
-            "faceCoreEnabled": face_core_enabled(),
-            "queue": await _face_core_queue_stats(),
-        },
-        lock=send_lock,
-    )
-
     try:
+        await _send(
+            websocket,
+            {
+                "type": "ready",
+                "message": "Send session then identify/checkin frames",
+                "faceCoreEnabled": face_core_enabled(),
+                "authTimeoutSeconds": auth_timeout,
+                "queue": await _face_core_queue_stats(),
+            },
+            lock=send_lock,
+        )
+
         while True:
             if token_exp and not token_warned and token_exp - time.time() < 300:
                 token_warned = True
                 await _send(websocket, {"type": "token_expiring"}, lock=send_lock)
-            message = await websocket.receive_text()
+
+            if authenticated:
+                message = await websocket.receive_text()
+            else:
+                remaining = auth_deadline - time.monotonic()
+                if remaining <= 0:
+                    await _reject(
+                        websocket,
+                        code="auth_timeout",
+                        detail=f"No valid session within {auth_timeout:g}s",
+                        send_lock=send_lock,
+                    )
+                    return
+                try:
+                    message = await asyncio.wait_for(
+                        websocket.receive_text(), timeout=remaining
+                    )
+                except asyncio.TimeoutError:
+                    await _reject(
+                        websocket,
+                        code="auth_timeout",
+                        detail=f"No valid session within {auth_timeout:g}s",
+                        send_lock=send_lock,
+                    )
+                    return
+
             try:
                 data = json.loads(message)
+                if not isinstance(data, dict):
+                    raise json.JSONDecodeError("expected object", message, 0)
             except json.JSONDecodeError:
-                await _send(websocket, {"type": "error", "detail": "Invalid JSON"})
+                if not authenticated:
+                    await _reject(
+                        websocket,
+                        code="unauthenticated",
+                        detail="Send a valid session message first",
+                        send_lock=send_lock,
+                    )
+                    return
+                await _send(websocket, {"type": "error", "detail": "Invalid JSON"}, lock=send_lock)
                 continue
 
             msg_type = data.get("type")
 
-            if msg_type == "ping":
-                await _send(
-                    websocket,
-                    {
-                        "type": "pong",
-                        "queue": await _face_core_queue_stats(company_id),
-                    },
-                )
-                continue
-
             if msg_type == "session":
                 try:
-                    raw_cid = data.get("companyId")
                     latitude = float(data.get("latitude", 0) or 0)
                     longitude = float(data.get("longitude", 0) or 0)
-                    from ..config.settings import settings as _settings
-
-                    if _settings.FACE_ROUTES_REQUIRE_JWT:
-                        from ..config.database import async_session
-                        from ..security.deps import (
-                            assert_company_access,
-                            member_from_token,
-                            verify_kiosk_token_db,
-                        )
-                        from ..security.jwt import decode_token
-
-                        token = str(data.get("token") or "")
-                        decoded = decode_token(token, expected_typ=None)
-                        token_exp = int(decoded.get("exp") or 0)
-                        token_warned = False
-                        async with async_session() as db:
-                            if decoded.get("typ") == "kiosk":
-                                device = await verify_kiosk_token_db(token, db)
-                                if raw_cid and UUID(str(raw_cid)) != device.companyId:
-                                    raise HTTPException(
-                                        status_code=403,
-                                        detail="Kiosk token companyId mismatch",
-                                    )
-                                company_id = device.companyId
-                            else:
-                                company_id = UUID(str(raw_cid))
-                                member = await member_from_token(token, db)
-                                await assert_company_access(db, member, company_id)
-                    else:
-                        company_id = UUID(str(raw_cid))
+                    new_company_id, new_token_exp = await _authenticate_session(data)
                 except Exception as exc:
+                    detail = getattr(exc, "detail", None) or "Invalid session payload"
+                    if not authenticated:
+                        await _reject(
+                            websocket,
+                            code="invalid_session",
+                            detail=str(detail),
+                            send_lock=send_lock,
+                        )
+                        return
                     await _send(
                         websocket,
-                        {
-                            "type": "error",
-                            "detail": getattr(exc, "detail", None)
-                            or "Invalid session payload",
-                        },
+                        {"type": "error", "code": "invalid_session", "detail": str(detail)},
+                        lock=send_lock,
                     )
                     continue
+
+                new_key = str(new_company_id)
+                if new_key != company_key:
+                    if not _acquire_slot(_conn_by_company, new_key, max_per_company):
+                        logger.warning(
+                            "Kiosk websocket rejected: per-company limit (%s) reached for %s",
+                            max_per_company,
+                            new_key,
+                        )
+                        await _reject(
+                            websocket,
+                            code="too_many_connections",
+                            detail=(
+                                "Too many kiosk connections for this company "
+                                f"(limit {max_per_company})"
+                            ),
+                            send_lock=send_lock,
+                        )
+                        return
+                    if company_key is not None:
+                        _release_slot(_conn_by_company, company_key)
+                    company_key = new_key
+
+                company_id = new_company_id
+                token_exp = new_token_exp
+                token_warned = False
+                authenticated = True
                 await _send(
                     websocket,
                     {
@@ -648,6 +802,27 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         "companyCode": str(company_id),
                         "queue": await _face_core_queue_stats(company_id),
                     },
+                    lock=send_lock,
+                )
+                continue
+
+            if not authenticated:
+                await _reject(
+                    websocket,
+                    code="unauthenticated",
+                    detail=f"Message '{msg_type}' rejected: send session first",
+                    send_lock=send_lock,
+                )
+                return
+
+            if msg_type == "ping":
+                await _send(
+                    websocket,
+                    {
+                        "type": "pong",
+                        "queue": await _face_core_queue_stats(company_id),
+                    },
+                    lock=send_lock,
                 )
                 continue
 
@@ -694,19 +869,6 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 continue
 
             if msg_type == "identify":
-                if company_id is None:
-                    await _send(
-                        websocket,
-                        {
-                            "type": "error",
-                            "intent": "identify",
-                            "trackId": data.get("trackId"),
-                            "requestId": data.get("requestId"),
-                            "detail": "Session not started",
-                        },
-                        lock=send_lock,
-                    )
-                    continue
                 asyncio.create_task(
                     _run_bounded(
                         task_sem,
@@ -724,19 +886,6 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 continue
 
             if msg_type == "checkin":
-                if company_id is None:
-                    await _send(
-                        websocket,
-                        {
-                            "type": "error",
-                            "intent": "checkin",
-                            "trackId": data.get("trackId"),
-                            "requestId": data.get("requestId"),
-                            "detail": "Session not started",
-                        },
-                        lock=send_lock,
-                    )
-                    continue
                 images = data.get("images") or []
                 if not images and data.get("image"):
                     images = [data.get("image")]
@@ -783,6 +932,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
             await _send(
                 websocket,
                 {"type": "error", "detail": f"Unknown message type: {msg_type}"},
+                lock=send_lock,
             )
 
     except WebSocketDisconnect:
@@ -790,8 +940,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     except Exception as exc:
         logger.exception("Kiosk websocket error: %s", exc)
         try:
-            await _send(websocket, {"type": "error", "detail": str(exc)})
+            await _send(websocket, {"type": "error", "detail": str(exc)}, lock=send_lock)
         except Exception:
             pass
     finally:
         inc_gauge("dpu_ws_active_kiosks", -1.0)
+        _release_slot(_conn_by_ip, client_ip)
+        if company_key is not None:
+            _release_slot(_conn_by_company, company_key)

@@ -8,16 +8,28 @@ Interactive docs are off unless `EXPOSE_API_DOCS=true`. Liveness: `GET /health`.
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| POST | `/auth/login` | — | Access + refresh token. Enforces `assert_not_locked` and active account status (`ENABLE`). When `totpEnabled=True`, requires 6-digit `totpCode` (returns `HTTP 401` with `detail="MFA_REQUIRED"` if omitted). |
-| POST | `/auth/refresh` and `/auth/refresh-token` | refresh token | Verifies account is not locked or disabled before issuing new tokens. |
+| POST | `/auth/login` | — | Access + refresh token. Enforces `assert_not_locked` and active account status (`ENABLE`). When `totpEnabled=True`, requires 6-digit `totpCode` (returns `HTTP 401` with `detail="MFA_REQUIRED"` if omitted). Both tokens carry `jti`, `typ` (`access` / `refresh`) and a shared session family `fam`. |
+| POST | `/auth/refresh` and `/auth/refresh-token` | refresh token | **Rotates**: the presented refresh token is revoked and a new access + refresh pair (same `fam`) is returned. Presenting an already-rotated refresh token is treated as theft — the whole family is revoked (`401 Refresh token reuse detected`). Verifies account is not locked or disabled. |
+| POST | `/auth/logout` | JWT (may be expired) + optional `refreshToken` | Revokes the access token in the header, the refresh token in the body, and their session family. Idempotent. Returns `{"ok": true, "revokedTokens": n, "familyRevoked": bool}`. |
+| POST | `/auth/kiosk/pair` | — | Body `{"pairingCode": "ABCD-EFGH"}`. Exchanges a one-time pairing code (issued by `POST /hr/company/{companyId}/kiosk-devices`) for a device-scoped session: `deviceToken` (`typ="kiosk"`, TTL `KIOSK_TOKEN_EXPIRE_HOURS`), `deviceRefreshToken` (`typ="kiosk_refresh"`, TTL `KIOSK_REFRESH_EXPIRE_DAYS`), `deviceId`, `companyId`, `deviceName`. Single use; `401` when the code is wrong, used, or expired; `429` after `KIOSK_PAIR_MAX_ATTEMPTS_PER_MINUTE` attempts per IP. |
+| POST | `/auth/kiosk/refresh` | kiosk refresh token | Rotates the device token pair (old refresh revoked; reuse revokes the device family so it must be re-paired). The previous `deviceToken` stops matching `kiosk_device.token_hash` immediately. |
 | POST | `/auth/change-password` | JWT | Required when `mustChangePassword` is set. |
 | GET | `/auth/mfa/status` | JWT | Returns `{"totpEnabled": bool}` for the current user. |
 | POST | `/auth/mfa/setup` | JWT | Generates RFC 6238 Base32 secret (`secret`) and `otpauth://` URI (`otpauthUri`) for Authenticator apps. |
 | POST | `/auth/mfa/enable` | JWT | Verifies 6-digit `totpCode` (`{"code": "123456"}`) and activates 2FA (`totpEnabled=True`). |
 | POST | `/auth/mfa/disable` | JWT | Verifies 6-digit `totpCode` (`{"code": "123456"}`) and disables 2FA (`totpEnabled=False`). |
-| POST | `/auth/sso/oidc` | — | Exchanges external OIDC ID Token (`{"idToken": "..."}`) for DPU access & refresh tokens. |
+| GET | `/auth/sso/oidc/status` | — | `{"enabled": bool, "issuer": str|null, "flow": "authorization_code+pkce"}`. The Login page shows the SSO button only when `enabled`. |
+| POST | `/auth/sso/oidc/start` | — | Body `{"companyId"?: uuid, "returnTo"?: "/same-origin/path"}`. Returns `{"authorizeUrl", "state", "txn", "expiresIn"}`. `txn` is an HS256-signed, short-lived transaction holding the `nonce` and PKCE `code_verifier`; the SPA keeps it in `sessionStorage` and never sends it to the IdP. `501` when `OIDC_ENABLED=false`. |
+| POST | `/auth/sso/oidc/callback` (alias `/auth/sso/oidc`) | — | Body `{"code", "state", "txn"}`. Exchanges the code at the IdP token endpoint (PKCE), verifies the ID token (JWKS **RS256/ES256** only, `iss`, `aud`, `exp`, `iat`, `nonce`, `azp`, optional `at_hash`), maps `email` (must not be `email_verified=false`) to an active Member, enforces lockout + `StatusType.ENABLE`, and returns the same `Token` payload as `/auth/login` (+ `returnTo`). Unknown emails are rejected (`404`) unless the company passed to `/start` has JIT provisioning enabled. The former self-signed `{"idToken"}` contract is removed. |
+| GET/PUT | `/auth/sso/policy/{companyId}` | JWT (company admin) | Per-company SSO policy: `{"jitProvisioning": false, "allowedEmailDomains": [], "defaultDepartmentId": null, "defaultPositionId": null}`. `jitProvisioning` defaults **off**; turning it on requires a default department + position of the same company. New members get role `MEMBER` / `EMP`, a random local password, `employeeId = sub`. |
 
-Every other route needs a Bearer token. Company paths are limited to that company's active employee/admin or a system admin. Kiosk Device Tokens (`typ="kiosk"`) are strictly isolated by `AuthzMiddleware` to only `/face/ws/kiosk`, `/face/members/{detect,identify,check-in,check-in-walkby,check-face-emp}`, `/face/kiosk-attendance/{companyId}`, and `/system/tts-settings` for their assigned `companyId`.
+Every other route needs a Bearer token in the `Authorization` header. `?token=` in the query string is **no longer accepted** (it leaked tokens into proxy/browser logs); the deprecation flag `AUTH_ALLOW_QUERY_TOKEN=true` re-enables it temporarily and logs a warning on every use. Company paths are limited to that company's active employee/admin or a system admin. Kiosk Device Tokens (`typ="kiosk"`) are strictly isolated by `AuthzMiddleware` to only `/face/ws/kiosk`, `/face/members/{detect,identify,check-in,check-in-walkby,check-face-emp}`, `/face/kiosk-attendance/{companyId}`, and `/system/tts-settings` for their assigned `companyId`.
+
+### Token lifecycle & revocation
+
+- Every JWT carries `jti`, `typ` and `fam`. `AuthzMiddleware` (and the `/face/ws/kiosk` `session` handshake) rejects tokens whose `jti` or `fam` is in the `revoked_token` table with `401 Token has been revoked`. Lookups go through a small in-process cache; a revocation becomes visible on every API replica within `AUTH_REVOCATION_CACHE_SECONDS` (default 30 s). Expired rows are purged every `AUTH_REVOCATION_PURGE_SECONDS`.
+- Tokens issued before this change (no `jti`) keep working until they expire but cannot be revoked.
+- Kiosk device tokens are additionally bound to `kiosk_device.token_hash` (only the latest token issued to the device is valid) and to `kiosk_device.token_family`.
 
 ## Members / Organization & Signed Payroll Webhooks
 
@@ -50,7 +62,7 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | POST | `/face/members/identify` | JWT / Kiosk | single frame + `companyId` → name/confidence (no timestamp). |
 | POST | `/face/members/check-in` | JWT / Kiosk | secure: liveness + passive anti-spoofing + photo + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `CHECK_OUT`). |
 | POST | `/face/members/check-in-walkby` | JWT / Kiosk | 1–3 frames + passive anti-spoofing, walk-by check-in/out + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `CHECK_OUT`). |
-| WS | `/face/ws/kiosk` | JWT / Kiosk | stream: `session` (`token`, `companyId`) → `detect` / `identify` / `checkin` (supports `punchType` and `typ="kiosk"` tokens). |
+| WS | `/face/ws/kiosk` | JWT / Kiosk | stream: `session` (`token`, `companyId`) must be the first message and be acknowledged with `session_ok` before `detect` / `identify` / `checkin` (supports `punchType` and `typ="kiosk"` tokens). Any other message before auth, a failed `session`, or no valid `session` within `WS_KIOSK_AUTH_TIMEOUT_SECONDS` (5 s) → `error` (`code`: `unauthenticated` / `invalid_session` / `auth_timeout`) and close 1008. Per-IP / per-company caps (`WS_KIOSK_MAX_CONN_PER_IP`=16, `WS_KIOSK_MAX_CONN_PER_COMPANY`=64) close with `too_many_connections`; nginx also applies `limit_conn` 16/IP (HTTP 429). |
 | GET | `/face/kiosk-attendance/{companyId}` | JWT / Kiosk | Today's (`Asia/Bangkok`) roster + summary (`checkedInCount`, `inAreaCount`, `checkedOutCount`, `outsideCount`, `lateCount`). |
 | GET | `/face/queue-stats` | JWT | GPU queue health. BFF adds `source: face-core`. |
 | GET | `/face/enrolled-images/{faceEncodingId}?companyId=` | JWT | Proxies the Face Core gated image, local disk image, or S3/MinIO object. |
@@ -79,8 +91,9 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | POST | `/hr/company/{companyId}/leaves/{leaveId}/approval` | JWT | Approve (`status=1`) or reject (`status=2`) a leave request. Approved leaves are excluded from missing check-in alerts. |
 | GET | `/hr/company/{companyId}/pdpa-summary` | JWT | PDPA biometric consent summary & retention policy (`imageRetentionDays`, `tempRetentionHours`, `storageBackend`). |
 | POST/DELETE | `/hr/company/{companyId}/members/{memberId}/biometric-consent` | JWT | Grant PDPA biometric consent (`POST`) or revoke consent & immediately purge enrolled face vectors from DB + S3/local storage (`DELETE`). |
-| GET/POST | `/hr/company/{companyId}/kiosk-devices` | JWT | List provisioned Kiosk devices or provision a new device (`POST` returns one-time `kioskToken` and `kioskUrl`). |
-| DELETE | `/hr/company/{companyId}/kiosk-devices/{deviceId}` | JWT | Revoke a Kiosk device token immediately (`isActive=False`, `revokedAt`). |
+| GET/POST | `/hr/company/{companyId}/kiosk-devices` | JWT | List Kiosk devices (`isPaired`, `pairingPending`, `pairingExpiresAt`, `lastSeenAt`, `isActive`) or provision a new device. `POST` body `{"name", "locationId"?}` returns a **one-time `pairingCode`** (`ABCD-EFGH`, valid `KIOSK_PAIRING_CODE_TTL_MINUTES`, shown once, stored hashed) to enter on the tablet at `/kiosk/pair`. No token or URL is returned. |
+| POST | `/hr/company/{companyId}/kiosk-devices/{deviceId}/pairing-code` | JWT | Re-pair an existing device: revokes its current token family and issues a fresh `pairingCode`. `409` when the device is revoked. |
+| DELETE | `/hr/company/{companyId}/kiosk-devices/{deviceId}` | JWT | Revoke a Kiosk device immediately (`isActive=False`, `revokedAt`): its token family is denied, `token_hash` cleared, and pending pairing codes dropped. |
 | GET | `/dashboard/stats/{companyId}` | JWT | `Asia/Bangkok` daily summary (`checkInsToday`, `inAreaToday`, `outsideToday`, `checkOutsToday`, `lateToday`, `pendingApproval`), 7-day chart, map points, and recent activity. |
 
 ## System, Cloud Storage & Observability
@@ -92,7 +105,7 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | GET/PUT | `/system/tts-settings` | Global kiosk TTS voice template settings. |
 | POST | `/system/rebuild-index` | No-op stub (`pgvector` HNSW index is live). |
 | POST | `/api/upload-image/` | Store uploaded photo (returns `path` and optional S3 `presignedUrl`). |
-| GET | `/images/...`, `/enrolled_images/...` | Gated by JWT Bearer header or `?token=`. |
+| GET | `/images/...`, `/enrolled_images/...` | Gated by JWT Bearer header (`?token=` is rejected unless `AUTH_ALLOW_QUERY_TOKEN=true`). The kiosk loads punch photos through `HttpClient` and renders them from blob URLs (`AuthedImageService`). |
 
 
 ## SentinelVision Security, Access Control, Watchlist, Visitor & Smart Events (`/sentinel`)

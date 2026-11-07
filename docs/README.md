@@ -2,6 +2,7 @@
 
 - [SETUP](SETUP.md) — run the stack (local / Docker Desktop) + optional Face Core BFF
 - [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
+- [SECRETS-REMEDIATION](SECRETS-REMEDIATION.md) — inventory ของ secret/PII ที่เคยอยู่ใน git, ขั้นตอน `git filter-repo`, key rotation checklist, re-clone notice
 - **[KIOSK-CAPACITY-GUIDE](KIOSK-CAPACITY-GUIDE.md) — คู่มือความจุ: สรุปผลเทสทุกวิธี + สเป็คที่ควรใช้ (อ่านก่อน)**
 - [KIOSK-LOADTEST](KIOSK-LOADTEST.md) — โหลดเทส WebSocket kiosk (local ก่อน แล้วชี้เซิร์ฟเวอร์)
 - [KIOSK-LOADTEST-SATURATION](KIOSK-LOADTEST-SATURATION.md) — รอบ saturation: dual-API + เฟรมสมจริง + เกณฑ์ face-core; §4b ผลรอบ 2

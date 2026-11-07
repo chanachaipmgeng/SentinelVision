@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
+import { AuthedImageService } from '../../../shared/services/authed-image.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
@@ -167,6 +168,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private attendanceTimer: ReturnType<typeof setInterval> | null = null;
   private detectBusy = false;
   private kioskWs: WebSocket | null = null;
+  /** Server acknowledged `session` (`session_ok`); frames are refused by the server before this. */
+  private wsSessionOk = false;
   private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private wsReqSeq = 0;
   private destroyWs = false;
@@ -227,21 +230,44 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private readonly cropPad = 0.4;
   /** Backoff after a failed crop/check-in — keep short so walk-by can retry quickly. */
   private readonly retryFailMs = 900;
+  /** Access denied (403, e.g. watchlist hit): back off longer so the kiosk does not hammer the alert path. */
+  private readonly accessDeniedRetryMs = 10_000;
+  /** Public-screen copy for a 403; never echo the server detail for denied faces. */
+  private readonly accessDeniedMessage = 'ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่';
+  private readonly accessDeniedLabel = 'ไม่สามารถลงเวลาได้';
   private readonly checkInEndpoint = '/face/members/check-in-walkby';
 
   constructor(
     private http: HttpClient,
     private tokenService: TokenService,
     private authService: AuthService,
+    private authedImages: AuthedImageService,
     private comLocationService: CompanyLocationService,
     private systemSettingService: SystemSettingService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
   ) {
+    const kiosk = this.tokenService.getKioskSession();
     const company = this.tokenService.getSelectCompany();
-    this.companyId = company.companyId;
-    this.companyName = company.companyName || 'บริษัท';
-    this.homeLink = `/company/home/${this.companyId}`;
+    // A paired kiosk is bound to its device record; the admin-selected company is only a fallback.
+    this.companyId = kiosk?.companyId || company.companyId;
+    this.companyName = company.companyName || kiosk?.deviceName || 'บริษัท';
+    this.isKioskDevice = !!kiosk;
+    this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
+  }
+
+  /** True when this tab holds a device-scoped kiosk session (paired via one-time code). */
+  isKioskDevice = false;
+
+  private imageSub?: { unsubscribe(): void };
+
+  /** Forget the device session on this tablet (admin must issue a new pairing code). */
+  unpairKiosk(): void {
+    this.destroyWs = true;
+    this.authService.logout(this.tokenService.getRefreshToken()).subscribe({
+      next: () => this.tokenService.signOut(),
+      error: () => this.tokenService.signOut(),
+    });
   }
 
   setPunchMode(mode: KioskPunchMode): void {
@@ -315,6 +341,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngOnInit() {
     document.documentElement.classList.add('dpu-kiosk-mode');
+    this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
     this.getCurrentLocation();
     unlockBeepAudio();
     unlockSpeech();
@@ -409,6 +436,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     document.documentElement.classList.remove('dpu-kiosk-mode');
     this.destroyWs = true;
+    this.imageSub?.unsubscribe();
     if (this.geoWatchId != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(this.geoWatchId);
       this.geoWatchId = null;
@@ -492,8 +520,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           this.updateTracks([], nowMs);
         }
 
-        // Prefer server-side detection (InsightFace GPU) when the stream is up.
-        if (this.wsConnected && nowMs >= this.serverDetectPausedUntil) {
+        // Prefer server-side detection (InsightFace GPU) once the session is acknowledged.
+        if (this.wsConnected && this.wsSessionOk && nowMs >= this.serverDetectPausedUntil) {
           this.sendDetectFrame(videoEl);
           return;
         }
@@ -787,10 +815,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.kioskWs = ws;
 
       ws.onopen = () => {
+        this.wsSessionOk = false;
         this.ngZone.run(() => {
           this.wsConnected = true;
           this.cdr.detectChanges();
         });
+        // Server requires `session` first; detect/identify/checkin wait for `session_ok`.
         this.sendWsSession();
       };
 
@@ -814,6 +844,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
       ws.onclose = () => {
         this.wsDetectInFlight = false;
+        this.wsSessionOk = false;
         this.ngZone.run(() => {
           this.wsConnected = false;
           this.cdr.detectChanges();
@@ -839,6 +870,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     if (!this.kioskWs || this.kioskWs.readyState !== WS_OPEN) {
       return false;
     }
+    // Only `session` may go out before the server acknowledges it (otherwise it closes with 1008).
+    if (payload['type'] !== 'session' && !this.wsSessionOk) {
+      return false;
+    }
     this.kioskWs.send(JSON.stringify(payload));
     return true;
   }
@@ -853,17 +888,26 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     if (!refresh) {
       return;
     }
-    this.authService.refreshToken(refresh.replace('Bearer ', '')).subscribe({
-      next: (token) => {
-        if (token?.accessToken) {
-          this.tokenService.saveToken(token.accessToken);
-        }
-        if (token?.refreshToken) {
-          this.tokenService.saveRefreshToken(token.refreshToken);
-        }
-        this.sendWsSession();
-      },
-    });
+    // Rotation: the refresh token we hold is single-use; the server returns a new pair.
+    this.authService
+      .refreshSession(refresh.replace('Bearer ', ''), this.tokenService.isKioskSession())
+      .subscribe({
+        next: (tokens) => {
+          if (tokens.accessToken) {
+            this.tokenService.saveToken(tokens.accessToken);
+          }
+          if (tokens.refreshToken) {
+            this.tokenService.saveRefreshToken(tokens.refreshToken);
+          }
+          this.sendWsSession();
+        },
+        error: () => {
+          // Revoked / reused refresh token: the device must be paired again.
+          this.notify('เซสชันอุปกรณ์หมดอายุ กรุณาจับคู่ตู้ Kiosk ใหม่', 'error');
+          this.destroyWs = true;
+          this.tokenService.signOut();
+        },
+      });
   }
 
   private onKioskWsMessage(msg: any) {
@@ -871,9 +915,30 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.queuePending = Number(msg.queue.pending) || 0;
     }
 
+    if (msg.type === 'session_ok') {
+      this.wsSessionOk = true;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (msg.type === 'token_expiring') {
       this.refreshKioskToken();
       return;
+    }
+
+    if (msg.type === 'error' && msg.code === 'invalid_session') {
+      // Server closes the socket after this; refresh the token so the reconnect's `session` is valid.
+      this.wsSessionOk = false;
+      this.refreshKioskToken();
+      return;
+    }
+
+    if (msg.type === 'error' && !msg.intent) {
+      const detail = String(msg.detail || '');
+      if (msg.code === 'token_expired' || /expired|revoked/i.test(detail)) {
+        this.refreshKioskToken();
+        return;
+      }
     }
 
     if (msg.type === 'identified') {
@@ -929,11 +994,36 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           t.retryAfter = Date.now() + this.retryFailMs;
           t.captureFrames = [];
         }
-        if (msg.detail) {
-          this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${msg.detail}`, 'warning');
-        }
+      }
+      if (Number(msg.status) === 403) {
+        this.applyAccessDenied(t ?? undefined, msg.intent === 'checkin');
+      } else if (msg.intent === 'checkin' && msg.detail) {
+        this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${msg.detail}`, 'warning');
       }
       this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Generic denied state for a 403 from identify / check-in (e.g. a watchlist hit).
+   * The server already withholds identity; the kiosk must not echo any detail,
+   * keep a stale label, or retry immediately.
+   */
+  private applyAccessDenied(track: FaceTrack | undefined, showToast: boolean) {
+    if (track) {
+      track.memberId = null;
+      track.confidence = null;
+      track.label = this.accessDeniedLabel;
+      track.identifyInFlight = false;
+      track.lastIdentifyAt = Date.now() + this.accessDeniedRetryMs;
+      if (track.phase === 'capturing') {
+        track.phase = 'watching';
+        track.captureFrames = [];
+      }
+      track.retryAfter = Date.now() + this.accessDeniedRetryMs;
+    }
+    if (showToast) {
+      this.notify(this.accessDeniedMessage, 'error');
     }
   }
 
@@ -1359,10 +1449,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (error) => {
         const t = this.tracks.find((x) => x.id === trackId);
         if (t) {
           t.identifyInFlight = false;
+        }
+        if (error?.status === 403) {
+          this.applyAccessDenied(t, false);
+          this.cdr.detectChanges();
         }
       },
     });
@@ -1485,8 +1579,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           t.retryAfter = Date.now() + this.retryFailMs;
           t.captureFrames = [];
         }
-        const detail = error.error?.detail || 'Check-in failed';
-        this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
+        if (error?.status === 403) {
+          this.applyAccessDenied(t, true);
+        } else {
+          const detail = error.error?.detail || 'Check-in failed';
+          this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
+        }
         this.cdr.detectChanges();
       },
     });
@@ -1696,10 +1794,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     return './assets/images/faces/1.jpg';
   }
 
+  /** Protected punch photo via Bearer-authenticated fetch → blob URL (no token in the URL). */
   private authedImage(file: string): string {
-    const base = `${environment.baseUrl || ''}/images/${file}`.replace(/([^:]\/)\/+/g, '$1');
-    const token = this.tokenService.getToken();
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    return this.authedImages.urlFor(file, './assets/images/faces/1.jpg');
   }
 
   isOutside(person: KioskRosterPerson): boolean {

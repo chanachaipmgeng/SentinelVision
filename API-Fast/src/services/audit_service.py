@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
+from typing import Any, Optional
+from uuid import UUID, uuid4
 
 from sqlalchemy import Column, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID

@@ -23,6 +23,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   password = '';
   totpCode = '';
   mfaRequired = false;
+  ssoEnabled = false;
+  ssoBusy = false;
   errorMessage = '';
   showLoader = false;
   _error: { name: string; message: string } = { name: '', message: '' };
@@ -48,6 +50,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     private empServie: EmployeeService
   ) {
     localStorage.clear();
+    this.tokenService.clearKioskSession();
   }
 
   ngOnInit(): void {
@@ -57,6 +60,10 @@ export class LoginComponent implements OnInit, OnDestroy {
       totpCode: [''],
     });
     this.renderer.addClass(this.document.body, 'dpu-login-body');
+    this.authService.ssoStatus().subscribe({
+      next: (s) => (this.ssoEnabled = !!s?.enabled),
+      error: () => (this.ssoEnabled = false),
+    });
     this.tickClock();
     this.clockTimer = setInterval(() => this.tickClock(), 250);
   }
@@ -126,6 +133,21 @@ export class LoginComponent implements OnInit, OnDestroy {
           }
         }
       );
+  }
+
+  loginWithSso() {
+    this.ssoBusy = true;
+    this.error = '';
+    this.authService.ssoStart().subscribe({
+      next: (start) => {
+        this.authService.saveSsoTransaction(start);
+        window.location.assign(start.authorizeUrl);
+      },
+      error: (err) => {
+        this.ssoBusy = false;
+        this.error = err?.error?.detail || 'ไม่สามารถเริ่มการเข้าสู่ระบบด้วย SSO ได้';
+      },
+    });
   }
 
   adminCompanyList(memberId: string) {

@@ -19,7 +19,7 @@ alwaysApply: false
 ## Auth & Multi-Tenancy
 
 - `FACE_ROUTES_REQUIRE_JWT=true` by default. HTTP routes get the member from `AuthzMiddleware`; form `companyId` is bound with `assert_request_company_access`; `memberId` / `faceEncodingId` routes use `assert_member_company_access` / `assert_encoding_company_access`
-- WS `/face/ws/kiosk`: `session` message must include `token`; company access is checked before frames are accepted, and `token_exp` is enforced on every frame
+- WS `/face/ws/kiosk`: the first message must be a valid `session` (with `token`) within `WS_KIOSK_AUTH_TIMEOUT_SECONDS` (5 s); any other message, invalid JSON, or a failed session before auth closes the socket with 1008 (`unauthenticated` / `invalid_session` / `auth_timeout`). `token_exp` is enforced on every frame. Per-process caps `WS_KIOSK_MAX_CONN_PER_IP` (16) / `WS_KIOSK_MAX_CONN_PER_COMPANY` (64) close with 1008 `too_many_connections`; nginx `limit_conn kiosk_ws_per_ip 16` guards the gateway
 - WS `detect` returns `dropped: true` when the queue passes `WS_QUEUE_BACKPRESSURE` or per-connection `task_sem` (`Semaphore(4)`) is full
 
 ## Endpoints (do not regress)

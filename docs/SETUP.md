@@ -61,6 +61,12 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `SECRET_KEY` | (placeholder) | **required**, ≥ 32 chars; startup fails otherwise |
 | `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | `60` / `14` | JWT lifetimes |
+| `OIDC_ENABLED` | `false` | enterprise SSO (OpenID Connect, Authorization Code + PKCE). When `true`, startup fails unless the variables below are valid |
+| `OIDC_ISSUER` | (empty) | IdP issuer URL, must serve `<issuer>/.well-known/openid-configuration` and match the `issuer` inside it (`https://`; plain `http://` only for `localhost`) |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | (empty) | RP client registered at the IdP. Secret optional for public clients (PKCE is always used) |
+| `OIDC_REDIRECT_URI` | (empty) | absolute URL of the SPA callback: `https://<host>/auth/sso/callback` — register the exact value at the IdP |
+| `OIDC_SCOPES` | `openid profile email` | space-separated; must include `openid` |
+| `OIDC_JWKS_CACHE_SECONDS` / `OIDC_LOGIN_TXN_TTL_SECONDS` / `OIDC_CLOCK_SKEW_SECONDS` / `OIDC_HTTP_TIMEOUT_SECONDS` | `3600` / `600` / `60` / `10` | JWKS + discovery cache TTL, how long a started login stays valid, `exp`/`iat` leeway, IdP HTTP timeout |
 | `FACE_ROUTES_REQUIRE_JWT` | `true` | face HTTP + kiosk WS need a token |
 | `FACE_DEVICES` | `cuda:0` | comma list; one GPU worker per device |
 | `EXPOSE_API_DOCS` | `false` | Swagger/ReDoc |
@@ -69,8 +75,26 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
 | `FACE_CORE_URL` | `http://host.docker.internal:8081` | Face Core base URL |
 | `FACE_CORE_API_KEY` | (empty) | Bearer key for Face Core tenant |
+| `GOOGLE_MAPS_API_KEY` | (empty) | Web-Manage Google Maps JS key; written to `assets/config.json` by the `admin` container entrypoint. Empty = OSM fallback |
+| `GOOGLE_MAPS_MAP_ID` | `DEMO_MAP_ID` | Map ID for AdvancedMarkerElement |
 
 Frontends in Docker use `baseUrl: ''` (same origin through nginx).
+
+### Web-Manage runtime config (no keys in the bundle)
+
+The SPA reads `assets/config.json` at startup (`src/app/shared/runtime-config.ts`) and injects the Google Maps SDK `<script>` from it. The file is git-ignored; `assets/config.example.json` is the template.
+
+- **Docker:** nothing to do — `Web-Manage/docker/40-runtime-config.sh` writes the file from `GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_MAP_ID` on each start.
+- **Local `ng serve`:** `cp Web-Manage/src/assets/config.example.json Web-Manage/src/assets/config.json` and fill in your own key. Never commit it.
+- `src/environments/environment*.ts` must not contain real keys (Firebase block is an unused placeholder). See `docs/SECRETS-REMEDIATION.md`.
+
+## Enterprise SSO (OIDC, optional)
+
+1. Register a confidential (or public) OIDC client at your IdP (Entra ID, Keycloak, Okta, Google Workspace, …) with redirect URI `https://<host>/auth/sso/callback` and the Authorization Code grant with PKCE (S256). ID tokens must be signed with `RS256` or `ES256`; `HS256` is refused.
+2. Set in `.env`: `OIDC_ENABLED=true`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` (if confidential), `OIDC_REDIRECT_URI`, optionally `OIDC_SCOPES`. Rebuild `api` (and `api-gpu1`) and `nginx` — `docker/nginx/*.conf` route `GET /auth/sso/callback` to the SPA so the IdP redirect lands on the Angular page.
+3. Verify: `curl http://localhost/auth/sso/oidc/status` → `{"enabled": true, ...}`. The Login page now shows **เข้าสู่ระบบด้วย SSO องค์กร**.
+4. Mapping is by verified e-mail → `member.email`. Unknown users are rejected unless a company admin enables JIT provisioning for that company via `PUT /auth/sso/policy/{companyId}` (`jitProvisioning=true`, `defaultDepartmentId`, `defaultPositionId`, optional `allowedEmailDomains`). JIT is off by default.
+5. Misconfiguration (missing issuer/client/redirect, non-https issuer, scopes without `openid`) aborts startup with `OIDC_ENABLED=true but misconfigured: ...`.
 
 ## Face Core BFF (optional)
 
@@ -146,7 +170,7 @@ ports:
   - "8000:8000"
 ```
 
-Then `ng serve` with `environment.ts` → `http://localhost:8000`.
+Then `ng serve` with `environment.ts` → `http://localhost:8000`. For Google Maps locally, create `src/assets/config.json` from `config.example.json` (git-ignored).
 
 ## Demo seed + smoke tests
 

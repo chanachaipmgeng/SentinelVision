@@ -36,7 +36,7 @@ import {
 const WS_CONNECTING = 0;
 const WS_OPEN = 1;
 
-export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'CHECK_OUT';
+export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'BREAK_OUT' | 'BREAK_IN' | 'CHECK_OUT';
 
 export interface CheckInFeedItem {
   id: string;
@@ -284,9 +284,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const modeLabel =
       mode === 'CHECK_IN'
         ? 'โหมดเข้างาน (Check-In)'
-        : mode === 'CHECK_OUT'
-          ? 'โหมดออกงาน (Check-Out)'
-          : 'โหมดอัตโนมัติ (Hybrid)';
+        : mode === 'BREAK_OUT'
+          ? 'โหมดพักนอก (Break-Out)'
+          : mode === 'BREAK_IN'
+            ? 'โหมดพักเข้า (Break-In)'
+            : mode === 'CHECK_OUT'
+              ? 'โหมดออกงาน (Check-Out)'
+              : 'โหมดอัตโนมัติ (Hybrid: เข้า → พักนอก → พักเข้า → ออก)';
     this.notify(`สลับเป็น ${modeLabel}`, 'info');
   }
 
@@ -1597,9 +1601,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
             ? 0
             : tsTypeRaw === 'CHECK_OUT'
               ? 2
-              : 1;
+              : tsTypeRaw === 'BREAK_OUT'
+                ? 4
+                : tsTypeRaw === 'BREAK_IN'
+                  ? 5
+                  : 1;
     const isWarning = !!response.isWarning || tsTypeNum === 0;
     const isCheckOut = tsTypeNum === 2;
+    const isBreakOut = tsTypeNum === 4;
+    const isBreakIn = tsTypeNum === 5;
     const isLate = !!ts.isLate;
     const lateMinutes = Number(ts.lateMinutes || 0);
     const overtimeMinutes = Number(ts.overtimeMinutes || 0);
@@ -1643,10 +1653,17 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         ? overtimeMinutes > 0
           ? `ออกงาน (OT ${overtimeMinutes} นาที)`
           : 'ลงเวลาออกงาน'
-        : isLate && lateMinutes > 0
-          ? `เข้างาน (สาย ${lateMinutes} นาที)`
-          : 'ลงเวลาเข้างาน';
+        : isBreakOut
+          ? 'พักนอก (Break-Out)'
+          : isBreakIn
+            ? 'พักเข้า (Break-In)'
+            : isLate && lateMinutes > 0
+              ? `เข้างาน (สาย ${lateMinutes} นาที)`
+              : 'ลงเวลาเข้างาน';
     let statusKind: CheckInFeedItem['statusKind'] = isWarning || isLate ? 'warning' : 'success';
+    if (isBreakOut || isBreakIn) {
+      statusKind = 'info';
+    }
     if (isDuplicate) {
       statusLabel = isWarning ? 'บันทึกแล้ว (Warning)' : 'ลงเวลาไปแล้ว';
       statusKind = 'info';

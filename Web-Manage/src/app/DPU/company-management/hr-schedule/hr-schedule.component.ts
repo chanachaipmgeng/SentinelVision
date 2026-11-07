@@ -93,9 +93,21 @@ import { TokenService } from '../../../shared/services/token.service';
                     <label class="form-label">เวลาเลิกงาน (HH:MM)</label>
                     <input type="time" class="form-control" [(ngModel)]="newShift.endTime" />
                   </div>
-                  <div class="col-span-6">
+                  <div class="col-span-4">
                     <label class="form-label">อนุโลมสาย (นาที)</label>
                     <input type="number" min="0" max="180" class="form-control" [(ngModel)]="newShift.graceMinutes" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="form-label">ปัดเวลา (นาที)</label>
+                    <input type="number" min="0" max="60" class="form-control" [(ngModel)]="newShift.roundingMinutes" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="form-label">พัก (นาที)</label>
+                    <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.breakMinutes" />
+                  </div>
+                  <div class="col-span-6">
+                    <label class="form-label">เกณฑ์ OT หลังเลิกงาน (นาที)</label>
+                    <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.otThresholdMinutes" />
                   </div>
                   <div class="col-span-6 flex flex-col justify-end gap-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -123,7 +135,7 @@ import { TokenService } from '../../../shared/services/token.service';
                       <tr class="border-b border-defaultborder">
                         <th class="text-start">ชื่อกะ</th>
                         <th class="text-start">เวลาเข้า - ออก</th>
-                        <th class="text-start">อนุโลมสาย</th>
+                        <th class="text-start">อนุโลม / ปัด / พัก / OT</th>
                         <th class="text-start">รูปแบบ</th>
                         <th class="text-end">จัดการ</th>
                       </tr>
@@ -135,7 +147,10 @@ import { TokenService } from '../../../shared/services/token.service';
                           <span *ngIf="s.isDefault" class="badge bg-primary/10 text-primary ms-1">Default</span>
                         </td>
                         <td>{{ s.startTime }} - {{ s.endTime }}</td>
-                        <td>{{ s.graceMinutes }} นาที</td>
+                        <td>
+                          สาย {{ s.graceMinutes }} · ปัด {{ s.roundingMinutes || 0 }} · พัก
+                          {{ s.breakMinutes || 0 }} · OT≥{{ s.otThresholdMinutes || 0 }}
+                        </td>
                         <td>
                           <span *ngIf="s.isCrossMidnight" class="badge bg-warning/10 text-warning">ข้ามคืน</span>
                           <span *ngIf="!s.isCrossMidnight" class="badge bg-success/10 text-success">ปกติ</span>
@@ -329,27 +344,43 @@ import { TokenService } from '../../../shared/services/token.service';
           <!-- TAB 3: COMPANY HOLIDAYS -->
           <div class="box-body space-y-6" *ngIf="activeTab === 'holidays'">
             <div class="grid grid-cols-12 gap-4">
-              <div class="col-span-12 lg:col-span-4 p-4 rounded-lg border border-defaultborder">
-                <h6 class="font-semibold mb-3">เพิ่มวันหยุดประจำปีของบริษัท</h6>
-                <div class="space-y-3">
-                  <div>
-                    <label class="form-label">วันที่หยุด</label>
-                    <input type="date" class="form-control" [(ngModel)]="newHoliday.holidayDate" />
+              <div class="col-span-12 lg:col-span-4 p-4 rounded-lg border border-defaultborder space-y-4">
+                <div>
+                  <h6 class="font-semibold mb-3">เพิ่มวันหยุดประจำปีของบริษัท</h6>
+                  <div class="space-y-3">
+                    <div>
+                      <label class="form-label">วันที่หยุด</label>
+                      <input type="date" class="form-control" [(ngModel)]="newHoliday.holidayDate" />
+                    </div>
+                    <div>
+                      <label class="form-label">ชื่อวันหยุด</label>
+                      <input class="form-control" [(ngModel)]="newHoliday.name" placeholder="เช่น วันสงกรานต์ / วันขึ้นปีใหม่" />
+                    </div>
+                    <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="createHoliday()">
+                      + เพิ่มวันหยุดบริษัท
+                    </button>
+                  </div>
+                </div>
+
+                <div class="border-t border-defaultborder pt-4 space-y-3">
+                  <h6 class="font-semibold">นำเข้า / Preset</h6>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" class="ti-btn ti-btn-outline-primary" (click)="applyThaiHolidayPreset()" [disabled]="holidayBusy">
+                      โหลดวันหยุดราชการไทย {{ holidayPresetYear }}
+                    </button>
                   </div>
                   <div>
-                    <label class="form-label">ชื่อวันหยุด</label>
-                    <input class="form-control" [(ngModel)]="newHoliday.name" placeholder="เช่น วันสงกรานต์ / วันขึ้นปีใหม่" />
+                    <label class="form-label">นำเข้าไฟล์ CSV หรือ iCal (.ics)</label>
+                    <input type="file" class="form-control" accept=".csv,.ics,.ical,text/csv,text/calendar" (change)="onHolidayFileSelected($event)" />
                   </div>
-                  <button type="button" class="ti-btn ti-btn-primary-full w-full" (click)="createHoliday()">
-                    + เพิ่มวันหยุดบริษัท
-                  </button>
+                  <p class="text-xs text-gray-500" *ngIf="holidayImportHint">{{ holidayImportHint }}</p>
                 </div>
               </div>
 
               <div class="col-span-12 lg:col-span-8 p-4 rounded-lg border border-defaultborder">
                 <h6 class="font-semibold mb-3">ปฏิทินวันหยุดบริษัท ({{ holidays.length }})</h6>
                 <p class="text-xs text-gray-500 mb-3">
-                  * ระบบแจ้งเตือนขาดงานอัตโนมัติ (Cutoff Notification) จะข้ามวันหยุดที่บันทึกไว้ในตารางนี้โดยอัตโนมัติ
+                  * ระบบแจ้งเตือนขาดงานอัตโนมัติ (Cutoff Notification) และเมตริก Late/OT จะข้ามวันหยุดที่บันทึกไว้ในตารางนี้
                 </p>
                 <div class="table-responsive">
                   <table class="table whitespace-nowrap min-w-full">
@@ -357,6 +388,7 @@ import { TokenService } from '../../../shared/services/token.service';
                       <tr class="border-b border-defaultborder">
                         <th class="text-start">วันที่</th>
                         <th class="text-start">ชื่อวันหยุด</th>
+                        <th class="text-start">แหล่งที่มา</th>
                         <th class="text-end">จัดการ</th>
                       </tr>
                     </thead>
@@ -364,6 +396,7 @@ import { TokenService } from '../../../shared/services/token.service';
                       <tr *ngFor="let h of holidays" class="border-b border-defaultborder">
                         <td class="font-medium">{{ h.holidayDate }}</td>
                         <td>{{ h.name }}</td>
+                        <td class="text-xs text-gray-500">{{ holidaySourceLabel(h.source) }}</td>
                         <td class="text-end">
                           <button type="button" class="ti-btn ti-btn-sm ti-btn-danger" (click)="deleteHoliday(h.holidayId)">
                             ลบ
@@ -371,7 +404,7 @@ import { TokenService } from '../../../shared/services/token.service';
                         </td>
                       </tr>
                       <tr *ngIf="holidays.length === 0">
-                        <td colspan="3" class="text-center text-gray-500 py-4">ยังไม่ได้กำหนดวันหยุดประจำปี</td>
+                        <td colspan="4" class="text-center text-gray-500 py-4">ยังไม่ได้กำหนดวันหยุดประจำปี</td>
                       </tr>
                     </tbody>
                   </table>
@@ -741,6 +774,9 @@ export class HrScheduleComponent implements OnInit {
   employees: any[] = [];
   leaves: any[] = [];
   holidays: any[] = [];
+  holidayBusy = false;
+  holidayImportHint = '';
+  holidayPresetYear = new Date().getFullYear();
   pdpaSummary: any = null;
   kioskDevices: any[] = [];
   newKioskName = '';
@@ -767,6 +803,10 @@ export class HrScheduleComponent implements OnInit {
     startTime: '09:00',
     endTime: '18:00',
     graceMinutes: 15,
+    roundingMinutes: 0,
+    breakMinutes: 0,
+    otThresholdMinutes: 0,
+    breakWindows: [] as { start: string; end: string }[],
     isCrossMidnight: false,
     isDefault: false,
   };
@@ -907,6 +947,10 @@ export class HrScheduleComponent implements OnInit {
         startTime: '09:00',
         endTime: '18:00',
         graceMinutes: 15,
+        roundingMinutes: 0,
+        breakMinutes: 0,
+        otThresholdMinutes: 0,
+        breakWindows: [],
         isCrossMidnight: false,
         isDefault: false,
       };
@@ -986,6 +1030,70 @@ export class HrScheduleComponent implements OnInit {
     this.http.delete(`/hr/company/${this.companyId}/holidays/${holidayId}`).subscribe(() => {
       this.loadHolidays();
       this.flash('ลบวันหยุดบริษัทเรียบร้อย');
+    });
+  }
+
+  holidaySourceLabel(source: string | null | undefined): string {
+    switch ((source || 'MANUAL').toUpperCase()) {
+      case 'CSV':
+        return 'CSV';
+      case 'ICAL':
+        return 'iCal';
+      case 'THAI_PRESET':
+        return 'ราชการไทย';
+      default:
+        return 'กำหนดเอง';
+    }
+  }
+
+  applyThaiHolidayPreset(): void {
+    if (!this.companyId || this.holidayBusy) return;
+    this.holidayBusy = true;
+    this.holidayImportHint = '';
+    this.http
+      .post(`/hr/company/${this.companyId}/holidays/thai-preset`, { year: this.holidayPresetYear })
+      .subscribe({
+        next: (res: any) => {
+          this.holidayBusy = false;
+          this.loadHolidays();
+          const n = Number(res?.imported || 0);
+          this.flash(`โหลดวันหยุดราชการไทย ${res?.year || this.holidayPresetYear} แล้ว (${n} รายการ)`);
+        },
+        error: (err) => {
+          this.holidayBusy = false;
+          this.holidayImportHint = err?.error?.detail || 'โหลด preset ไม่สำเร็จ';
+        },
+      });
+  }
+
+  onHolidayFileSelected(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input?.files?.[0];
+    if (!file || !this.companyId) return;
+    this.holidayBusy = true;
+    this.holidayImportHint = '';
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith('.ics') || lower.endsWith('.ical')) {
+      form.append('format', 'ical');
+    } else {
+      form.append('format', 'csv');
+    }
+    this.http.post(`/hr/company/${this.companyId}/holidays/import`, form).subscribe({
+      next: (res: any) => {
+        this.holidayBusy = false;
+        this.loadHolidays();
+        this.flash(
+          `นำเข้าวันหยุดแล้ว (ใหม่ ${res?.created || 0} / อัปเดต ${res?.updated || 0})`,
+        );
+        if (input) input.value = '';
+      },
+      error: (err) => {
+        this.holidayBusy = false;
+        this.holidayImportHint = err?.error?.detail || 'นำเข้าไฟล์ไม่สำเร็จ';
+        if (input) input.value = '';
+      },
     });
   }
 

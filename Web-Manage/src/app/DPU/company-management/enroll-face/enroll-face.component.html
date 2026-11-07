@@ -66,7 +66,7 @@
       class="dpu-kiosk__chip"
       [class.is-on]="punchMode === 'AUTO'"
       (click)="setPunchMode('AUTO')"
-      title="อัตโนมัติ: สแกนแรกของวันเป็นเข้างาน ถัดไปเป็นออกงาน">
+      title="อัตโนมัติ: เข้างาน → พักนอก → พักเข้า → ออกงาน">
       <i class="ri-magic-line"></i>
       อัตโนมัติ (Hybrid)
     </button>
@@ -78,6 +78,24 @@
       title="บังคับลงเวลาเข้างาน (Check-In)">
       <i class="ri-login-box-line"></i>
       เข้างาน
+    </button>
+    <button
+      type="button"
+      class="dpu-kiosk__chip"
+      [class.is-on]="punchMode === 'BREAK_OUT'"
+      (click)="setPunchMode('BREAK_OUT')"
+      title="บังคับพักนอก (Break-Out)">
+      <i class="ri-cup-line"></i>
+      พักนอก
+    </button>
+    <button
+      type="button"
+      class="dpu-kiosk__chip"
+      [class.is-on]="punchMode === 'BREAK_IN'"
+      (click)="setPunchMode('BREAK_IN')"
+      title="บังคับพักเข้า (Break-In)">
+      <i class="ri-cup-fill"></i>
+      พักเข้า
     </button>
     <button
       type="button"

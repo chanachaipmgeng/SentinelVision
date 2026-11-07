@@ -60,8 +60,8 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | POST | `/face/members/detect` | JWT / Kiosk | Lightweight face bbox detection for preview. |
 | POST | `/face/members/check-face-emp` | JWT / Kiosk | multipart `files` + `companyId` + liveness → match payload. |
 | POST | `/face/members/identify` | JWT / Kiosk | single frame + `companyId` → name/confidence (no timestamp). |
-| POST | `/face/members/check-in` | JWT / Kiosk | secure: liveness + passive anti-spoofing + photo + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `CHECK_OUT`). |
-| POST | `/face/members/check-in-walkby` | JWT / Kiosk | 1–3 frames + passive anti-spoofing, walk-by check-in/out + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `CHECK_OUT`). |
+| POST | `/face/members/check-in` | JWT / Kiosk | secure: liveness + passive anti-spoofing + photo + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `BREAK_OUT` \| `BREAK_IN` \| `CHECK_OUT`). AUTO advances IN→BREAK_OUT→BREAK_IN→OUT. |
+| POST | `/face/members/check-in-walkby` | JWT / Kiosk | 1–3 frames + passive anti-spoofing, walk-by check-in/out + timestamp. Optional form `punchType` (`AUTO` \| `CHECK_IN` \| `BREAK_OUT` \| `BREAK_IN` \| `CHECK_OUT`). |
 | WS | `/face/ws/kiosk` | JWT / Kiosk | stream: `session` (`token`, `companyId`) must be the first message and be acknowledged with `session_ok` before `detect` / `identify` / `checkin` (supports `punchType` and `typ="kiosk"` tokens). Any other message before auth, a failed `session`, or no valid `session` within `WS_KIOSK_AUTH_TIMEOUT_SECONDS` (5 s) → `error` (`code`: `unauthenticated` / `invalid_session` / `auth_timeout`) and close 1008. Per-IP / per-company caps (`WS_KIOSK_MAX_CONN_PER_IP`=16, `WS_KIOSK_MAX_CONN_PER_COMPANY`=64) close with `too_many_connections`; nginx also applies `limit_conn` 16/IP (HTTP 429). |
 | GET | `/face/kiosk-attendance/{companyId}` | JWT / Kiosk | Today's (`Asia/Bangkok`) roster + summary (`checkedInCount`, `inAreaCount`, `checkedOutCount`, `outsideCount`, `lateCount`). |
 | GET | `/face/queue-stats` | JWT | GPU queue health. BFF adds `source: face-core`. |
@@ -76,7 +76,7 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
 | GET | `/timestamp/company/{companyId}` | JWT | List company timestamps (`limit` default 500, max 2000; `offset`). Includes `isLate`, `lateMinutes`, `overtimeMinutes`, `shiftName`. |
-| POST | `/timestamp/company/{companyId}` | JWT | Create timestamp. Validates GPS server-side, resolves hybrid `CHECK_IN` (1) / `CHECK_OUT` (2) / `WARNING` (0), calculates shift Late/OT (including cross-midnight shifts), and emits signed outbound webhook (`attendance.checked_in` / `attendance.checked_out`). |
+| POST | `/timestamp/company/{companyId}` | JWT | Create timestamp. Validates GPS server-side, resolves hybrid punch types `CHECK_IN` (1) / `BREAK_OUT` (4) / `BREAK_IN` (5) / `CHECK_OUT` (2) / `WARNING` (0); AUTO state machine IN→BREAK_OUT→BREAK_IN→OUT (cross-midnight preserved). Late/OT only on IN/OUT. Emits webhooks (`attendance.checked_in` / `attendance.break_out` / `attendance.break_in` / `attendance.checked_out`). |
 | PUT/DELETE | `/timestamp/company/{companyId}/{timestampId}` | JWT | Update or delete timestamp. |
 | POST | `/timestamp/company/{companyId}/{timestampId}/approval` | JWT | Approve (`CHECK_IN`) or reject (`ABSENT`) outside-geofence warning timestamp and emit signed webhook (`attendance.approved` / `attendance.rejected`). |
 | GET | `/timestamp/search/company/{companyId}` | JWT | Filter by `company_employeeId`, `startDate`, `endDate`, `timestampType`, `approvalStatus`, `limit`, `offset`. |
@@ -85,7 +85,9 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | GET/POST | `/hr/company/{companyId}/shifts` | JWT | List or create named work shifts (`WorkShift`, supports `isCrossMidnight`, `isDefault`). |
 | PUT/DELETE | `/hr/company/{companyId}/shifts/{shiftId}` | JWT | Update or soft-delete a named work shift. |
 | PUT | `/hr/company/{companyId}/assign-shift` | JWT | Assign a shift (`shiftId`) to a department (`departmentId`) or employee (`company_employeeId`). |
-| GET/POST | `/hr/company/{companyId}/holidays` | JWT | List or create company public holidays (`CompanyHoliday`). Skipped automatically by `attendance_cutoff_tick`. |
+| GET/POST | `/hr/company/{companyId}/holidays` | JWT | List or create company public holidays (`CompanyHoliday`). GET accepts optional `start`/`end` date filters for metrics. Skipped automatically by `attendance_cutoff_tick`. |
+| POST | `/hr/company/{companyId}/holidays/import` | JWT | Import holidays from CSV or iCal (`.ics`) via multipart `file` or JSON `{format, content}`. Upserts by date; sets `source` to `CSV`/`ICAL`. |
+| POST | `/hr/company/{companyId}/holidays/thai-preset` | JWT | Seed Thai public-holiday preset for `year` (body/query; default Asia/Bangkok current year). `source=THAI_PRESET`. |
 | DELETE | `/hr/company/{companyId}/holidays/{holidayId}` | JWT | Soft-delete a company holiday. |
 | GET/POST | `/hr/company/{companyId}/leaves` | JWT | List or submit employee leave requests (`ANNUAL`, `SICK`, `PERSONAL`, `WFH`). |
 | POST | `/hr/company/{companyId}/leaves/{leaveId}/approval` | JWT | Approve (`status=1`) or reject (`status=2`) a leave request. Approved leaves are excluded from missing check-in alerts. |

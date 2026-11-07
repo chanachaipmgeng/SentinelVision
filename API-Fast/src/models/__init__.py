@@ -10,7 +10,10 @@ from . import (  # noqa: F401
     face_encoding,
     system_setting,
     hr_schedule,
+    attendance_daily,
     sentinel,
     revoked_token,
     import_job,
+    attendance_daily,
+    approvals_payroll,
 )

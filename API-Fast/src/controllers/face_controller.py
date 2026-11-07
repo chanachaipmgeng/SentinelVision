@@ -633,13 +633,31 @@ def _employee_brief(company_employee: CompanyEmployee) -> dict:
 def _should_bypass_dedupe_for_explicit_mode(
     requested_punch: Optional[str], existing_type_value: int
 ) -> bool:
-    """Allow an explicit CHECK_OUT after a recent CHECK_IN (or vice versa) on the Kiosk."""
-    norm = (requested_punch or "").strip().upper()
-    if norm in ("CHECK_OUT", "OUT", "2") and existing_type_value != 2:
-        return True
-    if norm in ("CHECK_IN", "IN", "1") and existing_type_value == 2:
-        return True
-    return False
+    """Allow a punch whose resolved type differs from the most recent one (mode switch / AUTO advance)."""
+    from ..controllers.employee_timestamp_controller import (
+        _next_auto_punch_type,
+        _parse_explicit_punch_type,
+    )
+    from ..models.employee_timestamp import TimestampType
+
+    explicit = _parse_explicit_punch_type(requested_punch)
+    if explicit is not None:
+        return int(existing_type_value) != int(explicit.value)
+
+    # AUTO: advance IN→BREAK_OUT→BREAK_IN→OUT; after OUT stay OUT (dedupe re-punches).
+    try:
+        last = TimestampType(int(existing_type_value))
+    except (ValueError, TypeError):
+        last = None
+    if last not in (
+        TimestampType.CHECK_IN,
+        TimestampType.BREAK_OUT,
+        TimestampType.BREAK_IN,
+        TimestampType.CHECK_OUT,
+    ):
+        last = None
+    nxt = _next_auto_punch_type(last)
+    return int(nxt.value) != int(existing_type_value)
 
 
 async def _finalize_check_in(
@@ -828,6 +846,8 @@ async def _finalize_check_in(
     ts_type_value = int(getattr(ts_type, "value", ts_type))
     is_warning = ts_type_value == 0
     is_checkout = ts_type_value == 2
+    is_break_out = ts_type_value == 4
+    is_break_in = ts_type_value == 5
 
     put_cached_check_in(
         companyId,
@@ -847,6 +867,10 @@ async def _finalize_check_in(
         msg_str = "Check-in saved (outside area)"
     elif is_checkout:
         msg_str = "Check-out saved"
+    elif is_break_out:
+        msg_str = "Break-out saved"
+    elif is_break_in:
+        msg_str = "Break-in saved"
     else:
         msg_str = "Check-in saved"
 

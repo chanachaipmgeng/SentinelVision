@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -21,6 +21,11 @@ class WorkShift(Base):
     startTime = Column("start_time", String(10), nullable=False, default="09:00")
     endTime = Column("end_time", String(10), nullable=False, default="18:00")
     graceMinutes = Column("grace_minutes", Integer, nullable=False, default=15)
+    # C2 shift rules — punch clock rounding, unpaid break, OT gate past shift end.
+    roundingMinutes = Column("rounding_minutes", Integer, nullable=False, default=0)
+    breakMinutes = Column("break_minutes", Integer, nullable=False, default=0)
+    breakWindows = Column("break_windows", JSONB, nullable=False, default=list)
+    otThresholdMinutes = Column("ot_threshold_minutes", Integer, nullable=False, default=0)
     isCrossMidnight = Column("is_cross_midnight", Boolean, nullable=False, default=False)
     isDefault = Column("is_default", Boolean, nullable=False, default=False)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
@@ -41,6 +46,8 @@ class CompanyHoliday(Base):
     )
     holidayDate = Column("holiday_date", Date, nullable=False)
     name = Column(String(150), nullable=False)
+    # MANUAL | CSV | ICAL | THAI_PRESET (C6 import provenance)
+    source = Column(String(30), nullable=False, default="MANUAL", server_default="MANUAL")
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 

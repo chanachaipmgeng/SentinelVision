@@ -53,10 +53,12 @@ export class TimestampService {
     startDate?: string,
     endDate?: string,
     timestampType?: string,
-    approvalStatus?: string
+    approvalStatus?: string,
+    mode: 'raw' | 'payroll' = 'raw'
   ): Observable<Blob> {
     const params = new URLSearchParams();
     params.set('format', format);
+    params.set('mode', mode);
     if (company_employeeId) params.set('company_employeeId', company_employeeId);
     if (startDate) params.set('startDate', startDate);
     if (endDate) params.set('endDate', endDate);

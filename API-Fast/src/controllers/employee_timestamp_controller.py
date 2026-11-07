@@ -27,6 +27,10 @@ DEFAULT_SHIFT = {
     "startTime": "09:00",
     "endTime": "18:00",
     "graceMinutes": 15,
+    "roundingMinutes": 0,
+    "breakMinutes": 0,
+    "breakWindows": [],
+    "otThresholdMinutes": 0,
     "isCrossMidnight": False,
 }
 
@@ -59,6 +63,12 @@ async def update_company_shift_settings(companyId: str | UUID, payload: dict, db
         "startTime": str(payload.get("startTime") or DEFAULT_SHIFT["startTime"]).strip(),
         "endTime": str(payload.get("endTime") or DEFAULT_SHIFT["endTime"]).strip(),
         "graceMinutes": max(0, int(payload.get("graceMinutes", DEFAULT_SHIFT["graceMinutes"]) or 0)),
+        "roundingMinutes": max(0, int(payload.get("roundingMinutes", DEFAULT_SHIFT["roundingMinutes"]) or 0)),
+        "breakMinutes": max(0, int(payload.get("breakMinutes", DEFAULT_SHIFT["breakMinutes"]) or 0)),
+        "breakWindows": payload.get("breakWindows") if isinstance(payload.get("breakWindows"), list) else [],
+        "otThresholdMinutes": max(
+            0, int(payload.get("otThresholdMinutes", DEFAULT_SHIFT["otThresholdMinutes"]) or 0)
+        ),
         "isCrossMidnight": bool(payload.get("isCrossMidnight", False)),
     }
     if row:
@@ -70,12 +80,19 @@ async def update_company_shift_settings(companyId: str | UUID, payload: dict, db
 
 
 def _shift_row_to_dict(ws: WorkShift) -> dict:
+    windows = getattr(ws, "breakWindows", None) or []
+    if not isinstance(windows, list):
+        windows = []
     return {
         "shiftId": str(ws.shiftId),
         "name": ws.name,
         "startTime": ws.startTime,
         "endTime": ws.endTime,
         "graceMinutes": int(ws.graceMinutes or 0),
+        "roundingMinutes": int(getattr(ws, "roundingMinutes", 0) or 0),
+        "breakMinutes": int(getattr(ws, "breakMinutes", 0) or 0),
+        "breakWindows": windows,
+        "otThresholdMinutes": int(getattr(ws, "otThresholdMinutes", 0) or 0),
         "isCrossMidnight": bool(ws.isCrossMidnight),
         "isDefault": bool(ws.isDefault),
     }
@@ -125,40 +142,83 @@ def _parse_hhmm(val: str, default_h: int, default_m: int) -> tuple[int, int]:
         return default_h, default_m
 
 
+def _round_local_time(now_local: datetime, rounding_minutes: int) -> datetime:
+    """Round punch time to the nearest ``rounding_minutes`` (no-op when 0)."""
+    step = max(0, int(rounding_minutes or 0))
+    if step <= 0:
+        return now_local
+    total = now_local.hour * 60 + now_local.minute
+    rounded = int((total + step / 2) // step) * step
+    # Clamp to same calendar day (24:00 → 23:59 equivalent minute 1439).
+    rounded = min(rounded, 24 * 60 - 1)
+    return now_local.replace(
+        hour=rounded // 60, minute=rounded % 60, second=0, microsecond=0
+    )
+
+
 def _compute_shift_metrics(
     now_local: datetime,
     shift: dict,
     *,
     is_checkout: bool,
+    is_holiday: bool = False,
+    is_on_leave: bool = False,
 ) -> tuple[bool, int, int, str]:
+    """Late / OT for a single punch against the resolved shift.
+
+    C2: CompanyHoliday and approved LeaveRequest suppress late and OT entirely.
+    ``roundingMinutes`` snaps the punch clock before comparison; ``otThresholdMinutes``
+    gates OT so only minutes past (shift end + threshold) count.
+    """
     shift_name = str(shift.get("name") or DEFAULT_SHIFT["name"])
+    if is_holiday or is_on_leave:
+        return False, 0, 0, shift_name
+
+    rounding = max(0, int(shift.get("roundingMinutes", 0) or 0))
+    clock = _round_local_time(now_local, rounding)
+
     sh, sm = _parse_hhmm(shift.get("startTime", "09:00"), 9, 0)
     eh, em = _parse_hhmm(shift.get("endTime", "18:00"), 18, 0)
     grace = max(0, int(shift.get("graceMinutes", 15) or 0))
+    ot_threshold = max(0, int(shift.get("otThresholdMinutes", 0) or 0))
     cross_midnight = bool(shift.get("isCrossMidnight")) or (eh, em) < (sh, sm)
 
-    shift_start = now_local.replace(hour=sh, minute=sm, second=0, microsecond=0)
-    shift_end = now_local.replace(hour=eh, minute=em, second=0, microsecond=0)
+    shift_start = clock.replace(hour=sh, minute=sm, second=0, microsecond=0)
+    shift_end = clock.replace(hour=eh, minute=em, second=0, microsecond=0)
 
     if cross_midnight:
         if is_checkout:
-            if now_local.hour >= 12:
+            if clock.hour >= 12:
                 shift_end = shift_end + timedelta(days=1)
         else:
-            if now_local.hour < 12:
+            if clock.hour < 12:
                 shift_start = shift_start - timedelta(days=1)
 
     if is_checkout:
-        if now_local > shift_end:
-            ot_mins = int((now_local - shift_end).total_seconds() // 60)
+        ot_gate = shift_end + timedelta(minutes=ot_threshold)
+        if clock > ot_gate:
+            ot_mins = int((clock - shift_end).total_seconds() // 60) - ot_threshold
             return False, 0, max(0, ot_mins), shift_name
         return False, 0, 0, shift_name
 
     late_cutoff = shift_start + timedelta(minutes=grace)
-    if now_local > late_cutoff:
-        late_mins = int((now_local - shift_start).total_seconds() // 60)
+    if clock > late_cutoff:
+        late_mins = int((clock - shift_start).total_seconds() // 60)
         return True, max(1, late_mins), 0, shift_name
     return False, 0, 0, shift_name
+
+
+async def _holiday_or_leave_flags(
+    db: AsyncSession,
+    company_id: UUID,
+    employee_id: UUID,
+    work_date,
+) -> tuple[bool, bool]:
+    from ..services.attendance_summary_service import is_company_holiday, is_on_approved_leave
+
+    holiday = await is_company_holiday(db, company_id, work_date)
+    on_leave = False if holiday else await is_on_approved_leave(db, company_id, employee_id, work_date)
+    return holiday, on_leave
 
 
 def _employee_brief(emp: Optional[CompanyEmployee]) -> Optional[dict]:
@@ -286,6 +346,46 @@ def _is_null_island(lat: float, lon: float) -> bool:
         return True
 
 
+_PUNCH_STATE_TYPES = (
+    TimestampType.CHECK_IN,
+    TimestampType.BREAK_OUT,
+    TimestampType.BREAK_IN,
+    TimestampType.CHECK_OUT,
+)
+
+
+def _parse_explicit_punch_type(requested_punch: Optional[str]) -> Optional[TimestampType]:
+    """Map explicit kiosk/API punch strings to TimestampType. AUTO/unknown → None."""
+    req = (requested_punch or "AUTO").strip().upper()
+    if req in ("AUTO", "", "HYBRID"):
+        return None
+    if req in ("CHECK_OUT", "CHECKOUT", "OUT", "2"):
+        return TimestampType.CHECK_OUT
+    if req in ("CHECK_IN", "CHECKIN", "IN", "1"):
+        return TimestampType.CHECK_IN
+    if req in ("BREAK_OUT", "BREAKOUT", "BREAK-OUT", "4"):
+        return TimestampType.BREAK_OUT
+    if req in ("BREAK_IN", "BREAKIN", "BREAK-IN", "5"):
+        return TimestampType.BREAK_IN
+    return None
+
+
+def _next_auto_punch_type(last: Optional[TimestampType]) -> TimestampType:
+    """AUTO cycle: IN → BREAK_OUT → BREAK_IN → OUT (then stay OUT until next day/window)."""
+    if last is None or last == TimestampType.CHECK_OUT:
+        # After OUT, further AUTO punches in the same window stay OUT (walk-by re-punch).
+        if last == TimestampType.CHECK_OUT:
+            return TimestampType.CHECK_OUT
+        return TimestampType.CHECK_IN
+    if last == TimestampType.CHECK_IN:
+        return TimestampType.BREAK_OUT
+    if last == TimestampType.BREAK_OUT:
+        return TimestampType.BREAK_IN
+    if last == TimestampType.BREAK_IN:
+        return TimestampType.CHECK_OUT
+    return TimestampType.CHECK_IN
+
+
 async def _resolve_hybrid_punch_type(
     db: AsyncSession,
     company_id: UUID,
@@ -294,13 +394,11 @@ async def _resolve_hybrid_punch_type(
     now_local: datetime,
     *,
     is_cross_midnight: bool = False,
-) -> bool:
-    """Return True if this punch should be treated as CHECK_OUT, False for CHECK_IN."""
-    req = (requested_punch or "AUTO").strip().upper()
-    if req in ("CHECK_OUT", "CHECKOUT", "OUT", "2"):
-        return True
-    if req in ("CHECK_IN", "CHECKIN", "IN", "1"):
-        return False
+) -> TimestampType:
+    """Resolve punch type: explicit modes honored; AUTO advances IN→BREAK_OUT→BREAK_IN→OUT."""
+    explicit = _parse_explicit_punch_type(requested_punch)
+    if explicit is not None:
+        return explicit
 
     today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     if is_cross_midnight and now_local.hour < 12:
@@ -315,11 +413,19 @@ async def _resolve_hybrid_punch_type(
             EmployeeTimestamp.company_employeeId == company_employee_id,
             EmployeeTimestamp.timestamp >= window_start,
             EmployeeTimestamp.timestamp < tomorrow,
+            EmployeeTimestamp.timestampType.in_(_PUNCH_STATE_TYPES),
         )
-        .order_by(EmployeeTimestamp.timestamp.asc())
+        .order_by(EmployeeTimestamp.timestamp.desc())
         .limit(1)
     )
-    return existing.first() is not None
+    row = existing.first()
+    last = row[0] if row else None
+    if isinstance(last, str):
+        try:
+            last = TimestampType[last]
+        except KeyError:
+            last = None
+    return _next_auto_punch_type(last)
 
 
 async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
@@ -383,17 +489,31 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
     eh, em = _parse_hhmm(shift.get("endTime", "18:00"), 18, 0)
     is_cross_midnight = bool(shift.get("isCrossMidnight")) or (eh, em) < (sh, sm)
 
-    is_checkout = await _resolve_hybrid_punch_type(
+    resolved_type = await _resolve_hybrid_punch_type(
         db, companyId, emp_id, requested_punch, now_local, is_cross_midnight=is_cross_midnight
     )
-    is_late, late_mins, ot_mins, shift_name = _compute_shift_metrics(
-        now_local, shift, is_checkout=is_checkout
-    )
+    is_checkout = resolved_type == TimestampType.CHECK_OUT
+    # Cross-midnight early-morning punches belong to the previous Bangkok work date.
+    work_date = now_local.date()
+    if is_cross_midnight and now_local.hour < 12:
+        work_date = (now_local - timedelta(days=1)).date()
+    # Late only on CHECK_IN; OT only on CHECK_OUT. Break punches skip both.
+    apply_late_ot = resolved_type in (TimestampType.CHECK_IN, TimestampType.CHECK_OUT)
+    if apply_late_ot:
+        is_holiday, is_on_leave = await _holiday_or_leave_flags(db, companyId, emp_id, work_date)
+        is_late, late_mins, ot_mins, shift_name = _compute_shift_metrics(
+            now_local,
+            shift,
+            is_checkout=is_checkout,
+            is_holiday=is_holiday,
+            is_on_leave=is_on_leave,
+        )
+    else:
+        is_late, late_mins, ot_mins = False, 0, 0
+        shift_name = str(shift.get("name") or DEFAULT_SHIFT["name"])
 
     if is_in_area:
-        data["timestampType"] = (
-            TimestampType.CHECK_OUT if is_checkout else TimestampType.CHECK_IN
-        )
+        data["timestampType"] = resolved_type
         data["approvalStatus"] = ApprovalStatus.NONE.value
     else:
         if not note:
@@ -437,17 +557,30 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
     new_timestamp.company_employee = company_employee
     payload_out = _timestamp_payload(new_timestamp)
 
+    # C1: refresh daily summary for this Bangkok work date (also covers face finalize path).
+    try:
+        from ..services.attendance_summary_service import recompute_daily
+
+        await recompute_daily(companyId, emp_id, work_date, db, commit=True)
+    except Exception:
+        pass
+
     # Emit signed outbound Payroll / ERP webhook event asynchronously
     try:
         import asyncio
         from ..services.notification_service import emit_company_webhook_event
 
         ts_type_val = int(getattr(new_timestamp.timestampType, "value", new_timestamp.timestampType))
-        event_name = (
-            "attendance.checked_out"
-            if ts_type_val == 2
-            else ("attendance.warning" if ts_type_val == 0 else "attendance.checked_in")
-        )
+        if ts_type_val == TimestampType.CHECK_OUT.value:
+            event_name = "attendance.checked_out"
+        elif ts_type_val == TimestampType.WARNING.value:
+            event_name = "attendance.warning"
+        elif ts_type_val == TimestampType.BREAK_OUT.value:
+            event_name = "attendance.break_out"
+        elif ts_type_val == TimestampType.BREAK_IN.value:
+            event_name = "attendance.break_in"
+        else:
+            event_name = "attendance.checked_in"
         member_obj = company_employee.member
         full_name = (
             f"{getattr(member_obj, 'firstName', '') or ''} {getattr(member_obj, 'lastName', '') or ''}".strip()
@@ -500,7 +633,10 @@ async def approve_or_reject_timestamp(
     companyId: UUID,
     action: TimestampApprovalAction,
     db: AsyncSession,
+    *,
+    approved_by: Optional[UUID] = None,
 ):
+    """Decide a geofence warning punch. ``approved_by`` must come from the JWT caller — never the body."""
     result = await db.execute(
         select(EmployeeTimestamp)
         .where(
@@ -523,6 +659,29 @@ async def approve_or_reject_timestamp(
             detail="Only PENDING timestamps can be approved or rejected.",
         )
 
+    subject = timestamp.company_employee
+    if subject is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found for timestamp")
+
+    from ..models.member import Member
+    from ..services.approval_gate import assert_can_approve_for_employee
+
+    if approved_by is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    caller = await db.get(Member, approved_by)
+    if caller is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    await assert_can_approve_for_employee(db, caller, companyId, subject)
+
+    # Period lock: cannot decide punches whose Bangkok date falls in a locked payroll period.
+    from ..services.payroll_period_service import assert_date_not_locked
+
+    punch_day = timestamp.timestamp
+    if punch_day is not None:
+        if punch_day.tzinfo is None:
+            punch_day = punch_day.replace(tzinfo=timezone.utc)
+        await assert_date_not_locked(db, companyId, punch_day.astimezone(get_bangkok_tz()).date())
+
     if action.approve:
         timestamp.approvalStatus = ApprovalStatus.APPROVED.value
         timestamp.timestampType = TimestampType.CHECK_IN
@@ -537,10 +696,19 @@ async def approve_or_reject_timestamp(
         timestamp.rejectReason = action.rejectReason.strip()
         timestamp.timestampType = TimestampType.DISAPPROVE
 
-    timestamp.approvedBy = action.approvedBy
+    # Ignore client-supplied action.approvedBy — JWT only.
+    timestamp.approvedBy = approved_by
     timestamp.approvedAt = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(timestamp)
+    try:
+        from ..services.attendance_summary_service import recompute_for_punch
+
+        await recompute_for_punch(
+            companyId, timestamp.company_employeeId, timestamp.timestamp, db
+        )
+    except Exception:
+        pass
     try:
         import asyncio
         from ..services.notification_service import emit_company_webhook_event, enqueue
@@ -560,7 +728,7 @@ async def approve_or_reject_timestamp(
                     "timestampId": str(timestamp.timestampId),
                     "company_employeeId": str(timestamp.company_employeeId),
                     "approvalStatus": timestamp.approvalStatus,
-                    "approvedBy": timestamp.approvedBy,
+                    "approvedBy": str(timestamp.approvedBy) if timestamp.approvedBy else None,
                     "rejectReason": timestamp.rejectReason,
                 },
             )
@@ -637,6 +805,10 @@ def _type_label(ts_type) -> str:
         return "นอกพื้นที่ (Warning)"
     if val == 3:
         return "ไม่อนุมัติ (Absent)"
+    if val == 4:
+        return "พักนอก (Break-Out)"
+    if val == 5:
+        return "พักเข้า (Break-In)"
     return str(val)
 
 

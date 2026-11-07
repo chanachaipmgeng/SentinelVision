@@ -23,6 +23,7 @@ from .deps import (
     member_from_token,
     verify_kiosk_token_db,
 )
+from ..services.approval_gate import assert_company_membership
 from .jwt import decode_token
 
 logger = logging.getLogger("dpu.authz")
@@ -40,6 +41,15 @@ _COMPANY_RES = [
     re.compile(rf"/notifications/company/({_UUID})"),
     re.compile(rf"/hr/company/({_UUID})"),
     re.compile(rf"/sentinel/company/({_UUID})"),
+]
+# C4 thin approval paths: any company member may hit the route; handler enforces approver/boss gate.
+_APPROVAL_MEMBERSHIP_RES = [
+    re.compile(rf"/timestamp/company/({_UUID})/{_UUID}/approval/?$"),
+    re.compile(rf"/hr/company/({_UUID})/leaves/{_UUID}/approval/?$"),
+    re.compile(rf"/hr/company/({_UUID})/approvals(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/regularizations(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/ot-approvals(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/leave-balances(?:/|$)"),
 ]
 _OPEN_PREFIXES = (
     "/auth/login",
@@ -266,7 +276,10 @@ async def _authorize(request: Request, db, member: Member, path: str):
             request.state.company_id = resolved
     if cid:
         try:
-            await assert_company_access(db, member, UUID(cid))
+            if any(rx.search(path) for rx in _APPROVAL_MEMBERSHIP_RES):
+                await assert_company_membership(db, member, UUID(cid))
+            else:
+                await assert_company_access(db, member, UUID(cid))
         except Exception as exc:
             code = getattr(exc, "status_code", 403)
             detail = getattr(exc, "detail", "Forbidden")

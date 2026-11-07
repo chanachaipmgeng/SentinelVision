@@ -228,14 +228,17 @@ async def test_hybrid_auto_punch_in_then_out_with_late_and_ot(world, clock):
         assert body["locationName"] == world.a.location.locationName
         assert body["isLate"] is True and body["lateMinutes"] == 40 and body["overtimeMinutes"] == 0
 
+        # Explicit CHECK_OUT still honors Late/OT (AUTO now advances through break states).
         clock.set("19:30")
-        second = await c.post(url, json=_punch_body(world), headers=world.auth("admin_a"))
+        second = await c.post(
+            url, json=_punch_body(world, punch="CHECK_OUT"), headers=world.auth("admin_a")
+        )
         assert second.status_code == 200, second.text
         body = second.json()
         assert body["timestampType"] == ctl.TimestampType.CHECK_OUT.value
         assert body["isLate"] is False and body["lateMinutes"] == 0 and body["overtimeMinutes"] == 90
 
-        # AUTO after any punch today keeps resolving to CHECK_OUT (walk-by kiosks re-punch).
+        # AUTO after CHECK_OUT stays CHECK_OUT (walk-by kiosks re-punch).
         third = await c.post(url, json=_punch_body(world), headers=world.auth("admin_a"))
         assert third.json()["timestampType"] == ctl.TimestampType.CHECK_OUT.value
 

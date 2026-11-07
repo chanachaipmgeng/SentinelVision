@@ -119,6 +119,27 @@ async def assert_request_company_access(request, db: AsyncSession, company_id) -
     return member
 
 
+async def assert_request_company_membership(request, db: AsyncSession, company_id) -> Optional[Member]:
+    """Softer than assert_request_company_access: any company employment (for thin C4 approval paths)."""
+    from ..services.approval_gate import assert_company_membership
+
+    cid = UUID(str(company_id))
+    kiosk_cid = getattr(request.state, "kiosk_company_id", None) or current_kiosk_company_var.get()
+    if kiosk_cid is not None:
+        if UUID(str(kiosk_cid)) == cid:
+            return None
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kiosk token scoped to a different company")
+    member = getattr(request.state, "member", None) or current_member_var.get()
+    if member is None:
+        from ..config.settings import settings
+
+        if not settings.FACE_ROUTES_REQUIRE_JWT:
+            return None
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    await assert_company_membership(db, member, cid)
+    return member
+
+
 async def assert_member_company_access(request, db: AsyncSession, target_member_id) -> None:
     """Ensure caller is system admin, the member themselves, or a company admin of the target member's company."""
     member = getattr(request.state, "member", None) or current_member_var.get()

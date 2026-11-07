@@ -19,6 +19,11 @@ export const App_Route: Route[] = [
   { path: 'auth/login', component: LoginComponent, data: { animation: 'Login' } },
   { path: 'auth/reset-password', component: CoverComponent, data: { animation: 'ResetPassword' } },
   {
+    path: 'auth/sso/callback',
+    loadComponent: () =>
+      import('./authentication/sso-callback/sso-callback.component').then((m) => m.SsoCallbackComponent),
+  },
+  {
     path: 'auth/change-password',
     canActivate: [AuthGuard],
     loadComponent: () =>

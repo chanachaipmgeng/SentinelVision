@@ -43,6 +43,13 @@ services:
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
+      OIDC_ENABLED: ${OIDC_ENABLED:-false}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
+      OIDC_SCOPES: "${OIDC_SCOPES:-openid profile email}"
       # Quote required: unquoted cuda:0,cuda:1 is invalid / truncated YAML.
       FACE_DEVICES: "${FACE_DEVICES:-cuda:0}"
       FACE_GPU_WORKERS: "${FACE_GPU_WORKERS:-1}"

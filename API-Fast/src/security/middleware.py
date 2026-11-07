@@ -1,7 +1,7 @@
-"""HTTP authz: JWT required, company paths bound to the caller, audit on writes."""
+"""HTTP authz: JWT required, company paths bound to the caller, Kiosk scope isolation, audit on writes."""
 from __future__ import annotations
 
-import json
+import asyncio
 import logging
 import re
 from typing import Optional
@@ -13,7 +13,14 @@ from starlette.responses import JSONResponse
 
 from ..config.database import async_session
 from ..models.member import Member, RoleType
-from .deps import assert_company_access, current_member_var, member_from_token
+from .deps import (
+    assert_company_access,
+    current_kiosk_company_var,
+    current_member_var,
+    member_from_token,
+    verify_kiosk_token_db,
+)
+from .jwt import decode_token
 
 logger = logging.getLogger("dpu.authz")
 
@@ -22,19 +29,35 @@ _COMPANY_RES = [
     re.compile(rf"/employees/company/(?:sub/)?({_UUID})"),
     re.compile(rf"/departments/company/({_UUID})"),
     re.compile(rf"/positions/company/({_UUID})"),
-    re.compile(rf"/timestamp/(?:search/)?company/({_UUID})"),
+    re.compile(rf"/timestamp/(?:search/|export/)?company/({_UUID})"),
     re.compile(rf"/company-locations/company/({_UUID})"),
     re.compile(rf"/dashboard/stats/({_UUID})"),
     re.compile(rf"/face/kiosk-attendance/({_UUID})"),
     re.compile(rf"/companys/({_UUID})"),
     re.compile(rf"/notifications/company/({_UUID})"),
+    re.compile(rf"/hr/company/({_UUID})"),
 ]
 _OPEN_PREFIXES = (
     "/auth/login",
     "/auth/refresh",
     "/auth/refresh-token",
+    "/auth/sso/oidc",
     "/health",
     "/ready",
+)
+_KIOSK_ALLOWED_PREFIXES = (
+    "/face/members/check-in",
+    "/face/members/check-in-walkby",
+    "/face/members/check-face-emp",
+    "/face/members/identify",
+    "/face/members/detect",
+    "/face/kiosk-attendance/",
+    "/face/enrolled-images/",
+    "/face/queue-stats",
+    "/company-locations/company/",
+    "/images/",
+    "/enrolled_images/",
+    "/system/tts-settings",
 )
 _MEMBER_SELF = re.compile(rf"/employees/member/({_UUID})/")
 
@@ -55,6 +78,24 @@ def _is_system_admin(member: Member) -> bool:
     return value in (99, RoleType.ADMIN_SYSTEM.value)
 
 
+def _client_ip(request: Request) -> Optional[str]:
+    xff = (request.headers.get("x-forwarded-for") or "").strip()
+    if xff:
+        return xff.split(",")[0].strip()
+    xrip = (request.headers.get("x-real-ip") or "").strip()
+    if xrip:
+        return xrip
+    return request.client.host if request.client else None
+
+
+def _is_kiosk_path_allowed(method: str, path: str) -> bool:
+    if path == "/system/tts-settings" and method != "GET":
+        return False
+    if path.startswith("/company-locations/company/") and method != "GET":
+        return False
+    return path.startswith(_KIOSK_ALLOWED_PREFIXES)
+
+
 class AuthzMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path.rstrip("/") or "/"
@@ -68,6 +109,40 @@ class AuthzMiddleware(BaseHTTPMiddleware):
         token = _token_from(request)
         if not token:
             return JSONResponse({"detail": "Authorization required"}, status_code=401)
+
+        try:
+            raw_payload = decode_token(token, expected_typ=None)
+        except Exception as exc:
+            code = getattr(exc, "status_code", 401)
+            detail = getattr(exc, "detail", "Invalid token")
+            return JSONResponse({"detail": detail}, status_code=code)
+
+        if raw_payload.get("typ") == "kiosk":
+            if not _is_kiosk_path_allowed(request.method, path):
+                return JSONResponse(
+                    {"detail": "Kiosk device token is restricted to kiosk check-in endpoints only"},
+                    status_code=403,
+                )
+            async with async_session() as db:
+                try:
+                    device = await verify_kiosk_token_db(token, db)
+                except Exception as exc:
+                    code = getattr(exc, "status_code", 401)
+                    detail = getattr(exc, "detail", "Invalid kiosk token")
+                    return JSONResponse({"detail": detail}, status_code=code)
+                cid = _company_id(path)
+                if cid and UUID(cid) != device.companyId:
+                    return JSONResponse(
+                        {"detail": "Kiosk device token does not match requested company"},
+                        status_code=403,
+                    )
+                request.state.kiosk_company_id = device.companyId
+                request.state.kiosk_device_id = device.deviceId
+                kiosk_ctx = current_kiosk_company_var.set(device.companyId)
+                try:
+                    return await call_next(request)
+                finally:
+                    current_kiosk_company_var.reset(kiosk_ctx)
 
         async with async_session() as db:
             try:
@@ -88,7 +163,7 @@ class AuthzMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} and response.status_code < 400:
-            await _audit(request, member, path, response.status_code)
+            asyncio.create_task(_audit(request, member, path, response.status_code))
         return response
 
 
@@ -143,7 +218,7 @@ async def _audit(request: Request, member: Member, path: str, status_code: int) 
             action=request.method,
             path=path,
             status_code=status_code,
-            ip=request.client.host if request.client else None,
+            ip=_client_ip(request),
             user_agent=request.headers.get("user-agent"),
             request_id=getattr(request.state, "request_id", None),
             company_id=_company_id(path),

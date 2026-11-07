@@ -20,6 +20,10 @@ export class TimestampModel extends BaseModel {
   approvedBy?: string
   approvedAt?: string
   rejectReason?: string
+  isLate?: boolean
+  lateMinutes?: number
+  overtimeMinutes?: number
+  shiftName?: string
   employee: EmployeeModel
   constructor(
     data?: Partial<TimestampModel>,
@@ -42,24 +46,34 @@ export class TimestampModel extends BaseModel {
     this.approvedBy = data?.approvedBy
     this.approvedAt = data?.approvedAt
     this.rejectReason = data?.rejectReason || ""
+    this.isLate = Boolean(data?.isLate)
+    this.lateMinutes = Number(data?.lateMinutes || 0)
+    this.overtimeMinutes = Number(data?.overtimeMinutes || 0)
+    this.shiftName = data?.shiftName || ""
     this.employee = new EmployeeModel(data?.employee, this.translateService)
   }
 
   getStatus(): string {
     if (this.approvalStatus === 'PENDING') {
-      return this.translateService.instant('Pending Approval')
+      return this.translateService ? this.translateService.instant('Pending Approval') : 'รออนุมัติ'
     } else if (this.approvalStatus === 'APPROVED') {
-      return this.translateService.instant('Approved')
+      return this.translateService ? this.translateService.instant('Approved') : 'อนุมัติแล้ว'
     } else if (this.approvalStatus === 'REJECTED') {
-      return this.translateService.instant('Rejected')
+      return this.translateService ? this.translateService.instant('Rejected') : 'ไม่อนุมัติ'
     } else if (this.timestampType == 1) {
-      return this.translateService.instant('Complete')
+      if (this.isLate && (this.lateMinutes || 0) > 0) {
+        return `เข้างาน (สาย ${this.lateMinutes} นาที)`
+      }
+      return 'เข้างานปกติ'
     } else if (this.timestampType == 2) {
-      return this.translateService.instant('Complete')
+      if ((this.overtimeMinutes || 0) > 0) {
+        return `ออกงาน (OT ${this.overtimeMinutes} นาที)`
+      }
+      return 'ออกงานปกติ'
     } else if (this.timestampType == 0) {
-      return this.translateService.instant('WARNING')
+      return this.translateService ? this.translateService.instant('WARNING') : 'Warning (นอกพื้นที่)'
     } else if (this.timestampType == 3) {
-      return this.translateService.instant('Absent')
+      return this.translateService ? this.translateService.instant('Absent') : 'Absent'
     } else {
       return "-"
     }

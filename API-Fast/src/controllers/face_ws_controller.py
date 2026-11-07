@@ -1,4 +1,4 @@
-"""WebSocket kiosk stream: identify + walk-by check-in via GPU queue."""
+"""WebSocket kiosk stream: identify + walk-by check-in via GPU queue (supports Member JWT and Kiosk Device Token)."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ from ..controllers.face_controller import (
     _resolve_match_response,
 )
 from ..clients.face_core_client import face_core_enabled, get_face_core_client
+from ..services.observability import inc_gauge
 from ..utils.face_engine import (
     decode_image_bytes,
     detect_faces_bgr,
@@ -188,7 +189,6 @@ async def _handle_detect(
             queue = face_gpu_queue_stats()
             pending = int(queue.get("pending") or 0)
 
-        # Per-connection min interval (raised under backpressure).
         now = time.monotonic()
         min_ms = _detect_interval_ms(pending)
         last = last_detect_at.get("t", 0.0)
@@ -239,8 +239,6 @@ async def _handle_detect(
             result = await client.detect(content)
             queue = await _face_core_queue_stats(company_id)
         else:
-            # Decode off the GPU worker on a dedicated pool; only det_model.detect
-            # uses the GPU slot.
             loop = asyncio.get_running_loop()
             try:
                 image = await loop.run_in_executor(
@@ -419,6 +417,7 @@ async def _handle_checkin(
     latitude: float,
     longitude: float,
     note: Optional[str],
+    punch_type: Optional[str],
     send_lock: asyncio.Lock,
     identify_cache: _IdentifyCache,
 ) -> None:
@@ -462,6 +461,7 @@ async def _handle_checkin(
                     liveness_passed=False,
                     mode="walkby-ws",
                     default_note="Face kiosk websocket walk-by",
+                    punch_type=punch_type,
                 )
                 queue = await _face_core_queue_stats(company_id)
             else:
@@ -497,6 +497,7 @@ async def _handle_checkin(
                     liveness_passed=False,
                     mode="walkby-ws",
                     default_note="Face kiosk websocket walk-by",
+                    punch_type=punch_type,
                 )
                 queue = face_gpu_queue_stats()
 
@@ -541,12 +542,19 @@ async def _handle_checkin(
         _cleanup(paths)
 
 
+async def _run_bounded(sem: asyncio.Semaphore, coro) -> None:
+    async with sem:
+        await coro
+
+
 async def kiosk_websocket(websocket: WebSocket) -> None:
     await websocket.accept()
+    inc_gauge("dpu_ws_active_kiosks", 1.0)
     company_id: Optional[UUID] = None
     latitude = 0.0
     longitude = 0.0
     send_lock = asyncio.Lock()
+    task_sem = asyncio.Semaphore(4)
     token_exp = 0
     token_warned = False
     last_detect_at: Dict[str, float] = {"t": 0.0}
@@ -589,23 +597,39 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
 
             if msg_type == "session":
                 try:
-                    company_id = UUID(str(data["companyId"]))
+                    raw_cid = data.get("companyId")
                     latitude = float(data.get("latitude", 0) or 0)
                     longitude = float(data.get("longitude", 0) or 0)
                     from ..config.settings import settings as _settings
 
                     if _settings.FACE_ROUTES_REQUIRE_JWT:
                         from ..config.database import async_session
-                        from ..security.deps import assert_company_access, member_from_token
-
-                        token = str(data.get("token") or "")
-                        async with async_session() as db:
-                            member = await member_from_token(token, db)
-                            await assert_company_access(db, member, company_id)
+                        from ..security.deps import (
+                            assert_company_access,
+                            member_from_token,
+                            verify_kiosk_token_db,
+                        )
                         from ..security.jwt import decode_token
 
-                        token_exp = int(decode_token(token).get("exp") or 0)
+                        token = str(data.get("token") or "")
+                        decoded = decode_token(token, expected_typ=None)
+                        token_exp = int(decoded.get("exp") or 0)
                         token_warned = False
+                        async with async_session() as db:
+                            if decoded.get("typ") == "kiosk":
+                                device = await verify_kiosk_token_db(token, db)
+                                if raw_cid and UUID(str(raw_cid)) != device.companyId:
+                                    raise HTTPException(
+                                        status_code=403,
+                                        detail="Kiosk token companyId mismatch",
+                                    )
+                                company_id = device.companyId
+                            else:
+                                company_id = UUID(str(raw_cid))
+                                member = await member_from_token(token, db)
+                                await assert_company_access(db, member, company_id)
+                    else:
+                        company_id = UUID(str(raw_cid))
                 except Exception as exc:
                     await _send(
                         websocket,
@@ -627,15 +651,44 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 )
                 continue
 
+            if token_exp and time.time() > token_exp:
+                await _send(
+                    websocket,
+                    {
+                        "type": "error",
+                        "code": "token_expired",
+                        "detail": "Session token expired. Please send a fresh session token.",
+                    },
+                    lock=send_lock,
+                )
+                continue
+
             if msg_type == "detect":
-                asyncio.create_task(
-                    _handle_detect(
+                if task_sem.locked():
+                    await _send(
                         websocket,
-                        request_id=data.get("requestId"),
-                        image_b64=str(data.get("image") or ""),
-                        company_id=company_id,
-                        send_lock=send_lock,
-                        last_detect_at=last_detect_at,
+                        {
+                            "type": "detected",
+                            "requestId": data.get("requestId"),
+                            "dropped": True,
+                            "frameWidth": 0,
+                            "frameHeight": 0,
+                            "faces": [],
+                        },
+                        lock=send_lock,
+                    )
+                    continue
+                asyncio.create_task(
+                    _run_bounded(
+                        task_sem,
+                        _handle_detect(
+                            websocket,
+                            request_id=data.get("requestId"),
+                            image_b64=str(data.get("image") or ""),
+                            company_id=company_id,
+                            send_lock=send_lock,
+                            last_detect_at=last_detect_at,
+                        ),
                     )
                 )
                 continue
@@ -655,14 +708,17 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     )
                     continue
                 asyncio.create_task(
-                    _handle_identify(
-                        websocket,
-                        track_id=data.get("trackId"),
-                        request_id=data.get("requestId"),
-                        image_b64=str(data.get("image") or ""),
-                        company_id=company_id,
-                        send_lock=send_lock,
-                        identify_cache=identify_cache,
+                    _run_bounded(
+                        task_sem,
+                        _handle_identify(
+                            websocket,
+                            track_id=data.get("trackId"),
+                            request_id=data.get("requestId"),
+                            image_b64=str(data.get("image") or ""),
+                            company_id=company_id,
+                            send_lock=send_lock,
+                            identify_cache=identify_cache,
+                        ),
                     )
                 )
                 continue
@@ -705,17 +761,21 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     )
                     continue
                 asyncio.create_task(
-                    _handle_checkin(
-                        websocket,
-                        track_id=data.get("trackId"),
-                        request_id=data.get("requestId"),
-                        images_b64=[str(x) for x in images],
-                        company_id=company_id,
-                        latitude=latitude,
-                        longitude=longitude,
-                        note=data.get("note"),
-                        send_lock=send_lock,
-                        identify_cache=identify_cache,
+                    _run_bounded(
+                        task_sem,
+                        _handle_checkin(
+                            websocket,
+                            track_id=data.get("trackId"),
+                            request_id=data.get("requestId"),
+                            images_b64=[str(x) for x in images],
+                            company_id=company_id,
+                            latitude=latitude,
+                            longitude=longitude,
+                            note=data.get("note"),
+                            punch_type=data.get("punchType"),
+                            send_lock=send_lock,
+                            identify_cache=identify_cache,
+                        ),
                     )
                 )
                 continue
@@ -733,3 +793,5 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
             await _send(websocket, {"type": "error", "detail": str(exc)})
         except Exception:
             pass
+    finally:
+        inc_gauge("dpu_ws_active_kiosks", -1.0)

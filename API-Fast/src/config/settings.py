@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # Minimum bbox center movement (pixels) across frames to reject a static photo
     LIVENESS_MIN_BBOX_MOTION: float = 4.0
 
+    # Phase-4 Single-Frame Passive Anti-Spoofing (YCrCb chrominance + screen glare / Moiré check)
+    FACE_ANTISPOOF_ENABLED: bool = True
+    FACE_ANTISPOOF_MIN_CHROMA_STD: float = 2.0
+    FACE_ANTISPOOF_MAX_SPECULAR_RATIO: float = 0.22
+
     # Soft dedupe: skip creating another timestamp for same employee within this window (0 = off)
     CHECK_IN_DEDUPE_SECONDS: int = 300
 
@@ -42,10 +47,13 @@ class Settings(BaseSettings):
     # When true, /face/* HTTP routes require JWT. WS session must carry the same token.
     FACE_ROUTES_REQUIRE_JWT: bool = True
 
-    # Auth
+    # Auth & Enterprise OIDC SSO
     SECRET_KEY: str = "change-me-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 14
+    KIOSK_TOKEN_EXPIRE_DAYS: int = 365
+    OIDC_ISSUER: str = ""
+    OIDC_CLIENT_ID: str = ""
     CORS_ORIGINS: str = (
         "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,"
         "http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,"
@@ -77,13 +85,19 @@ class Settings(BaseSettings):
     # WS identify/check-in: detect at FACE_DETECT_DET_SIZE then embed (skip 640 det).
     FACE_FAST_EMBED_DETECT: bool = True
 
-    # Storage
+    # Phase-5 Cloud Storage (Local / S3 / MinIO)
     STORAGE_BACKEND: str = "local"
     IMAGE_RETENTION_DAYS: int = 90
     TEMP_RETENTION_HOURS: int = 24
     UPLOAD_MAX_BYTES: int = 8 * 1024 * 1024
+    S3_ENDPOINT_URL: str = ""
+    S3_REGION: str = "ap-southeast-1"
+    S3_BUCKET: str = "dpu-attendance"
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
+    S3_PRESIGN_EXPIRES_SECONDS: int = 3600
 
-    # Notifications
+    # Notifications & Signed Payroll Webhooks
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
@@ -93,6 +107,7 @@ class Settings(BaseSettings):
     LINE_CHANNEL_ACCESS_TOKEN: str = ""
     NOTIFY_POLL_SECONDS: int = 30
     SERVICE_NOTIFY_TOKEN: str = ""
+    WEBHOOK_SIGNING_SECRET: str = ""
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

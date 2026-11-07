@@ -1,16 +1,164 @@
+from __future__ import annotations
+
+import csv
+import io
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from uuid import UUID
+
+from fastapi import HTTPException, status
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from fastapi import HTTPException, status
-from typing import Optional
-from datetime import datetime
 
-from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate, TimestampApprovalAction
-from ..models.employee_timestamp import EmployeeTimestamp, TimestampType, ApprovalStatus
-from uuid import UUID
 from ..models.company_employee import CompanyEmployee
 from ..models.company_location import CompanyLocation
+from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp, TimestampType
+from ..models.hr_schedule import WorkShift
+from ..models.system_setting import SystemSetting
+from ..schemas.employee_timestamp_schema import EmployeeTimestampUpdate, TimestampApprovalAction
 from ..utils.geolocation import get_distance_in_km
+
+DEFAULT_SHIFT = {
+    "name": "กะปกติ (09:00 - 18:00)",
+    "startTime": "09:00",
+    "endTime": "18:00",
+    "graceMinutes": 15,
+    "isCrossMidnight": False,
+}
+
+
+def get_bangkok_tz():
+    try:
+        from zoneinfo import ZoneInfo
+
+        return ZoneInfo("Asia/Bangkok")
+    except Exception:
+        return timezone(timedelta(hours=7))
+
+
+def _shift_key(company_id: str | UUID) -> str:
+    return f"shift:{company_id}"
+
+
+async def get_company_shift_settings(companyId: str | UUID, db: AsyncSession) -> dict:
+    row = await db.get(SystemSetting, _shift_key(companyId))
+    if row and isinstance(row.value, dict):
+        return {**DEFAULT_SHIFT, **row.value}
+    return dict(DEFAULT_SHIFT)
+
+
+async def update_company_shift_settings(companyId: str | UUID, payload: dict, db: AsyncSession) -> dict:
+    key = _shift_key(companyId)
+    row = await db.get(SystemSetting, key)
+    clean = {
+        "name": str(payload.get("name") or DEFAULT_SHIFT["name"]).strip(),
+        "startTime": str(payload.get("startTime") or DEFAULT_SHIFT["startTime"]).strip(),
+        "endTime": str(payload.get("endTime") or DEFAULT_SHIFT["endTime"]).strip(),
+        "graceMinutes": max(0, int(payload.get("graceMinutes", DEFAULT_SHIFT["graceMinutes"]) or 0)),
+        "isCrossMidnight": bool(payload.get("isCrossMidnight", False)),
+    }
+    if row:
+        row.value = clean
+    else:
+        db.add(SystemSetting(key=key, value=clean))
+    await db.commit()
+    return clean
+
+
+def _shift_row_to_dict(ws: WorkShift) -> dict:
+    return {
+        "shiftId": str(ws.shiftId),
+        "name": ws.name,
+        "startTime": ws.startTime,
+        "endTime": ws.endTime,
+        "graceMinutes": int(ws.graceMinutes or 0),
+        "isCrossMidnight": bool(ws.isCrossMidnight),
+        "isDefault": bool(ws.isDefault),
+    }
+
+
+async def _resolve_employee_shift(
+    company_id: UUID,
+    emp: Optional[CompanyEmployee],
+    db: AsyncSession,
+) -> dict:
+    """Resolve work shift hierarchy: Employee -> Department -> Default WorkShift -> Company SystemSetting."""
+    if emp is not None:
+        emp_shift_id = getattr(emp, "shiftId", None)
+        if emp_shift_id:
+            ws = await db.get(WorkShift, emp_shift_id)
+            if ws and ws.companyId == company_id and ws.deletedAt is None:
+                return _shift_row_to_dict(ws)
+        dept = getattr(emp, "department", None)
+        dept_shift_id = getattr(dept, "shiftId", None) if dept else None
+        if dept_shift_id:
+            ws = await db.get(WorkShift, dept_shift_id)
+            if ws and ws.companyId == company_id and ws.deletedAt is None:
+                return _shift_row_to_dict(ws)
+
+    default_ws = (
+        await db.execute(
+            select(WorkShift)
+            .where(
+                WorkShift.companyId == company_id,
+                WorkShift.isDefault.is_(True),
+                WorkShift.deletedAt.is_(None),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if default_ws:
+        return _shift_row_to_dict(default_ws)
+
+    return await get_company_shift_settings(company_id, db)
+
+
+def _parse_hhmm(val: str, default_h: int, default_m: int) -> tuple[int, int]:
+    try:
+        parts = str(val).strip().split(":")
+        return int(parts[0]), int(parts[1])
+    except Exception:
+        return default_h, default_m
+
+
+def _compute_shift_metrics(
+    now_local: datetime,
+    shift: dict,
+    *,
+    is_checkout: bool,
+) -> tuple[bool, int, int, str]:
+    shift_name = str(shift.get("name") or DEFAULT_SHIFT["name"])
+    sh, sm = _parse_hhmm(shift.get("startTime", "09:00"), 9, 0)
+    eh, em = _parse_hhmm(shift.get("endTime", "18:00"), 18, 0)
+    grace = max(0, int(shift.get("graceMinutes", 15) or 0))
+    cross_midnight = bool(shift.get("isCrossMidnight")) or (eh, em) < (sh, sm)
+
+    shift_start = now_local.replace(hour=sh, minute=sm, second=0, microsecond=0)
+    shift_end = now_local.replace(hour=eh, minute=em, second=0, microsecond=0)
+
+    if cross_midnight:
+        if is_checkout:
+            if now_local.hour >= 12:
+                shift_end = shift_end + timedelta(days=1)
+        else:
+            if now_local.hour < 12:
+                shift_start = shift_start - timedelta(days=1)
+
+    if is_checkout:
+        if now_local > shift_end:
+            ot_mins = int((now_local - shift_end).total_seconds() // 60)
+            return False, 0, max(0, ot_mins), shift_name
+        return False, 0, 0, shift_name
+
+    late_cutoff = shift_start + timedelta(minutes=grace)
+    if now_local > late_cutoff:
+        late_mins = int((now_local - shift_start).total_seconds() // 60)
+        return True, max(1, late_mins), 0, shift_name
+    return False, 0, 0, shift_name
 
 
 def _employee_brief(emp: Optional[CompanyEmployee]) -> Optional[dict]:
@@ -35,6 +183,7 @@ def _employee_brief(emp: Optional[CompanyEmployee]) -> Optional[dict]:
             "emergencyContactName": getattr(member, "emergencyContactName", None),
             "emergencyContactPhone": getattr(member, "emergencyContactPhone", None),
             "attachmentUrls": getattr(member, "attachmentUrls", None),
+            "biometricConsentAt": getattr(member, "biometricConsentAt", None),
         }
         if member
         else None,
@@ -49,12 +198,14 @@ def _employee_brief(emp: Optional[CompanyEmployee]) -> Optional[dict]:
             "departmentId": department.departmentId,
             "thName": department.thName,
             "engName": department.engName,
+            "shiftId": getattr(department, "shiftId", None),
         }
         if department
         else None,
         "company_employeeId": emp.company_employeeId,
         "employeeId": emp.employeeId or "",
         "bossId": emp.bossId or "",
+        "shiftId": getattr(emp, "shiftId", None),
     }
 
 
@@ -77,13 +228,28 @@ def _timestamp_payload(time: EmployeeTimestamp) -> dict:
         "approvedBy": time.approvedBy,
         "approvedAt": time.approvedAt,
         "rejectReason": time.rejectReason,
+        "isLate": bool(getattr(time, "isLate", False)),
+        "lateMinutes": int(getattr(time, "lateMinutes", 0) or 0),
+        "overtimeMinutes": int(getattr(time, "overtimeMinutes", 0) or 0),
+        "shiftName": getattr(time, "shiftName", None),
     }
 
 
-async def get_all_timestamps(companyId: str, db: AsyncSession):
+async def get_all_timestamps(
+    companyId: str | UUID,
+    db: AsyncSession,
+    *,
+    limit: int = 500,
+    offset: int = 0,
+):
+    safe_limit = min(max(1, int(limit or 500)), 2000)
+    safe_offset = max(0, int(offset or 0))
     result = await db.execute(
         select(EmployeeTimestamp)
         .where(EmployeeTimestamp.companyId == companyId)
+        .order_by(EmployeeTimestamp.timestamp.desc())
+        .offset(safe_offset)
+        .limit(safe_limit)
         .options(
             selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.member),
             selectinload(EmployeeTimestamp.company_employee).joinedload(CompanyEmployee.position),
@@ -120,10 +286,47 @@ def _is_null_island(lat: float, lon: float) -> bool:
         return True
 
 
+async def _resolve_hybrid_punch_type(
+    db: AsyncSession,
+    company_id: UUID,
+    company_employee_id: UUID,
+    requested_punch: Optional[str],
+    now_local: datetime,
+    *,
+    is_cross_midnight: bool = False,
+) -> bool:
+    """Return True if this punch should be treated as CHECK_OUT, False for CHECK_IN."""
+    req = (requested_punch or "AUTO").strip().upper()
+    if req in ("CHECK_OUT", "CHECKOUT", "OUT", "2"):
+        return True
+    if req in ("CHECK_IN", "CHECKIN", "IN", "1"):
+        return False
+
+    today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    if is_cross_midnight and now_local.hour < 12:
+        window_start = today_start - timedelta(hours=12)
+    else:
+        window_start = today_start
+    tomorrow = today_start + timedelta(days=1)
+    existing = await db.execute(
+        select(EmployeeTimestamp.timestampType)
+        .where(
+            EmployeeTimestamp.companyId == company_id,
+            EmployeeTimestamp.company_employeeId == company_employee_id,
+            EmployeeTimestamp.timestamp >= window_start,
+            EmployeeTimestamp.timestamp < tomorrow,
+        )
+        .order_by(EmployeeTimestamp.timestamp.asc())
+        .limit(1)
+    )
+    return existing.first() is not None
+
+
 async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
     user_lat = data.get("latitude")
     user_lon = data.get("longitude")
     note = (data.get("note") or "").strip() if data.get("note") else ""
+    requested_punch = data.get("punchType")
 
     if user_lat is None or user_lon is None:
         raise HTTPException(
@@ -136,7 +339,10 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
             detail="Invalid GPS coordinates (0,0). Enable location / open kiosk via HTTPS.",
         )
 
-    stmt = select(CompanyLocation).where(CompanyLocation.companyId == companyId)
+    stmt = select(CompanyLocation).where(
+        CompanyLocation.companyId == companyId,
+        CompanyLocation.deletedAt.is_(None),
+    )
     result = await db.execute(stmt)
     locations = result.scalars().all()
 
@@ -151,12 +357,43 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
                 found_location_name = loc.locationName
                 break
 
-    data["timestampType"] = TimestampType.CHECK_IN if is_in_area else TimestampType.WARNING
-    data["locationName"] = found_location_name
-    data["companyId"] = companyId
-    data["note"] = note or None
+    tz = get_bangkok_tz()
+    now_local = datetime.now(tz)
+    emp_id = UUID(str(data["company_employeeId"]))
+
+    emp_res = await db.execute(
+        select(CompanyEmployee)
+        .where(
+            CompanyEmployee.company_employeeId == emp_id,
+            CompanyEmployee.companyId == companyId,
+        )
+        .options(
+            selectinload(CompanyEmployee.member),
+            selectinload(CompanyEmployee.company),
+            selectinload(CompanyEmployee.position),
+            selectinload(CompanyEmployee.department),
+        )
+    )
+    company_employee = emp_res.scalar_one_or_none()
+    if not company_employee:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company Employee not found")
+
+    shift = await _resolve_employee_shift(companyId, company_employee, db)
+    sh, sm = _parse_hhmm(shift.get("startTime", "09:00"), 9, 0)
+    eh, em = _parse_hhmm(shift.get("endTime", "18:00"), 18, 0)
+    is_cross_midnight = bool(shift.get("isCrossMidnight")) or (eh, em) < (sh, sm)
+
+    is_checkout = await _resolve_hybrid_punch_type(
+        db, companyId, emp_id, requested_punch, now_local, is_cross_midnight=is_cross_midnight
+    )
+    is_late, late_mins, ot_mins, shift_name = _compute_shift_metrics(
+        now_local, shift, is_checkout=is_checkout
+    )
 
     if is_in_area:
+        data["timestampType"] = (
+            TimestampType.CHECK_OUT if is_checkout else TimestampType.CHECK_IN
+        )
         data["approvalStatus"] = ApprovalStatus.NONE.value
     else:
         if not note:
@@ -164,9 +401,17 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Note is required when checking in outside registered area.",
             )
+        data["timestampType"] = TimestampType.WARNING
         data["approvalStatus"] = ApprovalStatus.PENDING.value
 
-    # Drop unknown keys that ORM does not accept
+    data["locationName"] = found_location_name
+    data["companyId"] = companyId
+    data["note"] = note or None
+    data["isLate"] = is_late
+    data["lateMinutes"] = late_mins
+    data["overtimeMinutes"] = ot_mins
+    data["shiftName"] = shift_name
+
     allowed = {
         "company_employeeId",
         "companyId",
@@ -177,6 +422,10 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
         "photoTimestamp",
         "note",
         "approvalStatus",
+        "isLate",
+        "lateMinutes",
+        "overtimeMinutes",
+        "shiftName",
     }
     clean = {k: v for k, v in data.items() if k in allowed}
 
@@ -185,25 +434,44 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
     await db.commit()
     await db.refresh(new_timestamp)
 
-    result = await db.execute(
-        select(CompanyEmployee)
-        .where(
-            CompanyEmployee.company_employeeId == new_timestamp.company_employeeId,
-            CompanyEmployee.companyId == companyId,
-        )
-        .options(
-            selectinload(CompanyEmployee.member),
-            selectinload(CompanyEmployee.company),
-            selectinload(CompanyEmployee.position),
-            selectinload(CompanyEmployee.department),
-        )
-    )
-    company_employee = result.scalar_one_or_none()
-    if not company_employee:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company Employee not found")
-
     new_timestamp.company_employee = company_employee
-    return _timestamp_payload(new_timestamp)
+    payload_out = _timestamp_payload(new_timestamp)
+
+    # Emit signed outbound Payroll / ERP webhook event asynchronously
+    try:
+        import asyncio
+        from ..services.notification_service import emit_company_webhook_event
+
+        ts_type_val = int(getattr(new_timestamp.timestampType, "value", new_timestamp.timestampType))
+        event_name = (
+            "attendance.checked_out"
+            if ts_type_val == 2
+            else ("attendance.warning" if ts_type_val == 0 else "attendance.checked_in")
+        )
+        member_obj = company_employee.member
+        full_name = (
+            f"{getattr(member_obj, 'firstName', '') or ''} {getattr(member_obj, 'lastName', '') or ''}".strip()
+            if member_obj
+            else ""
+        )
+        webhook_data = {
+            "timestampId": str(new_timestamp.timestampId),
+            "company_employeeId": str(company_employee.company_employeeId),
+            "employeeId": company_employee.employeeId or "",
+            "employeeName": full_name,
+            "timestampType": ts_type_val,
+            "shiftName": shift_name,
+            "isLate": bool(is_late),
+            "lateMinutes": int(late_mins),
+            "overtimeMinutes": int(ot_mins),
+            "locationName": found_location_name,
+            "timestamp": new_timestamp.timestamp.isoformat() if new_timestamp.timestamp else None,
+        }
+        asyncio.create_task(emit_company_webhook_event(companyId, event_name, webhook_data))
+    except Exception:
+        pass
+
+    return payload_out
 
 
 async def update_timestamp(
@@ -270,17 +538,32 @@ async def approve_or_reject_timestamp(
         timestamp.timestampType = TimestampType.DISAPPROVE
 
     timestamp.approvedBy = action.approvedBy
-    timestamp.approvedAt = datetime.utcnow()
+    timestamp.approvedAt = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(timestamp)
     try:
-        from ..services.notification_service import enqueue
+        import asyncio
+        from ..services.notification_service import emit_company_webhook_event, enqueue
 
         await enqueue(
             "approval.decided",
             "line",
             {"body": f"Timestamp {timestampId} {'approved' if action.approve else 'rejected'}"},
             company_id=str(companyId),
+        )
+        ev_name = "attendance.approved" if action.approve else "attendance.rejected"
+        asyncio.create_task(
+            emit_company_webhook_event(
+                companyId,
+                ev_name,
+                {
+                    "timestampId": str(timestamp.timestampId),
+                    "company_employeeId": str(timestamp.company_employeeId),
+                    "approvalStatus": timestamp.approvalStatus,
+                    "approvedBy": timestamp.approvedBy,
+                    "rejectReason": timestamp.rejectReason,
+                },
+            )
         )
     except Exception:
         pass
@@ -309,7 +592,12 @@ async def search_timestamps(
     timestampType: Optional[int] = None,
     approvalStatus: Optional[str] = None,
     db: AsyncSession = None,
+    *,
+    limit: int = 500,
+    offset: int = 0,
 ):
+    safe_limit = min(max(1, int(limit or 500)), 5000)
+    safe_offset = max(0, int(offset or 0))
     query = select(EmployeeTimestamp).where(EmployeeTimestamp.companyId == companyId)
 
     if start_date:
@@ -319,9 +607,15 @@ async def search_timestamps(
     if company_employeeId:
         query = query.where(EmployeeTimestamp.company_employeeId == company_employeeId)
     if timestampType is not None:
-        query = query.where(EmployeeTimestamp.timestampType == timestampType)
+        try:
+            ts_enum = TimestampType(int(timestampType))
+            query = query.where(EmployeeTimestamp.timestampType == ts_enum)
+        except ValueError:
+            query = query.where(EmployeeTimestamp.timestampType == timestampType)
     if approvalStatus:
         query = query.where(EmployeeTimestamp.approvalStatus == approvalStatus)
+
+    query = query.order_by(EmployeeTimestamp.timestamp.desc()).offset(safe_offset).limit(safe_limit)
 
     result = await db.execute(
         query.options(
@@ -331,3 +625,111 @@ async def search_timestamps(
         )
     )
     return [_timestamp_payload(time) for time in result.scalars().all()]
+
+
+def _type_label(ts_type) -> str:
+    val = getattr(ts_type, "value", ts_type)
+    if val == 1:
+        return "เข้างาน (Check-In)"
+    if val == 2:
+        return "ออกงาน (Check-Out)"
+    if val == 0:
+        return "นอกพื้นที่ (Warning)"
+    if val == 3:
+        return "ไม่อนุมัติ (Absent)"
+    return str(val)
+
+
+def _format_export_rows(items: list[dict]) -> list[list[str]]:
+    tz = get_bangkok_tz()
+    rows: list[list[str]] = []
+    for item in items:
+        emp = item.get("employee") or {}
+        member = emp.get("member") or {}
+        dept = emp.get("department") or {}
+        pos = emp.get("position") or {}
+        full_name = f"{member.get('firstName') or ''} {member.get('lastName') or ''}".strip() or member.get("username") or "-"
+        ts_val = item.get("timestamp")
+        if isinstance(ts_val, datetime):
+            local_dt = ts_val.astimezone(tz) if ts_val.tzinfo else ts_val.replace(tzinfo=timezone.utc).astimezone(tz)
+            date_str = local_dt.strftime("%Y-%m-%d")
+            time_str = local_dt.strftime("%H:%M:%S")
+        else:
+            date_str = str(ts_val or "")[:10]
+            time_str = str(ts_val or "")[11:19]
+        rows.append(
+            [
+                date_str,
+                time_str,
+                str(emp.get("employeeId") or ""),
+                full_name,
+                str(dept.get("thName") or dept.get("engName") or ""),
+                str(pos.get("thName") or pos.get("engName") or ""),
+                _type_label(item.get("timestampType")),
+                str(item.get("shiftName") or ""),
+                "สาย" if item.get("isLate") else "ปกติ",
+                str(item.get("lateMinutes") or 0),
+                str(item.get("overtimeMinutes") or 0),
+                str(item.get("locationName") or ""),
+                f"{item.get('latitude') or ''}, {item.get('longitude') or ''}",
+                str(item.get("approvalStatus") or "NONE"),
+                str(item.get("note") or ""),
+            ]
+        )
+    return rows
+
+
+EXPORT_HEADERS = [
+    "วันที่",
+    "เวลา",
+    "รหัสพนักงาน",
+    "ชื่อ-นามสกุล",
+    "แผนก",
+    "ตำแหน่ง",
+    "ประเภทการลงเวลา",
+    "กะการทำงาน",
+    "สถานะการมาสาย",
+    "นาทีที่สาย",
+    "นาทีล่วงเวลา (OT)",
+    "สถานที่",
+    "พิกัด (Lat, Lng)",
+    "สถานะอนุมัติ",
+    "หมายเหตุ",
+]
+
+
+def build_timestamps_csv(items: list[dict]) -> bytes:
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(EXPORT_HEADERS)
+    for row in _format_export_rows(items):
+        writer.writerow(row)
+    return ("\ufeff" + buf.getvalue()).encode("utf-8")
+
+
+def build_timestamps_xlsx(items: list[dict]) -> bytes:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Attendance Report"
+
+    header_fill = PatternFill("solid", fgColor="0F766E")
+    header_font = Font(color="FFFFFF", bold=True)
+
+    for col_idx, header in enumerate(EXPORT_HEADERS, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    rows = _format_export_rows(items)
+    for row_idx, row in enumerate(rows, start=2):
+        for col_idx, val in enumerate(row, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=val)
+
+    widths = [14, 12, 16, 26, 20, 20, 22, 22, 16, 14, 16, 26, 24, 16, 30]
+    for idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width
+
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()

@@ -14,10 +14,14 @@ class EmployeeTimestampBase(BaseModel):
     photoTimestamp: Optional[str] = None
     note: Optional[str] = None
     approvalStatus: Optional[ApprovalStatus] = ApprovalStatus.NONE
+    isLate: Optional[bool] = False
+    lateMinutes: Optional[int] = 0
+    overtimeMinutes: Optional[int] = 0
+    shiftName: Optional[str] = None
 
 
 class EmployeeTimestampCreate(EmployeeTimestampBase):
-    pass
+    punchType: Optional[str] = None
 
 
 class EmployeeTimestampUpdate(BaseModel):

@@ -1,4 +1,4 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ProfileModel, UserModel } from '../user-auth.model';
 @Injectable({
@@ -11,12 +11,15 @@ export class AuthService {
   ) {
   }
 
-  login(username: string, password: string) {
-    const body = {
+  login(username: string, password: string, totpCode?: string) {
+    const body: any = {
       username: username,
       password: password,
     };
-    return this.http.post<UserModel>(this.apiBaseUrl + '/login', body)
+    if (totpCode && totpCode.trim()) {
+      body.totpCode = totpCode.trim();
+    }
+    return this.http.post<UserModel>(this.apiBaseUrl + '/login', body);
   }
 
   refreshToken(token: string) {

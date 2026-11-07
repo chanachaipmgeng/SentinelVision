@@ -36,7 +36,10 @@ def _company_code(company_id: UUID) -> str:
 
 async def _member_company_ids(db: AsyncSession, member_id: UUID) -> List[UUID]:
     result = await db.execute(
-        select(CompanyEmployee.companyId).where(CompanyEmployee.memberId == member_id)
+        select(CompanyEmployee.companyId).where(
+            CompanyEmployee.memberId == member_id,
+            CompanyEmployee.deletedAt.is_(None),
+        )
     )
     return [row[0] for row in result.all()]
 
@@ -82,10 +85,15 @@ async def _enrich_face_core_match(
 
     member_id = UUID(str(subject_id))
     member = await db.get(Member, member_id)
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Matched member not found",
+        )
+    if _member_status_value(getattr(member, "status", None)) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Employee account is disabled.",
         )
 
     emp_row = await db.execute(
@@ -93,6 +101,7 @@ async def _enrich_face_core_match(
         .where(
             CompanyEmployee.memberId == member_id,
             CompanyEmployee.companyId == company_id,
+            CompanyEmployee.deletedAt.is_(None),
         )
         .limit(1)
     )
@@ -125,8 +134,11 @@ async def _enrich_face_core_match(
 async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
     """Create InsightFace embedding, store in pgvector, save enrolled image."""
     member = await db.get(Member, memberId)
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if getattr(member, "biometricConsentAt", None) is None:
+        member.biometricConsentAt = datetime.now(timezone.utc)
 
     temp_dir = Path("temp_images")
     temp_dir.mkdir(exist_ok=True)
@@ -153,12 +165,16 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
                 enrolled = await client.enroll(code, subject_id, temp_file_path)
                 if first_face_id is None:
                     first_face_id = enrolled.get("faceId")
+            await db.commit()
             return {
                 "message": "New face encoding added successfully",
                 "faceEncodingId": first_face_id,
             }
 
-        encoding = generate_face_encoding(str(temp_file_path))
+        encoding = await run_on_face_gpu(
+            lambda p=str(temp_file_path): generate_face_encoding(p),
+            kind="other",
+        )
         if encoding is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -173,10 +189,14 @@ async def add_face(memberId: UUID, image_file: UploadFile, db: AsyncSession):
         await db.commit()
         await db.refresh(new_face_encoding)
 
-        permanent_dir = Path("enrolled_images")
-        permanent_dir.mkdir(exist_ok=True)
-        permanent_path = permanent_dir / f"{new_face_encoding.faceEncodingId}.jpg"
-        shutil.move(str(temp_file_path), permanent_path)
+        from ..services.storage_service import store_image_file
+
+        store_image_file(
+            "enrolled_images",
+            f"{new_face_encoding.faceEncodingId}.jpg",
+            temp_file_path,
+            move=True,
+        )
         file_moved = True
 
         return {
@@ -324,7 +344,7 @@ async def _resolve_match_response(
     )
 
     member = await db.get(Member, matched_member_id)
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Matched member not found",
@@ -382,7 +402,11 @@ async def check_face_emp(
         if face_core_enabled():
             fc = await _face_core_identify(companyId, temp_image_paths, "secure")
             return await _enrich_face_core_match(db, companyId, fc)
-        target_encoding = verify_liveness_and_get_encoding(temp_image_paths)
+        target_encoding = await run_on_face_gpu(
+            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
+            kind="checkin",
+            company_id=companyId,
+        )
         return await _resolve_match_response(
             db,
             target_encoding,
@@ -461,20 +485,18 @@ async def identify_face(
 
 
 def _persist_photo_from_path(source_path: str) -> str:
-    UPLOAD_DIR.mkdir(exist_ok=True)
+    from ..services.storage_service import store_image_file
+
     filename = f"{uuid.uuid4()}.jpg"
-    dest = UPLOAD_DIR / filename
-    shutil.copyfile(source_path, dest)
-    return filename
+    return store_image_file("uploaded_images", filename, source_path)
 
 
 def _persist_photo_from_bytes(content: bytes) -> str:
-    """Write punch photo from in-memory JPEG/PNG bytes (no temp file)."""
-    UPLOAD_DIR.mkdir(exist_ok=True)
+    """Write punch photo from in-memory JPEG/PNG bytes (no temp file) and sync to S3 when enabled."""
+    from ..services.storage_service import store_image_bytes
+
     filename = f"{uuid.uuid4()}.jpg"
-    dest = UPLOAD_DIR / filename
-    dest.write_bytes(content)
-    return filename
+    return store_image_bytes("uploaded_images", filename, content)
 
 
 def _employee_brief(company_employee: CompanyEmployee) -> dict:
@@ -496,6 +518,18 @@ def _employee_brief(company_employee: CompanyEmployee) -> dict:
     }
 
 
+def _should_bypass_dedupe_for_explicit_mode(
+    requested_punch: Optional[str], existing_type_value: int
+) -> bool:
+    """Allow an explicit CHECK_OUT after a recent CHECK_IN (or vice versa) on the Kiosk."""
+    norm = (requested_punch or "").strip().upper()
+    if norm in ("CHECK_OUT", "OUT", "2") and existing_type_value != 2:
+        return True
+    if norm in ("CHECK_IN", "IN", "1") and existing_type_value == 2:
+        return True
+    return False
+
+
 async def _finalize_check_in(
     *,
     db: AsyncSession,
@@ -510,6 +544,7 @@ async def _finalize_check_in(
     default_note: str,
     target_encoding: Optional[List[float]] = None,
     match_payload: Optional[dict] = None,
+    punch_type: Optional[str] = None,
 ) -> dict:
     if match_payload is None:
         if target_encoding is None:
@@ -527,6 +562,7 @@ async def _finalize_check_in(
         .where(
             CompanyEmployee.memberId == member_id,
             CompanyEmployee.companyId == companyId,
+            CompanyEmployee.deletedAt.is_(None),
         )
         .options(
             selectinload(CompanyEmployee.member),
@@ -549,31 +585,32 @@ async def _finalize_check_in(
             ttl_s=float(dedupe_seconds),
         )
         if cached is not None:
-            ts_type_value = getattr(cached.timestamp_type, "value", cached.timestamp_type)
-            photo = cached.photo_timestamp
-            return {
-                **match_payload,
-                "message": "Already checked in recently",
-                "checkedIn": False,
-                "duplicate": True,
-                "mode": mode,
-                "dedupeSeconds": dedupe_seconds,
-                "dedupeCache": True,
-                "isWarning": int(ts_type_value) == 0,
-                "employee": _employee_brief(company_employee),
-                "timestamp": {
-                    "timestampId": cached.timestamp_id,
-                    "timestamp": cached.timestamp,
-                    "timestampType": ts_type_value,
-                    "locationName": cached.location_name,
-                    "latitude": cached.latitude,
-                    "longitude": cached.longitude,
-                    "photoTimestamp": photo,
-                    "photoUrl": f"/images/{photo}" if photo else None,
-                    "approvalStatus": cached.approval_status,
-                    "note": cached.note,
-                },
-            }
+            ts_type_value = int(getattr(cached.timestamp_type, "value", cached.timestamp_type))
+            if not _should_bypass_dedupe_for_explicit_mode(punch_type, ts_type_value):
+                photo = cached.photo_timestamp
+                return {
+                    **match_payload,
+                    "message": "Already checked in recently",
+                    "checkedIn": False,
+                    "duplicate": True,
+                    "mode": mode,
+                    "dedupeSeconds": dedupe_seconds,
+                    "dedupeCache": True,
+                    "isWarning": int(ts_type_value) == 0,
+                    "employee": _employee_brief(company_employee),
+                    "timestamp": {
+                        "timestampId": cached.timestamp_id,
+                        "timestamp": cached.timestamp,
+                        "timestampType": ts_type_value,
+                        "locationName": cached.location_name,
+                        "latitude": cached.latitude,
+                        "longitude": cached.longitude,
+                        "photoTimestamp": photo,
+                        "photoUrl": f"/images/{photo}" if photo else None,
+                        "approvalStatus": cached.approval_status,
+                        "note": cached.note,
+                    },
+                }
 
         since = datetime.now(timezone.utc) - timedelta(seconds=dedupe_seconds)
         recent = await db.execute(
@@ -590,43 +627,48 @@ async def _finalize_check_in(
         existing_ts = recent.scalar_one_or_none()
         if existing_ts:
             ts_type = existing_ts.timestampType
-            ts_type_value = getattr(ts_type, "value", ts_type)
-            photo = existing_ts.photoTimestamp
-            put_cached_check_in(
-                companyId,
-                company_employee.company_employeeId,
-                timestamp_id=str(existing_ts.timestampId),
-                timestamp=existing_ts.timestamp,
-                timestamp_type=ts_type_value,
-                location_name=existing_ts.locationName,
-                latitude=existing_ts.latitude,
-                longitude=existing_ts.longitude,
-                photo_timestamp=photo,
-                approval_status=existing_ts.approvalStatus,
-                note=existing_ts.note,
-            )
-            return {
-                **match_payload,
-                "message": "Already checked in recently",
-                "checkedIn": False,
-                "duplicate": True,
-                "mode": mode,
-                "dedupeSeconds": dedupe_seconds,
-                "isWarning": int(ts_type_value) == 0,
-                "employee": _employee_brief(company_employee),
-                "timestamp": {
-                    "timestampId": str(existing_ts.timestampId),
-                    "timestamp": existing_ts.timestamp,
-                    "timestampType": ts_type_value,
-                    "locationName": existing_ts.locationName,
-                    "latitude": existing_ts.latitude,
-                    "longitude": existing_ts.longitude,
-                    "photoTimestamp": photo,
-                    "photoUrl": f"/images/{photo}" if photo else None,
-                    "approvalStatus": existing_ts.approvalStatus,
-                    "note": existing_ts.note,
-                },
-            }
+            ts_type_value = int(getattr(ts_type, "value", ts_type))
+            if not _should_bypass_dedupe_for_explicit_mode(punch_type, ts_type_value):
+                photo = existing_ts.photoTimestamp
+                put_cached_check_in(
+                    companyId,
+                    company_employee.company_employeeId,
+                    timestamp_id=str(existing_ts.timestampId),
+                    timestamp=existing_ts.timestamp,
+                    timestamp_type=ts_type_value,
+                    location_name=existing_ts.locationName,
+                    latitude=existing_ts.latitude,
+                    longitude=existing_ts.longitude,
+                    photo_timestamp=photo,
+                    approval_status=existing_ts.approvalStatus,
+                    note=existing_ts.note,
+                )
+                return {
+                    **match_payload,
+                    "message": "Already checked in recently",
+                    "checkedIn": False,
+                    "duplicate": True,
+                    "mode": mode,
+                    "dedupeSeconds": dedupe_seconds,
+                    "isWarning": int(ts_type_value) == 0,
+                    "employee": _employee_brief(company_employee),
+                    "timestamp": {
+                        "timestampId": str(existing_ts.timestampId),
+                        "timestamp": existing_ts.timestamp,
+                        "timestampType": ts_type_value,
+                        "locationName": existing_ts.locationName,
+                        "latitude": existing_ts.latitude,
+                        "longitude": existing_ts.longitude,
+                        "photoTimestamp": photo,
+                        "photoUrl": f"/images/{photo}" if photo else None,
+                        "approvalStatus": existing_ts.approvalStatus,
+                        "note": existing_ts.note,
+                        "isLate": bool(getattr(existing_ts, "isLate", False)),
+                        "lateMinutes": int(getattr(existing_ts, "lateMinutes", 0) or 0),
+                        "overtimeMinutes": int(getattr(existing_ts, "overtimeMinutes", 0) or 0),
+                        "shiftName": getattr(existing_ts, "shiftName", None),
+                    },
+                }
 
     try:
         lat_f = float(latitude)
@@ -664,14 +706,16 @@ async def _finalize_check_in(
             "longitude": lon_f,
             "photoTimestamp": photo_filename,
             "note": check_in_note,
+            "punchType": punch_type,
         },
         companyId,
         db,
     )
 
     ts_type = timestamp.get("timestampType")
-    ts_type_value = getattr(ts_type, "value", ts_type)
-    is_warning = int(ts_type_value) == 0
+    ts_type_value = int(getattr(ts_type, "value", ts_type))
+    is_warning = ts_type_value == 0
+    is_checkout = ts_type_value == 2
 
     put_cached_check_in(
         companyId,
@@ -687,11 +731,16 @@ async def _finalize_check_in(
         note=timestamp.get("note"),
     )
 
+    if is_warning:
+        msg_str = "Check-in saved (outside area)"
+    elif is_checkout:
+        msg_str = "Check-out saved"
+    else:
+        msg_str = "Check-in saved"
+
     return {
         **match_payload,
-        "message": "Check-in saved"
-        if not is_warning
-        else "Check-in saved (outside area)",
+        "message": msg_str,
         "checkedIn": True,
         "duplicate": False,
         "mode": mode,
@@ -708,6 +757,10 @@ async def _finalize_check_in(
             "photoUrl": f"/images/{photo_filename}",
             "approvalStatus": timestamp.get("approvalStatus"),
             "note": timestamp.get("note"),
+            "isLate": bool(timestamp.get("isLate", False)),
+            "lateMinutes": int(timestamp.get("lateMinutes", 0) or 0),
+            "overtimeMinutes": int(timestamp.get("overtimeMinutes", 0) or 0),
+            "shiftName": timestamp.get("shiftName"),
         },
     }
 
@@ -719,6 +772,7 @@ async def check_in_face(
     longitude: float,
     db: AsyncSession,
     note: Optional[str] = None,
+    punch_type: Optional[str] = None,
 ):
     """
     One-shot kiosk check-in: multi-frame liveness + match + save photo + timestamp.
@@ -747,6 +801,7 @@ async def check_in_face(
                 liveness_passed=True,
                 mode="secure",
                 default_note="Face kiosk auto check-in",
+                punch_type=punch_type,
             )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
@@ -764,6 +819,7 @@ async def check_in_face(
             liveness_passed=True,
             mode="secure",
             default_note="Face kiosk auto check-in",
+            punch_type=punch_type,
         )
     except HTTPException:
         raise
@@ -784,6 +840,7 @@ async def check_in_face_walkby(
     longitude: float,
     db: AsyncSession,
     note: Optional[str] = None,
+    punch_type: Optional[str] = None,
 ):
     """
     Walk-by check-in: 1–2 face crops, no motion liveness (faster multi-person pass).
@@ -814,6 +871,7 @@ async def check_in_face_walkby(
                 liveness_passed=False,
                 mode="walkby",
                 default_note="Face kiosk walk-by check-in",
+                punch_type=punch_type,
             )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): get_walkby_encoding(ps),
@@ -831,6 +889,7 @@ async def check_in_face_walkby(
             liveness_passed=False,
             mode="walkby",
             default_note="Face kiosk walk-by check-in",
+            punch_type=punch_type,
         )
     except HTTPException:
         raise
@@ -904,11 +963,11 @@ async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
     await db.commit()
 
     try:
-        image_path = Path(f"enrolled_images/{faceEncodingId}.jpg")
-        if image_path.exists():
-            image_path.unlink()
+        from ..services.storage_service import delete_stored_image
+
+        delete_stored_image("enrolled_images", f"{faceEncodingId}.jpg")
     except Exception as e:
-        print(f"Error deleting image file {image_path}: {e}")
+        print(f"Error deleting image file {faceEncodingId}.jpg: {e}")
 
     return {"message": "Face encoding deleted successfully"}
 
@@ -916,7 +975,7 @@ async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
 async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
     """Delete all enrolled face encodings for one member (no check-in side effects)."""
     member = await db.get(Member, memberId)
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     if face_core_enabled():
@@ -944,11 +1003,11 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
         await db.delete(enc)
     await db.commit()
 
+    from ..services.storage_service import delete_stored_image
+
     for enc_id in deleted_ids:
         try:
-            image_path = Path(f"enrolled_images/{enc_id}.jpg")
-            if image_path.exists():
-                image_path.unlink()
+            delete_stored_image("enrolled_images", f"{enc_id}.jpg")
         except Exception as e:
             print(f"Error deleting image file enrolled_images/{enc_id}.jpg: {e}")
 
@@ -965,9 +1024,10 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
     Returns confidence percent without creating a timestamp / check-in.
     """
     member = await db.get(Member, memberId)
-    if not member:
+    if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    company_ids = await _member_company_ids(db, memberId)
     count_result = await db.execute(
         select(FaceEncoding.faceEncodingId).where(FaceEncoding.memberId == memberId).limit(1)
     )
@@ -981,7 +1041,6 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
     try:
         temp_image_paths = await _save_temp_frames([image_file])
         if face_core_enabled():
-            company_ids = await _member_company_ids(db, memberId)
             if not company_ids:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -1177,6 +1236,10 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
                     "locationName": ts.locationName or "",
                     "photoTimestamp": ts.photoTimestamp,
                     "approvalStatus": ts.approvalStatus,
+                    "isLate": bool(getattr(ts, "isLate", False)),
+                    "lateMinutes": int(getattr(ts, "lateMinutes", 0) or 0),
+                    "overtimeMinutes": int(getattr(ts, "overtimeMinutes", 0) or 0),
+                    "shiftName": getattr(ts, "shiftName", None),
                 }
             )
 
@@ -1185,13 +1248,17 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
             reverse=True,
         )
 
-        in_area_count = sum(1 for row in checked_in if row.get("timestampType") == 1)
+        in_area_count = sum(1 for row in checked_in if row.get("timestampType") in (1, 2))
+        checked_out_count = sum(1 for row in checked_in if row.get("timestampType") == 2)
         outside_count = sum(1 for row in checked_in if row.get("timestampType") == 0)
+        late_count = sum(1 for row in checked_in if row.get("isLate"))
         return {
             "summary": {
                 "checkedInCount": len(checked_in),
                 "inAreaCount": in_area_count,
+                "checkedOutCount": checked_out_count,
                 "outsideCount": outside_count,
+                "lateCount": late_count,
                 "asOf": now_local.isoformat(),
                 "day": today_start.date().isoformat(),
             },
@@ -1215,9 +1282,13 @@ async def proxy_enrolled_image(faceEncodingId: UUID, companyId: UUID):
         )
         return Response(content=data, media_type="image/jpeg")
 
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, Response
+    from ..services.storage_service import read_image_bytes
 
     image_path = Path(f"enrolled_images/{faceEncodingId}.jpg")
-    if not image_path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
-    return FileResponse(image_path, media_type="image/jpeg")
+    if image_path.exists():
+        return FileResponse(image_path, media_type="image/jpeg")
+    data = read_image_bytes("enrolled_images", f"{faceEncodingId}.jpg")
+    if data is not None:
+        return Response(content=data, media_type="image/jpeg")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")

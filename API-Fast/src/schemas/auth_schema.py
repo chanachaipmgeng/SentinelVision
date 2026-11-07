@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 from ..schemas.member_schema import MemberBase
@@ -6,6 +7,7 @@ from ..schemas.member_schema import MemberBase
 class LoginRequest(BaseModel):
     username: str
     password: str
+    totpCode: Optional[str] = None
 
 
 class Token(BaseModel):

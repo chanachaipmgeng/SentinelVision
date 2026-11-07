@@ -27,17 +27,20 @@ class Member(Base):
     lastName = Column(String, nullable=True)
     email = Column(String, nullable=False, unique=True)
     phoneNumber = Column(String, nullable=True)
-    role = Column(Enum(RoleType), nullable=False, default=RoleType.MEMBER)  # Default as Enum instance
-    status = Column(Enum(StatusType), nullable=False, default=StatusType.ENABLE)  # Default as Enum instance
+    role = Column(Enum(RoleType), nullable=False, default=RoleType.MEMBER)
+    status = Column(Enum(StatusType), nullable=False, default=StatusType.ENABLE)
     picture = Column(String)
     birthDate = Column("birth_date", Date, nullable=True)
     address = Column(Text, nullable=True)
     emergencyContactName = Column("emergency_contact_name", String, nullable=True)
     emergencyContactPhone = Column("emergency_contact_phone", String, nullable=True)
-    attachmentUrls = Column("attachment_urls", Text, nullable=True)  # comma-separated filenames
+    attachmentUrls = Column("attachment_urls", Text, nullable=True)
     mustChangePassword = Column("must_change_password", Boolean, nullable=False, default=False, server_default="false")
     failedLoginCount = Column("failed_login_count", Integer, nullable=False, default=0, server_default="0")
     lockedUntil = Column("locked_until", DateTime(timezone=True), nullable=True)
+    biometricConsentAt = Column("biometric_consent_at", DateTime(timezone=True), nullable=True)
+    totpSecret = Column("totp_secret", String(128), nullable=True)
+    totpEnabled = Column("totp_enabled", Boolean, nullable=False, default=False, server_default="false")
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -45,11 +48,8 @@ class Member(Base):
     companyEmployees = relationship("CompanyEmployee", back_populates="member")
     face_encodings = relationship("FaceEncoding", back_populates="member", cascade="all, delete-orphan")
 
-    # ฟังก์ชันเพื่อแฮชรหัสผ่านก่อนบันทึก
     def hash_password(self, password):
         self.passwordHash = bcrypt.hash(password)
 
-    # ฟังก์ชันเพื่อตรวจสอบรหัสผ่าน
     def verify_password(self, password):
         return bcrypt.verify(password, self.passwordHash)
-

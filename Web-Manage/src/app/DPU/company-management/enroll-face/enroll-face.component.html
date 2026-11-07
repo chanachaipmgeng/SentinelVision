@@ -48,7 +48,36 @@
     </div>
   </header>
 
-  <div class="dpu-kiosk__chips" aria-label="สถานะระบบ">
+  <div class="dpu-kiosk__chips" aria-label="สถานะระบบและโหมดลงเวลา">
+    <!-- Hybrid Punch Mode Selector -->
+    <button
+      type="button"
+      class="dpu-kiosk__chip"
+      [class.is-on]="punchMode === 'AUTO'"
+      (click)="setPunchMode('AUTO')"
+      title="อัตโนมัติ: สแกนแรกของวันเป็นเข้างาน ถัดไปเป็นออกงาน">
+      <i class="ri-magic-line"></i>
+      อัตโนมัติ (Hybrid)
+    </button>
+    <button
+      type="button"
+      class="dpu-kiosk__chip"
+      [class.is-ok]="punchMode === 'CHECK_IN'"
+      (click)="setPunchMode('CHECK_IN')"
+      title="บังคับลงเวลาเข้างาน (Check-In)">
+      <i class="ri-login-box-line"></i>
+      เข้างาน
+    </button>
+    <button
+      type="button"
+      class="dpu-kiosk__chip"
+      [class.is-warn]="punchMode === 'CHECK_OUT'"
+      (click)="setPunchMode('CHECK_OUT')"
+      title="บังคับลงเวลาออกงาน (Check-Out)">
+      <i class="ri-logout-box-r-line"></i>
+      ออกงาน
+    </button>
+
     <span class="dpu-kiosk__chip" [class.is-on]="wsConnected" [class.is-off]="!wsConnected">
       <i class="ri-wifi-line"></i>
       {{ wsConnected ? 'Stream พร้อม' : 'กำลังเชื่อม…' }}
@@ -168,7 +197,7 @@
         <li
           *ngFor="let person of rosterList; trackBy: trackByRosterId"
           class="dpu-kiosk__roster-item"
-          [class.is-warn]="isOutside(person)">
+          [class.is-warn]="isOutside(person) || person.isLate">
           <img class="dpu-kiosk__roster-avatar" [src]="personPhoto(person)" alt="" loading="lazy" />
           <div class="dpu-kiosk__roster-body">
             <div class="dpu-kiosk__roster-row">
@@ -181,7 +210,10 @@
             </p>
             <p class="dpu-kiosk__meta mb-0">
               <span *ngIf="isOutside(person)">นอกพื้นที่</span>
-              <span *ngIf="!isOutside(person)">ในพื้นที่</span>
+              <span *ngIf="!isOutside(person) && isCheckedOut(person)">ออกงาน</span>
+              <span *ngIf="!isOutside(person) && !isCheckedOut(person)">เข้างาน</span>
+              <span *ngIf="person.isLate"> · สาย {{ person.lateMinutes }} นาที</span>
+              <span *ngIf="person.overtimeMinutes && person.overtimeMinutes > 0"> · OT {{ person.overtimeMinutes }} นาที</span>
               <span *ngIf="person.locationName"> · {{ person.locationName }}</span>
             </p>
           </div>

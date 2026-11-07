@@ -171,6 +171,7 @@ class MemberResponse(BaseModel):
     emergencyContactName: Optional[str] = None
     emergencyContactPhone: Optional[str] = None
     attachmentUrls: Optional[str] = None
+    biometricConsentAt: Optional[datetime] = None
 
 
 class PositionResponse(BaseModel):
@@ -183,6 +184,7 @@ class DepartmentResponse(BaseModel):
     departmentId: UUID
     thName: str
     engName: str
+    shiftId: Optional[UUID] = None
 
 
 class CompanyEmployeeResponse(BaseModel):
@@ -197,6 +199,7 @@ class CompanyEmployeeResponse(BaseModel):
     companyRoleType: CompanyRoleType
     empType: EmpType
     startDate: datetime
+    shiftId: Optional[UUID] = None
 
     @field_validator("employeeId", "bossId", mode="before")
     @classmethod

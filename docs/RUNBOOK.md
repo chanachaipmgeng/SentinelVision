@@ -28,6 +28,13 @@ Create a key with `POST /v1/api-keys` on face-core, put it in DPU `.env` as `FAC
 ## One GPU down
 Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Start `face-core-gpu1` again when the second card is back.
 
-## Alembic
-Existing databases already applied `schema_migrate`. After pulling this revision run `alembic stamp 0002_schema_migrate` inside `dpu-api` (needs `DATABASE_URL`). Fresh databases can `alembic upgrade head` after `create_all`.
+## Work Shifts & Attendance Export
+- Default company shift is `09:00` – `18:00` (`Asia/Bangkok`) with `15` minutes grace period. Update per company via `PUT /timestamp/company/{companyId}/shift-settings`.
+- Attendance exports (`GET /timestamp/export/company/{companyId}?format=xlsx|csv`) stream up to 5,000 rows per request.
 
+## Multi-Replica Notification Outbox
+- `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `dpu-api` replicas concurrently without duplicate Email / LINE / Webhook deliveries.
+- Daily missing-attendance cutoff state is stored in `system_setting` under `key = "cutoff_sent:{companyId}"`.
+
+## Alembic Migrations
+Existing databases apply idempotent DDL via `src/utils/schema_migrate.py` at startup. After pulling the latest revisions, run `alembic stamp 0003_enterprise_shifts_and_indexes` inside `dpu-api` (needs `DATABASE_URL`). Fresh databases can run `alembic upgrade head` after `create_all`.

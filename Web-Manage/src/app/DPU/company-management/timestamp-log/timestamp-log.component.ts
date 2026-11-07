@@ -38,6 +38,7 @@ export class TimestampLogComponent implements OnInit {
   companyId = '';
   loading = false;
   actionBusy = false;
+  exporting = false;
 
   dateRange: { from: Date; to: Date } = {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -77,6 +78,14 @@ export class TimestampLogComponent implements OnInit {
     return this.itemsList.filter(
       (x) => x.timestampType === 1 || x.timestampType === 2
     ).length;
+  }
+
+  get checkOutCount(): number {
+    return this.itemsList.filter((x) => x.timestampType === 2).length;
+  }
+
+  get lateCount(): number {
+    return this.itemsList.filter((x) => x.isLate).length;
   }
 
   get absentCount(): number {
@@ -151,6 +160,40 @@ export class TimestampLogComponent implements OnInit {
         error: () => {
           this.loading = false;
           swal('Error', 'โหลดข้อมูลการลงเวลาไม่สำเร็จ', 'error');
+        },
+      });
+  }
+
+  exportReport(format: 'xlsx' | 'csv' = 'xlsx') {
+    if (!this.companyId || this.exporting) return;
+    this.exporting = true;
+    const { from, to } = this.resolveDateRange();
+
+    this.timeService
+      .exportReport(
+        this.companyId,
+        format,
+        this.empSelect || undefined,
+        from.toISOString(),
+        to.toISOString(),
+        this.statusSelect || undefined
+      )
+      .subscribe({
+        next: (blob) => {
+          this.exporting = false;
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const dateStr = new Date().toISOString().slice(0, 10);
+          a.download = `attendance_report_${dateStr}.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        },
+        error: () => {
+          this.exporting = false;
+          swal('Error', 'ส่งออกรายงานไม่สำเร็จ', 'error');
         },
       });
   }
@@ -233,7 +276,7 @@ export class TimestampLogComponent implements OnInit {
   }
 
   statusTone(item: TimestampModel): 'warning' | 'success' | 'danger' | 'muted' {
-    if (item.timestampType === 0) return 'warning';
+    if (item.timestampType === 0 || item.isLate) return 'warning';
     if (item.timestampType === 1 || item.timestampType === 2) return 'success';
     if (item.timestampType === 3) return 'danger';
     return 'muted';

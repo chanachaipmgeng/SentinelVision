@@ -9,6 +9,8 @@ from ..controllers.system_controller import (
     rebuild_face_index,
     update_tts_settings,
 )
+from ..security.deps import get_current_member
+from ..services.observability import get_observability_summary
 
 router = APIRouter()
 
@@ -47,3 +49,12 @@ async def put_tts_settings_route(
     db: AsyncSession = Depends(get_db),
 ):
     return await update_tts_settings(payload, db)
+
+
+@router.get(
+    "/observability-summary",
+    tags=["System"],
+    summary="Live Prometheus latency histograms, GPU queue, and Cloud Storage status",
+)
+async def get_observability_summary_route(_member=Depends(get_current_member)):
+    return get_observability_summary()

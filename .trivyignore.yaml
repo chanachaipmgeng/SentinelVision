@@ -81,6 +81,16 @@ vulnerabilities:
     statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
     expired_at: 2027-03-31
 
+  # API images (trivy image, target "Python"): pip >= 25 ships pip/_vendor/bom.cdx.json, a CycloneDX
+  # SBOM that declares its vendored pkg_resources as setuptools==70.3.0. Only pkg_resources is
+  # vendored; setuptools/package_index.py (the PackageIndex path-traversal) is not in the image. The
+  # real setuptools install is upgraded in the Dockerfiles (`pip install --upgrade pip setuptools
+  # wheel`) and reports clean. Goes away once pip bumps its vendored copy — re-check on expiry.
+  - id: CVE-2025-47273
+    purls: ["pkg:pypi/setuptools@70.3.0"]
+    statement: "pip's vendored pkg_resources SBOM entry; the vulnerable PackageIndex module is not shipped."
+    expired_at: 2027-03-31
+
 misconfigurations:
   # Dockerfiles still run as root. Non-root users for api/admin/nginx images are part of
   # phase-b/hardening-backup (B4); drop this entry once that branch is merged.

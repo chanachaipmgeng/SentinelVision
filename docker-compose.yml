@@ -1,13 +1,19 @@
+# Required in .env (no insecure fallbacks — compose aborts with the message below):
+#   POSTGRES_PASSWORD, SECRET_KEY (>= 32 random chars). See docs/SETUP.md.
+# Images run as unprivileged users (api uid 10001, admin/nginx uid 101); the gateway and
+# admin listen on 8080 inside the network. Production: add docker-compose.prod.yml.
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
     container_name: dpu-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dpu}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dpu_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}
       POSTGRES_DB: ${POSTGRES_DB:-dpu}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Loopback only — reachable from this host (psql, scripts/backup.sh host mode), not the LAN.
+      # docker-compose.prod.yml removes the mapping entirely.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -18,6 +24,8 @@ services:
       retries: 12
       start_period: 10s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -32,7 +40,10 @@ services:
     expose:
       - "8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      # production (default) refuses weak SECRET_KEY / example DB password at startup;
+      # development only warns about the DB password (SECRET_KEY is always enforced).
+      APP_ENV: ${APP_ENV:-production}
       FACE_RECOGNITION_THRESHOLD: ${FACE_RECOGNITION_THRESHOLD:-0.40}
       # Soft dedupe window for face check-in (seconds). 0 = disable.
       CHECK_IN_DEDUPE_SECONDS: ${CHECK_IN_DEDUPE_SECONDS:-300}
@@ -41,7 +52,7 @@ services:
       IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
@@ -66,6 +77,8 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -86,19 +99,21 @@ services:
       dockerfile: Dockerfile
     container_name: dpu-admin
     expose:
-      - "80"
+      - "8080"
     environment:
-      # Written to /usr/share/nginx/html/assets/config.json on start (Web-Manage/docker/40-runtime-config.sh)
+      # Served as /assets/config.json from /tmp/dpu-runtime (Web-Manage/docker/40-runtime-config.sh)
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-DEMO_MAP_ID}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -109,20 +124,30 @@ services:
       dockerfile: Dockerfile
     container_name: dpu-nginx
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "${HTTP_PORT:-80}:8080"
+    environment:
+      # Rendered into nginx snippets at start (docker/nginx/entrypoint/30-dpu-runtime.sh).
+      EXPOSE_API_DOCS: ${EXPOSE_API_DOCS:-false}
+      INTERNAL_ALLOW_CIDRS: ${INTERNAL_ALLOW_CIDRS:-127.0.0.1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+      CSP_SCRIPT_EXTRA: ${CSP_SCRIPT_EXTRA:-}
+      CSP_CONNECT_EXTRA: ${CSP_CONNECT_EXTRA:-}
+      CSP_FRAME_EXTRA: ${CSP_FRAME_EXTRA:-}
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-}
     depends_on:
       api:
         condition: service_healthy
       admin:
         condition: service_started
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5

@@ -1,11 +1,15 @@
+# syntax=docker/dockerfile:1
 # CPU-only API image (no NVIDIA base). Use with docker-compose.cpu.yml override.
-FROM python:3.11-slim-bookworm
+# Multi-stage: build wheels in `builder`, ship only the venv + warmed model in `runtime`,
+# run as unprivileged `app` (uid 10001). Base image pinned by digest.
+ARG PY_BASE=python:3.11.18-slim-bookworm@sha256:a83ba18aef0f865b1a4a611c2cf460fe446f2795673bbb9fe43be570439e3b39
+
+FROM ${PY_BASE} AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    INSIGHTFACE_HOME=/root/.insightface \
-    FACE_DEVICE=cpu
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -14,20 +18,61 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel
+ENV PATH=/opt/venv/bin:$PATH
 
+WORKDIR /build
 COPY requirements.cpu.txt .
-RUN pip install --upgrade pip && pip install -r requirements.cpu.txt
+RUN pip install --no-cache-dir -r requirements.cpu.txt \
+    # pip is not needed in the runtime image (immutable venv); dropping it also removes its vendored SBOM
+    && python -m pip uninstall -y pip
 
-RUN python -c "from insightface.app import FaceAnalysis; \
+RUN HOME=/opt/model-home python -c "from insightface.app import FaceAnalysis; \
 app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); \
 app.prepare(ctx_id=-1, det_size=(640, 640)); \
 print('InsightFace buffalo_l ready')"
 
-COPY . .
 
-RUN mkdir -p enrolled_images uploaded_images temp_images
+FROM ${PY_BASE} AS runtime
+
+ARG APP_UID=10001
+ARG APP_GID=10001
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH=/opt/venv/bin:$PATH \
+    HOME=/home/app \
+    FACE_DEVICE=cpu
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    # the base image's pip/setuptools are unused at runtime (everything lives in /opt/venv)
+    && rm -rf /usr/local/lib/python3.11/site-packages/pip* /usr/local/lib/python3.11/site-packages/setuptools* \
+           /usr/local/lib/python3.11/site-packages/pkg_resources /usr/local/lib/python3.11/site-packages/_distutils_hack \
+           /usr/local/lib/python3.11/site-packages/distutils-precedence.pth /usr/local/lib/python3.11/site-packages/wheel* \
+           /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.11 /usr/local/bin/wheel \
+    && groupadd --gid ${APP_GID} app \
+    && useradd --uid ${APP_UID} --gid ${APP_GID} --home-dir /home/app --create-home --shell /usr/sbin/nologin app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder --chown=${APP_UID}:${APP_GID} /opt/model-home/.insightface /home/app/.insightface
+
+WORKDIR /app
+COPY --chown=${APP_UID}:${APP_GID} . .
+
+RUN mkdir -p enrolled_images uploaded_images temp_images \
+    && chown -R ${APP_UID}:${APP_GID} /app
+
+USER ${APP_UID}:${APP_GID}
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=15s --timeout=10s --start-period=60s --retries=10 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)" || exit 1
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

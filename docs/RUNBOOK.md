@@ -13,8 +13,22 @@ If `nvidia-smi` says driver/library mismatch, reboot the host so the kernel modu
 ## 413 on import
 Host TLS nginx must set `client_max_body_size 500m`. See `docker/nginx/tls-edge.example.conf`.
 
-## Weak SECRET_KEY
+## Weak SECRET_KEY / example database password
 The API refuses to start when `AUTH_FAIL_FAST=true` and `SECRET_KEY` is shorter than 32 characters or still `change-me-in-production`. Set a new secret and restart `api`. Existing tokens become invalid.
+
+In production mode (`APP_ENV` unset or `production`) it also refuses an example database password (`dpu_secret`, `postgres`, `password`, …) in `DATABASE_URL` with `POSTGRES_PASSWORD / DATABASE_URL still uses an example password`. Fix: set a real `POSTGRES_PASSWORD` in `.env`, rotate the role (`ALTER ROLE dpu PASSWORD '...'` on the running `dpu-db`, or let a fresh volume initialise with it) and recreate `api` / `api-gpu1`. `docker compose` itself aborts with `required variable POSTGRES_PASSWORD is missing` when the variable is absent. `APP_ENV=development` turns the password check into a warning for laptops only.
+
+## Upgrade to non-root containers (B4)
+Images built from this release run the API as uid 10001 (`app`) and admin/nginx as uid 101. Named volumes created by older root containers stay root-owned, and the API now aborts at startup with `image directories are not writable by uid 10001` instead of failing on the first upload. One-time fix per host:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml up -d --build
+docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml restart api api-gpu1
+docker exec dpu-api id        # uid=10001(app)
+```
+
+Other changes to apply on upgrade: `admin` and `nginx` listen on **8080** inside the network (`HTTP_PORT` on the host is unchanged); Postgres is published on `127.0.0.1:${POSTGRES_PORT}` only (none with the prod overlay); `/metrics` and `/docs` answer only to `INTERNAL_ALLOW_CIDRS`; `/auth/login` is rate limited (20/min per IP, burst 10) — raise the zones in `docker/nginx/00-dpu-http.conf` if a NAT hides many admins behind one address.
 
 ## Leaked secrets / PII in git
 `API-Fast/.env`, 811 face images, a scratch `.xlsx` and a load-test dump were tracked until roadmap A2. They are untracked now but still in history. Follow `docs/SECRETS-REMEDIATION.md` for the `git filter-repo` purge, the key-rotation checklist (`SECRET_KEY`, `POSTGRES_PASSWORD`, Google Maps, Firebase) and the re-clone notice. The Google Maps key is injected at runtime via `GOOGLE_MAPS_API_KEY` → `assets/config.json`; change it with `docker compose up -d admin`, no rebuild.

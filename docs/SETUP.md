@@ -17,20 +17,27 @@
 cp .env.example .env
 # set SECRET_KEY to a random string of at least 32 characters, e.g.
 #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+# set POSTGRES_PASSWORD (compose has no default any more) — .env.example ships dpu_secret
+# together with APP_ENV=development so a laptop still starts; servers use a real password
+# and APP_ENV=production (the default when the variable is absent).
 docker compose up --build
 ```
 
-The API refuses to start while `SECRET_KEY` is the placeholder (`AUTH_FAIL_FAST=true`).
+The API refuses to start while `SECRET_KEY` is the placeholder (`AUTH_FAIL_FAST=true`), and in
+production mode (`APP_ENV` unset or `production`) also when the database password is one of the
+example values (`dpu_secret`, `postgres`, …). `docker compose` itself aborts when
+`POSTGRES_PASSWORD` or `SECRET_KEY` is missing from `.env`.
 
 | URL | Service |
 |-----|---------|
 | http://localhost:8880/ | Admin (when `HTTP_PORT=8880` in `.env`) |
 | http://localhost:8880/company/timestamp-face | Face kiosk |
 | http://localhost:8880/health, /ready | liveness / readiness |
-| http://localhost:8880/docs | OpenAPI — 404 unless `EXPOSE_API_DOCS=true` and the nginx `/docs` block is re-enabled |
-| localhost:5434 | PostgreSQL (BFF dev alongside face-core) |
+| http://localhost:8880/docs | OpenAPI — 404 unless `EXPOSE_API_DOCS=true` (read by the API **and** nginx); even then only from `INTERNAL_ALLOW_CIDRS` |
+| http://localhost:8880/metrics | Prometheus text — only from `INTERNAL_ALLOW_CIDRS` (default loopback + RFC1918) |
+| 127.0.0.1:5434 | PostgreSQL (BFF dev alongside face-core) — bound to loopback only; `docker-compose.prod.yml` publishes nothing |
 
-Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them before any shared deployment.
+Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them before any shared deployment — production mode refuses `dpu_secret`.
 
 **Standalone** (no Face Core on same host): use `POSTGRES_PORT=5432` and `HTTP_PORT=80` in `.env`.
 
@@ -58,8 +65,14 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `FACE_RECOGNITION_THRESHOLD` | `0.40` | cosine **distance** cutoff (lower = stricter; local mode) |
 | `IMAGE_BLUR_THRESHOLD` | `20.0` | reject blurry kiosk / add-face enroll |
 | `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | Excel+ZIP import blur gate; `0` = do not reject blurry photos (face still required) |
+| `POSTGRES_PASSWORD` | **required** | compose aborts without it; example values are refused in production mode |
+| `APP_ENV` | `production` | `development` downgrades the weak-DB-password check to a warning (laptops only) |
 | `SECRET_KEY` | (placeholder) | **required**, ≥ 32 chars; startup fails otherwise |
-| `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs |
+| `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs / unit tests (disables every secret check, logged loudly) |
+| `INTERNAL_ALLOW_CIDRS` | loopback + RFC1918 | nginx allowlist for `/metrics` and `/docs`; narrow it to the Prometheus scraper in production |
+| `HTTPS_PORT` / `TLS_CERT_DIR` | `443` / `./certs` | used by `docker-compose.tls.yml` |
+| `HSTS_MAX_AGE` | auto | `Strict-Transport-Security` max-age; auto = on when the TLS overlay is active |
+| `CSP_SCRIPT_EXTRA` / `CSP_CONNECT_EXTRA` / `CSP_FRAME_EXTRA` | (empty) | extra Content-Security-Policy sources for the admin SPA (IdP origin, extra CDN, `'unsafe-eval'` if a library needs it) |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | `60` / `14` | JWT lifetimes |
 | `OIDC_ENABLED` | `false` | enterprise SSO (OpenID Connect, Authorization Code + PKCE). When `true`, startup fails unless the variables below are valid |
 | `OIDC_ISSUER` | (empty) | IdP issuer URL, must serve `<issuer>/.well-known/openid-configuration` and match the `issuer` inside it (`https://`; plain `http://` only for `localhost`) |
@@ -69,7 +82,7 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `OIDC_JWKS_CACHE_SECONDS` / `OIDC_LOGIN_TXN_TTL_SECONDS` / `OIDC_CLOCK_SKEW_SECONDS` / `OIDC_HTTP_TIMEOUT_SECONDS` | `3600` / `600` / `60` / `10` | JWKS + discovery cache TTL, how long a started login stays valid, `exp`/`iat` leeway, IdP HTTP timeout |
 | `FACE_ROUTES_REQUIRE_JWT` | `true` | face HTTP + kiosk WS need a token |
 | `FACE_DEVICES` | `cuda:0` | comma list; one GPU worker per device |
-| `EXPOSE_API_DOCS` | `false` | Swagger/ReDoc |
+| `EXPOSE_API_DOCS` | `false` | Swagger/ReDoc — must be `true` on the API *and* nginx (same `.env` value); gateway still restricts to `INTERNAL_ALLOW_CIDRS` |
 | `SMTP_*`, `LINE_CHANNEL_ACCESS_TOKEN` | (empty) | notification channels; empty = skipped |
 | `IMAGE_RETENTION_DAYS` | `90` | punch-photo retention |
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
@@ -79,6 +92,28 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `GOOGLE_MAPS_MAP_ID` | `DEMO_MAP_ID` | Map ID for AdvancedMarkerElement |
 
 Frontends in Docker use `baseUrl: ''` (same origin through nginx).
+
+## Hardened containers (B4)
+
+- **Non-root everywhere:** `api` / `api-gpu1` run as `app` (uid 10001), `admin` and `nginx` as `nginx` (uid 101, `nginxinc/nginx-unprivileged`, listening on **8080** inside the network), `db` as `postgres` in the prod overlay. `docker exec dpu-api id` must show `uid=10001`.
+- **Multi-stage, digest-pinned images:** `API-Fast/Dockerfile` (CUDA), `Dockerfile.cpu`, `Dockerfile.bff`, `Web-Manage/Dockerfile`, `docker/nginx/Dockerfile`. Build stages compile wheels; runtime stages carry only the venv, the warmed `buffalo_l` model (`/home/app/.insightface`, read-only) and the source. Every image has a `HEALTHCHECK`. Runtime images carry no `pip` (immutable venv); for ad-hoc debugging run `docker exec -u 0 dpu-api python -m ensurepip` in a throw-away container, never in production.
+- **Upgrading an existing deployment:** named volumes `api_enrolled` / `api_uploaded` / `api_temp` were created by root containers. Chown them once or the API refuses to start with a clear error:
+
+  ```bash
+  docker compose ... up -d --build            # pulls new images
+  docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images
+  docker compose ... restart api api-gpu1
+  ```
+
+- **Read-only root fs:** `docker-compose.prod.yml` makes `admin` and `nginx` read-only (tmpfs on `/tmp`); `docker-compose.api-readonly.yml` does the same for `api` (verified on CPU; test on your GPU host before adopting because the NVIDIA runtime writes the loader cache at start).
+- **Gateway** (`docker/nginx/snippets/gateway.conf`, shared by all four variants — rebuild `nginx` after editing anything under `docker/nginx/`):
+  - `limit_req` per client IP: `/auth/login` 20 r/min (burst 10), `/auth/refresh*` + `/auth/kiosk/refresh` 60 r/min (burst 20), `/auth/kiosk/pair` 10 r/min (burst 5), everything else 100 r/s (burst 200). Excess → `429`. Zones live in `docker/nginx/00-dpu-http.conf`.
+  - `/metrics`, `/docs`, `/redoc`, `/openapi.json` are internal-only (`INTERNAL_ALLOW_CIDRS`); docs additionally need `EXPOSE_API_DOCS=true`.
+  - Security headers on every response: `X-Content-Type-Options`, `X-Frame-Options SAMEORIGIN`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy` and a CSP. The SPA document CSP uses a per-request nonce (`$request_id`, injected into `index.html` via `sub_filter`; Angular picks it up through `ngCspNonce`, the Google Maps loader through `window.__dpuCspNonce`) with no `'unsafe-inline'` / `'unsafe-eval'` for scripts, and allows Google Maps, Google Fonts, OpenStreetMap tiles/embeds and same-origin WebSockets. API responses get `default-src 'none'`. `Permissions-Policy` grants `camera=(self)` only to SPA documents (the kiosk, `/kiosk/pair` and the face-enrollment dialog share the one Angular document, so it cannot be scoped to a single route) and denies it on API/image responses.
+  - `client_max_body_size` is 32m by default and 500m only for `/employees/*/import`.
+- **TLS in the stack:** add `-f docker-compose.tls.yml` with `fullchain.pem` / `privkey.pem` in `TLS_CERT_DIR` (readable by uid 101). nginx listens on `HTTPS_PORT` (TLS 1.2/1.3, HSTS) and redirects HTTP → HTTPS except the loopback healthcheck. Renewal = replace files + `docker compose ... exec nginx nginx -s reload`. Keep `docker/nginx/tls-edge.example.conf` when a host nginx terminates TLS instead.
+- **Local dev ergonomics:** nothing changes in the commands — `.env.example` carries `APP_ENV=development` and the example DB password; Postgres stays reachable from the host on `127.0.0.1:${POSTGRES_PORT}`; `EXPOSE_API_DOCS=true` in `.env` enables Swagger from the LAN.
+
 
 ### Web-Manage runtime config (no keys in the bundle)
 

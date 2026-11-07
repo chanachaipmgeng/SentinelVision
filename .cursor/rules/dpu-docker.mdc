@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Services
 
-`db` (pgvector), `api`, `admin`, `nginx` (:80)
+`db` (pgvector), `api`, `admin`, `nginx` (host `HTTP_PORT`→ container 8080). All app containers are non-root (api uid 10001, admin/nginx uid 101); `admin` serves on 8080 inside the network.
 
 ### Local InsightFace (DPU holds GPUs)
 
@@ -40,9 +40,10 @@ All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks 
 
 ## Required env
 
-- `SECRET_KEY` ≥ 32 chars — `api` exits at import otherwise (`AUTH_FAIL_FAST`)
+- `SECRET_KEY` ≥ 32 chars and `POSTGRES_PASSWORD` — compose has **no defaults** (`${VAR:?}`); `api` exits at import on a weak secret or, in `APP_ENV=production` (default), an example DB password (`security/startup_checks.py`)
 - Dual-GPU overlay sets `FACE_DEVICES=cuda:0` + `CUDA_VISIBLE_DEVICES` per service; override `FACE_GPU_WORKERS` (default 2, ONNX can oversubscribe)
-- `EXPOSE_API_DOCS=false` in production; nginx also returns 404 for `/docs`, `/redoc`, `/openapi.json`
+- `EXPOSE_API_DOCS=false` in production; nginx renders `/docs`, `/redoc`, `/openapi.json` as 404 unless the same var is true, and gates them + `/metrics` by `INTERNAL_ALLOW_CIDRS`
+- Overlays: `prod.yml` (no DB port, limits, read-only admin/nginx), `tls.yml` (certs in `TLS_CERT_DIR`, 8443), `api-readonly.yml` (opt-in)
 
 ## Rebuild matrix
 
@@ -50,24 +51,26 @@ All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks 
 |--------|---------|
 | `API-Fast/src/**` | `api` **and** `api-gpu1` |
 | `Web-Manage/**` | `admin` |
-| `docker/nginx/default.conf` or `default.dual-gpu.conf` | `nginx` |
+| anything under `docker/nginx/` (snippets, entrypoint, variants) | `nginx` (snippets are baked; overlays only bind-mount the variant file) |
 | `docker-compose.face-core.yml`, `API-Fast/Dockerfile.bff` | `api` (needs sibling face-core SDK) |
 
 API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code. Recreate nginx together with the APIs so upstream IPs stay fresh.
 
 ## Nginx
 
-- Single-GPU / CPU: `default.conf` uses Docker DNS `127.0.0.11` + variable `proxy_pass` (avoid stale IP 502)
-- Dual-GPU: `default.dual-gpu.conf` — `upstream dpu_api { least_conn; server api:8000; server api-gpu1:8000; }` (WS sticky per connection)
+- Every variant (`default.conf`, `default.dual-gpu.conf`, `default.quad-gpu.conf`, `default.hexa-gpu.conf`) is `upstream` (optional) + `server { set $dpu_api …; include snippets/gateway.conf; }` — edit routing **once** in `docker/nginx/snippets/gateway.conf`
+- Single-GPU / CPU: `set $dpu_api http://api:8000` with Docker DNS `127.0.0.11` (avoid stale IP 502); multi-GPU: `upstream dpu_api { least_conn; … }` (WS sticky per connection)
 - Face WS: `location ^~ /face/ws/` with Upgrade + long timeouts **before** the general `/face` regex
-- Uploads: `client_max_body_size 500m` (http + `/employees/.../import`); import `proxy_read_timeout 3600s`
+- Uploads: `client_max_body_size 32m` default, `500m` only on `/employees/.../import` (`proxy_read_timeout 3600s`)
 - HTTPS 413: drop `docker/nginx/host-upload-limit.conf` onto the **host** TLS nginx (`/etc/nginx/conf.d/`)
-- Proxy prefixes: auth, members, face, timestamp, system, dashboard, images, enrolled_images, notifications, health, ready, metrics
-- Security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, CSP) are set in `default.conf`; HSTS belongs on the host TLS nginx (`tls-edge.example.conf`)
+- Rate limits (`00-dpu-http.conf` zones): `/auth/login`, `/auth/refresh*`, `/auth/kiosk/pair`, general API → `429`
+- Env toggles rendered at start by `entrypoint/30-dpu-runtime.sh` into `/tmp/dpu-nginx/`: `EXPOSE_API_DOCS`, `INTERNAL_ALLOW_CIDRS`, `TLS_ENABLED`/`HTTPS_PORT`, `HSTS_MAX_AGE`, `CSP_*_EXTRA`
+- Security headers + nonce CSP (`'nonce-$request_id'` via `sub_filter` on `index.html`, `ngCspNonce`) for SPA documents; `default-src 'none'` for API responses; `Permissions-Policy camera=(self)` only on SPA documents
+- GET on `/auth/login`, `/auth/change-password`, `/auth/reset-password`, `/auth/sso/callback` → SPA; other methods → API
 
 ## Health
 
 - API healthcheck hits `/ready` (DB ping + GPU queue started)
 - After recreate: `GET /health` → 200, `GET /ready` → 200, `GET /companys` without token → 401, then `GET /face/queue-stats` with a Bearer token
 - Dual-GPU: expect both `dpu-api` and `dpu-api-gpu1` healthy; `nvidia-smi --query-compute-apps` should show a python process on **each** GPU after first inference
-- Backups: `scripts/backup.sh` (pg_dump); see `docs/RUNBOOK.md`
+- Non-root check after rebuild: `docker exec dpu-api id` → `uid=10001(app)`; root-owned legacy volumes → chown once (RUNBOOK "Upgrade to non-root")

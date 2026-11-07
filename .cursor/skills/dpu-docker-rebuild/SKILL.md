@@ -44,7 +44,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
 
 ## Before `up`
 
-`SECRET_KEY` in `.env` must be a random string of at least 32 characters. With the placeholder, `dpu-api` exits during import (`AUTH_FAIL_FAST=true`) and nginx never becomes healthy. Rotating the secret invalidates existing tokens.
+`SECRET_KEY` in `.env` must be a random string of at least 32 characters and `POSTGRES_PASSWORD` must be set (compose has no defaults). With the placeholder secret, or an example DB password in `APP_ENV=production`, `dpu-api` exits during import and nginx never becomes healthy. Rotating the secret invalidates existing tokens. First start after the B4 upgrade: chown the image volumes to uid 10001 (RUNBOOK "Upgrade to non-root").
 
 ## Verify
 
@@ -53,7 +53,8 @@ docker ps --filter name=dpu-
 curl -s -o NUL -w "%{http_code}\n" http://localhost/health      # 200
 curl -s -o NUL -w "%{http_code}\n" http://localhost/ready       # 200 (DB + GPU queue)
 curl -s -o NUL -w "%{http_code}\n" http://localhost/companys    # 401 (auth enforced)
-curl -s -o NUL -w "%{http_code}\n" http://localhost/docs        # 404 (docs closed)
+curl -s -o NUL -w "%{http_code}\n" http://localhost/docs        # 404 (docs closed; 403 when EXPOSE_API_DOCS=true but caller not in INTERNAL_ALLOW_CIDRS)
+docker exec dpu-api id                                           # uid=10001(app)
 # with a token from POST /auth/login
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost/face/queue-stats
 ```

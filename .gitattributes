@@ -2,3 +2,8 @@
 # a CRLF shebang makes them fail with "not found" when built from a Windows checkout.
 *.sh text eol=lf
 *.envsh text eol=lf
+# nginx / compose / Dockerfiles are read inside Linux containers as well.
+docker/**/*.conf text eol=lf
+Web-Manage/docker/*.conf text eol=lf
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf

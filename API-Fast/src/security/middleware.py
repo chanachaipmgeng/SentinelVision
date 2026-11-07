@@ -36,6 +36,7 @@ _COMPANY_RES = [
     re.compile(rf"/companys/({_UUID})"),
     re.compile(rf"/notifications/company/({_UUID})"),
     re.compile(rf"/hr/company/({_UUID})"),
+    re.compile(rf"/sentinel/company/({_UUID})"),
 ]
 _OPEN_PREFIXES = (
     "/auth/login",
@@ -54,6 +55,7 @@ _KIOSK_ALLOWED_PREFIXES = (
     "/face/kiosk-attendance/",
     "/face/enrolled-images/",
     "/face/queue-stats",
+    "/sentinel/company/",
     "/company-locations/company/",
     "/images/",
     "/enrolled_images/",
@@ -92,6 +94,12 @@ def _is_kiosk_path_allowed(method: str, path: str) -> bool:
     if path == "/system/tts-settings" and method != "GET":
         return False
     if path.startswith("/company-locations/company/") and method != "GET":
+        return False
+    if path.startswith("/sentinel/company/"):
+        if path.endswith("/scan") and method == "POST":
+            return True
+        if (path.endswith("/edge-sync") or path.endswith("/zones")) and method == "GET":
+            return True
         return False
     return path.startswith(_KIOSK_ALLOWED_PREFIXES)
 

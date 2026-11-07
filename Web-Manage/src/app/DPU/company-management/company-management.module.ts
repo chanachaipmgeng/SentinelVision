@@ -72,6 +72,13 @@ export const companyRoutes: Routes = [
         import('./hr-schedule/hr-schedule.component').then((m) => m.HrScheduleComponent),
     },
     {
+      path: 'company/sentinel-center',
+      loadComponent: () =>
+        import('./sentinel-center/sentinel-center.component').then(
+          (m) => m.SentinelCenterComponent
+        ),
+    },
+    {
       path: 'company/audit-log',
       loadComponent: () =>
         import('./audit-log/audit-log.component').then((m) => m.AuditLogComponent),

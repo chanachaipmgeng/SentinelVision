@@ -49,7 +49,10 @@ export class ContentLayoutComponent implements OnDestroy {
 
   private syncKioskMode(url: string): void {
     const path = (url || '').split('?')[0];
-    this.setKioskMode(path.includes('/company/timestamp-face'));
+    // Legacy attendance kiosk + modular `/company/scan/:stationMode` (not scan-hub).
+    this.setKioskMode(
+      path.includes('/company/timestamp-face') || path.includes('/company/scan/'),
+    );
   }
 
   private setKioskMode(on: boolean): void {

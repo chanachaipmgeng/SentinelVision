@@ -53,13 +53,20 @@
 
     <div class="col-span-12">
       <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
-        <div class="box-header">
+        <div class="box-header flex flex-wrap items-center justify-between gap-2">
           <h5 class="box-title !mb-0">เมนูด่วน</h5>
+          <a [routerLink]="scanHubLink" class="ti-btn ti-btn-primary-full modern-btn">
+            <i class="ri-radar-line me-1"></i>
+            เปิด Scan Hub
+          </a>
         </div>
         <div class="box-body">
           <div class="dpu-company-home__links">
             @for (link of links; track link.route) {
-              <a [routerLink]="link.route" class="dpu-company-home__link">
+              <a
+                [routerLink]="link.route"
+                class="dpu-company-home__link"
+                [class.dpu-company-home__link--featured]="link.featured">
                 <i [ngClass]="link.icon"></i>
                 <span class="dpu-company-home__link-text">
                   <strong>{{ link.label }}</strong>

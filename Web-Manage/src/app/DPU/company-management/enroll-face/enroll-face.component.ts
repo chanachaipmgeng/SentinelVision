@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { TokenService } from '../../../shared/services/token.service';
@@ -23,12 +24,33 @@ import {
   resolveTtsSettings,
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
-import { buildKioskSession, canSendKioskFrame, kioskWsSessionAction } from './kiosk-ws-client';
+import {
+  CompanyModuleConfigService,
+  StationMode,
+} from '../../services/company-module-config.service';
+import {
+  buildKioskCheckinExtras,
+  buildKioskSession,
+  canSendKioskFrame,
+  kioskWsSessionAction,
+} from './kiosk-ws-client';
 import {
   frameChangeScore,
   KIOSK_STATIC_SCENE_DIFF,
   nextCaptureInterval,
 } from './kiosk-tracker.service';
+import {
+  isAccessChrome,
+  isAttendanceChrome,
+  isEventChrome,
+  isVisitorChrome,
+  isWatchlistChrome,
+  parseStationModeParam,
+  shouldEnableDoorRelay,
+  stationModeCaptureHint,
+  stationModeRequiresGps,
+  stationModeTitle,
+} from '../scan-hub/scan-station-mode';
 
 // pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
 // drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
@@ -119,7 +141,7 @@ interface FaceTrack {
 @Component({
   selector: 'app-enroll-face',
   standalone: true,
-  imports: [CommonModule, SharedModule, RouterModule],
+  imports: [CommonModule, FormsModule, SharedModule, RouterModule],
   templateUrl: './enroll-face.component.html',
   styleUrl: './enroll-face.component.scss'
 })
@@ -142,6 +164,22 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   /** Hybrid punch mode: AUTO (first scan = in, next = out) or explicit CHECK_IN / CHECK_OUT */
   punchMode: KioskPunchMode = 'AUTO';
+
+  /**
+   * Modular station mode from `/company/scan/:stationMode` (defaults ATTENDANCE on
+   * `/company/timestamp-face` for backward-compatible attendance chrome).
+   */
+  stationMode: StationMode = 'ATTENDANCE';
+  zoneId: string | null = null;
+  eventId: string | null = null;
+  totpOrPin = '';
+  enableDoorRelayOnAttendance = false;
+  zones: Array<{ zoneId: string; name: string; require2FA?: boolean }> = [];
+  events: Array<{ eventId: string; name: string; capacity?: number; checkedInCount?: number }> = [];
+  doorStatus: 'idle' | 'unlocked' | 'denied' = 'idle';
+  welcomeBanner: string | null = null;
+  seatNumber: string | null = null;
+  vipArrivalName: string | null = null;
 
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
@@ -244,6 +282,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     private authedImages: AuthedImageService,
     private comLocationService: CompanyLocationService,
     private systemSettingService: SystemSettingService,
+    private moduleConfig: CompanyModuleConfigService,
+    private route: ActivatedRoute,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
   ) {
@@ -254,6 +294,101 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.companyName = company.companyName || kiosk?.deviceName || 'บริษัท';
     this.isKioskDevice = !!kiosk;
     this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
+    this.resolveStationContext();
+  }
+
+  /** Resolve `:stationMode` + zoneId/eventId query; timestamp-face stays ATTENDANCE. */
+  private resolveStationContext(): void {
+    const param = this.route.snapshot.paramMap.get('stationMode');
+    this.stationMode = parseStationModeParam(param);
+    const qp = this.route.snapshot.queryParamMap;
+    this.zoneId = qp.get('zoneId') || null;
+    this.eventId = qp.get('eventId') || null;
+    this.captureMessage = stationModeCaptureHint(this.stationMode);
+  }
+
+  get kioskTitle(): string {
+    return stationModeTitle(this.stationMode);
+  }
+
+  get showPunchChips(): boolean {
+    return isAttendanceChrome(this.stationMode);
+  }
+
+  get showAccessChrome(): boolean {
+    return isAccessChrome(this.stationMode);
+  }
+
+  get showWatchlistChrome(): boolean {
+    return isWatchlistChrome(this.stationMode);
+  }
+
+  get showVisitorChrome(): boolean {
+    return isVisitorChrome(this.stationMode);
+  }
+
+  get showEventChrome(): boolean {
+    return isEventChrome(this.stationMode);
+  }
+
+  get showAttendancePanel(): boolean {
+    return isAttendanceChrome(this.stationMode);
+  }
+
+  get doorRelayEnabled(): boolean {
+    return shouldEnableDoorRelay(this.stationMode, this.enableDoorRelayOnAttendance);
+  }
+
+  get selectedZone(): { zoneId: string; name: string; require2FA?: boolean } | null {
+    if (!this.zoneId) {
+      return null;
+    }
+    return this.zones.find((z) => z.zoneId === this.zoneId) || null;
+  }
+
+  get selectedEvent(): {
+    eventId: string;
+    name: string;
+    capacity?: number;
+    checkedInCount?: number;
+  } | null {
+    if (!this.eventId) {
+      return null;
+    }
+    return this.events.find((e) => e.eventId === this.eventId) || null;
+  }
+
+  get zoneRequires2FA(): boolean {
+    return !!this.selectedZone?.require2FA;
+  }
+
+  onZoneChange(zoneId: string): void {
+    this.zoneId = zoneId || null;
+    this.sendWsSession();
+  }
+
+  onEventChange(eventId: string): void {
+    this.eventId = eventId || null;
+    this.sendWsSession();
+  }
+
+  emergencyUnlock(): void {
+    if (!this.companyId || !this.zoneId) {
+      this.notify('เลือกโซนประตูก่อนสั่งปลดล็อก', 'warning');
+      return;
+    }
+    this.http
+      .post(`/sentinel/company/${this.companyId}/zones/${this.zoneId}/trigger`, {
+        reason: 'kiosk_emergency_unlock',
+      })
+      .subscribe({
+        next: () => {
+          this.doorStatus = 'unlocked';
+          this.notify('สั่งปลดล็อกประตูฉุกเฉินแล้ว', 'info');
+          this.cdr.detectChanges();
+        },
+        error: () => this.notify('สั่งปลดล็อกไม่สำเร็จ', 'error'),
+      });
   }
 
   /** True when this tab holds a device-scoped kiosk session (paired via one-time code). */
@@ -350,17 +485,80 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     unlockBeepAudio();
     unlockSpeech();
     this.loadTtsSettings();
+    this.loadModuleStationDefaults();
+    this.loadZoneAndEventOptions();
     this.prepareLocalDetector();
     this.startVideo();
     this.getCompanyLocation();
     this.ngZone.runOutsideAngular(() => this.connectKioskWs());
-    this.loadAttendance();
+    if (this.showAttendancePanel) {
+      this.loadAttendance();
+    }
     this.ngZone.runOutsideAngular(() => {
       this.attendanceTimer = setInterval(() => {
-        this.loadAttendance();
+        if (this.showAttendancePanel) {
+          this.loadAttendance();
+        }
         this.loadTtsSettings();
       }, 15000);
     });
+  }
+
+  /** Apply company defaultStationMode / zone / door-relay when route omitted them. */
+  private loadModuleStationDefaults(): void {
+    if (!this.companyId) {
+      return;
+    }
+    this.moduleConfig.getModuleConfig(this.companyId).subscribe({
+      next: (cfg) => {
+        this.enableDoorRelayOnAttendance = !!cfg.scanActionRules?.enableDoorRelayOnAttendance;
+        // `/company/timestamp-face` has no :stationMode — keep ATTENDANCE chrome, but honor
+        // UNIFIED_HYBRID / door-relay defaults from module-config when set as company default.
+        const routeHadMode = !!this.route.snapshot.paramMap.get('stationMode');
+        if (!routeHadMode && cfg.defaultStationMode === 'UNIFIED_HYBRID') {
+          this.stationMode = 'UNIFIED_HYBRID';
+          this.captureMessage = stationModeCaptureHint(this.stationMode);
+        }
+        if (!this.zoneId && cfg.defaultZoneId) {
+          this.zoneId = cfg.defaultZoneId;
+        }
+        if (!this.eventId && cfg.defaultEventId) {
+          this.eventId = cfg.defaultEventId;
+        }
+        this.sendWsSession();
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private loadZoneAndEventOptions(): void {
+    if (!this.companyId) {
+      return;
+    }
+    if (this.showAccessChrome || this.showVisitorChrome) {
+      this.http.get<any[]>(`/sentinel/company/${this.companyId}/zones`).subscribe({
+        next: (rows) => {
+          this.zones = rows || [];
+          if (!this.zoneId && this.zones.length === 1) {
+            this.zoneId = this.zones[0].zoneId;
+          }
+          this.cdr.detectChanges();
+        },
+        error: () => (this.zones = []),
+      });
+    }
+    if (this.showEventChrome) {
+      this.http.get<any[]>(`/sentinel/company/${this.companyId}/events`).subscribe({
+        next: (rows) => {
+          this.events = rows || [];
+          if (!this.eventId && this.events.length === 1) {
+            this.eventId = this.events[0].eventId;
+          }
+          this.cdr.detectChanges();
+        },
+        error: () => (this.events = []),
+      });
+    }
   }
 
   ngAfterViewInit(): void {
@@ -1014,8 +1212,38 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       }
       track.retryAfter = Date.now() + this.accessDeniedRetryMs;
     }
+    if (this.showAccessChrome || this.doorRelayEnabled) {
+      this.doorStatus = 'denied';
+    }
     if (showToast) {
       this.notify(this.accessDeniedMessage, 'error');
+    }
+  }
+
+  /** Apply modular scan payload fields (door / VIP / event seat) onto kiosk HUD state. */
+  private applyStationModeResult(response: any): void {
+    if (!response) {
+      return;
+    }
+    if (response.accessGranted === true || response.decision === 'ACCESS_GRANTED') {
+      this.doorStatus = 'unlocked';
+    } else if (response.accessGranted === false || response.decision === 'ACCESS_DENIED') {
+      this.doorStatus = 'denied';
+    } else if (this.doorRelayEnabled && !response.duplicate) {
+      // UNIFIED_HYBRID / enableDoorRelayOnAttendance: attendance success implies relay attempt.
+      this.doorStatus = 'unlocked';
+    }
+
+    const identityType = String(response.identityType || '').toUpperCase();
+    if (identityType === 'VIP' || response.decision === 'VIP_GREET') {
+      this.vipArrivalName =
+        response.subjectName || response.employee?.fullName || response.member?.fullName || 'VIP';
+    }
+    if (response.welcomeMessage) {
+      this.welcomeBanner = String(response.welcomeMessage);
+    }
+    if (response.seatNumber != null && response.seatNumber !== '') {
+      this.seatNumber = String(response.seatNumber);
     }
   }
 
@@ -1501,7 +1729,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       track.retryAfter = Date.now() + this.retryFailMs;
       return;
     }
-    if (!this.hasValidLocation) {
+    if (stationModeRequiresGps(this.stationMode) && !this.hasValidLocation) {
       track.phase = 'watching';
       track.captureFrames = [];
       track.retryAfter = Date.now() + this.retryFailMs;
@@ -1516,6 +1744,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const lat = this.location.latitude;
     const lng = this.location.longitude;
     const punchType = this.punchMode;
+    const modeExtras = buildKioskCheckinExtras({
+      stationMode: this.stationMode,
+      zoneId: this.zoneId,
+      eventId: this.eventId,
+      enableDoorRelay: this.doorRelayEnabled,
+      totpOrPin: this.zoneRequires2FA ? this.totpOrPin || null : null,
+    });
 
     if (
       this.wsSend({
@@ -1527,6 +1762,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         longitude: lng,
         note: 'Face kiosk websocket walk-by',
         punchType,
+        ...modeExtras,
       })
     ) {
       return;
@@ -1542,6 +1778,19 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     formData.append('longitude', String(lng));
     formData.append('note', 'Face kiosk walk-by check-in');
     formData.append('punchType', punchType);
+    formData.append('stationMode', this.stationMode);
+    if (this.zoneId) {
+      formData.append('zoneId', this.zoneId);
+    }
+    if (this.eventId) {
+      formData.append('eventId', this.eventId);
+    }
+    if (this.doorRelayEnabled) {
+      formData.append('enableDoorRelay', 'true');
+    }
+    if (this.zoneRequires2FA && this.totpOrPin) {
+      formData.append('totpOrPin', this.totpOrPin);
+    }
 
     this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
       next: (response: any) => {
@@ -1588,8 +1837,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     track: FaceTrack | undefined,
     isDuplicate = false,
   ) {
+    this.applyStationModeResult(response);
     const employee = response.employee || {};
     const member = response.member || employee.member || {};
+    // Prefer subjectName from modular decision engine when present.
+    if (response.subjectName && !employee.fullName && !member.fullName) {
+      employee.fullName = response.subjectName;
+    }
     const ts = response.timestamp || {};
     const tsTypeRaw = ts.timestampType;
     const tsTypeNum =
@@ -1848,6 +2102,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         token: this.tokenService.getToken(),
         latitude: this.hasValidLocation ? this.location.latitude : undefined,
         longitude: this.hasValidLocation ? this.location.longitude : undefined,
+        stationMode: this.stationMode,
+        zoneId: this.zoneId,
+        eventId: this.eventId,
       }),
     );
   }

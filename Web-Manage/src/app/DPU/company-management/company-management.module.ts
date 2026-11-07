@@ -56,10 +56,22 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./timestamp-log/timestamp-log.component').then((m) => m.TimestampLogComponent),
     },
+    // Legacy kiosk path — kept as alias; Phase 3 owns stationMode chrome on enroll-face.
+    // Phase 2 owns fuller modular route tree at integrate; these two routes are the minimal Phase 3 set.
     {
       path: 'company/timestamp-face',
       loadComponent: () =>
         import('./enroll-face/enroll-face.component').then((m) => m.EnrollFaceComponent),
+    },
+    {
+      path: 'company/scan/:stationMode',
+      loadComponent: () =>
+        import('./enroll-face/enroll-face.component').then((m) => m.EnrollFaceComponent),
+    },
+    {
+      path: 'company/scan-hub',
+      loadComponent: () =>
+        import('./scan-hub/scan-hub.component').then((m) => m.ScanHubComponent),
     },
     {
       path: 'company/warning-timestamp-log',

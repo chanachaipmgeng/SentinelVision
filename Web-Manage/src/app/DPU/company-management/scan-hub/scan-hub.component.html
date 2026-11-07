@@ -1,0 +1,211 @@
+<app-page-header [title]="'Scan & Action Hub'" [activeTitle]="'ศูนย์สแกน'" [title1]="'Scan Hub'"></app-page-header>
+
+<div class="dpu-scan-hub grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="ศูนย์เลือกโหมดสแกน & ตั้งค่าโมดูล">
+      <ng-container chips>
+        <app-stat-chip>เปิด {{ enabledCount }}/{{ toggleableCount }}</app-stat-chip>
+        <app-stat-chip tone="ok" *ngIf="config.defaultStationMode">
+          โหมดหลัก {{ config.defaultStationMode }}
+        </app-stat-chip>
+        <app-stat-chip tone="danger" *ngIf="error">ผิดพลาด</app-stat-chip>
+        <app-stat-chip tone="ok" *ngIf="saveMessage">บันทึกแล้ว</app-stat-chip>
+      </ng-container>
+      <ng-container actions>
+        <a [routerLink]="homeLink()" class="ti-btn ti-btn-outline-light modern-btn">หน้าบริษัท</a>
+        <button type="button" class="ti-btn ti-btn-outline-light modern-btn" (click)="openLegacyKiosk()">
+          Kiosk เดิม
+        </button>
+        <button
+          type="button"
+          class="ti-btn ti-btn-primary-full modern-btn"
+          [disabled]="saving || loading"
+          (click)="save()">
+          {{ saving ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า' }}
+        </button>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
+
+  <div class="col-span-12" *ngIf="loading">
+    <div class="box modern-card glass">
+      <div class="box-body">
+        <app-empty-state [loading]="true" message="กำลังโหลด module-config…"></app-empty-state>
+      </div>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <div class="col-span-12" *ngIf="error">
+      <div class="box modern-card glass">
+        <div class="box-body flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="font-semibold text-danger">แจ้งเตือน</div>
+            <div class="text-sm text-dpu-muted">{{ error }}</div>
+          </div>
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="reload()">ลองใหม่</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-span-12" *ngIf="saveMessage">
+      <div class="box modern-card glass">
+        <div class="box-body text-sm text-dpu-brand">{{ saveMessage }}</div>
+      </div>
+    </div>
+
+    <!-- Module toggles -->
+    <div class="col-span-12 xl:col-span-7">
+      <div class="box modern-card glass">
+        <div class="box-header">
+          <h5 class="box-title !mb-0">โมดูลที่ใช้งาน</h5>
+        </div>
+        <div class="box-body">
+          <p class="dpu-scan-hub__lead">
+            เปิดเฉพาะโมดูลที่บริษัทใช้งานจริง — CORE และ GOVERNANCE เปิดเสมอ
+          </p>
+          <div class="dpu-scan-hub__modules">
+            @for (card of moduleCards; track trackModule($index, card)) {
+              <label class="dpu-scan-hub__module" [class.is-on]="card.enabled">
+                <span class="dpu-scan-hub__module-icon"><i [ngClass]="card.icon"></i></span>
+                <span class="dpu-scan-hub__module-text">
+                  <strong>{{ card.label }}</strong>
+                  <em>{{ card.hint }}</em>
+                </span>
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  [checked]="card.enabled"
+                  (change)="setModuleEnabled(card.module, $any($event.target).checked)" />
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Default station + zone/event -->
+    <div class="col-span-12 xl:col-span-5">
+      <div class="box modern-card glass">
+        <div class="box-header">
+          <h5 class="box-title !mb-0">เมื่อตรวจพบใบหน้าให้ทำอะไร</h5>
+        </div>
+        <div class="box-body space-y-4">
+          <div>
+            <label class="form-label">โหมดจุดสแกนหลัก (defaultStationMode)</label>
+            <select
+              class="form-control"
+              [ngModel]="config.defaultStationMode"
+              (ngModelChange)="onDefaultStationModeChange($event)">
+              @for (mode of stationModes; track mode) {
+                <option [ngValue]="mode">{{ mode }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">โซนประตูเริ่มต้น (defaultZoneId)</label>
+            <select
+              class="form-control"
+              [ngModel]="config.defaultZoneId || ''"
+              (ngModelChange)="onDefaultZoneChange($event)">
+              <option value="">— ไม่ระบุ —</option>
+              @for (z of zones; track z.zoneId) {
+                <option [value]="z.zoneId">{{ z.name || z.zoneId }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">งานอีเวนต์เริ่มต้น (defaultEventId)</label>
+            <select
+              class="form-control"
+              [ngModel]="config.defaultEventId || ''"
+              (ngModelChange)="onDefaultEventChange($event)">
+              <option value="">— ไม่ระบุ —</option>
+              @for (ev of events; track ev.eventId) {
+                <option [value]="ev.eventId">{{ ev.name || ev.eventId }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="dpu-scan-hub__rules">
+            <label class="dpu-scan-hub__rule">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="config.scanActionRules.enableBlacklistSilentAlarm"
+                (change)="setRule('enableBlacklistSilentAlarm', $any($event.target).checked)" />
+              <span>แจ้งเตือนเงียบเมื่อพบ Blacklist / POI</span>
+            </label>
+            <label class="dpu-scan-hub__rule">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="config.scanActionRules.enableVipGreeting"
+                (change)="setRule('enableVipGreeting', $any($event.target).checked)" />
+              <span>ต้อนรับ VIP พิเศษ</span>
+            </label>
+            <label class="dpu-scan-hub__rule">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="config.scanActionRules.enableTtsVoice"
+                (change)="setRule('enableTtsVoice', $any($event.target).checked)" />
+              <span>เสียงพูด TTS</span>
+            </label>
+            <label class="dpu-scan-hub__rule">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="config.scanActionRules.enableDoorRelayOnAttendance"
+                (change)="setRule('enableDoorRelayOnAttendance', $any($event.target).checked)" />
+              <span>เปิดประตูเมื่อลงเวลาสำเร็จ (enableDoorRelayOnAttendance)</span>
+            </label>
+            <div>
+              <label class="form-label">ใบหน้าที่ไม่รู้จัก (unknownFaceAction)</label>
+              <select
+                class="form-control"
+                [ngModel]="config.scanActionRules.unknownFaceAction"
+                (ngModelChange)="setRule('unknownFaceAction', $event)">
+                @for (a of unknownFaceActions; track a) {
+                  <option [ngValue]="a">{{ a }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Launch scanners -->
+    <div class="col-span-12">
+      <div class="box modern-card glass">
+        <div class="box-header">
+          <h5 class="box-title !mb-0">เปิดจุดสแกนสด</h5>
+        </div>
+        <div class="box-body">
+          <p class="dpu-scan-hub__lead">
+            เลือกโหมดที่เปิดอยู่ — จะพาไป `/company/scan/:stationMode` พร้อม zoneId / eventId ถ้าตั้งไว้
+          </p>
+          <div class="dpu-scan-hub__launches" *ngIf="launchLinks.length; else noLaunch">
+            @for (link of launchLinks; track trackLaunch($index, link)) {
+              <button type="button" class="dpu-scan-hub__launch" (click)="launch(link)">
+                <strong>{{ link.label }}</strong>
+                <em>{{ link.stationMode }}</em>
+                <span class="dpu-scan-hub__launch-meta">
+                  <span *ngIf="link.needsZone">zone</span>
+                  <span *ngIf="link.needsEvent">event</span>
+                </span>
+                <i class="ri-arrow-right-s-line"></i>
+              </button>
+            }
+          </div>
+          <ng-template #noLaunch>
+            <app-empty-state message="ยังไม่มีโมดูลที่เปิด — เปิดอย่างน้อยหนึ่งโมดูลก่อน"></app-empty-state>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

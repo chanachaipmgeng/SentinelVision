@@ -1033,6 +1033,37 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
   color: #0f172a;
 }
 
+.dpu-kiosk__chip--select {
+  gap: 0.35rem;
+  cursor: default;
+}
+
+.dpu-kiosk__inline-select,
+.dpu-kiosk__inline-input {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  max-width: 10rem;
+  outline: none;
+}
+
+.dpu-kiosk__mode-banner {
+  margin: 0 1rem 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(15, 23, 42, 0.04));
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  color: #0b4f4a;
+  font-weight: 700;
+  font-size: clamp(1rem, 2.4vw, 1.35rem);
+  text-align: center;
+}
+
+.dpu-kiosk__mode-banner p {
+  margin: 0.15rem 0;
+}
+
 @media (max-width: 991.98px) {
   .dpu-kiosk__decor-clock {
     opacity: 0.28;

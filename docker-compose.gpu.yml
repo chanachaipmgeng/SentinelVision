@@ -30,14 +30,15 @@ services:
     expose:
       - "8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      APP_ENV: ${APP_ENV:-production}
       FACE_RECOGNITION_THRESHOLD: ${FACE_RECOGNITION_THRESHOLD:-0.40}
       CHECK_IN_DEDUPE_SECONDS: ${CHECK_IN_DEDUPE_SECONDS:-300}
       IMAGE_BLUR_THRESHOLD: ${IMAGE_BLUR_THRESHOLD:-20.0}
       IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
@@ -68,12 +69,19 @@ services:
     gpus: all
     deploy:
       resources:
+        # Same caps as `api` in docker-compose.prod.yml (prod overlay cannot target this
+        # service without also defining it, so the limits live here).
+        limits:
+          cpus: "4"
+          memory: 8G
         reservations:
           devices:
             - driver: nvidia
               count: all
               capabilities: [gpu]
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:

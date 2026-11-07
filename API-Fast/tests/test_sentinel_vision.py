@@ -114,7 +114,10 @@ def test_nginx_configs_include_sentinel_prefix():
     from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[2]
-    for conf_name in ("default.conf", "default.dual-gpu.conf", "default.quad-gpu.conf"):
-        conf_path = repo_root / "docker" / "nginx" / conf_name
-        text = conf_path.read_text(encoding="utf-8")
-        assert "|hr|sentinel|" in text, f"{conf_name} is missing 'sentinel' in FastAPI proxy regex"
+    nginx_dir = repo_root / "docker" / "nginx"
+    # B4: routing is shared by every gateway variant through snippets/gateway.conf.
+    shared = (nginx_dir / "snippets" / "gateway.conf").read_text(encoding="utf-8")
+    assert "|hr|sentinel|" in shared, "gateway.conf is missing 'sentinel' in FastAPI proxy regex"
+    for conf_name in ("default.conf", "default.dual-gpu.conf", "default.quad-gpu.conf", "default.hexa-gpu.conf"):
+        text = (nginx_dir / conf_name).read_text(encoding="utf-8")
+        assert "include /etc/nginx/snippets/gateway.conf;" in text, f"{conf_name} does not include the shared gateway"

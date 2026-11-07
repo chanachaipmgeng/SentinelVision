@@ -80,6 +80,9 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4201,https://face-in.myhr.co.th,http://face-in.myhr.co.th"
     )
     AUTH_FAIL_FAST: bool = True
+    # production (default) = weak SECRET_KEY / example DB password abort startup;
+    # development = DB password only warns. See security/startup_checks.py.
+    APP_ENV: str = "production"
     MAX_FAILED_LOGINS: int = 5
     LOCKOUT_MINUTES: int = 15
 

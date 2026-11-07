@@ -24,8 +24,24 @@ ROOTS = {
 
 
 def ensure_dirs() -> None:
+    """Create the image roots and make sure the (non-root) API user can write to them.
+
+    Named volumes created by pre-B4 root containers stay root-owned; fail with the fix
+    instead of surfacing as 500s on the first upload (docs/RUNBOOK.md "Upgrade to non-root").
+    """
+    import os
+
+    not_writable: list[str] = []
     for path in ROOTS.values():
         path.mkdir(exist_ok=True)
+        if not os.access(path, os.W_OK | os.X_OK):
+            not_writable.append(str(path.resolve()))
+    if not_writable:
+        raise RuntimeError(
+            "image directories are not writable by uid %s: %s — chown the volumes once, e.g. "
+            "`docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 %s`"
+            % (os.getuid(), ", ".join(not_writable), " ".join(not_writable))
+        )
 
 
 def is_s3_enabled() -> bool:

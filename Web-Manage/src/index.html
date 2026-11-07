@@ -87,7 +87,10 @@
       }
     }
   </style>
-  <script type="text/javascript">
+  <!-- The nonce placeholder below is replaced per request by the gateway
+       (docker/nginx/snippets/gateway.conf); CSP script-src only allows inline scripts carrying it. -->
+  <script type="text/javascript" nonce="__CSP_NONCE__">
+    window.__dpuCspNonce = (document.currentScript && document.currentScript.nonce) || '';
     window.paceOptions = {
       document: true,
       eventLag: true,
@@ -102,14 +105,14 @@
 </head>
 
 <body>
-  <script>
+  <script nonce="__CSP_NONCE__">
     // Called by Google Maps when the API key/referrer is rejected.
     window.gm_authFailure = function () {
       window.__dpuMapsAuthFailed = true;
     };
   </script>
   <!-- Google Maps SDK is injected at startup from assets/config.json (see src/app/shared/runtime-config.ts). Never hard-code the API key here. -->
-  <app-root>
+  <app-root ngCspNonce="__CSP_NONCE__">
     <div class="app-loading">
       <div class="logo">
         <svg class="spinner" viewBox="25 25 50 50">

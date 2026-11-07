@@ -1,0 +1,12 @@
+# Opt-in: run the API container(s) with a read-only root filesystem.
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml \
+#     -f docker-compose.prod.yml -f docker-compose.api-readonly.yml up -d
+# Writable paths stay: the three image volumes (/app/*_images) and a tmpfs on /tmp.
+# The InsightFace model is baked read-only under /home/app/.insightface.
+# Verify on a GPU host before adopting (the NVIDIA runtime may need to write ld.so.cache
+# at container start); add the same keys to api-gpu1 if it passes.
+services:
+  api:
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777

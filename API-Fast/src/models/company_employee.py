@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, Enum, Float
+from sqlalchemy import Column, String, DateTime, Index, ForeignKey, Enum, Float, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -42,3 +42,16 @@ class CompanyEmployee(Base):
     position = relationship("Position", back_populates="companyEmployees")
     department = relationship("Department", back_populates="companyEmployees")
     timestamps = relationship("EmployeeTimestamp", back_populates="company_employee", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        # One employment row per member per company.
+        Index("uq_company_employee_member_company", "memberId", "companyId", unique=True),
+        # Employee code unique within a company (blank codes are allowed to repeat).
+        Index(
+            "uq_company_employee_code",
+            "companyId",
+            "employeeId",
+            unique=True,
+            postgresql_where=text("\"employeeId\" IS NOT NULL AND \"employeeId\" <> ''"),
+        ),
+    )

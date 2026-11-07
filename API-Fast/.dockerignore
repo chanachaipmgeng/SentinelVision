@@ -1,11 +1,15 @@
 __pycache__
 *.py[cod]
+.pytest_cache
 .env
+.env.*
 .venv
 venv
+tests
 temp_images
 enrolled_images
 uploaded_images
+import_jobs
 *.faiss
 *.pkl
 .git

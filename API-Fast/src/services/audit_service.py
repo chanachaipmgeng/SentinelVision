@@ -5,7 +5,7 @@ import logging
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String, Text
+from sqlalchemy import Column, DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.sql import func
 
@@ -31,6 +31,8 @@ class AuditLog(Base):
     userAgent = Column(Text, nullable=True)
     requestId = Column(String, nullable=True)
     detail = Column(JSONB, nullable=True)
+
+    __table_args__ = (Index("audit_log_company_occurred_idx", "companyId", occurredAt.desc()),)
 
 
 async def write_audit(

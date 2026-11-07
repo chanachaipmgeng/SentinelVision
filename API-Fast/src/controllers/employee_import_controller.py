@@ -7,7 +7,7 @@ import shutil
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -465,12 +465,19 @@ async def build_employee_import_template(companyId: str, db: AsyncSession) -> by
     return buf.getvalue()
 
 
+ProgressCallback = Callable[[Dict[str, int]], Awaitable[None]]
+
+
 async def import_employees_from_excel(
     companyId: str,
     file: UploadFile,
     db: AsyncSession,
     photos: Optional[UploadFile] = None,
+    *,
+    progress_cb: Optional[ProgressCallback] = None,
 ) -> Dict[str, Any]:
+    """Process the workbook row by row. ``progress_cb`` (B7 worker) receives
+    ``{processed, total, success, failed, facesEnrolled}`` after every data row."""
     company = await db.get(Company, companyId)
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
@@ -554,6 +561,27 @@ async def import_employees_from_excel(
     errors: List[Dict[str, Any]] = []
     total_data_rows = 0
     faces_ok = 0
+    expected_rows = sum(
+        1
+        for r in ws.iter_rows(min_row=2, values_only=True)
+        if r is not None and not all(v is None or _norm(v) == "" for v in r)
+    )
+
+    async def _report_progress() -> None:
+        if progress_cb is None:
+            return
+        try:
+            await progress_cb(
+                {
+                    "processed": total_data_rows,
+                    "total": expected_rows,
+                    "success": len(created),
+                    "failed": len(errors),
+                    "facesEnrolled": faces_ok,
+                }
+            )
+        except Exception:  # progress is best-effort; never fail the import for it
+            pass
 
     for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         if row is None or all(v is None or _norm(v) == "" for v in row):
@@ -674,6 +702,7 @@ async def import_employees_from_excel(
             await _recover_import_session(db)
             departments, positions = await _load_org_lookups(companyId, db)
             errors.append({"row": row_num, "email": email, "message": str(exc)})
+        await _report_progress()
 
     return {
         "total": total_data_rows,

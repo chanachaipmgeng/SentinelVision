@@ -14,7 +14,7 @@ services:
       dockerfile: Dockerfile
     working_dir: /app
     environment:
-      KIOSK_LOAD_BASE_URL: ${KIOSK_LOAD_BASE_URL:-http://nginx:80}
+      KIOSK_LOAD_BASE_URL: ${KIOSK_LOAD_BASE_URL:-http://nginx:8080}
       KIOSK_LOAD_USER: ${KIOSK_LOAD_USER:-}
       KIOSK_LOAD_PASSWORD: ${KIOSK_LOAD_PASSWORD:-}
       KIOSK_LOAD_COMPANY_ID: ${KIOSK_LOAD_COMPANY_ID:-11111111-1111-1111-1111-111111111111}

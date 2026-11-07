@@ -95,7 +95,7 @@ export function handleThemeUpdate(cssVars: any) {
   }
   
   export function localStorageBackUp() {
-    let html = document.querySelector('html');
+    const html = document.querySelector('html');
     if (localStorage.getItem('data-header-styles') == 'dark') {
       if (localStorage.getItem('ynex-theme-mode')) {
         const type: any = localStorage.getItem('ynex-theme-mode');

@@ -80,8 +80,19 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4201,https://face-in.myhr.co.th,http://face-in.myhr.co.th"
     )
     AUTH_FAIL_FAST: bool = True
+    # production (default) = weak SECRET_KEY / example DB password abort startup;
+    # development = DB password only warns. See security/startup_checks.py.
+    APP_ENV: str = "production"
     MAX_FAILED_LOGINS: int = 5
     LOCKOUT_MINUTES: int = 15
+
+    # Database schema (Alembic is the single source of truth; see docs/RUNBOOK.md)
+    # Run `alembic upgrade head` inside the API process before serving. Off by default: run the
+    # migration as a separate step (`alembic upgrade head` / scripts/migrate.sh) so multi-replica
+    # deployments do not race and a failed migration does not take the API down with it.
+    MIGRATE_ON_STARTUP: bool = False
+    # /ready returns 503 (`schema_out_of_date`) while alembic_version != head. Set false to only log.
+    REQUIRE_SCHEMA_HEAD: bool = True
 
     # Ops
     LOG_LEVEL: str = "INFO"
@@ -91,6 +102,28 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_RECYCLE: int = 1800
     HNSW_EF_SEARCH: int = 40
+    # OpenTelemetry tracing (B6). Off unless an OTLP endpoint is set; the standard OTEL_* env
+    # names are honoured by the SDK too, these only document the knobs and allow .env usage.
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_EXPORTER_OTLP_PROTOCOL: str = "http/protobuf"
+    OTEL_SERVICE_NAME: str = ""
+
+    # Background jobs (B7). The outbox dispatcher, attendance cutoff, storage retention,
+    # sentinel expiry, revocation purge and employee import processing run in the separate
+    # `worker` service (`python -m src.worker`). Set RUN_BACKGROUND_JOBS_IN_API=true for a
+    # single-container dev setup to run the same loops inside the API process instead.
+    RUN_BACKGROUND_JOBS_IN_API: bool = False
+    WORKER_ID: str = ""
+    WORKER_JOBS: str = "outbox,retention,imports"
+    WORKER_METRICS_PORT: int = 9108
+    WORKER_RETENTION_INTERVAL_SECONDS: int = 3600
+    WORKER_IMPORT_POLL_SECONDS: int = 2
+    # A running import whose heartbeat is older than this is considered orphaned (worker died).
+    WORKER_IMPORT_LEASE_SECONDS: int = 900
+    WORKER_SHUTDOWN_GRACE_SECONDS: int = 30
+    # Directory (shared volume between api and worker) holding uploaded import files per job.
+    IMPORT_JOB_DIR: str = "import_jobs"
+    IMPORT_JOB_RETENTION_DAYS: int = 7
 
     # Multi-GPU. Comma list; worker i uses devices[i % len].
     FACE_DEVICES: str = ""

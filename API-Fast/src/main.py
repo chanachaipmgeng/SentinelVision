@@ -5,32 +5,23 @@ from fastapi.staticfiles import StaticFiles
 import asyncio
 import logging
 
-from .config.database import engine, Base, async_session, ensure_db_schema
+from .config.database import engine, async_session
+from .config.migrations import SchemaStatus, remediation_hint, schema_status, upgrade_to_head
 from .config.settings import settings
-from .security.jwt import assert_secret_configured
+from .security.startup_checks import assert_runtime_secrets_configured
 from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
-from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
-from .services import audit_service, notification_service  # noqa: F401  register tables
-
-# Register all ORM models on Base.metadata before create_all
-from .models import (  # noqa: F401
-    member,
-    company,
-    company_employee,
-    company_location,
-    department,
-    position,
-    employee_timestamp,
-    face_encoding,
-    system_setting,
-    hr_schedule,
-    sentinel,
-    revoked_token,
+from .services.observability import (
+    METRICS_CONTENT_TYPE,
+    RequestIdMiddleware,
+    configure_logging,
+    render_metrics,
+    set_ready_status,
+    setup_tracing,
+    shutdown_tracing,
 )
-from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
-from .utils.schema_migrate import ensure_profile_and_approval_columns
+from .config import schema as _schema  # noqa: F401  registers every ORM mapper on Base.metadata
 from .routes import (
     member_routes,
     company_routes,
@@ -49,10 +40,10 @@ from .routes import (
     sentinel_routes,
 )
 
-assert_secret_configured()
+assert_runtime_secrets_configured()
 assert_oidc_configured()
 assert_face_core_configured()
-configure_logging()
+configure_logging("api")
 logger = logging.getLogger("dpu.api")
 
 app = FastAPI(
@@ -73,6 +64,8 @@ app.add_middleware(
 )
 app.add_middleware(AuthzMiddleware)
 app.add_middleware(RequestIdMiddleware)
+# OTel server spans wrap everything above (no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set).
+setup_tracing(app, engine=engine)
 
 
 @app.exception_handler(Exception)
@@ -86,45 +79,35 @@ async def unhandled_error(request: Request, exc: Exception):
     )
 
 
-async def _retention_loop() -> None:
-    from .services.storage_service import retention_tick
-    from .routes.sentinel_routes import expire_sentinel_identities_tick
-
-    while True:
-        try:
-            r_stats = retention_tick()
-            s_stats = await expire_sentinel_identities_tick()
-            logger.info("retention %s sentinel=%s", r_stats, s_stats)
-        except Exception:
-            logger.exception("retention failed")
-        await asyncio.sleep(3600)
+# B7: outbox / retention / import processing live in the `worker` service (python -m src.worker).
+# RUN_BACKGROUND_JOBS_IN_API=true runs the same job loops inside this process (single-container dev).
+_in_process_jobs = None
 
 
-async def _notify_loop() -> None:
-    from .services.notification_service import drain_outbox
-
-    while True:
-        try:
-            await drain_outbox()
-            from .services.notification_service import attendance_cutoff_tick
-
-            await attendance_cutoff_tick()
-        except Exception:
-            logger.exception("notify drain failed")
-        await asyncio.sleep(max(5, int(settings.NOTIFY_POLL_SECONDS)))
+async def _check_schema() -> SchemaStatus:
+    """Compare alembic_version with the code's head revision; never mutates the schema."""
+    async with engine.connect() as conn:
+        status = await schema_status(conn)
+    app.state.schema_status = status
+    if status.at_head:
+        logger.info("schema at %s", status.head)
+    else:
+        logger.error("schema %s: %s", status.code, remediation_hint(status))
+    return status
 
 
 @app.on_event("startup")
 async def startup():
     from .services.storage_service import ensure_dirs
+    from .services.import_job_service import import_job_root
 
     ensure_dirs()
-    async with engine.begin() as conn:
-        await ensure_db_schema(conn)
-        await prepare_pgvector(conn)
-        await conn.run_sync(Base.metadata.create_all)
-        await ensure_face_embedding_index(conn)
-        await ensure_profile_and_approval_columns(conn)
+    import_job_root().mkdir(parents=True, exist_ok=True)
+    # Alembic owns the schema (B1). The API only migrates when explicitly asked to.
+    if settings.MIGRATE_ON_STARTUP:
+        logger.info("MIGRATE_ON_STARTUP=true: running alembic upgrade head")
+        await asyncio.to_thread(upgrade_to_head)
+    await _check_schema()
 
     if not face_core_enabled():
         from .utils.face_gpu_queue import start_face_gpu_workers
@@ -135,11 +118,28 @@ async def startup():
             queue_size=settings.FACE_GPU_QUEUE_SIZE,
             devices=devices,
         )
-    asyncio.create_task(_retention_loop())
-    asyncio.create_task(_notify_loop())
     from .services.token_revocation_service import revocation_purge_loop
 
     asyncio.create_task(revocation_purge_loop())
+
+    global _in_process_jobs
+    if settings.RUN_BACKGROUND_JOBS_IN_API:
+        from .worker import WorkerRunner
+
+        _in_process_jobs = WorkerRunner(worker_id=f"api:{settings.WORKER_ID or 'in-process'}")
+        await _in_process_jobs.start()
+        logger.warning(
+            "RUN_BACKGROUND_JOBS_IN_API=true: outbox/retention/import jobs run inside the API process"
+        )
+    else:
+        logger.info("background jobs delegated to the worker service (RUN_BACKGROUND_JOBS_IN_API=false)")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _in_process_jobs is not None:
+        await _in_process_jobs.stop()
+    shutdown_tracing()
 
 
 @app.get("/health")
@@ -156,24 +156,42 @@ async def ready():
         async with async_session() as db:
             await db.execute(text("SELECT 1"))
     except Exception as exc:
+        set_ready_status("db", False)
         return JSONResponse({"status": "down", "db": str(exc)}, status_code=503)
+    set_ready_status("db", True)
+    schema: SchemaStatus | None = getattr(app.state, "schema_status", None)
+    if schema is not None and not schema.at_head:
+        # Re-check so an operator who ran `alembic upgrade head` does not need to restart the API.
+        schema = await _check_schema()
+    if schema is not None and not schema.at_head and settings.REQUIRE_SCHEMA_HEAD:
+        set_ready_status("schema", False)
+        return JSONResponse(
+            {"status": "down", "code": "schema_out_of_date", "schema": schema.as_dict()},
+            status_code=503,
+        )
+    set_ready_status("schema", True)
     queue = {"source": "face-core"} if face_core_enabled() else face_gpu_queue_stats()
     if face_core_enabled():
         try:
             queue = await ping_face_core()
         except Exception as exc:
+            set_ready_status("face_core", False)
             return JSONResponse(
                 {"status": "down", "faceCore": str(exc), "code": "face_core_down"},
                 status_code=503,
             )
+        set_ready_status("face_core", True)
     elif not queue.get("started"):
+        set_ready_status("face_queue", False)
         return JSONResponse({"status": "down", "queue": queue}, status_code=503)
-    return {"status": "ok", "queue": queue}
+    else:
+        set_ready_status("face_queue", True)
+    return {"status": "ok", "queue": queue, "schema": schema.as_dict() if schema else None}
 
 
 @app.get("/metrics")
 async def metrics():
-    return PlainTextResponse(render_metrics(), media_type="text/plain; version=0.0.4")
+    return PlainTextResponse(render_metrics(), media_type=METRICS_CONTENT_TYPE)
 
 
 @app.get("/")

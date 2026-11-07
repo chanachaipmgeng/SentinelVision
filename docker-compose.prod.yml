@@ -1,26 +1,51 @@
-# Production overlay: do not publish Postgres, cap resources.
+# Production overlay: no published Postgres port, resource limits, locked-down containers.
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml up -d
+#
+# admin + nginx run with a read-only root fs (tmpfs for nginx cache / runtime snippets).
+# The API containers keep a writable root fs here because the NVIDIA container runtime
+# refreshes the loader cache inside the container at start; use docker-compose.api-readonly.yml
+# on CPU / BFF hosts (or after verifying it on your GPU host).
+# docker-compose.gpu.yml services (api-gpu1, …) inherit nothing from this file — their limits
+# live in docker-compose.gpu.yml (`x-api-gpu-limits`).
 services:
   db:
     ports: !reset []
+    user: postgres
+    cap_drop: [ALL]
     deploy:
       resources:
         limits:
           cpus: "2"
           memory: 4G
   api:
+    cap_drop: [ALL]
     deploy:
       resources:
         limits:
           cpus: "4"
           memory: 8G
+  worker:
+    cap_drop: [ALL]
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 3G
   admin:
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs:
+      - /tmp:size=32m,mode=1777
     deploy:
       resources:
         limits:
           cpus: "1"
           memory: 512M
   nginx:
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs:
+      - /tmp:size=256m,mode=1777
     deploy:
       resources:
         limits:

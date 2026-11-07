@@ -1,0 +1,34 @@
+# Prometheus scrape config for the DPU stack (docker-compose.observability.yml).
+# Targets are Docker service names on the compose network; the worker exposes its own
+# /metrics on WORKER_METRICS_PORT (default 9108). `api-gpu1` only exists with the GPU overlay —
+# Prometheus simply reports it as down otherwise.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: dpu-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: dpu-api
+          instance_role: api
+      - targets: ["api-gpu1:8000"]
+        labels:
+          service: dpu-api
+          instance_role: api-gpu1
+
+  - job_name: dpu-worker
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["worker:9108"]
+        labels:
+          service: dpu-worker

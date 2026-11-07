@@ -124,9 +124,6 @@ export class SwitcherComponent {
      if(localStorage.getItem('ynex-sidemenu-styles') == 'closed'){
        this.renderer.setAttribute(htmlElement, 'data-toggled', type);
      }
-     else if (localStorage.getItem('ynex-sidemenu-styles') == 'closed'){
-     this.renderer.removeAttribute(htmlElement, 'data-toggled');
-     }
      
     localStorage.setItem('ynex-sidemenu-styles', type1);
     localStorage.setItem('ynex-sidemenu-styles-toggled', type);

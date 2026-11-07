@@ -1,8 +1,8 @@
 """Phase 3: Multi-shift, leave requests, and company holidays."""
 from alembic import op
 
-revision = "0004_phase3_shifts_leaves_holidays"
-down_revision = "0003_enterprise_shifts_and_indexes"
+revision = "0004_shifts_leaves_holidays"
+down_revision = "0003_enterprise_shift_indexes"
 branch_labels = None
 depends_on = None
 

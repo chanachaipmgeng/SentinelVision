@@ -1,13 +1,13 @@
 """Phase 4: Kiosk Device Provisioning & Member TOTP 2FA columns.
 
 Revision ID: 0005_phase4_kiosk_mfa_antispoof
-Revises: 0004_phase3_shifts_leaves_holidays
+Revises: 0004_shifts_leaves_holidays
 Create Date: 2026-11-07
 """
 from alembic import op
 
 revision = "0005_phase4_kiosk_mfa_antispoof"
-down_revision = "0004_phase3_shifts_leaves_holidays"
+down_revision = "0004_shifts_leaves_holidays"
 branch_labels = None
 depends_on = None
 

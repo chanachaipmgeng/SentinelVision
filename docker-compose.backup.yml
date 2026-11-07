@@ -1,0 +1,61 @@
+# Backup sidecar (B5): daily pg_dump + image volume archive + manifest, optional rclone offsite copy,
+# periodic restore drill into a scratch database on dpu-db.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.backup.yml up -d
+#   docker compose ... run --rm backup backup.sh            # one-off backup
+#   docker compose ... run --rm backup restore-drill.sh     # one-off drill (DRILL_TARGET=database)
+#
+# Credentials come from .env only (POSTGRES_PASSWORD is required by docker-compose.yml). The host
+# directory BACKUP_DIR must be writable by BACKUP_UID:BACKUP_GID. For an offsite copy set
+# BACKUP_RCLONE_REMOTE=backup:bucket/prefix and the RCLONE_CONFIG_BACKUP_* variables below
+# (rclone reads a remote called "backup" from them — no config file needed).
+# Not combined with docker-compose.external-db.yml (dev-only shared Postgres): run scripts/backup.sh
+# on the host with BACKUP_MODE=direct PGHOST=... DB_SCHEMA=dpu instead. The entrypoint waits for
+# PGHOST with pg_isready, so no depends_on on db is needed.
+services:
+  backup:
+    build:
+      context: .
+      dockerfile: docker/backup/Dockerfile
+    image: sentinelvision-backup
+    container_name: dpu-backup
+    restart: unless-stopped
+    user: "${BACKUP_UID:-1000}:${BACKUP_GID:-1000}"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dpu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}
+      POSTGRES_DB: ${POSTGRES_DB:-dpu}
+      DB_SCHEMA: ${DB_SCHEMA:-public}
+      PGHOST: db
+      PGPORT: "5432"
+      BACKUP_MODE: direct
+      BACKUP_DIR: /backups
+      BACKUP_IMAGES_ROOT: /data
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RUN_AT_START: ${BACKUP_RUN_AT_START:-1}
+      BACKUP_DRILL_EVERY: ${BACKUP_DRILL_EVERY:-7}
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-}
+      RCLONE_CONFIG_BACKUP_TYPE: ${RCLONE_CONFIG_BACKUP_TYPE:-s3}
+      RCLONE_CONFIG_BACKUP_PROVIDER: ${RCLONE_CONFIG_BACKUP_PROVIDER:-AWS}
+      RCLONE_CONFIG_BACKUP_ENDPOINT: ${RCLONE_CONFIG_BACKUP_ENDPOINT:-}
+      RCLONE_CONFIG_BACKUP_REGION: ${RCLONE_CONFIG_BACKUP_REGION:-}
+      RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID: ${RCLONE_CONFIG_BACKUP_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY: ${RCLONE_CONFIG_BACKUP_SECRET_ACCESS_KEY:-}
+      SERVICE_NOTIFY_TOKEN: ${SERVICE_NOTIFY_TOKEN:-}
+      NOTIFY_URL: http://nginx:8080/notifications/system
+    volumes:
+      - api_uploaded:/data/uploaded_images:ro
+      - api_enrolled:/data/enrolled_images:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M

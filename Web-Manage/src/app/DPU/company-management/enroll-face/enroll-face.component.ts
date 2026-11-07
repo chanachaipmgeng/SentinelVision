@@ -23,7 +23,7 @@ import {
   resolveTtsSettings,
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
-import { buildKioskSession } from './kiosk-ws-client';
+import { buildKioskSession, canSendKioskFrame, kioskWsSessionAction } from './kiosk-ws-client';
 import {
   frameChangeScore,
   KIOSK_STATIC_SCENE_DIFF,
@@ -867,11 +867,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private wsSend(payload: Record<string, unknown>): boolean {
-    if (!this.kioskWs || this.kioskWs.readyState !== WS_OPEN) {
-      return false;
-    }
     // Only `session` may go out before the server acknowledges it (otherwise it closes with 1008).
-    if (payload['type'] !== 'session' && !this.wsSessionOk) {
+    if (!this.kioskWs || !canSendKioskFrame(payload['type'], this.wsSessionOk, this.kioskWs.readyState)) {
       return false;
     }
     this.kioskWs.send(JSON.stringify(payload));
@@ -915,30 +912,21 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.queuePending = Number(msg.queue.pending) || 0;
     }
 
-    if (msg.type === 'session_ok') {
-      this.wsSessionOk = true;
-      this.cdr.detectChanges();
-      return;
-    }
-
-    if (msg.type === 'token_expiring') {
-      this.refreshKioskToken();
-      return;
-    }
-
-    if (msg.type === 'error' && msg.code === 'invalid_session') {
-      // Server closes the socket after this; refresh the token so the reconnect's `session` is valid.
-      this.wsSessionOk = false;
-      this.refreshKioskToken();
-      return;
-    }
-
-    if (msg.type === 'error' && !msg.intent) {
-      const detail = String(msg.detail || '');
-      if (msg.code === 'token_expired' || /expired|revoked/i.test(detail)) {
+    switch (kioskWsSessionAction(msg)) {
+      case 'session_ok':
+        this.wsSessionOk = true;
+        this.cdr.detectChanges();
+        return;
+      case 'refresh_token':
         this.refreshKioskToken();
         return;
-      }
+      case 'invalid_session':
+        // Server closes the socket after this; refresh the token so the reconnect's `session` is valid.
+        this.wsSessionOk = false;
+        this.refreshKioskToken();
+        return;
+      case 'none':
+        break;
     }
 
     if (msg.type === 'identified') {

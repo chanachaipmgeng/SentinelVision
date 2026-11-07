@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, Literal, Optional
 from uuid import UUID
 
-from ..services.observability import observe_histogram
+from ..services.observability import observe_face_gpu_job
 
 logger = logging.getLogger(__name__)
 
@@ -117,10 +117,15 @@ async def start_face_gpu_workers(
 async def stop_face_gpu_workers_for_tests() -> None:
     """Cancel workers and clear buckets (test harness only)."""
     global _started, _worker_count, _active, _completed, _pending_total, _wake, _worker_tasks
+    # Workers started by an earlier app startup (e.g. TestClient in another test module) live on a
+    # loop that is already closed; awaiting them from the current loop would raise, so drop them.
+    running = asyncio.get_running_loop()
+    awaitable = [t for t in _worker_tasks if t.get_loop() is running and not running.is_closed()]
     for task in _worker_tasks:
-        task.cancel()
-    if _worker_tasks:
-        await asyncio.gather(*_worker_tasks, return_exceptions=True)
+        if task.get_loop() is running:
+            task.cancel()
+    if awaitable:
+        await asyncio.gather(*awaitable, return_exceptions=True)
     _worker_tasks = []
     for kind in _KIND_ORDER:
         for dq in list(_buckets[kind].values()):
@@ -201,11 +206,19 @@ async def _worker_loop(worker_id: int) -> None:
             if not job.future.done():
                 job.future.set_exception(StaleFaceJob("detect frame stale"))
             _completed += 1
+            observe_face_gpu_job(
+                job.kind,
+                wait_seconds=time.monotonic() - job.enqueued_at,
+                processing_seconds=0.0,
+                result="stale",
+            )
             continue
 
         device = job.device or _devices[worker_id % len(_devices)]
         _active += 1
+        waited = time.monotonic() - job.enqueued_at
         t0 = time.perf_counter()
+        outcome = "ok"
         try:
             result = await loop.run_in_executor(
                 _executor, lambda fn=job.fn, device=device: _call_on_device(fn, device)
@@ -213,11 +226,17 @@ async def _worker_loop(worker_id: int) -> None:
             if not job.future.done():
                 job.future.set_result(result)
         except Exception as exc:
+            outcome = "error"
             if not job.future.done():
                 job.future.set_exception(exc)
             logger.warning("Face GPU worker %s job failed: %s", worker_id, exc)
         finally:
-            observe_histogram("dpu_face_gpu_latency_ms", (time.perf_counter() - t0) * 1000.0)
+            observe_face_gpu_job(
+                job.kind,
+                wait_seconds=waited,
+                processing_seconds=time.perf_counter() - t0,
+                result=outcome,
+            )
             _active = max(0, _active - 1)
             _completed += 1
 
@@ -237,10 +256,19 @@ async def run_on_face_gpu(
     if not _started or _wake is None:
         loop = asyncio.get_running_loop()
         t0 = time.perf_counter()
+        outcome = "ok"
         try:
             return await loop.run_in_executor(_executor, fn)
+        except Exception:
+            outcome = "error"
+            raise
         finally:
-            observe_histogram("dpu_face_gpu_latency_ms", (time.perf_counter() - t0) * 1000.0)
+            observe_face_gpu_job(
+                _normalize_kind(kind),
+                wait_seconds=0.0,
+                processing_seconds=time.perf_counter() - t0,
+                result=outcome,
+            )
 
     # Soft backpressure: wait until under maxsize (same as old Queue.put).
     while _pending_total >= _maxsize:

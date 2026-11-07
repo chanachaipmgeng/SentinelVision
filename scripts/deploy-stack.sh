@@ -22,6 +22,17 @@ reject_default() {
 
 reject_default "$DPU_DIR/.env" SECRET_KEY change-me-in-production
 reject_default "$DPU_DIR/.env" FACE_CORE_API_KEY dev-face-core-key-change-me
+# B4: no example database password and no development mode on a server.
+pg_pw=$(grep -E '^POSTGRES_PASSWORD=' "$DPU_DIR/.env" | head -1 | cut -d= -f2- || true)
+if [ -z "$pg_pw" ] || [ "$pg_pw" = "dpu_secret" ]; then
+  echo "$DPU_DIR/.env: POSTGRES_PASSWORD must be set and must not be the example dpu_secret" >&2
+  exit 1
+fi
+app_env=$(grep -E '^APP_ENV=' "$DPU_DIR/.env" | head -1 | cut -d= -f2- || true)
+if [ -n "$app_env" ] && [ "$app_env" != "production" ]; then
+  echo "$DPU_DIR/.env: APP_ENV=$app_env — servers must run APP_ENV=production (or leave it unset)" >&2
+  exit 1
+fi
 reject_default "$FACE_CORE_DIR/.env" BOOTSTRAP_API_KEY dev-face-core-key-change-me
 
 docker network create face-net >/dev/null 2>&1 || true

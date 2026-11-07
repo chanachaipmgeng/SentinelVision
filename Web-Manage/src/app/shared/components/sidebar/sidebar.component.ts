@@ -82,7 +82,7 @@ export class SidebarComponent {
 
   ngOnInit() {
 
-    let bodyElement: any = document.querySelector('.main-content');
+    const bodyElement: any = document.querySelector('.main-content');
 
     bodyElement.onclick = () => {
       if (
@@ -230,7 +230,6 @@ export class SidebarComponent {
     }
     if (localStorage.getItem('ynex-sidemenu-styles') == 'doublemenu') {
       if (item.active) return;
-    } else {
     }
 
 

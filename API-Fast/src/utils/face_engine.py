@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
 
-from .image_quality import check_image_quality, check_image_quality_bgr
+from .image_quality import check_image_quality_bgr
 from .liveness_detection import (
     check_multi_frame_liveness,
     check_passive_antispoof_bgr,

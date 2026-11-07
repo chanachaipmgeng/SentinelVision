@@ -13,6 +13,8 @@ API-Fast/temp_images/
 API-Fast/enrolled_images/
 API-Fast/uploaded_images/
 API-Fast/uploads/
+# Pending employee-import payloads (worker hand-off; may contain photos)
+API-Fast/import_jobs/
 API-Fast/dataset/
 API-Fast/**/*.jpg
 API-Fast/**/*.jpeg
@@ -61,3 +63,4 @@ Thumbs.db
 *.wmv
 *.flv
 *.tiff
+backups/

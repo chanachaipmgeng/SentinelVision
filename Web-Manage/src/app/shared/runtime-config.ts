@@ -65,6 +65,12 @@ export function injectGoogleMapsScript(config: RuntimeConfig = current): void {
   });
   const script = document.createElement('script');
   script.id = MAPS_SCRIPT_ID;
+  // Gateway CSP (docker/nginx) allows inline scripts only with the per-request nonce that
+  // index.html exposes as window.__dpuCspNonce; Maps reuses it for the code it injects.
+  const nonce = (window as unknown as { __dpuCspNonce?: string }).__dpuCspNonce;
+  if (nonce) {
+    script.nonce = nonce;
+  }
   script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
   script.async = true;
   script.defer = true;

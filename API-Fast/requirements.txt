@@ -20,6 +20,13 @@ httpx
 authlib==1.9.5
 alembic
 psycopg[binary]
+# Observability (B6): Prometheus exposition + optional OpenTelemetry tracing (OTLP/HTTP).
+prometheus_client>=0.20
+opentelemetry-sdk>=1.25
+opentelemetry-exporter-otlp-proto-http>=1.25
+opentelemetry-instrumentation-fastapi>=0.46b0
+opentelemetry-instrumentation-sqlalchemy>=0.46b0
+opentelemetry-instrumentation-httpx>=0.46b0
 insightface==0.7.3
 # GPU ONNX Runtime (AI_VISION worker pattern). Do not install onnxruntime alongside this.
 # 1.20.1 was removed from PyPI (~2026-07); pin a version that still has wheels.

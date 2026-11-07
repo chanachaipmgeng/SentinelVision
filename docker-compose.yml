@@ -1,13 +1,19 @@
+# Required in .env (no insecure fallbacks — compose aborts with the message below):
+#   POSTGRES_PASSWORD, SECRET_KEY (>= 32 random chars). See docs/SETUP.md.
+# Images run as unprivileged users (api uid 10001, admin/nginx uid 101); the gateway and
+# admin listen on 8080 inside the network. Production: add docker-compose.prod.yml.
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
     container_name: dpu-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dpu}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dpu_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}
       POSTGRES_DB: ${POSTGRES_DB:-dpu}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      # Loopback only — reachable from this host (psql, scripts/backup.sh host mode), not the LAN.
+      # docker-compose.prod.yml removes the mapping entirely.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -18,6 +24,8 @@ services:
       retries: 12
       start_period: 10s
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -32,7 +40,10 @@ services:
     expose:
       - "8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      # production (default) refuses weak SECRET_KEY / example DB password at startup;
+      # development only warns about the DB password (SECRET_KEY is always enforced).
+      APP_ENV: ${APP_ENV:-production}
       FACE_RECOGNITION_THRESHOLD: ${FACE_RECOGNITION_THRESHOLD:-0.40}
       # Soft dedupe window for face check-in (seconds). 0 = disable.
       CHECK_IN_DEDUPE_SECONDS: ${CHECK_IN_DEDUPE_SECONDS:-300}
@@ -41,8 +52,12 @@ services:
       IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
-      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      # Schema is managed by Alembic (docs/RUNBOOK.md "Database migrations"). Single-node
+      # installs may set MIGRATE_ON_STARTUP=true; otherwise run `alembic upgrade head` first.
+      MIGRATE_ON_STARTUP: ${MIGRATE_ON_STARTUP:-false}
+      REQUIRE_SCHEMA_HEAD: ${REQUIRE_SCHEMA_HEAD:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
@@ -58,14 +73,23 @@ services:
       FACE_DEVICE: "${FACE_DEVICE:-cuda:0}"
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+      # B7: outbox / retention / import processing run in the `worker` service below.
+      # true = single-container dev: run the same job loops inside the API process.
+      RUN_BACKGROUND_JOBS_IN_API: ${RUN_BACKGROUND_JOBS_IN_API:-false}
+      IMPORT_JOB_DIR: /app/import_jobs
+      # B6: OpenTelemetry is a no-op until an OTLP endpoint is set (see docker-compose.observability.yml).
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
       - api_temp:/app/temp_images
+      - api_import_jobs:/app/import_jobs
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
@@ -80,25 +104,98 @@ services:
       retries: 10
       start_period: 60s
 
+  # B7 background worker: notification outbox dispatcher, attendance cutoff, storage / sentinel /
+  # import-payload retention and employee import processing. Same image as `api`, different
+  # entrypoint, no GPU (face enrollment during import runs InsightFace on CPU). Scale with
+  # `--scale worker=N`: every job claims rows with FOR UPDATE SKIP LOCKED.
+  worker:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile
+    container_name: dpu-worker
+    command: ["python", "-m", "src.worker"]
+    expose:
+      - "9108"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
+      AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      APP_ENV: ${APP_ENV:-production}
+      IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
+      IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
+      IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
+      FACE_DEVICE: cpu
+      FACE_DEVICES: cpu
+      NVIDIA_VISIBLE_DEVICES: ""
+      WORKER_JOBS: ${WORKER_JOBS:-outbox,retention,imports}
+      WORKER_METRICS_PORT: "9108"
+      WORKER_IMPORT_POLL_SECONDS: ${WORKER_IMPORT_POLL_SECONDS:-2}
+      WORKER_RETENTION_INTERVAL_SECONDS: ${WORKER_RETENTION_INTERVAL_SECONDS:-3600}
+      WORKER_IMPORT_LEASE_SECONDS: ${WORKER_IMPORT_LEASE_SECONDS:-900}
+      WORKER_SHUTDOWN_GRACE_SECONDS: ${WORKER_SHUTDOWN_GRACE_SECONDS:-30}
+      NOTIFY_POLL_SECONDS: ${NOTIFY_POLL_SECONDS:-30}
+      IMPORT_JOB_DIR: /app/import_jobs
+      IMPORT_JOB_RETENTION_DAYS: ${IMPORT_JOB_RETENTION_DAYS:-7}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      IMAGE_RETENTION_DAYS: ${IMAGE_RETENTION_DAYS:-90}
+      TEMP_RETENTION_HOURS: ${TEMP_RETENTION_HOURS:-24}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    volumes:
+      - api_enrolled:/app/enrolled_images
+      - api_uploaded:/app/uploaded_images
+      - api_temp:/app/temp_images
+      - api_import_jobs:/app/import_jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      # `api` is healthy only when /ready is 200, i.e. alembic_version == head (B1), so the
+      # worker never starts against an unmigrated schema.
+      api:
+        condition: service_healthy
+    stop_grace_period: 45s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9108/metrics')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   admin:
     build:
       context: ./Web-Manage
       dockerfile: Dockerfile
     container_name: dpu-admin
     expose:
-      - "80"
+      - "8080"
     environment:
-      # Written to /usr/share/nginx/html/assets/config.json on start (Web-Manage/docker/40-runtime-config.sh)
+      # Served as /assets/config.json from /tmp/dpu-runtime (Web-Manage/docker/40-runtime-config.sh)
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       GOOGLE_MAPS_MAP_ID: ${GOOGLE_MAPS_MAP_ID:-DEMO_MAP_ID}
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -109,20 +206,30 @@ services:
       dockerfile: Dockerfile
     container_name: dpu-nginx
     ports:
-      - "${HTTP_PORT:-80}:80"
+      - "${HTTP_PORT:-80}:8080"
+    environment:
+      # Rendered into nginx snippets at start (docker/nginx/entrypoint/30-dpu-runtime.sh).
+      EXPOSE_API_DOCS: ${EXPOSE_API_DOCS:-false}
+      INTERNAL_ALLOW_CIDRS: ${INTERNAL_ALLOW_CIDRS:-127.0.0.1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16}
+      CSP_SCRIPT_EXTRA: ${CSP_SCRIPT_EXTRA:-}
+      CSP_CONNECT_EXTRA: ${CSP_CONNECT_EXTRA:-}
+      CSP_FRAME_EXTRA: ${CSP_FRAME_EXTRA:-}
+      HSTS_MAX_AGE: ${HSTS_MAX_AGE:-}
     depends_on:
       api:
         condition: service_healthy
       admin:
         condition: service_started
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/health || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -132,3 +239,4 @@ volumes:
   api_enrolled:
   api_uploaded:
   api_temp:
+  api_import_jobs:

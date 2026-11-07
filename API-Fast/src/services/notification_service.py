@@ -15,13 +15,20 @@ import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Integer, String, select, text
+from sqlalchemy import Column, DateTime, Index, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.sql import func
 
 from ..config.database import Base, async_session
 from ..config.settings import settings
+from ..models.import_job import ImportJob  # noqa: F401  re-exported for existing importers (B7 moved it)
 from ..models.system_setting import SystemSetting
+from .observability import (
+    outbox_claims_total,
+    outbox_deliveries_total,
+    outbox_delivery_duration_seconds,
+    set_outbox_backlog,
+)
 
 logger = logging.getLogger("dpu.notify")
 
@@ -39,17 +46,7 @@ class NotificationOutbox(Base):
     lastError = Column(String, nullable=True)
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
 
-
-class ImportJob(Base):
-    __tablename__ = "import_job"
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    companyId = Column(PGUUID(as_uuid=True), nullable=False)
-    status = Column(String, nullable=False, default="pending")
-    result = Column(JSONB, nullable=True)
-    error = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    finishedAt = Column(DateTime(timezone=True), nullable=True)
+    __table_args__ = (Index("notification_outbox_status_created_idx", "status", "createdAt"),)
 
 
 def compute_webhook_signature(secret: str, timestamp_str: str, body_bytes: bytes) -> str:
@@ -366,7 +363,27 @@ def _backoff_ready(row: NotificationOutbox, now_utc: datetime) -> bool:
     return (now_utc - created).total_seconds() >= wait_seconds
 
 
+OUTBOX_MAX_ATTEMPTS = 5
+
+
+async def refresh_outbox_backlog() -> tuple[int, Optional[datetime]]:
+    """Publish pending count + oldest pending age (dispatcher lag) to Prometheus."""
+    async with async_session() as db:
+        pending, oldest = (
+            await db.execute(
+                select(func.count(), func.min(NotificationOutbox.createdAt)).where(
+                    NotificationOutbox.status == "pending"
+                )
+            )
+        ).one()
+    set_outbox_backlog(int(pending or 0), oldest)
+    return int(pending or 0), oldest
+
+
 async def drain_outbox(limit: int = 20) -> int:
+    """Claim up to `limit` pending rows (``FOR UPDATE SKIP LOCKED`` — safe across replicas /
+    worker instances) and deliver them. Runs in the worker service, or in the API process when
+    ``RUN_BACKGROUND_JOBS_IN_API=true``."""
     sent = 0
     now_utc = datetime.now(timezone.utc)
     async with async_session() as db:
@@ -379,10 +396,13 @@ async def drain_outbox(limit: int = 20) -> int:
                 .with_for_update(skip_locked=True)
             )
         ).scalars().all()
+        outbox_claims_total.inc(len(rows))
         for row in rows:
             if not _backoff_ready(row, now_utc):
+                outbox_deliveries_total.labels(channel=row.channel, result="skipped").inc()
                 continue
             row.attempts = int(row.attempts or 0) + 1
+            t0 = time.perf_counter()
             try:
                 if row.channel == "email":
                     await asyncio.to_thread(_send_email, row.payload or {})
@@ -397,10 +417,18 @@ async def drain_outbox(limit: int = 20) -> int:
                 row.status = "sent"
                 row.lastError = None
                 sent += 1
+                outbox_deliveries_total.labels(channel=row.channel, result="sent").inc()
             except Exception as exc:
                 row.lastError = str(exc)[:500]
-                if row.attempts >= 5:
+                if row.attempts >= OUTBOX_MAX_ATTEMPTS:
                     row.status = "failed"
+                    outbox_deliveries_total.labels(channel=row.channel, result="failed").inc()
+                else:
+                    outbox_deliveries_total.labels(channel=row.channel, result="retry").inc()
                 logger.warning("notify %s failed: %s", row.id, exc)
+            finally:
+                outbox_delivery_duration_seconds.labels(channel=row.channel).observe(
+                    time.perf_counter() - t0
+                )
         await db.commit()
     return sent

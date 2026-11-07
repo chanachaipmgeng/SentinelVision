@@ -223,6 +223,27 @@ async def ensure_profile_and_approval_columns(connection) -> None:
         CREATE INDEX IF NOT EXISTS face_encoding_member_idx
         ON face_encoding ("memberId")
         """,
+        # Tenant ownership of face encodings (A6). Backfill picks the member's oldest
+        # active employment; rows whose member has no active employee row stay NULL.
+        """
+        ALTER TABLE face_encoding
+        ADD COLUMN IF NOT EXISTS "companyId" UUID REFERENCES company("companyId")
+        """,
+        """
+        UPDATE face_encoding fe
+        SET "companyId" = (
+            SELECT ce."companyId"
+            FROM company_employee ce
+            WHERE ce."memberId" = fe."memberId" AND ce.deleted_at IS NULL
+            ORDER BY ce."createdAt" NULLS LAST, ce."company_employeeId"
+            LIMIT 1
+        )
+        WHERE fe."companyId" IS NULL
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS face_encoding_company_member_idx
+        ON face_encoding ("companyId", "memberId")
+        """,
         """
         CREATE INDEX IF NOT EXISTS audit_log_company_occurred_idx
         ON audit_log ("companyId", "occurredAt" DESC)

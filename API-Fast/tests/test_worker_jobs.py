@@ -25,8 +25,8 @@ pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 # ----------------------------------------------------------------------------- runner (no DB)
 def test_parse_job_list_defaults_and_validation():
-    assert parse_job_list("") == ["outbox", "retention", "imports"]
-    assert parse_job_list("all") == ["outbox", "retention", "imports"]
+    assert parse_job_list("") == ["outbox", "retention", "imports", "attendance_summary"]
+    assert parse_job_list("all") == ["outbox", "retention", "imports", "attendance_summary"]
     assert parse_job_list(" imports , outbox ") == ["imports", "outbox"]
     with pytest.raises(ValueError):
         parse_job_list("outbox,nope")

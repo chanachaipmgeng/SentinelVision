@@ -93,9 +93,21 @@ import { TokenService } from '../../../shared/services/token.service';
                     <label class="form-label">เวลาเลิกงาน (HH:MM)</label>
                     <input type="time" class="form-control" [(ngModel)]="newShift.endTime" />
                   </div>
-                  <div class="col-span-6">
+                  <div class="col-span-4">
                     <label class="form-label">อนุโลมสาย (นาที)</label>
                     <input type="number" min="0" max="180" class="form-control" [(ngModel)]="newShift.graceMinutes" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="form-label">ปัดเวลา (นาที)</label>
+                    <input type="number" min="0" max="60" class="form-control" [(ngModel)]="newShift.roundingMinutes" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="form-label">พัก (นาที)</label>
+                    <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.breakMinutes" />
+                  </div>
+                  <div class="col-span-6">
+                    <label class="form-label">เกณฑ์ OT หลังเลิกงาน (นาที)</label>
+                    <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.otThresholdMinutes" />
                   </div>
                   <div class="col-span-6 flex flex-col justify-end gap-2">
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -123,7 +135,7 @@ import { TokenService } from '../../../shared/services/token.service';
                       <tr class="border-b border-defaultborder">
                         <th class="text-start">ชื่อกะ</th>
                         <th class="text-start">เวลาเข้า - ออก</th>
-                        <th class="text-start">อนุโลมสาย</th>
+                        <th class="text-start">อนุโลม / ปัด / พัก / OT</th>
                         <th class="text-start">รูปแบบ</th>
                         <th class="text-end">จัดการ</th>
                       </tr>
@@ -135,7 +147,10 @@ import { TokenService } from '../../../shared/services/token.service';
                           <span *ngIf="s.isDefault" class="badge bg-primary/10 text-primary ms-1">Default</span>
                         </td>
                         <td>{{ s.startTime }} - {{ s.endTime }}</td>
-                        <td>{{ s.graceMinutes }} นาที</td>
+                        <td>
+                          สาย {{ s.graceMinutes }} · ปัด {{ s.roundingMinutes || 0 }} · พัก
+                          {{ s.breakMinutes || 0 }} · OT≥{{ s.otThresholdMinutes || 0 }}
+                        </td>
                         <td>
                           <span *ngIf="s.isCrossMidnight" class="badge bg-warning/10 text-warning">ข้ามคืน</span>
                           <span *ngIf="!s.isCrossMidnight" class="badge bg-success/10 text-success">ปกติ</span>
@@ -767,6 +782,10 @@ export class HrScheduleComponent implements OnInit {
     startTime: '09:00',
     endTime: '18:00',
     graceMinutes: 15,
+    roundingMinutes: 0,
+    breakMinutes: 0,
+    otThresholdMinutes: 0,
+    breakWindows: [] as { start: string; end: string }[],
     isCrossMidnight: false,
     isDefault: false,
   };
@@ -907,6 +926,10 @@ export class HrScheduleComponent implements OnInit {
         startTime: '09:00',
         endTime: '18:00',
         graceMinutes: 15,
+        roundingMinutes: 0,
+        breakMinutes: 0,
+        otThresholdMinutes: 0,
+        breakWindows: [],
         isCrossMidnight: false,
         isDefault: false,
       };

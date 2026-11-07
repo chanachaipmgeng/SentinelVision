@@ -71,8 +71,9 @@ def test_revision_ids_fit_alembic_version_column():
         match = re.search(r'^revision = "([^"]+)"', path.read_text(encoding="utf-8"), re.M)
         assert match, f"{path.name} has no revision id"
         ids.append(match.group(1))
-    too_long = [r for r in ids if len(r) > 32]
-    assert not too_long, f"alembic_version.version_num is VARCHAR(32): {too_long}"
+    # 0011 widens alembic_version.version_num to VARCHAR(64) (C1 id is 33 chars).
+    too_long = [r for r in ids if len(r) > 64]
+    assert not too_long, f"alembic_version.version_num is VARCHAR(64): {too_long}"
     assert len(ids) == len(set(ids))
 
 

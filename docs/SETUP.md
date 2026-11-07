@@ -38,7 +38,7 @@ docker compose run --rm api alembic upgrade head
 # upgrade of an existing install
 docker compose exec api alembic upgrade head
 # verify
-docker compose exec api alembic current   # 0010_schema_drift (head)
+docker compose exec api alembic current   # 0011_attendance_daily_shift_rules (head)
 docker compose exec api alembic check     # No new upgrade operations detected.
 ```
 

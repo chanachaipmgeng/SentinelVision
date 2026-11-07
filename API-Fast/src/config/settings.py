@@ -85,6 +85,15 @@ class Settings(BaseSettings):
     # WS identify/check-in: detect at FACE_DETECT_DET_SIZE then embed (skip 640 det).
     FACE_FAST_EMBED_DETECT: bool = True
 
+    # Kiosk WebSocket hardening. A socket that has not completed a valid `session`
+    # within this many seconds is closed (1008). Any non-`session` message before
+    # auth also closes the socket, so unauthenticated clients never reach the GPU.
+    WS_KIOSK_AUTH_TIMEOUT_SECONDS: float = 5.0
+    # Per-process concurrent kiosk sockets per client IP / per company (0 = unlimited).
+    # nginx `limit_conn` on /face/ws/ is the gateway-level counterpart (see docker/nginx).
+    WS_KIOSK_MAX_CONN_PER_IP: int = 16
+    WS_KIOSK_MAX_CONN_PER_COMPANY: int = 64
+
     # Phase-5 Cloud Storage (Local / S3 / MinIO)
     STORAGE_BACKEND: str = "local"
     IMAGE_RETENTION_DAYS: int = 90

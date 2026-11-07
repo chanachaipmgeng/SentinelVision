@@ -1,14 +1,40 @@
 {
   "root": true,
-  "ignorePatterns": ["projects/**/*"],
+  "ignorePatterns": ["projects/**/*", "dist/**/*", "coverage/**/*", "e2e/**/*", "src/assets/**/*"],
   "overrides": [
     {
       "files": ["*.ts"],
       "parserOptions": {
-        "project": ["tsconfig.json"]
+        "project": ["tsconfig.json", "tsconfig.spec.json"],
+        "createDefaultProgram": true
       },
-      "extends": ["eslint:recommended"],
-      "rules": {}
+      "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:@angular-eslint/recommended",
+        "plugin:@angular-eslint/template/process-inline-templates"
+      ],
+      "rules": {
+        "prefer-const": "error",
+        "no-empty": ["error", { "allowEmptyCatch": true }],
+        "no-dupe-else-if": "error",
+        "no-debugger": "error",
+
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "@angular-eslint/use-lifecycle-interface": "off",
+        "@typescript-eslint/ban-types": "off",
+        "@angular-eslint/no-empty-lifecycle-method": "off",
+        "@typescript-eslint/no-unsafe-declaration-merging": "off"
+      }
+    },
+    {
+      "files": ["*.html"],
+      "extends": ["plugin:@angular-eslint/template/recommended"],
+      "rules": {
+        "@angular-eslint/template/eqeqeq": "off"
+      }
     }
   ]
 }

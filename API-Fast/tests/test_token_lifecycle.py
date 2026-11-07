@@ -420,3 +420,138 @@ def test_purge_expired_revocations(db_env):
         assert await revocation.is_token_revoked({"jti": "old-jti"}) is False
 
     _run(flow())
+
+
+# ---------------------------------------------------------------------------
+# B2 regressions: lockout, disabled accounts, token-type confusion, logout idempotence
+# ---------------------------------------------------------------------------
+@requires_db
+def test_login_locks_after_max_failures_and_unlocks_on_expiry(app, seed, monkeypatch):
+    from sqlalchemy import select, update
+
+    from src.config.database import async_session
+    from src.models.member import Member
+
+    monkeypatch.setattr(settings_mod.settings, "MAX_FAILED_LOGINS", 3)
+
+    async def flow():
+        async with _client(app) as c:
+            for _ in range(2):
+                bad = await c.post("/auth/login", json={"username": seed["username"], "password": "wrong"})
+                assert bad.status_code == 401 and bad.json()["detail"] == "Invalid credentials"
+            async with async_session() as db:
+                m = (await db.execute(select(Member).where(Member.username == seed["username"]))).scalar_one()
+                assert m.failedLoginCount == 2 and m.lockedUntil is None
+            third = await c.post("/auth/login", json={"username": seed["username"], "password": "wrong"})
+            assert third.status_code == 401
+            # locked: even the correct password is refused with 423 and the counter was reset
+            locked = await c.post("/auth/login", json={"username": seed["username"], "password": seed["password"]})
+            assert locked.status_code == 423
+            assert "locked" in locked.json()["detail"].lower()
+            async with async_session() as db:
+                m = (await db.execute(select(Member).where(Member.username == seed["username"]))).scalar_one()
+                assert m.lockedUntil is not None and m.failedLoginCount == 0
+                await db.execute(
+                    update(Member)
+                    .where(Member.memberId == m.memberId)
+                    .values(lockedUntil=datetime.now(timezone.utc) - timedelta(seconds=1))
+                )
+                await db.commit()
+            # lock expired → login succeeds and clears the lock
+            access, _ = await _login(c, seed)
+            assert (await c.get("/system/whoami", headers=_auth(access))).status_code == 200
+            async with async_session() as db:
+                m = (await db.execute(select(Member).where(Member.username == seed["username"]))).scalar_one()
+                assert m.lockedUntil is None and m.failedLoginCount == 0
+
+    _run(flow())
+
+
+@requires_db
+def test_disabled_account_cannot_login_refresh_or_use_live_tokens(app, seed):
+    from sqlalchemy import select, update
+
+    from src.config.database import async_session
+    from src.models.member import Member, StatusType
+
+    async def flow():
+        async with _client(app) as c:
+            access, refresh = await _login(c, seed)
+            async with async_session() as db:
+                await db.execute(
+                    update(Member).where(Member.username == seed["username"]).values(status=StatusType.DISABLED)
+                )
+                await db.commit()
+            try:
+                login = await c.post("/auth/login", json={"username": seed["username"], "password": seed["password"]})
+                assert login.status_code == 403 and login.json()["detail"] == "Account disabled"
+                live = await c.get("/system/whoami", headers=_auth(access))
+                assert live.status_code == 403 and live.json()["detail"] == "Account disabled"
+                renew = await c.post("/auth/refresh", json={"refreshToken": refresh})
+                assert renew.status_code == 403
+            finally:
+                async with async_session() as db:
+                    await db.execute(
+                        update(Member).where(Member.username == seed["username"]).values(status=StatusType.ENABLE)
+                    )
+                    await db.commit()
+            # the pair issued before disabling is still valid once re-enabled (nothing was revoked)
+            assert (await c.get("/system/whoami", headers=_auth(access))).status_code == 200
+            async with async_session() as db:
+                m = (await db.execute(select(Member).where(Member.username == seed["username"]))).scalar_one()
+                assert m.status == StatusType.ENABLE
+
+    _run(flow())
+
+
+@requires_db
+def test_token_type_confusion_is_rejected(app, seed):
+    async def flow():
+        async with _client(app) as c:
+            access, refresh = await _login(c, seed)
+            # access token presented as refresh token
+            r = await c.post("/auth/refresh", json={"refreshToken": access})
+            assert r.status_code == 401 and r.json()["detail"] == "Wrong token type"
+            # refresh token presented as bearer
+            r = await c.get("/system/whoami", headers=_auth(refresh))
+            assert r.status_code == 401 and r.json()["detail"] == "Wrong token type"
+            # kiosk refresh endpoint refuses member refresh tokens
+            r = await c.post("/auth/kiosk/refresh", json={"refreshToken": refresh})
+            assert r.status_code == 401
+            # missing body token
+            r = await c.post("/auth/refresh", json={})
+            assert r.status_code == 401 and r.json()["detail"] == "Refresh token required"
+            # legacy snake_case field is still accepted
+            r = await c.post("/auth/refresh", json={"refresh_token": refresh})
+            assert r.status_code == 200 and r.json()["accessToken"]
+
+    _run(flow())
+
+
+@requires_db
+def test_logout_is_idempotent_and_accepts_expired_access_token(app, seed):
+    from src.security.jwt import TYP_ACCESS, create_token
+
+    async def flow():
+        async with _client(app) as c:
+            access, refresh = await _login(c, seed)
+            first = await c.post("/auth/logout", json={"refreshToken": refresh}, headers=_auth(access))
+            assert first.status_code == 200 and first.json()["revokedTokens"] == 2
+            second = await c.post("/auth/logout", json={"refreshToken": refresh}, headers=_auth(access))
+            assert second.status_code == 200 and second.json()["ok"] is True
+
+            # a lapsed access token can still log out (signature verified, exp ignored)
+            access2, refresh2 = await _login(c, seed)
+            fam = decode_token(refresh2, expected_typ="refresh")["fam"]
+            payload = decode_token(access2)
+            expired = create_token(
+                payload["memberId"], payload["username"], typ=TYP_ACCESS, expires=timedelta(seconds=-30), family=fam
+            )
+            assert (await c.get("/system/whoami", headers=_auth(expired))).status_code == 401
+            res = await c.post("/auth/logout", json={}, headers=_auth(expired))
+            assert res.status_code == 200 and res.json()["familyRevoked"] is True
+            # whole family gone: the live access token and the refresh token are both dead
+            assert (await c.get("/system/whoami", headers=_auth(access2))).status_code == 401
+            assert (await c.post("/auth/refresh", json={"refreshToken": refresh2})).status_code == 401
+
+    _run(flow())

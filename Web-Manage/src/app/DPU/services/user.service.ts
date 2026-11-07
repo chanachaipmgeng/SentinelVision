@@ -101,14 +101,14 @@ export class UserService {
 
 
   resetPass(email: string) {
-    let tempBody = {
+    const tempBody = {
       "email": email
     }
     return this.http.put<ResponseModel>(this.apiBaseUrl + "/send-reset-password", tempBody);
   }
 
   resetPassUser(oldPassword: string, password: string) {
-    let tempBody = {
+    const tempBody = {
       "oldPassword": oldPassword,
       "password": password
     }

@@ -7,13 +7,6 @@ import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-# Avoid InsightFace/onnx at import time
-_mock_insight = MagicMock()
-sys.modules["insightface"] = _mock_insight
-sys.modules["insightface.app"] = _mock_insight.app
-sys.modules["cv2"] = MagicMock()
-sys.modules["onnxruntime"] = MagicMock()
-
 import pytest
 from fastapi import HTTPException
 
@@ -21,7 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# InsightFace / ONNX are stubbed by tests/conftest.py when the GPU stack is not installed;
+# cv2 is always the real module (other tests exercise OpenCV-based anti-spoofing).
 from src.controllers.face_controller import _enrich_face_core_match  # noqa: E402
+from src.models.member import StatusType  # noqa: E402
 
 
 def _fake_member(member_id: uuid.UUID) -> MagicMock:
@@ -33,6 +29,10 @@ def _fake_member(member_id: uuid.UUID) -> MagicMock:
     m.lastName = "One"
     m.phoneNumber = None
     m.picture = None
+    # An active member: MagicMock attributes are truthy, so these must be set explicitly
+    # (``deletedAt`` would otherwise read as "soft-deleted" → 404).
+    m.deletedAt = None
+    m.status = StatusType.ENABLE
     return m
 
 

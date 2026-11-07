@@ -225,6 +225,40 @@ docker compose run --rm -v ./API-Fast:/app --entrypoint python api scripts/smoke
 Seed fills all 8 tables. Default password for seeded users: `Password123!`
 (accounts: `sysadmin`, `admin`, `boss`, `emp1`, `emp2`).
 
+## Automated tests (Phase B2)
+
+Backend — real PostgreSQL + pgvector migrated to Alembic head once per session (`tests/conftest.py`):
+
+```bash
+cd API-Fast
+pip install -r requirements.txt -r requirements-dev.txt
+# either point at a database you own (it is migrated, tables are reused between runs)…
+export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/dpu_test
+# …or install the embedded server and let conftest start a throw-away one
+pip install pgserver
+python -m pytest -q
+```
+
+The suite has no skips when a database is available: authz matrix (`tests/test_authz_matrix.py`), hybrid punch /
+shift late-OT / xlsx-csv export (`tests/test_punch_shift_export.py`), outbox claiming with `FOR UPDATE SKIP LOCKED`
+(`tests/test_outbox_claiming.py`), token lifecycle (`tests/test_token_lifecycle.py`), Alembic drift
+(`tests/test_alembic_schema.py`) and app startup / readiness (`tests/test_app_startup.py`). Shared tenant fixtures live
+in `tests/support.py`.
+
+Frontend (`Web-Manage`, Node 20+; `.npmrc` sets `legacy-peer-deps` so `npm ci` matches the Docker build):
+
+```bash
+cd Web-Manage
+npm ci
+npm run lint          # eslint (angular-eslint, see .eslintrc.json baseline)
+npm run test:ci       # Karma + Jasmine on ChromeHeadless (CHROME_BIN=/path/to/chrome if not on PATH)
+npm run build:prod    # ng build --configuration production
+```
+
+`npm test` keeps the interactive Chrome runner. Playwright end-to-end smoke tests are **not** wired yet
+(`e2e/smoke.spec.ts` + `playwright.config.ts` are placeholders; `@playwright/test` is not a dependency) — follow-up
+tracked in docs/BACKLOG.md.
+
 ```bash
 docker compose logs -f api
 docker compose ps

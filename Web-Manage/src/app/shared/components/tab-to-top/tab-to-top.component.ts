@@ -19,7 +19,7 @@ export class TabToTopComponent {
   @HostListener("window:scroll", [])
 
   onWindowScroll(){
-    let number = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const number = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
     if (number > 600) {
       this.show = true;
     } else {
@@ -28,7 +28,7 @@ export class TabToTopComponent {
   }
 
   taptotop(){
-    let body:any = document.querySelector('body')
+    const body:any = document.querySelector('body')
     body.style. scrollBehavior = 'smooth';
     this.viewScroller.scrollToPosition([0,0]);
   }

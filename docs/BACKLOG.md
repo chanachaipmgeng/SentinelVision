@@ -50,3 +50,7 @@
 - [x] **Smart Events & Seminar Check-in (`SentinelEvent`):** Event campaign management, attendee face + seat/table enrollment (`seat_number`), and live welcome/seat lookup on scan
 - [x] **Live Building Occupancy, Emergency Muster Roll & Offline-First Edge Sync:** Real-time roster of employees and visitors inside the building today (`GET /sentinel/company/{companyId}/overview`) plus Edge AI vector manifest (`GET /sentinel/company/{companyId}/edge-sync`)
 - [x] **UX/UI Modernization & SentinelVision Command Console (`/company/sentinel-center`):** 4-pillar sidebar navigation, container-query responsive sticky tables (`.sv-table-wrapper`), CSS layout containment (`.sv-contain-region`), and 6-tab `SentinelCenterComponent`
+
+## Open — Phase B follow-ups
+- [ ] **Playwright E2E smoke (Web-Manage):** add `@playwright/test`, replace the placeholder `e2e/smoke.spec.ts` with login → admin home → kiosk page reaching `session_ok` against a mocked backend (skip when `DPU_BASE_URL` is unset), and run it as a non-blocking CI job before promoting it to a gate
+- [ ] **Lint debt (Web-Manage):** re-enable the rules baselined in `.eslintrc.json` one at a time (`@typescript-eslint/no-explicit-any` 248, `no-non-null-asserted-optional-chain` 71, `no-unused-vars` 67, `@angular-eslint/use-lifecycle-interface` 10, `ban-types` 7, `no-empty-lifecycle-method` 2, `no-unsafe-declaration-merging` 2, template `eqeqeq`)

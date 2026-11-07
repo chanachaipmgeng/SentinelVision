@@ -3,6 +3,9 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
+    // `allowJs` (inherited) makes the karma builder's virtual `ng-virtual-main.js` entry fall
+    // outside the TS program ("is missing from the TypeScript compilation"); specs are TS only.
+    "allowJs": false,
     "types": [
       "jasmine"
     ]

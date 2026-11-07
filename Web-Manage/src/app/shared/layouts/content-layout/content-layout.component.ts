@@ -62,7 +62,7 @@ export class ContentLayoutComponent implements OnDestroy {
     }
   }
   clearToggle() {
-    let html = this.elementRef.nativeElement.ownerDocument.documentElement;
+    const html = this.elementRef.nativeElement.ownerDocument.documentElement;
     html?.setAttribute('data-toggled', 'close');
     document.querySelector('#responsive-overlay')?.classList.remove('active');
   }
@@ -73,7 +73,7 @@ export class ContentLayoutComponent implements OnDestroy {
     if (document.documentElement.getAttribute('data-nav-layout') == 'horizontal' && window.innerWidth > 992) {
       this.closeMenu();
     }
-    let html = this.elementRef.nativeElement.ownerDocument.documentElement;
+    const html = this.elementRef.nativeElement.ownerDocument.documentElement;
     if (window.innerWidth <= 992) {
       html?.setAttribute(
         'data-toggled',

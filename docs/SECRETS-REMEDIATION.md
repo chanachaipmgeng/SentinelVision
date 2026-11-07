@@ -4,10 +4,12 @@ Status of the two halves of A2:
 
 | Step | State | Where |
 |---|---|---|
-| Stop tracking secrets / PII, ignore rules, `.env.example`, externalize Google Maps key | **Done** (PR `chore/a2-untrack-secrets-and-pii`) | this repo |
-| Purge from git history + rotate keys | **Pending — needs owner go-ahead** (destructive, every clone must be re-cloned) | §2–§4 below |
+| Stop tracking secrets / PII, ignore rules, `.env.example`, externalize Google Maps key | **Done** (PR #3 `chore/a2-untrack-secrets-and-pii`, merged via PR #8) | this repo |
+| Purge from git history | **Done 2026-11-07** (see §6) | §2, §6 |
+| Rotate `SECRET_KEY`, `POSTGRES_PASSWORD` | **Done 2026-11-07** (see §6) | §4, §6 |
+| Rotate Google Maps key, Firebase web config; GitHub cache purge; collaborator re-clone | **Pending — owner actions** (see §6) | §3, §4, §6 |
 
-Until §2–§4 are executed the leaked values are still readable in history (`git log -p -- API-Fast/.env`) and **must be treated as compromised**.
+The Google Maps key and the Firebase web config were published in history until the rewrite and GitHub may still serve the old commits from cache; keep treating them as compromised until §6's remaining actions are done.
 
 ---
 
@@ -121,3 +123,30 @@ Evidence to keep in the change ticket: date/time of each rotation, who did it, a
 - Add a secret scanner to CI before merging (`gitleaks detect --redact` in `.gitlab-ci.yml` `lint` stage, or GitHub secret scanning + push protection on the repo).
 - Pre-commit hook suggestion: `pre-commit` with `gitleaks` and `check-added-large-files --maxkb=500`.
 - Runtime secrets belong in `.env` (Docker) or the orchestrator's secret store, never in `index.html`, `environment*.ts`, or docs.
+
+## 6. Execution log — 2026-11-07
+
+Performed on the owner's workstation after PR #8 (Phase A integration) was merged into `main` with a merge commit (`a3d78344`, rewritten to `878494f6`).
+
+**Backup (keep offline ≥ 30 days, then delete):** `D:\Project\myProject\SentinelVision-backup-20261107.bundle` — full `git clone --mirror` of the pre-rewrite repository (all branches, tags and `refs/pull/*`, ~260 MB, `git bundle verify` OK). It contains the leaked values; do not copy it anywhere shared.
+
+**History rewrite** — `git filter-repo` 2.47 on a fresh mirror clone, single pass, 120 commits rewritten; branches `main`, `DEV` and tags `v1`, `v1.1.0`, `v.1.2.0` force-pushed.
+
+- Paths removed from every commit (`--invert-paths --paths-from-file`): `API-Fast/.env`, `API-Fast/uploaded_images/`, `API-Fast/uploads/`, `API-Fast/_inspect_import.xlsx`, `ผลโหลดเทส/`.
+- Literals replaced with `***REMOVED***` (`--replace-text`): the `SECRET_KEY` value and the `DATABASE_URL` password from the historical `API-Fast/.env`; the Google Maps key from `Web-Manage/src/index.html`; plus a safety regex for any `AIza…` key. The Firebase `apiKey` / `appId` / `messagingSenderId` in `environment*.ts` were already masked (`***`) in every historical revision, so nothing to replace. The compose default `dpu_secret` was deliberately **not** rewritten (it is the public example value in `docker-compose.yml` / `.env.example`; the real password was rotated instead).
+- Verification on the rewritten mirror: `git log --all -- API-Fast/.env` → 0 commits; purged paths absent from all trees; `git grep` for each literal and for `AIza[0-9A-Za-z_-]{30,}` over `git rev-list --all` → 0 hits; new `main` tree id identical to the old `main` tree id (`git diff --stat` empty); `DEV` and tags differ only in the purged files. Pack size 260 MB → 221 MB (the remaining bulk is `Web-Manage/src/assets/models/*`).
+- Owner checkout reset onto the rewritten history (`fetch --prune`, `reset --hard origin/main`, tags re-fetched, `reflog expire --expire=now --all`, `gc --prune=now --aggressive`); the old `main` object is no longer present locally. Local gitignored `.env` untouched.
+- Merged feature branches deleted on origin: `fix/a1-audit-service-imports`, `fix/a7-kiosk-blacklist-exposure`, `chore/a2-untrack-secrets-and-pii`, `fix/a3-kiosk-ws-auth-gating`, `fix/a6-tenant-isolation`, `feat/a5-token-lifecycle-kiosk-pairing`, `feat/a4-real-oidc`, `integration/phase-a`.
+
+**Rotated (values live only in the gitignored root `.env`):**
+
+- `SECRET_KEY` — new 64-char random value. Every pre-existing access/refresh/kiosk token is invalid; admins must log in again and kiosks must be re-paired (`/kiosk/pair`).
+- `POSTGRES_PASSWORD` for role `dpu` on the builtin `dpu-db` (`ALTER USER dpu WITH PASSWORD …`), new 32-char random value; `DATABASE_URL` is derived from it by `docker-compose.yml`. Verified: old default password rejected over the network, new one accepted, `api` recreated, `/health` and `/ready` 200, login works, pre-rotation token → 401, startup DDL clean.
+
+**Still to do (owner):**
+
+1. Google Maps key — Google Cloud Console → Credentials: delete the leaked key, create a new key restricted to HTTP referrers + Maps JavaScript / Places APIs, set `GOOGLE_MAPS_API_KEY` in `.env`, `docker compose up -d admin` (no rebuild).
+2. Firebase web app — Firebase console / Google Cloud Credentials: delete the web app or restrict/regenerate its browser key (unused by DPU).
+3. GitHub — the old commits are still reachable through `refs/pull/1..8/head` and GitHub's cache (e.g. `/commit/a3d78344`, PR diff views). Ask GitHub Support to purge unreachable objects / dereference the pull-request refs for `chanachaipmgeng/SentinelVision`, then turn on secret scanning + push protection.
+4. Every other clone (CI runners, deploy hosts per `docs/DEPLOY-SERVER.md`, developers, Docker build caches) must be **re-cloned, not pulled** — see §3. The sibling `dpu-project` checkout (Bitbucket remote) carries the same pre-A2 history and the old DB password in its `.env`; if that stack is started against the shared `dpu-project_pgdata` volume, update its `POSTGRES_PASSWORD` first.
+5. `scripts/backup.sh` and any monitoring that used the old DB password need the new value.

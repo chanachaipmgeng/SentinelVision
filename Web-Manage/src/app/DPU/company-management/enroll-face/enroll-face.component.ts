@@ -167,6 +167,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private attendanceTimer: ReturnType<typeof setInterval> | null = null;
   private detectBusy = false;
   private kioskWs: WebSocket | null = null;
+  /** Server acknowledged `session` (`session_ok`); frames are refused by the server before this. */
+  private wsSessionOk = false;
   private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private wsReqSeq = 0;
   private destroyWs = false;
@@ -492,8 +494,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           this.updateTracks([], nowMs);
         }
 
-        // Prefer server-side detection (InsightFace GPU) when the stream is up.
-        if (this.wsConnected && nowMs >= this.serverDetectPausedUntil) {
+        // Prefer server-side detection (InsightFace GPU) once the session is acknowledged.
+        if (this.wsConnected && this.wsSessionOk && nowMs >= this.serverDetectPausedUntil) {
           this.sendDetectFrame(videoEl);
           return;
         }
@@ -787,10 +789,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.kioskWs = ws;
 
       ws.onopen = () => {
+        this.wsSessionOk = false;
         this.ngZone.run(() => {
           this.wsConnected = true;
           this.cdr.detectChanges();
         });
+        // Server requires `session` first; detect/identify/checkin wait for `session_ok`.
         this.sendWsSession();
       };
 
@@ -814,6 +818,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
       ws.onclose = () => {
         this.wsDetectInFlight = false;
+        this.wsSessionOk = false;
         this.ngZone.run(() => {
           this.wsConnected = false;
           this.cdr.detectChanges();
@@ -837,6 +842,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   private wsSend(payload: Record<string, unknown>): boolean {
     if (!this.kioskWs || this.kioskWs.readyState !== WS_OPEN) {
+      return false;
+    }
+    // Only `session` may go out before the server acknowledges it (otherwise it closes with 1008).
+    if (payload['type'] !== 'session' && !this.wsSessionOk) {
       return false;
     }
     this.kioskWs.send(JSON.stringify(payload));
@@ -871,7 +880,20 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.queuePending = Number(msg.queue.pending) || 0;
     }
 
+    if (msg.type === 'session_ok') {
+      this.wsSessionOk = true;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (msg.type === 'token_expiring') {
+      this.refreshKioskToken();
+      return;
+    }
+
+    if (msg.type === 'error' && msg.code === 'invalid_session') {
+      // Server closes the socket after this; refresh the token so the reconnect's `session` is valid.
+      this.wsSessionOk = false;
       this.refreshKioskToken();
       return;
     }

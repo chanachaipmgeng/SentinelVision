@@ -12,6 +12,7 @@
 - [x] Enforce account lockout (`assert_not_locked`) and active status check on both `/auth/login` and `/auth/refresh`
 - [x] Offload synchronous `generate_face_encoding` and `verify_liveness_and_get_encoding` to `run_on_face_gpu` so the FastAPI `asyncio` event loop never blocks
 - [x] Per-connection WebSocket task semaphore (`asyncio.Semaphore(4)`) and continuous JWT expiration enforcement in `/face/ws/kiosk`
+- [x] `/face/ws/kiosk` auth gating: reject every message before an authenticated `session` (close 1008), 5 s auth deadline, per-IP / per-company connection caps (`WS_KIOSK_*`), nginx `limit_conn` on `/face/ws/` (A3)
 - [x] Non-blocking Audit Log writes (`asyncio.create_task`) + real client IP extraction from `X-Forwarded-For` / `X-Real-IP`
 - [x] Multi-replica safe Notification Outbox (`SELECT ... FOR UPDATE SKIP LOCKED`), non-blocking SMTP/LINE/Webhook dispatch (`asyncio.to_thread`), and persistent daily cutoff markers (`cutoff_sent:{companyId}`)
 - [x] Standardized `Asia/Bangkok` business day boundaries across Kiosk, Dashboard, and Cutoff ticks

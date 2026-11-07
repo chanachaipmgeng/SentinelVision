@@ -300,8 +300,10 @@ async def _recover_import_session(db: AsyncSession) -> None:
         pass
 
 
-async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSession) -> str:
-    """Save profile picture + InsightFace encoding. Returns faceEncodingId."""
+async def _enroll_face_bytes(
+    member_id: str, image_bytes: bytes, db: AsyncSession, company_id: str | UUID | None = None
+) -> str:
+    """Save profile picture + InsightFace encoding owned by ``company_id``. Returns faceEncodingId."""
     member = await db.get(Member, UUID(str(member_id)))
     if not member:
         raise ValueError("ไม่พบสมาชิกสำหรับบันทึกใบหน้า")
@@ -333,7 +335,11 @@ async def _enroll_face_bytes(member_id: str, image_bytes: bytes, db: AsyncSessio
         if encoding is None:
             raise ValueError("ไม่พบใบหน้าในรูป หรือคุณภาพรูปไม่ผ่านเกณฑ์")
 
-        new_face = FaceEncoding(memberId=member.memberId, embedding=encoding)
+        new_face = FaceEncoding(
+            memberId=member.memberId,
+            companyId=UUID(str(company_id)) if company_id else None,
+            embedding=encoding,
+        )
         db.add(new_face)
         member.picture = profile_name
         await db.commit()
@@ -639,7 +645,7 @@ async def import_employees_from_excel(
                     embedded=embedded,
                 )
                 if photo_bytes:
-                    await _enroll_face_bytes(member_id, photo_bytes, db)
+                    await _enroll_face_bytes(member_id, photo_bytes, db, company_id=companyId)
                     face_enrolled = True
                     faces_ok += 1
             except Exception as face_exc:

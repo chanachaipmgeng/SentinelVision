@@ -11,17 +11,21 @@ from ..controllers.position_controller import (
     delete_position
 )
 from ..schemas.position_schema import PositionCreate, PositionUpdate, PositionResponse
-from ..security.deps import assert_request_company_access
+from ..security.deps import assert_request_company_access, require_request_system_admin
 
 router = APIRouter()
 
 @router.get("", response_model=List[PositionResponse])
-async def get_positions_route(db: AsyncSession = Depends(get_db)):
+async def get_positions_route(request: Request, db: AsyncSession = Depends(get_db)):
+    """Cross-tenant listing — system admin only (Web-Manage uses /company/{companyId})."""
+    require_request_system_admin(request)
     return await get_all_positions(db)
 
 @router.get("/{positionId}", response_model=PositionResponse)
-async def get_position_by_id_route(positionId: str, db: AsyncSession = Depends(get_db)):
-    return await get_position_by_id(positionId, db)
+async def get_position_by_id_route(request: Request, positionId: str, db: AsyncSession = Depends(get_db)):
+    position = await get_position_by_id(positionId, db)
+    await assert_request_company_access(request, db, position.companyId)
+    return position
 
 @router.get("/company/{companyId}", response_model=List[PositionResponse])
 async def get_positions_by_companyId_route(companyId: str, db: AsyncSession = Depends(get_db)):
@@ -36,6 +40,9 @@ async def create_position_route(request: Request, position: PositionCreate, db: 
 async def update_position_route(request: Request, positionId: str, position: PositionUpdate, db: AsyncSession = Depends(get_db)):
     existing = await get_position_by_id(positionId, db)
     await assert_request_company_access(request, db, existing.companyId)
+    if position.companyId is not None and position.companyId != existing.companyId:
+        # Re-homing a position into another tenant needs admin rights there too.
+        await assert_request_company_access(request, db, position.companyId)
     return await update_position(positionId, position.dict(exclude_unset=True), db)
 
 @router.delete("/{positionId}")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -6,6 +6,7 @@ import io
 
 from ..schemas.company_schema import CompanyResponse
 from ..config.database import get_db
+from ..security.deps import current_member_var
 from ..controllers.company_employee_controller import (
     get_all_companyEmployees,
     get_company_employee_by_id,
@@ -91,8 +92,14 @@ async def register_member_route(
 
 # แก้ไขข้อมูลพนักงานในบริษัทตาม company_employeeId และ companyId
 @router.put("/company/{companyId}", response_model=CompanyEmployeeResponse)
-async def update_company_employee_route(companyId: str, company_employee: CompanyEmployeeUpdate, db: AsyncSession = Depends(get_db)):
-    return await update_company_employee(company_employee, companyId,db)
+async def update_company_employee_route(
+    request: Request,
+    companyId: str,
+    company_employee: CompanyEmployeeUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    actor = getattr(request.state, "member", None) or current_member_var.get()
+    return await update_company_employee(company_employee, companyId, db, actor=actor)
 
 # ลบพนักงานออกจากบริษัทตาม company_employeeId และ companyId
 @router.delete("/company/{companyId}/{company_employeeId}")

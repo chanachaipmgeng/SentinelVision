@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, ForeignKey, text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -16,11 +16,20 @@ class FaceEncoding(Base):
     memberId = Column(
         UUID(as_uuid=True), ForeignKey("member.memberId"), nullable=False
     )
+    # Tenant that enrolled this encoding. Nullable only for legacy rows that the
+    # startup/Alembic backfill could not resolve (member without an active employee row).
+    companyId = Column(
+        UUID(as_uuid=True), ForeignKey("company.companyId"), nullable=True
+    )
     # InsightFace buffalo_l ArcFace embedding (512-d, L2-normalized)
     embedding = Column(Vector(FACE_EMBEDDING_DIM), nullable=False)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     member = relationship("Member", back_populates="face_encodings")
+
+    __table_args__ = (
+        Index("face_encoding_company_member_idx", "companyId", "memberId"),
+    )
 
 
 async def prepare_pgvector(connection) -> None:

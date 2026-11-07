@@ -6,6 +6,7 @@
       <ng-container chips>
         <app-stat-chip>ทั้งหมด {{ itemsList.length }}</app-stat-chip>
         <app-stat-chip tone="ok">Public {{ publicCount }}</app-stat-chip>
+        <app-stat-chip tone="warn" *ngIf="suspendedCount">ระงับ {{ suspendedCount }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</app-stat-chip>
       </ng-container>
       <ng-container controls>
@@ -53,6 +54,7 @@
                 <th>รหัส</th>
                 <th>เจ้าของ</th>
                 <th>สถานะ</th>
+                <th>Lifecycle / Package</th>
                 <th class="text-end">จัดการ</th>
               </tr>
             </thead>
@@ -81,9 +83,19 @@
                     <span class="badge" [class.bg-success]="item.status===1" [class.text-white]="item.status===1"
                       [class.bg-warning]="item.status!==1">{{ item.status === 1 ? 'PUBLIC' : 'PENDING' }}</span>
                   </td>
+                  <td>
+                    <span class="badge text-white"
+                      [class.bg-success]="lifecycleLabel(item)==='ACTIVE'"
+                      [class.bg-warning]="lifecycleLabel(item)==='SUSPENDED'"
+                      [class.bg-danger]="lifecycleLabel(item)==='OFFBOARDED'">{{ lifecycleLabel(item) }}</span>
+                    <div class="text-[0.7rem] text-dpu-muted mt-1">{{ item.packageCode || '—' }} · GPU {{ item.gpuPriority ?? 0 }}</div>
+                  </td>
                   <td class="text-end">
-                    <div class="inline-flex gap-2">
-                      <button type="button" class="dpu-icon-btn" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                    <div class="inline-flex gap-2 flex-wrap justify-end">
+                      <button type="button" class="dpu-icon-btn" title="แก้ไข / โควตา" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                      <button *ngIf="lifecycleLabel(item)==='ACTIVE'" type="button" class="dpu-icon-btn" title="ระงับ" (click)="suspend(item)"><i class="ri-pause-circle-line"></i></button>
+                      <button *ngIf="lifecycleLabel(item)==='SUSPENDED'" type="button" class="dpu-icon-btn" title="เปิดใช้งาน" (click)="resume(item)"><i class="ri-play-circle-line"></i></button>
+                      <button *ngIf="lifecycleLabel(item)!=='OFFBOARDED'" type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="Offboard" (click)="offboard(item)"><i class="ri-logout-box-r-line"></i></button>
                       <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
                     </div>
                   </td>
@@ -148,6 +160,36 @@
               <ng-option [value]="0">Pending</ng-option>
               <ng-option [value]="1">Public</ng-option>
             </ng-select>
+          </div>
+
+          <div class="col-span-12 border-t pt-3" *ngIf="action === 'edit'">
+            <h6 class="font-semibold mb-2">โควตา / แพ็กเกจ (D5)</h6>
+            <div class="grid grid-cols-12 gap-3">
+              <div class="col-span-12 md:col-span-6">
+                <label class="form-label">Package</label>
+                <ng-select [(ngModel)]="quotaDraft.packageCode" [clearable]="true" [appendTo]="'body'">
+                  <ng-option *ngFor="let p of packages" [value]="p">{{ p }}</ng-option>
+                </ng-select>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <label class="form-label">GPU priority</label>
+                <input type="number" class="form-control" [(ngModel)]="quotaDraft.gpuPriority">
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <label class="form-label">Max devices (ว่าง = ไม่จำกัด)</label>
+                <input type="number" class="form-control" [(ngModel)]="quotaDraft.maxDevices">
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <label class="form-label">Max employees (ว่าง = ไม่จำกัด)</label>
+                <input type="number" class="form-control" [(ngModel)]="quotaDraft.maxEmployees">
+              </div>
+              <div class="col-span-12 text-[0.75rem] text-dpu-muted" *ngIf="quotaUsage">
+                ใช้งานอยู่: อุปกรณ์ {{ quotaUsage.devices ?? 0 }} · พนักงาน {{ quotaUsage.employees ?? 0 }}
+              </div>
+              <div class="col-span-12">
+                <button type="button" class="ti-btn ti-btn-secondary-full" (click)="saveQuotas()">บันทึกโควตา</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -25,6 +25,7 @@ from .config import schema as _schema  # noqa: F401  registers every ORM mapper 
 from .routes import (
     member_routes,
     company_routes,
+    device_routes,
     department_routes,
     position_routes,
     employee_routes,
@@ -207,6 +208,7 @@ async def root():
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
 app.include_router(member_routes.router, prefix="/members", tags=["Members"])
 app.include_router(company_routes.router, prefix="/companys", tags=["Companys"])
+app.include_router(device_routes.router, prefix="/devices", tags=["Kiosk Devices"])
 app.include_router(
     company_location_routes.router, prefix="/company-locations", tags=["Locations"]
 )

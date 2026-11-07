@@ -17,6 +17,13 @@ export class CompanyModel extends BaseModel {
   picture?: string;
   ownerName: string;
   contact: string;
+  lifecycleStatus?: string;
+  packageCode?: string | null;
+  maxDevices?: number | null;
+  maxEmployees?: number | null;
+  gpuPriority?: number;
+  suspendedAt?: string | null;
+  offboardedAt?: string | null;
 
   constructor(
     data?: Partial<CompanyModel>,
@@ -36,6 +43,13 @@ export class CompanyModel extends BaseModel {
     this.contact = data?.contact!
     this.created_at = data?.created_at!
     this.updatedAt = data?.updatedAt!
+    this.lifecycleStatus = data?.lifecycleStatus || 'ACTIVE';
+    this.packageCode = data?.packageCode ?? null;
+    this.maxDevices = data?.maxDevices ?? null;
+    this.maxEmployees = data?.maxEmployees ?? null;
+    this.gpuPriority = data?.gpuPriority ?? 0;
+    this.suspendedAt = data?.suspendedAt ?? null;
+    this.offboardedAt = data?.offboardedAt ?? null;
   }
 
   getStatus(): string {

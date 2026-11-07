@@ -41,7 +41,12 @@ _COMPANY_RES = [
     re.compile(rf"/notifications/company/({_UUID})"),
     re.compile(rf"/hr/company/({_UUID})"),
     re.compile(rf"/sentinel/company/({_UUID})"),
+    re.compile(rf"/devices/company/({_UUID})"),
 ]
+# Lifecycle management endpoints system admins may hit even when the tenant is suspended.
+_TENANT_LIFECYCLE_ALLOW = re.compile(
+    rf"^/companys/({_UUID})/(?:suspend|resume|offboard|quotas|tenant)/?$"
+)
 # C4 thin approval paths: any company member may hit the route; handler enforces approver/boss gate.
 _APPROVAL_MEMBERSHIP_RES = [
     re.compile(rf"/timestamp/company/({_UUID})/{_UUID}/approval/?$"),
@@ -73,6 +78,7 @@ _KIOSK_ALLOWED_PREFIXES = (
     "/face/queue-stats",
     "/sentinel/company/",
     "/company-locations/company/",
+    "/devices/company/",
     "/images/",
     "/enrolled_images/",
     "/system/tts-settings",
@@ -140,6 +146,9 @@ def _is_kiosk_path_allowed(method: str, path: str) -> bool:
         return False
     if path.startswith("/company-locations/company/") and method != "GET":
         return False
+    if path.startswith("/devices/company/"):
+        # Kiosk may only POST heartbeat on its own device (handler enforces deviceId).
+        return method == "POST" and path.rstrip("/").endswith("/heartbeat")
     if path.startswith("/sentinel/company/"):
         if path.endswith("/scan") and method == "POST":
             return True
@@ -282,11 +291,33 @@ async def _authorize(request: Request, db, member: Member, path: str):
                 await assert_company_membership(db, member, UUID(cid))
             else:
                 await assert_company_access(db, member, UUID(cid))
+            # D5: block operational access to suspended/offboarded tenants.
+            # System admins may still hit lifecycle/quota endpoints + GET /companys/{id}.
+            life_denied = await _lifecycle_denied(db, member, UUID(cid), path)
+            if life_denied is not None:
+                return life_denied
         except Exception as exc:
             code = getattr(exc, "status_code", 403)
             detail = getattr(exc, "detail", "Forbidden")
             return JSONResponse({"detail": detail}, status_code=code)
     return None
+
+
+async def _lifecycle_denied(db, member: Member, company_id: UUID, path: str):
+    from ..models.company import Company, LifecycleStatus
+
+    company = await db.get(Company, company_id)
+    if company is None or company.deletedAt is not None:
+        return None
+    life = (company.lifecycleStatus or LifecycleStatus.ACTIVE).upper()
+    if life == LifecycleStatus.ACTIVE:
+        return None
+    if _is_system_admin(member) and (
+        _TENANT_LIFECYCLE_ALLOW.match(path) or path.rstrip("/") == f"/companys/{company_id}"
+    ):
+        return None
+    detail = "Company is suspended" if life == LifecycleStatus.SUSPENDED else "Company is offboarded"
+    return JSONResponse({"detail": detail}, status_code=403)
 
 
 async def _audit(request: Request, member: Member, path: str, status_code: int) -> None:

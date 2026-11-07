@@ -1,0 +1,126 @@
+<app-page-header [title]="'จัดการอุปกรณ์ Kiosk'" [activeTitle]="'ธรรมาภิบาล'" [title1]="'อุปกรณ์'"></app-page-header>
+
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="อุปกรณ์ Kiosk">
+      <ng-container chips>
+        <app-stat-chip>ทั้งหมด {{ items.length }}</app-stat-chip>
+        <app-stat-chip tone="ok">ใช้งาน {{ activeCount }}</app-stat-chip>
+        <app-stat-chip tone="soft">จับคู่แล้ว {{ pairedCount }}</app-stat-chip>
+      </ng-container>
+      <ng-container controls>
+        <app-pill-search [(value)]="searchTerm" placeholder="ค้นหาชื่อ / โหมด / fingerprint..." ariaLabel="ค้นหาอุปกรณ์"></app-pill-search>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
+
+  <div class="col-span-12 xl:col-span-4">
+    <div class="box dpu-list-panel modern-card glass">
+      <div class="box-header"><div class="box-title">เพิ่มอุปกรณ์</div></div>
+      <div class="box-body space-y-3">
+        <div>
+          <label class="form-label">ชื่ออุปกรณ์</label>
+          <input class="form-control" [(ngModel)]="draft.name" placeholder="Gate A / Lobby" />
+        </div>
+        <div>
+          <label class="form-label">ตำแหน่ง (ข้อความ)</label>
+          <input class="form-control" [(ngModel)]="draft.locationLabel" placeholder="ชั้น 1 โถงทางเข้า" />
+        </div>
+        <div>
+          <label class="form-label">stationMode</label>
+          <select class="form-control" [(ngModel)]="draft.stationMode">
+            <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">zoneId (ถ้ามี)</label>
+          <input class="form-control" [(ngModel)]="draft.zoneId" placeholder="UUID โซนประตู" />
+        </div>
+        <div>
+          <label class="form-label">App version</label>
+          <input class="form-control" [(ngModel)]="draft.appVersion" placeholder="1.0.0" />
+        </div>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="create()">
+          <i class="ri-add-line"></i><span>สร้าง + ออกโค้ดจับคู่</span>
+        </button>
+        <p class="text-[0.75rem] text-dpu-muted" *ngIf="lastPairingCode">
+          โค้ดล่าสุด: <strong>{{ lastPairingCode }}</strong> — ใช้ที่ /kiosk/pair
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 xl:col-span-8">
+    <div class="box dpu-list-panel modern-card glass">
+      <div class="box-header">
+        <div class="box-title">รายการอุปกรณ์</div>
+        <span class="dpu-muted-count" *ngIf="filtered.length">{{ filtered.length }} รายการ</span>
+      </div>
+      <div class="box-body dpu-list-body">
+        <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลดอุปกรณ์..."></app-empty-state>
+        <app-empty-state
+          *ngIf="!loading && pageItems.length === 0"
+          icon="ri-tablet-line"
+          [message]="searchTerm ? 'ไม่พบอุปกรณ์ตามคำค้น' : 'ยังไม่มีอุปกรณ์'"
+          [actionLabel]="searchTerm ? 'ล้างการค้นหา' : ''"
+          (action)="clearSearch()">
+        </app-empty-state>
+        <div class="table-responsive" *ngIf="!loading && pageItems.length">
+          <table class="table whitespace-nowrap min-w-full dpu-list-table mb-0">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>โหมด / โซน</th>
+                <th>Heartbeat</th>
+                <th>สถานะ</th>
+                <th class="text-end">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (d of pageItems; track d.deviceId) {
+                <tr>
+                  <td>
+                    <div class="font-semibold">{{ d.name }}</div>
+                    <div class="text-[0.75rem] text-dpu-muted">{{ d.locationLabel || '—' }}</div>
+                    <div class="text-[0.7rem] text-dpu-muted truncate max-w-[180px]">{{ d.appVersion || '' }} {{ d.fingerprint || '' }}</div>
+                  </td>
+                  <td>
+                    <select class="form-control form-control-sm mb-1" [(ngModel)]="d.stationMode">
+                      <option [ngValue]="null">—</option>
+                      <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+                    </select>
+                    <input class="form-control form-control-sm" [(ngModel)]="d.zoneId" placeholder="zoneId" />
+                  </td>
+                  <td>
+                    <div class="text-[0.8rem]">{{ d.heartbeatAt || d.lastSeenAt || '—' }}</div>
+                  </td>
+                  <td>
+                    <span class="badge"
+                      [class.bg-success]="statusLabel(d)==='PAIRED'"
+                      [class.bg-warning]="statusLabel(d)==='PENDING' || statusLabel(d)==='NEW'"
+                      [class.bg-danger]="statusLabel(d)==='REVOKED'"
+                      [class.text-white]="true">{{ statusLabel(d) }}</span>
+                  </td>
+                  <td class="text-end">
+                    <div class="inline-flex gap-2 flex-wrap justify-end">
+                      <button type="button" class="dpu-icon-btn" title="บันทึกการผูก" (click)="saveBinding(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-save-line"></i>
+                      </button>
+                      <button type="button" class="dpu-icon-btn" title="หมุนเวียน / ออกโค้ดใหม่" (click)="rotate(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-refresh-line"></i>
+                      </button>
+                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="เพิกถอน" (click)="revoke(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-forbid-line"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <app-simple-pager [pageIndex]="pageIndex" [pageSize]="pageSize" [total]="filtered.length" (pageIndexChange)="onPageChange($event)"></app-simple-pager>
+    </div>
+  </div>
+</div>

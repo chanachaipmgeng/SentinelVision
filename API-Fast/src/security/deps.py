@@ -42,6 +42,16 @@ async def verify_kiosk_token_db(token: str, db: AsyncSession) -> KioskDevice:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kiosk device token has been revoked")
     if device.tokenHash != hash_kiosk_token(token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid kiosk device token")
+    # D5: refuse kiosk traffic for suspended/offboarded tenants.
+    from ..models.company import Company, LifecycleStatus
+
+    company = await db.get(Company, company_id)
+    if company is not None:
+        life = (company.lifecycleStatus or LifecycleStatus.ACTIVE).upper()
+        if life == LifecycleStatus.SUSPENDED:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is suspended")
+        if life == LifecycleStatus.OFFBOARDED:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is offboarded")
     device.lastSeenAt = datetime.now(timezone.utc)
     await db.commit()
     return device

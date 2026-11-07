@@ -100,19 +100,24 @@ export class UserService {
   }
 
 
+  /** @deprecated Prefer AuthService.sendResetPassword — kept for callers mid-migration. */
   resetPass(email: string) {
-    const tempBody = {
-      "email": email
-    }
-    return this.http.put<ResponseModel>(this.apiBaseUrl + "/send-reset-password", tempBody);
+    return this.http.post<ResponseModel>("/auth/send-reset-password", { email });
   }
 
-  resetPassUser(oldPassword: string, password: string) {
-    const tempBody = {
-      "oldPassword": oldPassword,
-      "password": password
+  /** Complete a password-reset token (or change via /auth/change-password when signed in). */
+  resetPassUser(tokenOrOld: string, password: string) {
+    // Token-based reset (E4). Callers that still pass oldPassword should use /auth/change-password.
+    if ((tokenOrOld || '').length > 40) {
+      return this.http.post<ResponseModel>("/auth/reset-password", {
+        token: tokenOrOld,
+        newPassword: password,
+      });
     }
-    return this.http.put<ResponseModel>(this.apiBaseUrl + "/reset-password", tempBody);
+    return this.http.post<ResponseModel>("/auth/change-password", {
+      currentPassword: tokenOrOld,
+      newPassword: password,
+    });
   }
 
 

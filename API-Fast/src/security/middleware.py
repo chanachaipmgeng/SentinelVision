@@ -85,6 +85,8 @@ _OPEN_PREFIXES = (
     "/auth/kiosk/pair",
     "/auth/kiosk/refresh",
     "/auth/sso/oidc",
+    "/auth/send-reset-password",
+    "/auth/reset-password",
     "/health",
     "/ready",
 )

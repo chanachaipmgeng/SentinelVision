@@ -1,0 +1,54 @@
+<app-page-header [title]="'โปรไฟล์และความปลอดภัย'" [activeTitle]="'บัญชี'" [title1]="'Security'"></app-page-header>
+
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="Profile & Security"></app-page-toolbar>
+  </div>
+
+  <div class="col-span-12 lg:col-span-4">
+    <div class="box modern-card glass">
+      <div class="box-header"><div class="box-title">บัญชี</div></div>
+      <div class="box-body space-y-2 text-sm">
+        <div><span class="text-dpu-muted">Username</span><div class="font-semibold">{{ username || '—' }}</div></div>
+        <div><span class="text-dpu-muted">Email</span><div class="font-semibold">{{ email || '—' }}</div></div>
+        <div><span class="text-dpu-muted">Access token</span><div>เก็บในหน่วยความจำเท่านั้น</div></div>
+        <div><span class="text-dpu-muted">Refresh</span><div>httpOnly cookie + CSRF</div></div>
+        <button type="button" class="ti-btn ti-btn-light modern-btn mt-2" (click)="logoutEverywhere()">
+          ออกจากระบบ (server revoke)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-4">
+    <div class="box modern-card glass">
+      <div class="box-header"><div class="box-title">เปลี่ยนรหัสผ่าน</div></div>
+      <div class="box-body space-y-3">
+        <div><label class="form-label">รหัสผ่านปัจจุบัน</label><input type="password" class="form-control" [(ngModel)]="pw.currentPassword" autocomplete="current-password" /></div>
+        <div><label class="form-label">รหัสผ่านใหม่</label><input type="password" class="form-control" [(ngModel)]="pw.newPassword" autocomplete="new-password" /></div>
+        <div><label class="form-label">ยืนยัน</label><input type="password" class="form-control" [(ngModel)]="pw.confirm" autocomplete="new-password" /></div>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" [disabled]="busy" (click)="changePassword()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-4">
+    <div class="box modern-card glass">
+      <div class="box-header"><div class="box-title">การยืนยันตัวตนสองขั้น (MFA)</div></div>
+      <div class="box-body space-y-3">
+        <p class="text-sm">สถานะ: <strong>{{ mfa.totpEnabled ? 'เปิดใช้งาน' : 'ยังไม่เปิด' }}</strong></p>
+        <p class="text-xs text-dpu-muted" *ngIf="mfa.oidcConfigured">OIDC SSO พร้อมใช้งานบนเซิร์ฟเวอร์</p>
+        <ng-container *ngIf="!mfa.totpEnabled">
+          <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="startMfa()">เริ่มตั้งค่า Authenticator</button>
+          <div *ngIf="setup" class="space-y-2 text-sm">
+            <p class="break-all text-xs">Secret: {{ setup.secret }}</p>
+            <p class="break-all text-xs">{{ setup.otpauthUri }}</p>
+            <input class="form-control" placeholder="รหัส 6 หลัก" [(ngModel)]="mfaCode" />
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="enableMfa()">เปิดใช้งาน</button>
+          </div>
+        </ng-container>
+        <button *ngIf="mfa.totpEnabled" type="button" class="ti-btn ti-btn-danger-full modern-btn" (click)="disableMfa()">ปิด 2FA</button>
+      </div>
+    </div>
+  </div>
+</div>

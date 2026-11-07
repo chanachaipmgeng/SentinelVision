@@ -9,9 +9,18 @@ import { AuthService, RefreshedTokens } from './auth.service';
 import { environment } from '../../../environments/environment';
 
 
-const TOKEN_HEADER_KEY = 'Authorization';    // for Node.js Expre
+const TOKEN_HEADER_KEY = 'Authorization';
+const CSRF_HEADER = 'X-CSRF-Token';
 /** Endpoints that must never trigger a refresh / retry loop. */
-const NO_REFRESH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout', '/auth/kiosk/pair', '/auth/kiosk/refresh'];
+const NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/kiosk/pair',
+  '/auth/kiosk/refresh',
+  '/auth/send-reset-password',
+  '/auth/reset-password',
+];
 
 @Injectable()
 export class HttpRequestInterceptor {
@@ -28,21 +37,20 @@ export class HttpRequestInterceptor {
       const raw = this.tokenService.getToken();
       const token = raw ? (raw.startsWith("Bearer ") ? raw : "Bearer " + raw) : null;
       if (token) {
-        authReq = this.addTokenHeader(req, token ,fullUrl);
-      }else{
-        const overideReq = {
+        authReq = this.addTokenHeader(req, token, fullUrl);
+      } else {
+        authReq = req.clone({
           url: fullUrl,
-        };
-        authReq = req.clone(overideReq);
+          withCredentials: req.withCredentials || this.needsCredentials(fullUrl),
+        });
       }
       return next.handle(authReq).pipe(catchError(error => {
-        // A kiosk device token gets 403 for anything outside the kiosk scope; refreshing
-        // cannot fix that, so only 401 triggers a rotation for kiosk sessions.
+        // E4: rotate only on 401. Kiosk 403 (out of scope) must not trigger refresh.
         const refreshable =
           error instanceof HttpErrorResponse &&
-          (error.status === 401 || (error.status === 403 && !this.tokenService.isKioskSession()));
+          error.status === 401;
         if (refreshable && !NO_REFRESH_PATHS.some((p) => fullUrl.includes(p))) {
-          return this.handle403Error(authReq, next ,fullUrl);
+          return this.handle401Error(authReq, next, fullUrl);
         }
         return throwError(() => error);
       }));
@@ -50,17 +58,21 @@ export class HttpRequestInterceptor {
 
   }
 
-  private handle403Error(request: HttpRequest<any>, next: HttpHandler , fullUrl : string) {
+  private needsCredentials(url: string): boolean {
+    return url.includes('/auth/');
+  }
+
+  private handle401Error(request: HttpRequest<any>, next: HttpHandler, fullUrl: string) {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
 
-      const token = this.tokenService.getRefreshToken();
+      const refresh = this.tokenService.getRefreshToken();
+      const canCookieRefresh = !this.tokenService.isKioskSession();
 
-      if (token)
-        // Refresh tokens rotate server-side: the old one is revoked once this call succeeds.
+      if (refresh || canCookieRefresh) {
         return this.authService
-          .refreshSession(token.replace("Bearer ", ""), this.tokenService.isKioskSession())
+          .refreshSession(refresh, this.tokenService.isKioskSession())
           .pipe(
           switchMap((tokens: RefreshedTokens) => {
             this.isRefreshing = false;
@@ -69,9 +81,12 @@ export class HttpRequestInterceptor {
             if (tokens.refreshToken) {
               this.tokenService.saveRefreshToken(tokens.refreshToken);
             }
+            if (tokens.csrfToken) {
+              this.tokenService.saveCsrfToken(tokens.csrfToken);
+            }
             this.refreshTokenSubject.next(tokens.accessToken);
 
-            return next.handle(this.addTokenHeader(request, 'Bearer ' + tokens.accessToken ,fullUrl));
+            return next.handle(this.addTokenHeader(request, 'Bearer ' + tokens.accessToken, fullUrl));
           }),
           catchError((err) => {
             this.isRefreshing = false;
@@ -80,6 +95,7 @@ export class HttpRequestInterceptor {
             return throwError(() => err);
           })
         );
+      }
       this.isRefreshing = false;
       this.tokenService.signOut();
       return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Session expired', url: fullUrl }));
@@ -88,18 +104,27 @@ export class HttpRequestInterceptor {
     return this.refreshTokenSubject.pipe(
       filter(token => token !== null),
       take(1),
-      switchMap((token) => next.handle(this.addTokenHeader(request, 'Bearer ' + token ,fullUrl)))
+      switchMap((token) => next.handle(this.addTokenHeader(request, 'Bearer ' + token, fullUrl)))
     );
   }
 
 
 
-  private addTokenHeader(request: HttpRequest<any>, token: string ,fullUrl :string) {
-    /* for Spring Boot back-end */
-    // return request.clone({ headers: request.headers.set(TOKEN_HEADER_KEY, 'Bearer ' + token) });
-
-    /* for Node.js Express back-end */
+  private addTokenHeader(request: HttpRequest<any>, token: string, fullUrl: string) {
     const value = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
-    return request.clone({ headers: request.headers.set(TOKEN_HEADER_KEY, value) , url : fullUrl });
+    const headers: Record<string, string> = { [TOKEN_HEADER_KEY]: value };
+    const csrf = this.tokenService.getCsrfToken();
+    if (csrf && fullUrl.includes('/auth/')) {
+      headers[CSRF_HEADER] = csrf;
+    }
+    return request.clone({
+      setHeaders: headers,
+      url: fullUrl,
+      withCredentials: true,
+    });
   }
 }
+
+export const httpInterceptorProviders = [
+  { provide: HTTP_INTERCEPTORS, useClass: HttpRequestInterceptor, multi: true },
+];

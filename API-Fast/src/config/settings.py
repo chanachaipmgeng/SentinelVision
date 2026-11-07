@@ -80,6 +80,16 @@ class Settings(BaseSettings):
     KIOSK_PAIR_MAX_ATTEMPTS_PER_MINUTE: int = 10
     # Deprecated: accept `?token=` in the query string. Leaks tokens into access logs; off by default.
     AUTH_ALLOW_QUERY_TOKEN: bool = False
+    # Browser session: httpOnly refresh cookie + double-submit CSRF (E4).
+    AUTH_REFRESH_COOKIE_NAME: str = "dpu_refresh"
+    AUTH_CSRF_COOKIE_NAME: str = "dpu_csrf"
+    AUTH_CSRF_HEADER: str = "X-CSRF-Token"
+    # Secure cookies when not running a local/dev APP_ENV.
+    AUTH_COOKIE_SECURE: bool | None = None
+    AUTH_COOKIE_SAMESITE: str = "lax"
+    AUTH_PASSWORD_RESET_EXPIRE_MINUTES: int = 30
+    # When true (or APP_ENV=development), /auth/send-reset-password may echo resetToken for QA.
+    AUTH_EXPOSE_RESET_TOKEN: bool = False
     # Negative-cache TTL for the revocation lookup (seconds). Revocations propagate to other
     # replicas within this window.
     AUTH_REVOCATION_CACHE_SECONDS: int = 30

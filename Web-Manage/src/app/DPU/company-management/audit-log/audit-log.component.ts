@@ -1,12 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   DataTableColumn,
   DataTableComponent,
   DataTableSortChange,
 } from '../../../shared/components/data-table/data-table.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
+import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
+import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import {
   SortDir,
@@ -22,6 +26,8 @@ interface AuditRow {
   actorMemberId: string | null;
   actorRole: string | null;
   action: string;
+  entityType?: string | null;
+  entityId?: string | null;
   path: string | null;
   statusCode: string | null;
   ip: string | null;
@@ -30,58 +36,18 @@ interface AuditRow {
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule, DataTableComponent],
-  template: `
-    <section class="box p-4 audit-page">
-      <h2>ประวัติการใช้งาน</h2>
-      <div class="audit-actions">
-        <button type="button" (click)="exportCsv()" [disabled]="!rows.length">ส่งออก CSV (หน้านี้)</button>
-      </div>
-
-      <app-data-table
-        [columns]="columns"
-        [rows]="rows"
-        [total]="total"
-        [loading]="loading"
-        [pageIndex]="pageIndex"
-        [pageSize]="pageSize"
-        [sortBy]="sortBy"
-        [sortDir]="sortDir"
-        [search]="search"
-        searchPlaceholder="ค้นหา action / path / IP…"
-        trackByKey="id"
-        emptyTitle="ยังไม่มีบันทึก audit"
-        emptyHint="เมื่อมีการแก้ไขข้อมูล ระบบจะบันทึกประวัติที่นี่"
-        (pageIndexChange)="onPage($event)"
-        (sortChange)="onSort($event)"
-        (searchChange)="onSearch($event)"
-        (searchSubmit)="reload()"
-      ></app-data-table>
-
-      <h3>แจ้งเตือน</h3>
-      <label>อีเมล <input [(ngModel)]="email" /></label>
-      <label>LINE token <input [(ngModel)]="lineToken" /></label>
-      <button type="button" (click)="saveNotify()">บันทึก</button>
-      <button type="button" (click)="testNotify()">ทดสอบ</button>
-    </section>
-  `,
-  styles: [
-    `
-      .audit-page h2 {
-        margin: 0 0 0.75rem;
-      }
-      .audit-actions {
-        margin-bottom: 0.75rem;
-      }
-      .audit-page h3 {
-        margin-top: 1.5rem;
-      }
-      .audit-page label {
-        display: block;
-        margin: 0.35rem 0;
-      }
-    `,
+  imports: [
+    CommonModule,
+    FormsModule,
+    SharedModule,
+    PageToolbarComponent,
+    PillSearchComponent,
+    EmptyStateComponent,
+    DataTableComponent,
   ],
+  templateUrl: './audit-log.component.html',
+  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class AuditLogComponent implements OnInit, OnDestroy {
   rows: AuditRow[] = [];
@@ -89,21 +55,29 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   loading = false;
   pageIndex = 0;
   pageSize = 25;
-  search = '';
   sortBy: string | null = 'occurredAt';
   sortDir: SortDir | null = 'desc';
   email = '';
   lineToken = '';
-  private companyId = '';
+  companyId = '';
+  filters = {
+    q: '',
+    actor: '',
+    action: '',
+    resource: '',
+    dateFrom: '',
+    dateTo: '',
+  };
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly columns: DataTableColumn<AuditRow>[] = [
     { key: 'occurredAt', header: 'เวลา', sortable: true },
-    { key: 'action', header: 'การกระทำ', sortable: true },
-    { key: 'path', header: 'เส้นทาง', sortable: true },
+    { key: 'actorRole', header: 'Actor' },
+    { key: 'action', header: 'Action', sortable: true },
+    { key: 'entityType', header: 'Resource' },
+    { key: 'path', header: 'Path', sortable: true },
     { key: 'statusCode', header: 'สถานะ', sortable: true },
     { key: 'ip', header: 'IP' },
-    { key: 'actorRole', header: 'บทบาท' },
   ];
 
   constructor(private http: HttpClient, private token: TokenService) {
@@ -123,6 +97,13 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     if (this.searchTimer) clearTimeout(this.searchTimer);
   }
 
+  setSearch(val: string): void {
+    this.filters.q = val;
+    this.pageIndex = 0;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.reload(), 250);
+  }
+
   onPage(index: number): void {
     this.pageIndex = index;
     this.reload();
@@ -135,24 +116,24 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     this.reload();
   }
 
-  onSearch(value: string): void {
-    this.search = value;
-    this.pageIndex = 0;
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => this.reload(), 250);
-  }
-
   reload(): void {
     if (!this.companyId) return;
     this.loading = true;
     const query = buildDataTableQuery({
       pageIndex: this.pageIndex,
       pageSize: this.pageSize,
-      q: this.search,
+      q: this.filters.q,
       sortBy: this.sortBy,
       sortDir: this.sortDir || 'desc',
     });
-    const params = new HttpParams({ fromObject: toDataTableParams(query) });
+    let params = new HttpParams({ fromObject: toDataTableParams(query) });
+    const f = this.filters;
+    if (f.actor.trim()) params = params.set('actor', f.actor.trim());
+    if (f.action.trim()) params = params.set('action', f.action.trim());
+    if (f.resource.trim()) params = params.set('resource', f.resource.trim());
+    if (f.dateFrom) params = params.set('dateFrom', f.dateFrom);
+    if (f.dateTo) params = params.set('dateTo', f.dateTo);
+
     this.http
       .get<any>(`/companys/${this.companyId}/audit-logs`, { params })
       .subscribe({
@@ -186,12 +167,20 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   }
 
   exportCsv(): void {
-    const header = 'occurredAt,action,path,statusCode,ip,actorRole';
+    const header = 'occurredAt,actor,action,resource,path,statusCode,ip';
     const body = this.rows
       .map((r) =>
-        [r.occurredAt, r.action, r.path, r.statusCode, r.ip, r.actorRole]
-          .map((v) => `"${v ?? ''}"`)
-          .join(','),
+        [
+          r.occurredAt,
+          r.actorMemberId || r.actorRole,
+          r.action,
+          [r.entityType, r.entityId].filter(Boolean).join(':'),
+          r.path,
+          r.statusCode,
+          r.ip,
+        ]
+          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+          .join(',')
       )
       .join('\n');
     const blob = new Blob([header + '\n' + body], { type: 'text/csv' });

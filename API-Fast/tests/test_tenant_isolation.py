@@ -113,6 +113,9 @@ class Fixture:
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def fx():
+    # Other modules (e.g. test_oidc's audit writes under TestClient) may have left pooled asyncpg
+    # connections bound to a different event loop; drop them without awaiting their close.
+    await engine.dispose(close=False)
     try:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

@@ -3,7 +3,13 @@ import { Subject, BehaviorSubject, fromEvent } from 'rxjs';
 import { takeUntil, debounceTime } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { TokenService } from './token.service';
-// Menu
+import {
+  ALWAYS_ON_MODULES,
+  PlatformModule,
+  TOGGLEABLE_COMPANY_MODULES,
+} from '../../DPU/services/company-module-config.service';
+
+/** Menu item; `moduleId` drives per-company sidebar filtering. */
 export interface Menu {
   headTitle?: string;
   headTitle2?: string;
@@ -21,7 +27,9 @@ export interface Menu {
   children2?: Menu[];
   Menusub?: boolean;
   target?: boolean;
-  menutype?: string
+  menutype?: string;
+  /** Platform module this entry belongs to. Omit for always-visible command chrome. */
+  moduleId?: PlatformModule | 'COMMAND';
 }
 
 @Injectable({
@@ -54,7 +62,7 @@ export class NavService implements OnDestroy {
   public fullScreen = false;
   active: any;
 
-  constructor(private router: Router , private tokenService : TokenService) {
+  constructor(private router: Router, private tokenService: TokenService) {
     this.setScreenWidth(window.innerWidth);
     fromEvent(window, 'resize')
       .pipe(debounceTime(1000), takeUntil(this.unsubscriber))
@@ -71,7 +79,7 @@ export class NavService implements OnDestroy {
       });
     if (window.innerWidth < 991) {
       // Detect Route change sidebar close
-      this.router.events.subscribe((event) => {
+      this.router.events.subscribe(() => {
         this.collapseSidebar = true;
         this.megaMenu = false;
         this.levelMenu = false;
@@ -88,11 +96,10 @@ export class NavService implements OnDestroy {
     this.screenWidth.next(width);
   }
 
-  MENUITEMS: Menu[] = []
+  MENUITEMS: Menu[] = [];
 
   getCommonMenu() {
     return [
-      // Dashboard
       { headTitle: 'ผู้ดูแลระบบ' },
       {
         icon: 'user',
@@ -100,14 +107,12 @@ export class NavService implements OnDestroy {
         title: 'จัดการสมาชิก',
         type: 'link',
       },
-
       {
         icon: 'buildings',
         path: '/admin/manage-companys',
         title: 'จัดการบริษัท',
         type: 'link',
       },
-
       {
         icon: 'user-check',
         path: '/admin/admin-manage',
@@ -120,41 +125,41 @@ export class NavService implements OnDestroy {
         title: 'ตั้งค่าระบบ / TTS',
         type: 'link',
       },
-      // { headTitle: 'User Management' },
-
     ];
   }
 
-  getCompanyMenu() {
+  /**
+   * Full company sidebar tree (7 modules). Filter with
+   * {@link filterCompanyMenuByModules} using `enabledModules`.
+   */
+  getCompanyMenu(): Menu[] {
     return [
-      { headTitle: 'SENTINELVISION COMMAND' },
+      { headTitle: 'SENTINELVISION COMMAND', moduleId: 'COMMAND' },
       {
         icon: 'home',
         path: '/company/dashboard',
         title: 'แดชบอร์ดภาพรวม',
         type: 'link',
+        moduleId: 'COMMAND',
       },
       {
-        icon: 'shield-quarter',
-        path: '/company/sentinel-center',
-        title: 'ศูนย์ความปลอดภัย & Access',
+        icon: 'radar',
+        path: '/company/scan-hub',
+        title: 'Scan & Action Hub',
         type: 'link',
+        moduleId: 'COMMAND',
         badgeValue: 'AI',
         badgeClass: 'primary',
         badgeText: 'primary',
       },
-      {
-        icon: 'camera',
-        path: '/company/timestamp-face',
-        title: 'Kiosk สแกนใบหน้าสด',
-        type: 'link',
-      },
-      { headTitle: 'IDENTITY & ORGANIZATION' },
+
+      { headTitle: 'CORE — องค์กรและบุคลากร', moduleId: 'CORE' },
       {
         title: 'องค์กรและบุคลากร',
         icon: 'buildings',
         type: 'sub',
         active: false,
+        moduleId: 'CORE',
         children: [
           { path: '/company/company-info', title: 'ข้อมูลบริษัท', type: 'link' },
           { path: '/company/company-department', title: 'จัดการแผนก', type: 'link' },
@@ -162,33 +167,206 @@ export class NavService implements OnDestroy {
           { path: '/company/company-emp', title: 'ทะเบียนพนักงาน & ใบหน้า', type: 'link' },
         ],
       },
-      { headTitle: 'TIME, SECURITY & GOVERNANCE' },
+
+      { headTitle: 'ATTENDANCE — ลงเวลาทำงาน', moduleId: 'ATTENDANCE' },
       {
-        title: 'เวลาทำงาน & กะงาน (HR)',
+        title: 'โมดูลลงเวลาทำงาน',
         icon: 'time',
         type: 'sub',
         active: false,
+        moduleId: 'ATTENDANCE',
         children: [
-          { path: '/company/company-location', title: 'สถานที่ลงเวลา (GPS)', type: 'link' },
-          { path: '/company/hr-schedule', title: 'กะงาน / วันลา / PDPA', type: 'link' },
+          {
+            path: '/company/scan/attendance',
+            title: 'จุดสแกนลงเวลาสด',
+            type: 'link',
+          },
           { path: '/company/timestamp-log', title: 'ประวัติการลงเวลา', type: 'link' },
-          { path: '/company/approval-inbox', title: 'กล่องอนุมัติ', type: 'link' },
-          { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
+          {
+            path: '/company/warning-timestamp-log',
+            title: 'อนุมัติการลงเวลา (Warning)',
+            type: 'link',
+          },
+          {
+            path: '/company/company-location',
+            title: 'สถานที่ลงเวลา (GPS)',
+            type: 'link',
+          },
+          {
+            path: '/company/hr-schedule',
+            title: 'ตั้งค่ากะงาน / วันลา / อุปกรณ์ Kiosk',
+            type: 'link',
+          },
         ],
       },
+
+      { headTitle: 'ACCESS_CONTROL — ควบคุมประตู', moduleId: 'ACCESS_CONTROL' },
       {
-        title: 'ความปลอดภัย & อีเวนต์',
+        title: 'โมดูลควบคุมประตู',
         icon: 'lock-alt',
         type: 'sub',
         active: false,
+        moduleId: 'ACCESS_CONTROL',
         children: [
-          { path: '/company/sentinel-center', title: 'Watchlist / Blacklist / VIP', type: 'link' },
-          { path: '/company/sentinel-center', title: 'Access Control & Visitor Pass', type: 'link' },
-          { path: '/company/sentinel-center', title: 'Smart Events & Muster Roll', type: 'link' },
-          { path: '/company/audit-log', title: 'ประวัติการใช้งาน (Audit Log)', type: 'link' },
+          {
+            path: '/company/scan/access-control',
+            title: 'จุดสแกนหน้าประตูสด',
+            type: 'link',
+          },
+          {
+            path: '/company/access-control/zones',
+            title: 'จัดการโซนประตู & สั่งเปิดประตู',
+            type: 'link',
+          },
+          {
+            path: '/company/access-control/logs',
+            title: 'ประวัติการผ่านประตู',
+            type: 'link',
+          },
+          {
+            path: '/company/access-control/settings',
+            title: 'ตั้งค่า Access Control & IoT Relay',
+            type: 'link',
+          },
         ],
       },
+
+      { headTitle: 'WATCHLIST — เฝ้าระวัง & VIP', moduleId: 'WATCHLIST' },
+      {
+        title: 'โมดูลเฝ้าระวัง & VIP',
+        icon: 'shield-quarter',
+        type: 'sub',
+        active: false,
+        moduleId: 'WATCHLIST',
+        children: [
+          {
+            path: '/company/scan/watchlist',
+            title: 'กล้องเฝ้าระวังสด',
+            type: 'link',
+          },
+          {
+            path: '/company/watchlist/identities',
+            title: 'บัญชีเฝ้าระวัง Blacklist / POI / VIP',
+            type: 'link',
+          },
+          {
+            path: '/company/watchlist/incidents',
+            title: 'รายการแจ้งเตือนเหตุการณ์',
+            type: 'link',
+          },
+          {
+            path: '/company/watchlist/settings',
+            title: 'ตั้งค่าการแจ้งเตือนความปลอดภัย',
+            type: 'link',
+          },
+        ],
+      },
+
+      { headTitle: 'VISITOR — ผู้มาติดต่อ & อาคาร', moduleId: 'VISITOR' },
+      {
+        title: 'โมดูลผู้มาติดต่อ & อาคาร',
+        icon: 'user-check',
+        type: 'sub',
+        active: false,
+        moduleId: 'VISITOR',
+        children: [
+          {
+            path: '/company/scan/visitor',
+            title: 'จุดสแกนผู้มาติดต่อสด',
+            type: 'link',
+          },
+          {
+            path: '/company/visitors/passes',
+            title: 'ออกบัตรผู้มาติดต่อ (Visitor Pass)',
+            type: 'link',
+          },
+          {
+            path: '/company/visitors/muster-roll',
+            title: 'เช็คยอดคนในอาคาร (Muster Roll)',
+            type: 'link',
+          },
+          {
+            path: '/company/visitors/settings',
+            title: 'ตั้งค่า Visitor & PDPA',
+            type: 'link',
+          },
+        ],
+      },
+
+      { headTitle: 'EVENTS — งานอีเวนต์ & สัมมนา', moduleId: 'EVENTS' },
+      {
+        title: 'โมดูลงานอีเวนต์ & สัมมนา',
+        icon: 'calendar',
+        type: 'sub',
+        active: false,
+        moduleId: 'EVENTS',
+        children: [
+          {
+            path: '/company/scan/event',
+            title: 'จุดสแกนหน้างานอีเวนต์สด',
+            type: 'link',
+          },
+          {
+            path: '/company/events/campaigns',
+            title: 'จัดการแคมเปญงานอีเวนต์ & ผู้ร่วมงาน',
+            type: 'link',
+          },
+          {
+            path: '/company/events/checkins',
+            title: 'สถิติผู้เข้างานสด',
+            type: 'link',
+          },
+          {
+            path: '/company/events/settings',
+            title: 'ตั้งค่างานอีเวนต์',
+            type: 'link',
+          },
+        ],
+      },
+
+      { headTitle: 'GOVERNANCE — ธรรมาภิบาล', moduleId: 'GOVERNANCE' },
+      {
+        icon: 'file-list',
+        path: '/company/audit-log',
+        title: 'ประวัติการใช้งาน (Audit Log)',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+      },
     ];
+  }
+
+  /**
+   * Keep COMMAND + CORE + GOVERNANCE always; keep toggleable modules only when
+   * present in `enabledModules`. Drops orphaned headTitles with no following items.
+   */
+  filterCompanyMenuByModules(
+    items: Menu[],
+    enabledModules: readonly string[] | null | undefined
+  ): Menu[] {
+    const enabled = new Set<string>([
+      ...ALWAYS_ON_MODULES,
+      'COMMAND',
+      ...(enabledModules ?? [...TOGGLEABLE_COMPANY_MODULES]),
+    ]);
+
+    const kept = items.filter((item) => {
+      const moduleId = item.moduleId || 'COMMAND';
+      return enabled.has(moduleId);
+    });
+
+    const result: Menu[] = [];
+    for (let i = 0; i < kept.length; i++) {
+      const item = kept[i];
+      if (item.headTitle) {
+        const next = kept[i + 1];
+        if (next && !next.headTitle) {
+          result.push(item);
+        }
+        continue;
+      }
+      result.push(item);
+    }
+    return result;
   }
 
   items = new BehaviorSubject<Menu[]>(this.MENUITEMS);

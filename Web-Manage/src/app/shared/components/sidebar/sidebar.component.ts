@@ -6,6 +6,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { checkHoriMenu, switcherArrowFn } from './sidebar';
 import { TokenService } from '../../services/token.service';
 import { CompanyModel } from '../../../DPU/models/company.model';
+import { CompanyModuleConfigService } from '../../../DPU/services/company-module-config.service';
 @Component({
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
@@ -74,7 +75,8 @@ export class SidebarComponent {
     public router: Router,
     public renderer: Renderer2,
     private elementRef: ElementRef,
-    public tokenService: TokenService
+    public tokenService: TokenService,
+    private moduleConfigService: CompanyModuleConfigService
   ) {
     // this.companyModel = new CompanyModel(this.tokenService.getSelectCompany())
     this.screenWidth = window.innerWidth;
@@ -170,15 +172,30 @@ export class SidebarComponent {
 
   changeMenu() {
     if (this.isInstallerRoute) {
-      this.menuitemsSubscribe$ = this.navServices.items.subscribe((items) => {
-        this.menuItems = this.navServices.getCompanyMenu();
+      const raw = this.navServices.getCompanyMenu();
+      const companyId = this.tokenService.getSelectCompany()?.companyId;
+      if (!companyId) {
+        this.menuItems = raw;
+        this.ParentActive();
+        return;
+      }
+      this.moduleConfigService.getModuleConfig(companyId).subscribe({
+        next: (cfg) => {
+          this.menuItems = this.navServices.filterCompanyMenuByModules(
+            raw,
+            cfg.enabledModules
+          );
+          this.ParentActive();
+        },
+        error: () => {
+          this.menuItems = raw;
+          this.ParentActive();
+        },
       });
     } else {
-      this.menuitemsSubscribe$ = this.navServices.items.subscribe((items) => {
-        this.menuItems = this.navServices.getCommonMenu();
-      });
+      this.menuItems = this.navServices.getCommonMenu();
+      this.ParentActive();
     }
-    this.ParentActive()
   }
 
 
@@ -269,6 +286,9 @@ export class SidebarComponent {
   }
 
   ParentActive() {
+    if (!this.menuItems?.length) {
+      return;
+    }
 
     this.menuItems.map((element: any) => {
       if (element.children) {

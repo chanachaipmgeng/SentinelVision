@@ -3,6 +3,7 @@ from ..security.deps import (
     assert_encoding_company_access,
     assert_member_company_access,
     assert_request_company_access,
+    current_member_var,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
@@ -45,6 +46,7 @@ async def enrolled_image_proxy_route(
 ):
     """Proxy Face Core gated images for Web-Manage / kiosk preview."""
     await assert_request_company_access(request, db, companyId)
+    await assert_encoding_company_access(request, db, faceEncodingId)
     return await proxy_enrolled_image(faceEncodingId, companyId)
 
 
@@ -66,11 +68,17 @@ async def add_face_route(
     request: Request,
     memberId: UUID,
     file: UploadFile = File(...),
+    companyId: Optional[UUID] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
+    """Enroll one face. Optional ``companyId`` names the tenant that owns the encoding
+    (required to disambiguate members employed by several companies)."""
     await assert_member_company_access(request, db, memberId)
-    return await add_face(memberId, file, db)
+    if companyId is not None:
+        await assert_request_company_access(request, db, companyId)
+    actor = getattr(request.state, "member", None) or current_member_var.get()
+    return await add_face(memberId, file, db, company_id=companyId, actor=actor)
 
 
 @router.post("/detect")

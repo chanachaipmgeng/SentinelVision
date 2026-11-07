@@ -327,7 +327,50 @@ async def _resolve_match_response(
     match = await _search_face_pgvector(
         db, target_encoding, threshold=threshold, companyId=companyId
     )
+    sentinel_meta: Optional[dict] = None
+    if companyId is not None:
+        try:
+            from ..routes.sentinel_routes import evaluate_kiosk_sentinel_match
+
+            sentinel_meta = await evaluate_kiosk_sentinel_match(
+                db, companyId, target_encoding, threshold
+            )
+        except Exception:
+            sentinel_meta = None
+
     if not match:
+        if sentinel_meta is not None:
+            if not sentinel_meta.get("accessGranted", True):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Security Watchlist Alert: {sentinel_meta.get('fullName')} ({sentinel_meta.get('identityType')})",
+                )
+            return {
+                "memberId": sentinel_meta["identityId"],
+                "faceEncodingId": sentinel_meta["identityId"],
+                "distance": sentinel_meta["distance"],
+                "threshold": threshold,
+                "confidence": round(1.0 - float(sentinel_meta["distance"]), 6),
+                "confidencePercent": sentinel_meta["confidencePercent"],
+                "matchMargin": 0.5,
+                "matchQuality": _match_quality(float(sentinel_meta["distance"]), threshold),
+                "livenessPassed": liveness_passed,
+                "enrolledImageUrl": sentinel_meta.get("pictureUrl"),
+                "message": f"SentinelVision Match: {sentinel_meta['fullName']} ({sentinel_meta['identityType']})",
+                "matched": True,
+                "sentinelMatch": sentinel_meta,
+                "member": {
+                    "memberId": sentinel_meta["identityId"],
+                    "username": sentinel_meta["identityType"],
+                    "email": "",
+                    "firstName": sentinel_meta["fullName"],
+                    "lastName": f"[{sentinel_meta['identityType']}]",
+                    "fullName": f"{sentinel_meta['fullName']} ({sentinel_meta['identityType']})",
+                    "phoneNumber": None,
+                    "picture": sentinel_meta.get("pictureUrl"),
+                    "pictureUrl": sentinel_meta.get("pictureUrl"),
+                },
+            }
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=(
@@ -362,6 +405,7 @@ async def _resolve_match_response(
             "message": "Face match found!",
             "matched": True,
             "member": _member_payload(member),
+            "sentinelMatch": sentinel_meta,
         }
     )
     return payload

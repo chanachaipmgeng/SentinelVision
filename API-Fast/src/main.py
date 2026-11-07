@@ -85,10 +85,13 @@ async def unhandled_error(request: Request, exc: Exception):
 
 async def _retention_loop() -> None:
     from .services.storage_service import retention_tick
+    from .routes.sentinel_routes import expire_sentinel_identities_tick
 
     while True:
         try:
-            logger.info("retention %s", retention_tick())
+            r_stats = retention_tick()
+            s_stats = await expire_sentinel_identities_tick()
+            logger.info("retention %s sentinel=%s", r_stats, s_stats)
         except Exception:
             logger.exception("retention failed")
         await asyncio.sleep(3600)

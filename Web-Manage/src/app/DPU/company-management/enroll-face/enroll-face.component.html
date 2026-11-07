@@ -33,10 +33,14 @@
 
   <header class="dpu-kiosk__top">
     <div class="dpu-kiosk__brand">
-      <p class="dpu-kiosk__eyebrow">{{ companyName }}</p>
-      <h1 class="dpu-kiosk__title">ลงเวลาด้วยใบหน้า</h1>
+      <p class="dpu-kiosk__eyebrow">{{ companyName }} • SENTINELVISION AI</p>
+      <h1 class="dpu-kiosk__title">สแกนใบหน้าอัจฉริยะ (Attendance &amp; Access)</h1>
     </div>
     <div class="dpu-kiosk__top-actions">
+      <a routerLink="/company/sentinel-center" class="dpu-kiosk__home-btn" title="เปิดศูนย์ความปลอดภัย SentinelVision">
+        <i class="ri-shield-flash-line"></i>
+        <span>Sentinel Center</span>
+      </a>
       <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" title="กลับหน้าหลัก">
         <i class="ri-home-5-line"></i>
         <span>หน้าหลัก</span>

@@ -18,3 +18,5 @@ class Token(BaseModel):
     mustChangePassword: bool = False
     accessToken: str | None = None
     refreshToken: str | None = None
+    # SSO only: same-origin path requested via /auth/sso/oidc/start
+    returnTo: str | None = None

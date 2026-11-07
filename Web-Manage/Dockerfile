@@ -15,7 +15,7 @@ RUN [ -f src/assets/config.json ] || cp src/assets/config.example.json src/asset
 RUN npx ng build --configuration=production
 
 # Angular application builder output
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.30-alpine AS runtime
 COPY docker/nginx-spa.conf /etc/nginx/conf.d/default.conf
 COPY docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 # Strip CR in case the build context came from a CRLF (Windows) checkout; the shebang must be clean.

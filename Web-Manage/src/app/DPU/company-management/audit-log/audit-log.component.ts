@@ -1,73 +1,93 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Component, OnInit } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SharedModule } from '../../../shared/shared.module';
+import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
+import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
 
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
-    <section class="box p-4">
-      <h2>ประวัติการใช้งาน</h2>
-      <button type="button" (click)="exportCsv()">ส่งออก CSV</button>
-      <table>
-        <tr><th>เวลา</th><th>การกระทำ</th><th>เส้นทาง</th><th>สถานะ</th></tr>
-        <tr *ngFor="let row of rows">
-          <td>{{ row.occurredAt }}</td>
-          <td>{{ row.action }}</td>
-          <td>{{ row.path }}</td>
-          <td>{{ row.statusCode }}</td>
-        </tr>
-      </table>
-      <h3>แจ้งเตือน</h3>
-      <label>อีเมล <input [(ngModel)]="email" /></label>
-      <label>LINE token <input [(ngModel)]="lineToken" /></label>
-      <button type="button" (click)="saveNotify()">บันทึก</button>
-      <button type="button" (click)="testNotify()">ทดสอบ</button>
-    </section>
-  `,
+  imports: [
+    CommonModule,
+    FormsModule,
+    SharedModule,
+    PageToolbarComponent,
+    PillSearchComponent,
+    EmptyStateComponent,
+  ],
+  templateUrl: './audit-log.component.html',
+  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class AuditLogComponent implements OnInit {
   rows: any[] = [];
-  email = '';
-  lineToken = '';
-  private companyId = '';
+  loading = false;
+  companyId = '';
+  filters = {
+    q: '',
+    actor: '',
+    action: '',
+    resource: '',
+    dateFrom: '',
+    dateTo: '',
+  };
 
   constructor(private http: HttpClient, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
 
   ngOnInit(): void {
-    if (!this.companyId) {
-      return;
-    }
-    this.http.get<any[]>(`/companys/${this.companyId}/audit-logs`).subscribe((rows) => (this.rows = rows || []));
-    this.http.get<any>(`/notifications/company/${this.companyId}/settings`).subscribe((s) => {
-      this.email = s?.email || '';
-      this.lineToken = s?.lineToken || '';
+    this.reload();
+  }
+
+  setSearch(val: string): void {
+    this.filters.q = val;
+    this.reload();
+  }
+
+  reload(): void {
+    if (!this.companyId) return;
+    this.loading = true;
+    let params = new HttpParams().set('limit', '200');
+    const f = this.filters;
+    if (f.q.trim()) params = params.set('q', f.q.trim());
+    if (f.actor.trim()) params = params.set('actor', f.actor.trim());
+    if (f.action.trim()) params = params.set('action', f.action.trim());
+    if (f.resource.trim()) params = params.set('resource', f.resource.trim());
+    if (f.dateFrom) params = params.set('dateFrom', f.dateFrom);
+    if (f.dateTo) params = params.set('dateTo', f.dateTo);
+    this.http.get<any[]>(`/companys/${this.companyId}/audit-logs`, { params }).subscribe({
+      next: (rows) => {
+        this.rows = rows || [];
+        this.loading = false;
+      },
+      error: () => {
+        this.rows = [];
+        this.loading = false;
+      },
     });
   }
 
-  saveNotify(): void {
-    this.http
-      .put(`/notifications/company/${this.companyId}/settings`, {
-        email: this.email,
-        lineToken: this.lineToken,
-        events: ['import.finished', 'approval.pending'],
-      })
-      .subscribe();
-  }
-
-  testNotify(): void {
-    this.http.post(`/notifications/company/${this.companyId}/test`, {}).subscribe();
-  }
-
   exportCsv(): void {
-    const header = 'occurredAt,action,path,statusCode';
+    const header = 'occurredAt,actor,action,resource,path,statusCode,ip';
     const body = this.rows
-      .map((r) => [r.occurredAt, r.action, r.path, r.statusCode].map((v) => `"${v ?? ''}"`).join(','))
+      .map((r) =>
+        [
+          r.occurredAt,
+          r.actorMemberId || r.actorRole,
+          r.action,
+          [r.entityType, r.entityId].filter(Boolean).join(':'),
+          r.path,
+          r.statusCode,
+          r.ip,
+        ]
+          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+          .join(',')
+      )
       .join('\n');
     const blob = new Blob([header + '\n' + body], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ..config.database import get_db
@@ -95,16 +96,83 @@ async def list_audit_logs(
     companyId: str,
     request: Request,
     limit: int = 100,
+    offset: int = 0,
+    q: Optional[str] = None,
+    actor: Optional[str] = None,
+    action: Optional[str] = None,
+    resource: Optional[str] = None,
+    entityType: Optional[str] = None,
+    dateFrom: Optional[str] = None,
+    dateTo: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("audit.read")),
 ):
+    """Searchable audit log: actor / action / resource / date range / free-text."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import and_, or_
+
     await assert_request_company_access(request, db, companyId)
+    clauses = [AuditLog.companyId == companyId]
+    actor_q = (actor or "").strip()
+    if actor_q:
+        try:
+            clauses.append(AuditLog.actorMemberId == UUID(actor_q))
+        except ValueError:
+            clauses.append(AuditLog.actorRole.ilike(f"%{actor_q}%"))
+    action_q = (action or "").strip()
+    if action_q:
+        clauses.append(AuditLog.action.ilike(f"%{action_q}%"))
+    resource_q = (resource or entityType or "").strip()
+    if resource_q:
+        clauses.append(
+            or_(
+                AuditLog.entityType.ilike(f"%{resource_q}%"),
+                AuditLog.entityId.ilike(f"%{resource_q}%"),
+                AuditLog.path.ilike(f"%{resource_q}%"),
+            )
+        )
+    free = (q or "").strip()
+    if free:
+        clauses.append(
+            or_(
+                AuditLog.action.ilike(f"%{free}%"),
+                AuditLog.path.ilike(f"%{free}%"),
+                AuditLog.entityType.ilike(f"%{free}%"),
+                AuditLog.entityId.ilike(f"%{free}%"),
+                AuditLog.actorRole.ilike(f"%{free}%"),
+                AuditLog.ip.ilike(f"%{free}%"),
+            )
+        )
+
+    def _parse_dt(raw: Optional[str], *, end: bool = False) -> Optional[datetime]:
+        if not raw:
+            return None
+        text = raw.strip()
+        try:
+            if len(text) == 10:
+                text = f"{text}T23:59:59.999Z" if end else f"{text}T00:00:00Z"
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+
+    df = _parse_dt(dateFrom, end=False)
+    dt = _parse_dt(dateTo, end=True)
+    if df is not None:
+        clauses.append(AuditLog.occurredAt >= df)
+    if dt is not None:
+        clauses.append(AuditLog.occurredAt <= dt)
+
+    lim = min(max(int(limit or 100), 1), 500)
+    off = max(int(offset or 0), 0)
     rows = (
         await db.execute(
             select(AuditLog)
-            .where(AuditLog.companyId == companyId)
+            .where(and_(*clauses))
             .order_by(AuditLog.occurredAt.desc())
-            .limit(min(max(limit, 1), 500))
+            .offset(off)
+            .limit(lim)
         )
     ).scalars().all()
     return [
@@ -114,6 +182,8 @@ async def list_audit_logs(
             "actorMemberId": str(r.actorMemberId) if r.actorMemberId else None,
             "actorRole": r.actorRole,
             "action": r.action,
+            "entityType": r.entityType,
+            "entityId": r.entityId,
             "path": r.path,
             "statusCode": r.statusCode,
             "ip": r.ip,

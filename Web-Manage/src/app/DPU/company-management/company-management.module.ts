@@ -78,6 +78,28 @@ export const companyRoutes: Routes = [
         import('./warning-timetamp/warning-timetamp.component').then((m) => m.WarningTimetampComponent),
     },
     {
+      path: 'company/approval-inbox',
+      loadComponent: () =>
+        import('./approval-inbox/approval-inbox.component').then((m) => m.ApprovalInboxComponent),
+    },
+    {
+      path: 'company/reports',
+      loadComponent: () =>
+        import('./reports/reports.component').then((m) => m.ReportsComponent),
+    },
+    {
+      path: 'company/self-service',
+      loadComponent: () =>
+        import('./self-service/self-service.component').then((m) => m.SelfServiceComponent),
+    },
+    {
+      path: 'company/profile-security',
+      loadComponent: () =>
+        import('./profile-security/profile-security.component').then(
+          (m) => m.ProfileSecurityComponent
+        ),
+    },
+    {
       path: 'company/hr-schedule',
       loadComponent: () =>
         import('./hr-schedule/hr-schedule.component').then((m) => m.HrScheduleComponent),

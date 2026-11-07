@@ -98,12 +98,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       )
       .subscribe(
         (result) => {
-          this.tokenService.saveToken(result.access_token || result.accessToken || '');
-          const refresh = result.refresh_token || result.refreshToken;
-          if (refresh) {
-            this.tokenService.saveRefreshToken(refresh);
-          }
-          this.tokenService.saveUser(result);
+          // AuthService.login already applied memory access + CSRF; refresh is httpOnly cookie.
+          this.authService.applyMemberSession(result);
           if (result.mustChangePassword || result.must_change_password) {
             this.routes.navigate(['/auth/change-password']);
             return;

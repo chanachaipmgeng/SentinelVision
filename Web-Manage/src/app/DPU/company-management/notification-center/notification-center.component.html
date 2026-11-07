@@ -39,12 +39,23 @@
 
   <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
 
-  <div *ngIf="!loading && activeTab === 'inbox'" class="box">
-    <div class="box-header flex justify-between items-center">
-      <h6 class="font-semibold m-0">{{ 'Inbox' | translate }} ({{ inbox.length }})</h6>
-      <button type="button" class="ti-btn ti-btn-light" (click)="markAllRead()">
-        {{ 'Mark all read' | translate }}
-      </button>
+  <div *ngIf="!loading && activeTab === 'inbox'" class="box modern-card glass">
+    <div class="box-header flex flex-wrap justify-between items-center gap-2">
+      <h6 class="font-semibold m-0">{{ 'Inbox' | translate }} ({{ inboxFiltered.length }}/{{ inbox.length }})</h6>
+      <div class="flex flex-wrap gap-2 items-center">
+        <input
+          type="search"
+          class="form-control"
+          style="min-width: 12rem"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="applyInboxFilter()"
+          placeholder="ค้นหาแจ้งเตือน..."
+          aria-label="ค้นหาแจ้งเตือน"
+        />
+        <button type="button" class="ti-btn ti-btn-light" (click)="markAllRead()">
+          {{ 'Mark all read' | translate }}
+        </button>
+      </div>
     </div>
     <div class="box-body">
       <table class="table table-bordered w-full">
@@ -58,7 +69,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let n of inbox" [class.opacity-60]="!!n.readAt">
+          <tr *ngFor="let n of inboxFiltered" [class.opacity-60]="!!n.readAt">
             <td class="text-xs whitespace-nowrap">{{ n.createdAt | date: 'short' }}</td>
             <td><code>{{ n.event }}</code></td>
             <td>{{ n.title }}</td>
@@ -74,7 +85,7 @@
               </button>
             </td>
           </tr>
-          <tr *ngIf="inbox.length === 0">
+          <tr *ngIf="inboxFiltered.length === 0">
             <td colspan="5" class="text-center text-muted">{{ 'No notifications' | translate }}</td>
           </tr>
         </tbody>

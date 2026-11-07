@@ -1,0 +1,84 @@
+<app-page-header [title]="'ประวัติการใช้งาน'" [activeTitle]="'ธรรมาภิบาล'" [title1]="'Audit Log'"></app-page-header>
+
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="Audit Log">
+      <ng-container controls>
+        <app-pill-search
+          [value]="filters.q"
+          (valueChange)="setSearch($event)"
+          placeholder="ค้นหา action / path / IP..."
+          ariaLabel="ค้นหา audit log"
+        ></app-pill-search>
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="reload()">
+          <i class="ri-refresh-line"></i>
+        </button>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="exportCsv()">
+          ส่งออก CSV
+        </button>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
+
+  <div class="col-span-12">
+    <div class="box modern-card glass mb-4">
+      <div class="box-body grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div>
+          <label class="form-label">Actor</label>
+          <input class="form-control" [(ngModel)]="filters.actor" placeholder="memberId / role" (keyup.enter)="reload()" />
+        </div>
+        <div>
+          <label class="form-label">Action</label>
+          <input class="form-control" [(ngModel)]="filters.action" placeholder="LOGIN_OK" (keyup.enter)="reload()" />
+        </div>
+        <div>
+          <label class="form-label">Resource</label>
+          <input class="form-control" [(ngModel)]="filters.resource" placeholder="entity / path" (keyup.enter)="reload()" />
+        </div>
+        <div>
+          <label class="form-label">จากวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateFrom" (change)="reload()" />
+        </div>
+        <div>
+          <label class="form-label">ถึงวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateTo" (change)="reload()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12">
+    <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
+    <div class="box modern-card glass" *ngIf="!loading">
+      <div class="box-body p-0 overflow-x-auto">
+        <table class="table dpu-list-table w-full">
+          <thead>
+            <tr>
+              <th>เวลา</th>
+              <th>Actor</th>
+              <th>Action</th>
+              <th>Resource</th>
+              <th>Path</th>
+              <th>สถานะ</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows">
+              <td class="whitespace-nowrap">{{ row.occurredAt }}</td>
+              <td>{{ row.actorRole || row.actorMemberId || '—' }}</td>
+              <td>{{ row.action }}</td>
+              <td>{{ row.entityType || '—' }}<span *ngIf="row.entityId"> / {{ row.entityId }}</span></td>
+              <td class="text-xs">{{ row.path }}</td>
+              <td>{{ row.statusCode }}</td>
+              <td>{{ row.ip || '—' }}</td>
+            </tr>
+            <tr *ngIf="!rows.length">
+              <td colspan="7" class="text-center text-muted py-8">ไม่พบรายการ</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

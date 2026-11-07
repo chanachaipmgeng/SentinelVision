@@ -18,5 +18,7 @@ class Token(BaseModel):
     mustChangePassword: bool = False
     accessToken: str | None = None
     refreshToken: str | None = None
+    # Double-submit CSRF for cookie-based refresh/logout (also set as readable cookie).
+    csrfToken: str | None = None
     # SSO only: same-origin path requested via /auth/sso/oidc/start
     returnTo: str | None = None

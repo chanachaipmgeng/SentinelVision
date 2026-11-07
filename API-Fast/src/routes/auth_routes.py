@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,14 +17,22 @@ from ..config.settings import settings
 from ..models.hr_schedule import KioskDevice
 from ..models.member import Member
 from ..schemas.auth_schema import LoginRequest, Token
+from ..security.auth_cookies import (
+    clear_auth_cookies,
+    csrf_ok,
+    read_refresh_cookie,
+    set_auth_cookies,
+)
 from ..security.deps import assert_company_access, get_current_member
 from ..services import rbac_service
 from ..security.jwt import (
     ALGORITHM,
     TYP_ACCESS,
     TYP_KIOSK_REFRESH,
+    TYP_PASSWORD_RESET,
     TYP_REFRESH,
     create_kiosk_token_pair,
+    create_password_reset_token,
     create_token_pair,
     decode_token,
     hash_kiosk_token,
@@ -109,9 +117,19 @@ class KioskRefreshRequest(BaseModel):
     refresh_token: str | None = None
 
 
-def _tokens(member: Member, *, family: Optional[str] = None) -> dict:
+class SendResetPasswordRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20)
+    newPassword: str | None = None
+    password: str | None = None
+
+
+def _tokens(member: Member, *, family: Optional[str] = None, csrf: Optional[str] = None) -> dict:
     access, refresh = create_token_pair(str(member.memberId), member.username, family=family)
-    return {
+    out = {
         "member": member,
         "access_token": access,
         "refresh_token": refresh,
@@ -120,11 +138,38 @@ def _tokens(member: Member, *, family: Optional[str] = None) -> dict:
         "accessToken": access,
         "refreshToken": refresh,
     }
+    if csrf:
+        out["csrfToken"] = csrf
+    return out
+
+
+def _attach_session_cookies(response: Response, payload: dict) -> dict:
+    """Set httpOnly refresh + CSRF cookies; echo csrfToken for the SPA."""
+    refresh = payload.get("refresh_token") or payload.get("refreshToken")
+    if not refresh:
+        return payload
+    csrf = set_auth_cookies(response, refresh)
+    payload["csrfToken"] = csrf
+    return payload
+
+
+def _resolve_refresh_raw(body: RefreshRequest | LogoutRequest, request: Request) -> tuple[str | None, bool]:
+    """Return (raw_refresh, used_cookie). Cookie path requires a matching CSRF header."""
+    raw = (body.refreshToken or body.refresh_token or "").strip() or None
+    if raw:
+        return raw, False
+    cookie = read_refresh_cookie(request)
+    if not cookie:
+        return None, False
+    if not csrf_ok(request):
+        raise HTTPException(status_code=403, detail="CSRF validation failed")
+    return cookie, True
 
 
 @router.post("/login", response_model=Token)
 async def login(
     request: LoginRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
     _rl=Depends(rate_limit_login),
 ):
@@ -156,7 +201,7 @@ async def login(
     await db.commit()
     await db.refresh(member)
     await write_audit(actor=member, action="LOGIN_OK", path="/auth/login", status_code=200)
-    return _tokens(member)
+    return _attach_session_cookies(response, _tokens(member))
 
 
 async def _assert_refresh_not_revoked(db: AsyncSession, payload: dict, *, refresh_ttl) -> None:
@@ -183,8 +228,13 @@ async def _assert_refresh_not_revoked(db: AsyncSession, payload: dict, *, refres
 
 @router.post("/refresh-token")
 @router.post("/refresh")
-async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
-    raw = body.refreshToken or body.refresh_token
+async def refresh_token(
+    body: RefreshRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    raw, _from_cookie = _resolve_refresh_raw(body, request)
     if not raw:
         raise HTTPException(status_code=401, detail="Refresh token required")
     payload = decode_token(raw, expected_typ=TYP_REFRESH)
@@ -200,7 +250,7 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
     # Rotation: the presented refresh token is single-use; the new pair stays in the same family.
     await revocation.revoke_token_payload(db, payload, reason=revocation.REASON_ROTATED)
     await db.commit()
-    return _tokens(member, family=payload.get("fam"))
+    return _attach_session_cookies(response, _tokens(member, family=payload.get("fam")))
 
 
 def _bearer_payload_allow_expired(request: Request) -> Optional[dict]:
@@ -222,18 +272,28 @@ def _bearer_payload_allow_expired(request: Request) -> Optional[dict]:
 
 
 @router.post("/logout")
-async def logout(body: LogoutRequest, request: Request, db: AsyncSession = Depends(get_db)):
-    """Revoke the current session: the access token (header), the refresh token (body) and the
-    family they share. Idempotent; works with an expired access token as long as it is ours."""
+async def logout(
+    body: LogoutRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """Revoke the current session: the access token (header), the refresh token (body or cookie)
+    and the family they share. Idempotent; works with an expired access token as long as it is ours."""
     access_payload = _bearer_payload_allow_expired(request)
     refresh_payload = None
-    raw_refresh = body.refreshToken or body.refresh_token
+    try:
+        raw_refresh, _ = _resolve_refresh_raw(body, request)
+    except HTTPException:
+        # Cookie present without CSRF: still clear cookies, but only revoke if bearer is valid.
+        raw_refresh = None
     if raw_refresh:
         try:
             refresh_payload = decode_token(raw_refresh, expected_typ=TYP_REFRESH)
         except HTTPException:
             refresh_payload = None
     if access_payload is None and refresh_payload is None:
+        clear_auth_cookies(response)
         raise HTTPException(status_code=401, detail="No valid token to revoke")
 
     revoked = 0
@@ -256,6 +316,7 @@ async def logout(body: LogoutRequest, request: Request, db: AsyncSession = Depen
     member = await db.get(Member, UUID(str(member_id))) if member_id else None
     if member is not None:
         await write_audit(actor=member, action="LOGOUT", path="/auth/logout", status_code=200)
+    clear_auth_cookies(response)
     return {"ok": True, "revokedTokens": revoked, "familyRevoked": bool(family)}
 
 
@@ -486,7 +547,11 @@ async def sso_oidc_start(body: OidcStartRequest | None = None):
 
 @router.post("/sso/oidc", response_model=Token)
 @router.post("/sso/oidc/callback", response_model=Token)
-async def sso_oidc_callback(body: OidcCallbackRequest, db: AsyncSession = Depends(get_db)):
+async def sso_oidc_callback(
+    body: OidcCallbackRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
     provider = _require_oidc()
     try:
         claims, txn = await provider.login_with_code(body.code, body.state, body.txn)
@@ -530,10 +595,73 @@ async def sso_oidc_callback(body: OidcCallbackRequest, db: AsyncSession = Depend
         status_code=200,
         detail={"issuer": claims.get("iss"), "sub": claims.get("sub")},
     )
-    issued = _tokens(member)
+    issued = _attach_session_cookies(response, _tokens(member))
     if txn.return_to:
         issued["returnTo"] = txn.return_to
     return issued
+
+
+def _expose_reset_token() -> bool:
+    if bool(getattr(settings, "AUTH_EXPOSE_RESET_TOKEN", False)):
+        return True
+    return (settings.APP_ENV or "").strip().lower() in {"development", "dev", "test", "local"}
+
+
+@router.post("/send-reset-password")
+@router.put("/send-reset-password")
+async def send_reset_password(body: SendResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """Always returns ok (no email enumeration). Issues a short-lived password-reset JWT."""
+    email = (body.email or "").strip().lower()
+    result = {"ok": True}
+    if not email or "@" not in email:
+        return result
+    member = (
+        await db.execute(select(Member).where(func.lower(Member.email) == email))
+    ).scalars().first()
+    if member is None or getattr(member, "deletedAt", None) is not None:
+        return result
+    token = create_password_reset_token(str(member.memberId), member.username, member.email)
+    await write_audit(
+        actor=member,
+        action="PASSWORD_RESET_REQUESTED",
+        path="/auth/send-reset-password",
+        status_code=200,
+        entity_type="member",
+        entity_id=str(member.memberId),
+    )
+    # Delivery is out of band (mailer). In non-prod we may echo the token for automated tests.
+    if _expose_reset_token():
+        result["resetToken"] = token
+        result["expiresInMinutes"] = int(settings.AUTH_PASSWORD_RESET_EXPIRE_MINUTES)
+    return result
+
+
+@router.post("/reset-password")
+@router.put("/reset-password")
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    new_password = (body.newPassword or body.password or "").strip()
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    payload = decode_token(body.token, expected_typ=TYP_PASSWORD_RESET)
+    member = await db.get(Member, UUID(str(payload["memberId"])))
+    if not member or getattr(member, "deletedAt", None) is not None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    token_email = (payload.get("email") or "").strip().lower()
+    if token_email and token_email != (member.email or "").strip().lower():
+        raise HTTPException(status_code=401, detail="Invalid reset token")
+    assert_not_locked(member)
+    member.passwordHash = hash_password(new_password)
+    member.mustChangePassword = False
+    await db.commit()
+    await write_audit(
+        actor=member,
+        action="PASSWORD_RESET_OK",
+        path="/auth/reset-password",
+        status_code=200,
+        entity_type="member",
+        entity_id=str(member.memberId),
+    )
+    return {"ok": True}
 
 
 @router.get("/me/permissions")

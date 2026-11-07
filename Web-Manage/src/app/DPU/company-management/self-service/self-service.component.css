@@ -1,0 +1,9 @@
+.ess-page {
+  padding-bottom: 2rem;
+}
+
+@media (max-width: 640px) {
+  .ess-page .ti-btn {
+    flex: 1 1 auto;
+  }
+}

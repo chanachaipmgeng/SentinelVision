@@ -19,10 +19,8 @@ if os.environ.get("TEST_DATABASE_URL"):
     os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 
 # Route modules import the InsightFace engine at module level; stub it when the GPU stack is not
-# installed so auth/HR routes can be tested without onnxruntime.
-try:
-    import insightface  # noqa: F401
-except ImportError:  # pragma: no cover - only on machines without the face stack
+# installed (or only a broken namespace package exists) so auth/HR routes can be tested without ORT.
+def _stub_insightface() -> None:
     _insightface = types.ModuleType("insightface")
     _insightface_app = types.ModuleType("insightface.app")
 
@@ -34,6 +32,12 @@ except ImportError:  # pragma: no cover - only on machines without the face stac
     _insightface.app = _insightface_app
     sys.modules["insightface"] = _insightface
     sys.modules["insightface.app"] = _insightface_app
+
+
+try:
+    from insightface.app import FaceAnalysis  # noqa: F401
+except Exception:  # pragma: no cover - missing package or incomplete install
+    _stub_insightface()
 
 try:
     import onnxruntime  # noqa: F401

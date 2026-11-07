@@ -15,7 +15,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
@@ -57,12 +56,13 @@ class LeaveBalance(Base):
     updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_leave_balance_emp_type_year",
             "companyId",
             "company_employeeId",
             "leaveType",
             "year",
-            name="uq_leave_balance_emp_type_year",
+            unique=True,
         ),
         Index("leave_balance_company_emp_idx", "companyId", "company_employeeId"),
     )
@@ -159,6 +159,12 @@ class PayrollPeriod(Base):
     updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint("companyId", "startDate", "endDate", name="uq_payroll_period_range"),
+        Index(
+            "uq_payroll_period_range",
+            "companyId",
+            "startDate",
+            "endDate",
+            unique=True,
+        ),
         Index("payroll_period_company_status_idx", "companyId", "status"),
     )

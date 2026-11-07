@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from ..config.database import get_db
-from ..models.member import Member
 from ..schemas.member_schema import MemberCreate, MemberResponse, MemberUpdate
 from ..controllers.member_controller import (
     get_users,

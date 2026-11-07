@@ -1,8 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from ..models.member import Member
-from ..utils.file_handler import save_uploaded_file
 from uuid import UUID
 from ..schemas.member_schema import MemberUpdate
 

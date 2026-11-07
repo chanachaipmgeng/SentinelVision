@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
@@ -46,6 +46,16 @@ class SentinelIdentity(Base):
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (
+        Index("sentinel_identity_company_type_idx", "companyId", "identity_type", "status"),
+        Index(
+            "sentinel_identity_embedding_hnsw_idx",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
 
 class SentinelAccessZone(Base):
     """Smart Access Control Zone / Door / Kiosk Station policy & IoT Relay configuration."""
@@ -79,6 +89,8 @@ class SentinelAccessZone(Base):
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (Index("sentinel_access_zone_company_idx", "companyId", "is_active"),)
+
 
 class SentinelEvent(Base):
     """Smart Event / Seminar / Conference campaign."""
@@ -102,6 +114,8 @@ class SentinelEvent(Base):
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("sentinel_event_company_idx", "companyId", "status", "start_at"),)
 
 
 class SentinelIncidentLog(Base):
@@ -131,3 +145,7 @@ class SentinelIncidentLog(Base):
     acknowledgedBy = Column("acknowledged_by", UUID(as_uuid=True), nullable=True)
     acknowledgedAt = Column("acknowledged_at", DateTime(timezone=True), nullable=True)
     occurredAt = Column("occurred_at", DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("sentinel_incident_company_occurred_idx", "companyId", occurredAt.desc()),
+    )

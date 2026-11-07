@@ -54,6 +54,10 @@ services:
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      # Schema is managed by Alembic (docs/RUNBOOK.md "Database migrations"). Single-node
+      # installs may set MIGRATE_ON_STARTUP=true; otherwise run `alembic upgrade head` first.
+      MIGRATE_ON_STARTUP: ${MIGRATE_ON_STARTUP:-false}
+      REQUIRE_SCHEMA_HEAD: ${REQUIRE_SCHEMA_HEAD:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
@@ -151,7 +155,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      # The API creates / migrates the schema on startup; the worker only needs the tables to exist.
+      # `api` is healthy only when /ready is 200, i.e. alembic_version == head (B1), so the
+      # worker never starts against an unmigrated schema.
       api:
         condition: service_healthy
     stop_grace_period: 45s

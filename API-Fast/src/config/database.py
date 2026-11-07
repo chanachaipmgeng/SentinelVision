@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, text
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
@@ -36,13 +36,6 @@ async_session = sessionmaker(
 )
 
 Base = declarative_base(metadata=_metadata)
-
-
-async def ensure_db_schema(connection) -> None:
-    """Create app schema when using a shared database (e.g. localdev.dpu)."""
-    if DB_SCHEMA == "public":
-        return
-    await connection.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{DB_SCHEMA}"'))
 
 
 async def get_db():

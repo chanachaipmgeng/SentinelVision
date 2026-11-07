@@ -28,6 +28,39 @@ production mode (`APP_ENV` unset or `production`) also when the database passwor
 example values (`dpu_secret`, `postgres`, …). `docker compose` itself aborts when
 `POSTGRES_PASSWORD` or `SECRET_KEY` is missing from `.env`.
 
+### Database schema (Alembic)
+
+The API does not create tables on its own. Apply the migrations once, before the first start and after every upgrade:
+
+```bash
+# fresh install: create the schema (db must be healthy; api may already be running — /ready stays 503 until this finishes)
+docker compose run --rm api alembic upgrade head
+# upgrade of an existing install
+docker compose exec api alembic upgrade head
+# verify
+docker compose exec api alembic current   # 0010_schema_drift (head)
+docker compose exec api alembic check     # No new upgrade operations detected.
+```
+
+Databases created by releases **before Phase B1** (the API used `create_all` at startup, there is no `alembic_version` table yet) must be stamped first:
+
+```bash
+docker compose exec api alembic stamp 0008_revocation_kiosk_pairing
+docker compose exec api alembic upgrade head
+```
+
+Single-node convenience: `MIGRATE_ON_STARTUP=true` in `.env` lets the `api` container run `alembic upgrade head` at boot (still needs the one-time stamp for legacy databases; do not combine with `docker-compose.gpu.yml`'s second API process). `GET /ready` returns `503 schema_out_of_date` while the database is behind the code. Details and rollback: [RUNBOOK.md](RUNBOOK.md#database-migrations-alembic-is-the-single-schema-source).
+
+Local (non-Docker) backend:
+
+```bash
+cd API-Fast
+pip install -r requirements.txt -r requirements-dev.txt
+export DATABASE_URL=postgresql+asyncpg://dpu:dpu_secret@localhost:5432/dpu   # or the dev-postgres URL + DB_SCHEMA=dpu
+alembic upgrade head
+uvicorn src.main:app --reload
+```
+
 | URL | Service |
 |-----|---------|
 | http://localhost:8880/ | Admin (when `HTTP_PORT=8880` in `.env`) |
@@ -69,6 +102,8 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `APP_ENV` | `production` | `development` downgrades the weak-DB-password check to a warning (laptops only) |
 | `SECRET_KEY` | (placeholder) | **required**, ≥ 32 chars; startup fails otherwise |
 | `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs / unit tests (disables every secret check, logged loudly) |
+| `MIGRATE_ON_STARTUP` | `false` | `true` = `api` runs `alembic upgrade head` at boot (single-node only) |
+| `REQUIRE_SCHEMA_HEAD` | `true` | `/ready` is 503 while `alembic_version` ≠ head; `false` only logs |
 | `INTERNAL_ALLOW_CIDRS` | loopback + RFC1918 | nginx allowlist for `/metrics` and `/docs`; narrow it to the Prometheus scraper in production |
 | `HTTPS_PORT` / `TLS_CERT_DIR` | `443` / `./certs` | used by `docker-compose.tls.yml` |
 | `HSTS_MAX_AGE` | auto | `Strict-Transport-Security` max-age; auto = on when the TLS overlay is active |
@@ -227,6 +262,49 @@ docker compose run --rm -v ./API-Fast:/app --entrypoint python api scripts/smoke
 
 Seed fills all 8 tables. Default password for seeded users: `Password123!`
 (accounts: `sysadmin`, `admin`, `boss`, `emp1`, `emp2`).
+
+## Automated tests (Phase B2)
+
+Backend — real PostgreSQL + pgvector migrated to Alembic head once per session (`tests/conftest.py`):
+
+```bash
+cd API-Fast
+pip install -r requirements.txt -r requirements-dev.txt
+# either point at a database you own (it is migrated, tables are reused between runs)…
+export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/dpu_test
+# …or install the embedded server and let conftest start a throw-away one
+pip install pgserver
+python -m pytest -q
+```
+
+The suite has no skips when a database is available: authz matrix (`tests/test_authz_matrix.py`), hybrid punch /
+shift late-OT / xlsx-csv export (`tests/test_punch_shift_export.py`), outbox claiming with `FOR UPDATE SKIP LOCKED`
+(`tests/test_outbox_claiming.py`), token lifecycle (`tests/test_token_lifecycle.py`), Alembic drift
+(`tests/test_alembic_schema.py`) and app startup / readiness (`tests/test_app_startup.py`). Shared tenant fixtures live
+in `tests/support.py`.
+
+Frontend (`Web-Manage`, Node 20+; `.npmrc` sets `legacy-peer-deps` so `npm ci` matches the Docker build):
+
+```bash
+cd Web-Manage
+npm ci
+npm run lint          # eslint (angular-eslint, see .eslintrc.json baseline)
+npm run test:ci       # Karma + Jasmine on ChromeHeadless (CHROME_BIN=/path/to/chrome if not on PATH)
+npm run build:prod    # ng build --configuration production
+```
+
+`npm test` keeps the interactive Chrome runner. Playwright end-to-end smoke tests are **not** wired yet
+(`e2e/smoke.spec.ts` + `playwright.config.ts` are placeholders; `@playwright/test` is not a dependency) — follow-up
+tracked in docs/BACKLOG.md.
+
+Static checks that CI also runs (Phase B3; config in `API-Fast/pyproject.toml`, `trivy.yaml`, `.trivyignore.yaml`):
+
+```bash
+cd API-Fast && pip install ruff mypy && ruff check . && mypy
+cd .. && trivy fs --config trivy.yaml --scanners vuln,secret,misconfig .
+```
+
+The full gate list and the lint/CVE baselines are documented in `docs/RUNBOOK.md` → "CI gates and lint baselines".
 
 ```bash
 docker compose logs -f api

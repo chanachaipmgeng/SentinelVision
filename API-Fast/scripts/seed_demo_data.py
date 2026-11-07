@@ -34,7 +34,7 @@ from src.models.employee_timestamp import ApprovalStatus, EmployeeTimestamp, Tim
 from src.models.face_encoding import FACE_EMBEDDING_DIM, FaceEncoding
 from src.models.member import Member, RoleType, StatusType
 from src.models.position import Position
-from src.utils.schema_migrate import ensure_profile_and_approval_columns
+from src.config.migrations import schema_status, remediation_hint
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 DEFAULT_PASSWORD = "Password123!"
@@ -595,8 +595,10 @@ async def main(reset: bool) -> None:
     engine = create_async_engine(database_url, echo=False)
     Session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
-    async with engine.begin() as conn:
-        await ensure_profile_and_approval_columns(conn)
+    async with engine.connect() as conn:
+        status = await schema_status(conn)
+    if not status.at_head:
+        raise SystemExit(f"schema {status.code}: {remediation_hint(status)}")
 
     async with Session() as session:
         if reset:

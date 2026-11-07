@@ -9,7 +9,10 @@
     "test": "ng test",
     "postcss": "sass ./src/assets/scss/style.scss ./src/assets/css/style.css && postcss ./src/assets/css/style.css -o ./src/assets/css/style.css",
     "sass": "sass ./src/assets/scss:./src/assets/css/",
-    "sass-min": "sass ./src/assets/scss:./src/assets/css/ --style compressed"
+    "sass-min": "sass ./src/assets/scss:./src/assets/css/ --style compressed",
+    "test:ci": "ng test --configuration ci",
+    "lint": "eslint \"src/**/*.ts\" \"src/**/*.html\"",
+    "build:prod": "ng build --configuration production"
   },
   "private": true,
   "dependencies": {
@@ -82,9 +85,17 @@
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^17.0.5",
+    "@angular-eslint/builder": "^17.5.3",
+    "@angular-eslint/eslint-plugin": "^17.5.3",
+    "@angular-eslint/eslint-plugin-template": "^17.5.3",
+    "@angular-eslint/schematics": "^17.5.3",
+    "@angular-eslint/template-parser": "^17.5.3",
     "@angular/cli": "^17.1.1",
     "@angular/compiler-cli": "^17.0.0",
     "@types/jasmine": "~5.1.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
     "jasmine-core": "~5.1.0",
     "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",

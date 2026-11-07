@@ -40,6 +40,8 @@ services:
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      # Only `api` may run MIGRATE_ON_STARTUP; the second process just verifies the schema.
+      REQUIRE_SCHEMA_HEAD: ${REQUIRE_SCHEMA_HEAD:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
       OIDC_ISSUER: ${OIDC_ISSUER:-}

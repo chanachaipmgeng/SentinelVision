@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Integer, String, select, text
+from sqlalchemy import Column, DateTime, Index, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.sql import func
 
@@ -45,6 +45,8 @@ class NotificationOutbox(Base):
     attempts = Column(Integer, nullable=False, default=0)
     lastError = Column(String, nullable=True)
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (Index("notification_outbox_status_created_idx", "status", "createdAt"),)
 
 
 def compute_webhook_signature(secret: str, timestamp_str: str, body_bytes: bytes) -> str:

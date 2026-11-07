@@ -110,14 +110,26 @@ def test_sentinel_serializers():
 
 
 
-def test_nginx_configs_include_sentinel_prefix():
+def _nginx_conf_dir():
+    """``docker/nginx`` of the repository checkout; ``None`` inside the API image (only API-Fast is copied)."""
     from pathlib import Path
 
-    repo_root = Path(__file__).resolve().parents[2]
-    nginx_dir = repo_root / "docker" / "nginx"
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "docker" / "nginx"
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def test_nginx_configs_include_sentinel_prefix():
+    import pytest
+
+    conf_dir = _nginx_conf_dir()
+    if conf_dir is None:
+        pytest.skip("docker/nginx not present (tests running from the API image, not a repo checkout)")
     # B4: routing is shared by every gateway variant through snippets/gateway.conf.
-    shared = (nginx_dir / "snippets" / "gateway.conf").read_text(encoding="utf-8")
+    shared = (conf_dir / "snippets" / "gateway.conf").read_text(encoding="utf-8")
     assert "|hr|sentinel|" in shared, "gateway.conf is missing 'sentinel' in FastAPI proxy regex"
     for conf_name in ("default.conf", "default.dual-gpu.conf", "default.quad-gpu.conf", "default.hexa-gpu.conf"):
-        text = (nginx_dir / conf_name).read_text(encoding="utf-8")
+        text = (conf_dir / conf_name).read_text(encoding="utf-8")
         assert "include /etc/nginx/snippets/gateway.conf;" in text, f"{conf_name} does not include the shared gateway"

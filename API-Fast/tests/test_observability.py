@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
@@ -87,9 +88,11 @@ def test_metrics_endpoint_exposes_new_series_and_content_type():
         "dpu_build_info{",
         "dpu_face_gpu_queue_pending_total",
         "dpu_face_gpu_queue_started",
-        "process_cpu_seconds_total",
     ):
         assert needle in text, needle
+    if sys.platform.startswith("linux"):
+        # prometheus_client's ProcessCollector reads /proc; absent on Windows/macOS dev machines.
+        assert "process_cpu_seconds_total" in text
     obs.ws_kiosk_connections.dec()
 
 

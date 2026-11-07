@@ -29,7 +29,7 @@ Invoke by mentioning the skill name or describing the matching task (agent auto-
 - Open paths only: `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/`
 - Frontend: `AuthGuard` + `RoleGuard`, single `HttpRequestInterceptor`, kiosk WS session sends `token`, `/auth/change-password` for first login
 - Services: `services/audit_service.py`, `notification_service.py` (outbox dispatcher + SMTP/LINE), `import_job_service.py` (B7 import hand-off: payload dir + `import_job` claim/progress), `storage_service.py` (retention), `observability.py` (B6: `prometheus_client` metrics, OTel tracing, JSON logs with request/company id, `/metrics`), `face_match_service.py`; `src/worker/` (B7 runner: `outbox` / `retention` / `imports` jobs, `python -m src.worker [--once]`, `RUN_BACKGROUND_JOBS_IN_API` for single-container dev)
-- Ops: `docs/RUNBOOK.md`, `scripts/backup.sh`, `docker-compose.prod.yml`, `.gitlab-ci.yml`, `API-Fast/alembic/` (baseline marker; runtime schema still via `create_all` + `schema_migrate`)
+- Ops: `docs/RUNBOOK.md`, `scripts/backup.sh` / `restore.sh` / `restore-drill.sh` (B5), `docker-compose.prod.yml`, `.github/workflows/ci.yml` + `.gitlab-ci.yml` (B3 gates), `API-Fast/alembic/` (single schema source: `alembic upgrade head` before start, `/ready` 503 while behind; see RUNBOOK "Database migrations")
 
 ## Face check-in evolution (keep in sync)
 

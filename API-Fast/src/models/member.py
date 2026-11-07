@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Integer, DateTime, Date, Text, Enum, Boolean
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
 from ..config.database import Base
 from uuid import uuid4
 from passlib.hash import bcrypt

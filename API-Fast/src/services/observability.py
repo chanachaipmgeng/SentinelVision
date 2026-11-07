@@ -492,6 +492,7 @@ class RequestIdMiddleware:
         for var, tok in zip(
             (current_request_id_var, current_trace_id_var, current_span_id_var, current_company_id_var),
             tokens,
+            strict=True,
         ):
             try:
                 var.reset(tok)
@@ -756,7 +757,7 @@ def _histogram_summary(metric: str, *, scale: float = 1000.0) -> dict:
 
 
 def _gauge_value(metric: str, **labels: str) -> float:
-    for fam_name, sample in _collect_samples((metric,)):
+    for _fam_name, sample in _collect_samples((metric,)):
         if sample.name == metric and all(sample.labels.get(k) == v for k, v in labels.items()):
             return float(sample.value)
     return 0.0
@@ -764,7 +765,7 @@ def _gauge_value(metric: str, **labels: str) -> float:
 
 def get_observability_summary() -> dict:
     status_counts: Dict[str, float] = {}
-    for fam_name, sample in _collect_samples(("dpu_http_requests_total",)):
+    for _fam_name, sample in _collect_samples(("dpu_http_requests_total",)):
         if sample.name == "dpu_http_requests_total":
             code = sample.labels.get("status", "unknown")
             status_counts[f"http_{code}"] = status_counts.get(f"http_{code}", 0.0) + sample.value
@@ -785,7 +786,7 @@ def get_observability_summary() -> dict:
         storage = {}
 
     jobs: Dict[str, dict] = {}
-    for fam_name, sample in _collect_samples(("dpu_job_last_success_timestamp_seconds", "dpu_job_runs_total")):
+    for _fam_name, sample in _collect_samples(("dpu_job_last_success_timestamp_seconds", "dpu_job_runs_total")):
         job = sample.labels.get("job_name")
         if not job:
             continue

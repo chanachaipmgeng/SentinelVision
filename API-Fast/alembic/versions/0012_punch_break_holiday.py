@@ -1,12 +1,10 @@
-"""C3+C6 placeholder: punch break types + holiday import hooks.
+"""C3+C6: BREAK_OUT/BREAK_IN punch types + holiday import source column.
 
 Revision ID: 0012_punch_break_holiday
 Revises: 0011_attendance_daily_shift_rules
 Create Date: 2026-11-07
 
-Owned by branch ``phase-c/punch-holidays``. Chain stub — replace with the sibling's
-identical revision when pushed. BREAK_OUT / BREAK_IN enum expansion is C3's concern;
-this stub is intentionally a no-op DDL so C4/C5 can upgrade past it.
+Owned by branch ``phase-c/punch-holidays``.
 """
 from __future__ import annotations
 
@@ -19,9 +17,31 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Intentionally empty until sibling C3/C6 lands the real punch/holiday DDL.
-    op.execute("SELECT 1")
+    # Native PG enum — ADD VALUE is not transactional on some versions; guard duplicates.
+    op.execute(
+        """
+        DO $$ BEGIN
+          ALTER TYPE timestamptype ADD VALUE 'BREAK_OUT';
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        DO $$ BEGIN
+          ALTER TYPE timestamptype ADD VALUE 'BREAK_IN';
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        ALTER TABLE company_holiday
+          ADD COLUMN IF NOT EXISTS source VARCHAR(30) NOT NULL DEFAULT 'MANUAL'
+        """
+    )
 
 
 def downgrade() -> None:
-    op.execute("SELECT 1")
+    # Enum values cannot be removed safely on PostgreSQL; only drop the source column.
+    op.execute("ALTER TABLE company_holiday DROP COLUMN IF EXISTS source")

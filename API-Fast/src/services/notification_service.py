@@ -15,12 +15,13 @@ import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Integer, String, select, text
+from sqlalchemy import Column, DateTime, Index, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.sql import func
 
 from ..config.database import Base, async_session
 from ..config.settings import settings
+from ..models.import_job import ImportJob  # noqa: F401  re-exported for existing importers (B7 moved it)
 from ..models.system_setting import SystemSetting
 
 logger = logging.getLogger("dpu.notify")
@@ -39,17 +40,7 @@ class NotificationOutbox(Base):
     lastError = Column(String, nullable=True)
     createdAt = Column(DateTime(timezone=True), server_default=func.now())
 
-
-class ImportJob(Base):
-    __tablename__ = "import_job"
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    companyId = Column(PGUUID(as_uuid=True), nullable=False)
-    status = Column(String, nullable=False, default="pending")
-    result = Column(JSONB, nullable=True)
-    error = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    finishedAt = Column(DateTime(timezone=True), nullable=True)
+    __table_args__ = (Index("notification_outbox_status_created_idx", "status", "createdAt"),)
 
 
 def compute_webhook_signature(secret: str, timestamp_str: str, body_bytes: bytes) -> str:

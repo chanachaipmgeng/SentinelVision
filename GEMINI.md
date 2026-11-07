@@ -25,6 +25,6 @@
 - **Timezone Consistency:** Business day boundaries (e.g., dashboard stats, kiosk attendance, muster roll, cutoff ticks) MUST use a consistent configured timezone (`Asia/Bangkok` / company timezone) rather than mixing naive `datetime.utcnow()` and aware timestamps.
 
 ## 4. Schema, Gateway & Deployment Workflow
-- **Database Migrations:** Never use destructive `DROP TABLE` at startup. Add idempotent schema updates in `API-Fast/src/utils/schema_migrate.py` paired with an Alembic revision in `API-Fast/alembic/versions/`.
+- **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.
 - **Nginx Gateway Prefix Sync:** Whenever a new top-level router prefix is added in `API-Fast/src/main.py` (e.g., `/sentinel`), add that prefix to the FastAPI regex location block in `docker/nginx/default.conf`, `default.dual-gpu.conf`, and `default.quad-gpu.conf`.
 - **Docker Rebuild Matrix:** Source code is baked into images. Rebuild `api` (and `api-gpu1` on dual-GPU), `admin`, and `nginx` as appropriate, then verify `/health` and `/ready`.

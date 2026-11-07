@@ -22,6 +22,39 @@ docker compose up --build
 
 The API refuses to start while `SECRET_KEY` is the placeholder (`AUTH_FAIL_FAST=true`).
 
+### Database schema (Alembic)
+
+The API does not create tables on its own. Apply the migrations once, before the first start and after every upgrade:
+
+```bash
+# fresh install: create the schema (db must be healthy; api may already be running — /ready stays 503 until this finishes)
+docker compose run --rm api alembic upgrade head
+# upgrade of an existing install
+docker compose exec api alembic upgrade head
+# verify
+docker compose exec api alembic current   # 0010_schema_drift (head)
+docker compose exec api alembic check     # No new upgrade operations detected.
+```
+
+Databases created by releases **before Phase B1** (the API used `create_all` at startup, there is no `alembic_version` table yet) must be stamped first:
+
+```bash
+docker compose exec api alembic stamp 0008_revocation_kiosk_pairing
+docker compose exec api alembic upgrade head
+```
+
+Single-node convenience: `MIGRATE_ON_STARTUP=true` in `.env` lets the `api` container run `alembic upgrade head` at boot (still needs the one-time stamp for legacy databases; do not combine with `docker-compose.gpu.yml`'s second API process). `GET /ready` returns `503 schema_out_of_date` while the database is behind the code. Details and rollback: [RUNBOOK.md](RUNBOOK.md#database-migrations-alembic-is-the-single-schema-source).
+
+Local (non-Docker) backend:
+
+```bash
+cd API-Fast
+pip install -r requirements.txt -r requirements-dev.txt
+export DATABASE_URL=postgresql+asyncpg://dpu:dpu_secret@localhost:5432/dpu   # or the dev-postgres URL + DB_SCHEMA=dpu
+alembic upgrade head
+uvicorn src.main:app --reload
+```
+
 | URL | Service |
 |-----|---------|
 | http://localhost:8880/ | Admin (when `HTTP_PORT=8880` in `.env`) |
@@ -60,6 +93,8 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `IMAGE_BLUR_THRESHOLD_IMPORT` | `0` | Excel+ZIP import blur gate; `0` = do not reject blurry photos (face still required) |
 | `SECRET_KEY` | (placeholder) | **required**, ≥ 32 chars; startup fails otherwise |
 | `AUTH_FAIL_FAST` | `true` | set `false` only for throwaway local runs |
+| `MIGRATE_ON_STARTUP` | `false` | `true` = `api` runs `alembic upgrade head` at boot (single-node only) |
+| `REQUIRE_SCHEMA_HEAD` | `true` | `/ready` is 503 while `alembic_version` ≠ head; `false` only logs |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | `60` / `14` | JWT lifetimes |
 | `OIDC_ENABLED` | `false` | enterprise SSO (OpenID Connect, Authorization Code + PKCE). When `true`, startup fails unless the variables below are valid |
 | `OIDC_ISSUER` | (empty) | IdP issuer URL, must serve `<issuer>/.well-known/openid-configuration` and match the `issuer` inside it (`https://`; plain `http://` only for `localhost`) |

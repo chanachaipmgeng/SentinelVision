@@ -5,32 +5,15 @@ from fastapi.staticfiles import StaticFiles
 import asyncio
 import logging
 
-from .config.database import engine, Base, async_session, ensure_db_schema
+from .config.database import engine, async_session
+from .config.migrations import SchemaStatus, remediation_hint, schema_status, upgrade_to_head
 from .config.settings import settings
 from .security.jwt import assert_secret_configured
 from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
 from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
-from .services import audit_service, notification_service  # noqa: F401  register tables
-
-# Register all ORM models on Base.metadata before create_all
-from .models import (  # noqa: F401
-    member,
-    company,
-    company_employee,
-    company_location,
-    department,
-    position,
-    employee_timestamp,
-    face_encoding,
-    system_setting,
-    hr_schedule,
-    sentinel,
-    revoked_token,
-)
-from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
-from .utils.schema_migrate import ensure_profile_and_approval_columns
+from .config import schema as _schema  # noqa: F401  registers every ORM mapper on Base.metadata
 from .routes import (
     member_routes,
     company_routes,
@@ -114,17 +97,28 @@ async def _notify_loop() -> None:
         await asyncio.sleep(max(5, int(settings.NOTIFY_POLL_SECONDS)))
 
 
+async def _check_schema() -> SchemaStatus:
+    """Compare alembic_version with the code's head revision; never mutates the schema."""
+    async with engine.connect() as conn:
+        status = await schema_status(conn)
+    app.state.schema_status = status
+    if status.at_head:
+        logger.info("schema at %s", status.head)
+    else:
+        logger.error("schema %s: %s", status.code, remediation_hint(status))
+    return status
+
+
 @app.on_event("startup")
 async def startup():
     from .services.storage_service import ensure_dirs
 
     ensure_dirs()
-    async with engine.begin() as conn:
-        await ensure_db_schema(conn)
-        await prepare_pgvector(conn)
-        await conn.run_sync(Base.metadata.create_all)
-        await ensure_face_embedding_index(conn)
-        await ensure_profile_and_approval_columns(conn)
+    # Alembic owns the schema (B1). The API only migrates when explicitly asked to.
+    if settings.MIGRATE_ON_STARTUP:
+        logger.info("MIGRATE_ON_STARTUP=true: running alembic upgrade head")
+        await asyncio.to_thread(upgrade_to_head)
+    await _check_schema()
 
     if not face_core_enabled():
         from .utils.face_gpu_queue import start_face_gpu_workers
@@ -157,6 +151,15 @@ async def ready():
             await db.execute(text("SELECT 1"))
     except Exception as exc:
         return JSONResponse({"status": "down", "db": str(exc)}, status_code=503)
+    schema: SchemaStatus | None = getattr(app.state, "schema_status", None)
+    if schema is not None and not schema.at_head:
+        # Re-check so an operator who ran `alembic upgrade head` does not need to restart the API.
+        schema = await _check_schema()
+    if schema is not None and not schema.at_head and settings.REQUIRE_SCHEMA_HEAD:
+        return JSONResponse(
+            {"status": "down", "code": "schema_out_of_date", "schema": schema.as_dict()},
+            status_code=503,
+        )
     queue = {"source": "face-core"} if face_core_enabled() else face_gpu_queue_stats()
     if face_core_enabled():
         try:
@@ -168,7 +171,7 @@ async def ready():
             )
     elif not queue.get("started"):
         return JSONResponse({"status": "down", "queue": queue}, status_code=503)
-    return {"status": "ok", "queue": queue}
+    return {"status": "ok", "queue": queue, "schema": schema.as_dict() if schema else None}
 
 
 @app.get("/metrics")

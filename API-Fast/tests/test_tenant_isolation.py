@@ -12,17 +12,12 @@ Requires DATABASE_URL to point at a reachable PostgreSQL (see tests/conftest.py)
 from __future__ import annotations
 
 import os
-import sys
 import uuid
-from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
 
-# Keep InsightFace / OpenCV / ONNX out of the import graph.
-for _mod in ("insightface", "insightface.app", "cv2", "onnxruntime"):
-    sys.modules.setdefault(_mod, MagicMock())
-
+# InsightFace / ONNX are stubbed by tests/conftest.py when the GPU stack is not installed.
 if not os.environ.get("DPU_TEST_DB_READY"):
     pytest.skip(
         "No test database: set TEST_DATABASE_URL or `pip install pgserver`",
@@ -460,21 +455,3 @@ async def test_other_tenant_admin_cannot_update_employee_at_all(fx):
         r = await c.put(f"/employees/company/{fx.company_a.companyId}", json=payload, headers=_auth(fx, "admin_b"))
         assert r.status_code == 403
 
-
-# ------------------------------------------------------------------ schema / backfill
-async def test_schema_migrate_backfills_face_encoding_company(fx):
-    from src.utils.schema_migrate import ensure_profile_and_approval_columns
-
-    orphan = _encoding(fx.emp_b, None)
-    async with async_session() as db:
-        db.add(orphan)
-        await db.commit()
-    async with engine.begin() as conn:
-        await ensure_profile_and_approval_columns(conn)
-    async with async_session() as db:
-        row = await db.get(FaceEncoding, orphan.faceEncodingId)
-        assert row.companyId == fx.company_b.companyId
-        idx = await db.execute(
-            text("SELECT 1 FROM pg_indexes WHERE indexname = 'face_encoding_company_member_idx'")
-        )
-        assert idx.first() is not None

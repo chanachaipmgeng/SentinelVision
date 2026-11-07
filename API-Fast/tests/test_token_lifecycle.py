@@ -1,8 +1,8 @@
 """A5: token lifecycle — jti/typ claims, revocation, refresh rotation + reuse detection, kiosk
 pairing codes, and the removal of `?token=`.
 
-Unit tests run everywhere. Tests marked ``db`` need PostgreSQL via ``TEST_DATABASE_URL``
-(e.g. ``postgresql+asyncpg://postgres:postgres@localhost:5432/dpu_test``) and are skipped otherwise.
+Unit tests run everywhere. The integration tests need the PostgreSQL that tests/conftest.py
+prepares (``TEST_DATABASE_URL`` or the embedded ``pgserver``) and is migrated to Alembic head.
 """
 from __future__ import annotations
 
@@ -24,8 +24,10 @@ from src.security.jwt import (
 from src.security.middleware import _token_from
 from src.services import token_revocation_service as revocation
 
-TEST_DB_URL = os.environ.get("TEST_DATABASE_URL", "")
-requires_db = pytest.mark.skipif(not TEST_DB_URL, reason="TEST_DATABASE_URL not set")
+requires_db = pytest.mark.skipif(
+    not os.environ.get("DPU_TEST_DB_READY"),
+    reason="No test database: set TEST_DATABASE_URL or `pip install pgserver`",
+)
 
 
 def _request(path: str, query: str = "", headers: dict | None = None) -> Request:
@@ -117,35 +119,16 @@ def test_legacy_token_without_jti_is_not_treated_as_revoked():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def db_env():
-    if not TEST_DB_URL:
-        pytest.skip("TEST_DATABASE_URL not set")
-    from sqlalchemy import text
+    """Schema comes from Alembic (conftest); only drop pooled connections from other loops."""
+    if not os.environ.get("DPU_TEST_DB_READY"):
+        pytest.skip("No test database: set TEST_DATABASE_URL or `pip install pgserver`")
 
-    from src.config.database import Base, engine
-    from src.models.company import Company  # noqa: F401
-    from src.models.hr_schedule import KioskDevice  # noqa: F401
-    from src.models.member import Member  # noqa: F401
-    from src.models.revoked_token import RevokedToken  # noqa: F401
-    from src.services.audit_service import AuditLog  # noqa: F401
+    async def _reset_pool():
+        from src.config.database import engine
 
-    tables = [
-        Member.__table__,
-        Company.__table__,
-        KioskDevice.__table__,
-        RevokedToken.__table__,
-        AuditLog.__table__,
-    ]
+        await engine.dispose(close=False)
 
-    async def _setup():
-        async with engine.begin() as conn:
-            for t in reversed(tables):
-                await conn.execute(text(f'DROP TABLE IF EXISTS "{t.name}" CASCADE'))
-            await conn.execute(text("DROP TYPE IF EXISTS roletype CASCADE"))
-            await conn.execute(text("DROP TYPE IF EXISTS statustype CASCADE"))
-            await conn.execute(text("DROP TYPE IF EXISTS publictype CASCADE"))
-            await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, tables=tables))
-
-    _run(_setup())
+    asyncio.run(_reset_pool())
     yield
 
 

@@ -43,6 +43,10 @@ services:
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      # Schema is managed by Alembic (docs/RUNBOOK.md "Database migrations"). Single-node
+      # installs may set MIGRATE_ON_STARTUP=true; otherwise run `alembic upgrade head` first.
+      MIGRATE_ON_STARTUP: ${MIGRATE_ON_STARTUP:-false}
+      REQUIRE_SCHEMA_HEAD: ${REQUIRE_SCHEMA_HEAD:-true}
       # OIDC SSO relying party (Authorization Code + PKCE). Empty = disabled.
       OIDC_ENABLED: ${OIDC_ENABLED:-false}
       OIDC_ISSUER: ${OIDC_ISSUER:-}

@@ -29,7 +29,7 @@ Invoke by mentioning the skill name or describing the matching task (agent auto-
 - Open paths only: `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/`
 - Frontend: `AuthGuard` + `RoleGuard`, single `HttpRequestInterceptor`, kiosk WS session sends `token`, `/auth/change-password` for first login
 - Services: `services/audit_service.py`, `notification_service.py` (outbox + SMTP/LINE worker + `ImportJob`), `storage_service.py` (retention), `observability.py` (request-id, JSON logs, `/metrics`), `face_match_service.py`
-- Ops: `docs/RUNBOOK.md`, `scripts/backup.sh`, `docker-compose.prod.yml`, `.gitlab-ci.yml`, `API-Fast/alembic/` (baseline marker; runtime schema still via `create_all` + `schema_migrate`)
+- Ops: `docs/RUNBOOK.md`, `scripts/backup.sh`, `docker-compose.prod.yml`, `.gitlab-ci.yml`, `API-Fast/alembic/` (single schema source: `alembic upgrade head` before start, `/ready` 503 while behind; see RUNBOOK "Database migrations")
 
 ## Face check-in evolution (keep in sync)
 

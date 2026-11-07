@@ -42,5 +42,5 @@ Shared finalize: `_finalize_check_in` (match **within company** → active compa
 - Prefer extending `face_controller` / `face_engine` / `face_gpu_queue` over new parallel pipelines
 - Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true` in `AUTO` mode; allow explicit `CHECK_OUT` after recent `CHECK_IN` (`_should_bypass_dedupe_for_explicit_mode`)
 - Outside geofence: `create_timestamp` needs a `note` — kiosk sends a default note
-- Do not add `DROP TABLE` or `create_all`-style destructive steps at startup; schema changes go in `utils/schema_migrate.py` (idempotent SQL) and an Alembic revision under `API-Fast/alembic/versions/`
+- The API never runs DDL at startup (no `create_all`, no ad-hoc SQL). Schema changes = edit the model + `alembic revision --autogenerate` under `API-Fast/alembic/versions/` (revision id ≤ 32 chars, write `downgrade()`); `tests/test_alembic_schema.py` fails on model/DB drift
 - Mutating handlers are audited by the middleware; do not log passwords, tokens, or embeddings

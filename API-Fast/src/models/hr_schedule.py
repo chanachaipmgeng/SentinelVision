@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -27,6 +27,8 @@ class WorkShift(Base):
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (Index("work_shift_company_idx", "companyId"),)
+
 
 class CompanyHoliday(Base):
     __tablename__ = "company_holiday"
@@ -41,6 +43,8 @@ class CompanyHoliday(Base):
     name = Column(String(150), nullable=False)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("company_holiday_company_date_idx", "companyId", "holiday_date"),)
 
 
 class LeaveRequest(Base):
@@ -68,6 +72,10 @@ class LeaveRequest(Base):
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
 
+    __table_args__ = (
+        Index("leave_request_company_dates_idx", "companyId", "start_date", "end_date", "status"),
+    )
+
 
 class KioskDevice(Base):
     __tablename__ = "kiosk_device"
@@ -91,3 +99,12 @@ class KioskDevice(Base):
     lastSeenAt = Column("last_seen_at", DateTime(timezone=True), nullable=True)
     revokedAt = Column("revoked_at", DateTime(timezone=True), nullable=True)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("kiosk_device_company_idx", "companyId", "revoked_at"),
+        Index(
+            "kiosk_device_pairing_code_idx",
+            "pairing_code_hash",
+            postgresql_where=text("pairing_code_hash IS NOT NULL"),
+        ),
+    )

@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     MAX_FAILED_LOGINS: int = 5
     LOCKOUT_MINUTES: int = 15
 
+    # Database schema (Alembic is the single source of truth; see docs/RUNBOOK.md)
+    # Run `alembic upgrade head` inside the API process before serving. Off by default: run the
+    # migration as a separate step (`alembic upgrade head` / scripts/migrate.sh) so multi-replica
+    # deployments do not race and a failed migration does not take the API down with it.
+    MIGRATE_ON_STARTUP: bool = False
+    # /ready returns 503 (`schema_out_of_date`) while alembic_version != head. Set false to only log.
+    REQUIRE_SCHEMA_HEAD: bool = True
+
     # Ops
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = True

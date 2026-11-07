@@ -59,5 +59,19 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 - `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `dpu-api` replicas concurrently without duplicate Email / LINE / Webhook deliveries.
 - Daily missing-attendance cutoff state is stored in `system_setting` under `key = "cutoff_sent:{companyId}"`.
 
-## Alembic Migrations
-Existing databases apply idempotent DDL via `src/utils/schema_migrate.py` at startup. After pulling the latest revisions, run `alembic stamp 0008_revocation_kiosk_pairing` inside `dpu-api` (needs `DATABASE_URL`). Fresh databases can run `alembic upgrade head` after `create_all`. Revision `0007_face_encoding_company_id` adds `face_encoding."companyId"` (backfilled) and revision `0008_revocation_kiosk_pairing` adds `revoked_token` and the kiosk pairing columns on `kiosk_device` (`token_hash` becomes nullable).
+## Database migrations (Alembic is the single schema source)
+Since Phase B1 the API **never** creates or alters tables itself (`create_all` and `utils/schema_migrate.py` are gone). The schema comes only from `API-Fast/alembic/versions/` (`0001_baseline` = full schema, `0002`–`0008` idempotent history, `0009_import_job_worker` = import_job worker hand-off columns (B7), `0010_schema_drift` = NOT NULL / index / FK drift of legacy databases). `alembic/env.py` uses the ORM metadata (`src/config/schema.py`) as `target_metadata`, so `alembic check` and `alembic revision --autogenerate` work. All commands run from `API-Fast/` with `DATABASE_URL` exported (asyncpg URLs are rewritten to psycopg); in Docker: `docker compose exec api alembic <cmd>` or `docker compose run --rm api alembic <cmd>` before the stack is up.
+
+| Situation | Commands |
+|-----------|----------|
+| Fresh database | `alembic upgrade head` then start `api` |
+| Upgrade after a deploy | `alembic upgrade head` (expand/contract: run **before** restarting replicas) |
+| Database created by the old startup path (pre-B1, no `alembic_version` table) | `alembic stamp 0008_revocation_kiosk_pairing && alembic upgrade head` — the stamp records what `create_all` + `schema_migrate` already applied; `0009` adds the import_job worker columns and `0010` tightens the nullable columns, adds the `face_encoding` HNSW index / `company_employee` unique indexes / `approved_by` FK when missing |
+| Database stamped at `0001_baseline` or `0002_schema_migrate` earlier | `alembic upgrade head` (all later revisions are idempotent) |
+| Verify | `alembic current` shows `0010_schema_drift (head)`; `alembic check` prints `No new upgrade operations detected.` |
+| Roll back the last revision | `alembic downgrade -1` (only `0007`, `0009` and `0010` have real `downgrade()`; `0002`–`0006`/`0008` are history markers and cannot be reverted automatically) |
+| New schema change | edit the model → `alembic revision --autogenerate -m "..."` → review the file (revision ids ≤ 32 chars) → `alembic upgrade head` → `alembic check` — the test suite (`tests/test_alembic_schema.py`) fails on any model/DB drift |
+
+Readiness gate: at startup the API compares `alembic_version` with the code's head revision. While they differ, `GET /ready` returns `503 {"code": "schema_out_of_date", "schema": {"status": "behind"|"unmanaged", ...}}` and the log shows the exact remediation command; the probe recovers on its own once `alembic upgrade head` finished (no restart). `REQUIRE_SCHEMA_HEAD=false` downgrades this to a log warning. `MIGRATE_ON_STARTUP=true` makes the `api` process run `alembic upgrade head` itself before serving — acceptable for a single-node Docker Compose install, **not** for the dual-GPU overlay or any multi-replica deployment (two processes would race), and it cannot stamp a legacy database for you.
+
+Never run `alembic stamp` on a database you are not sure about: stamping records that a revision was applied without applying it. When in doubt take a backup (`scripts/backup.sh`), restore it to a scratch database and try the upgrade there first.

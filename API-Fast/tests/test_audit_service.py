@@ -4,10 +4,8 @@
 audit row that carried a ``company_id`` died with ``NameError`` inside the middleware's
 fire-and-forget task and the company audit log stayed empty.
 
-These tests need a reachable Postgres at ``DATABASE_URL`` (the app engine is reused);
+These tests need the PostgreSQL prepared by ``tests/conftest.py`` (migrated to Alembic head);
 they skip when the database cannot be reached so the rest of the suite still runs.
-Only the ``member`` and ``audit_log`` tables are created, so no pgvector extension is
-required.
 """
 
 from __future__ import annotations
@@ -29,20 +27,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 import src.models  # noqa: E402,F401  (register mappers so Member relationships resolve)
-from src.config.database import Base, async_session, engine, ensure_db_schema  # noqa: E402
+from src.config.database import async_session, engine  # noqa: E402
 from src.models.member import Member, RoleType, StatusType  # noqa: E402
 from src.routes.company_routes import router as company_router  # noqa: E402
 from src.security.jwt import create_access_token  # noqa: E402
 from src.security.middleware import AuthzMiddleware  # noqa: E402
 from src.services.audit_service import AuditLog, write_audit  # noqa: E402
-
-_TEST_TABLES = [Member.__table__, AuditLog.__table__]
-
-
-async def _prepare_schema() -> None:
-    async with engine.begin() as conn:
-        await ensure_db_schema(conn)
-        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, tables=_TEST_TABLES))
 
 
 async def _probe_database() -> bool:
@@ -88,7 +78,6 @@ async def test_write_audit_persists_company_id_directly():
     company_id = uuid.uuid4()
     member = _make_admin(uuid.uuid4().hex[:8])
     try:
-        await _prepare_schema()
         async with async_session() as db:
             db.add(member)
             await db.commit()
@@ -128,8 +117,8 @@ async def test_write_audit_persists_company_id_directly():
 def audited_client():
     """Minimal app wired with the real ``AuthzMiddleware`` and the real audit-log read route.
 
-    The full ``src.main`` app is not used because its startup pulls InsightFace / ONNX and
-    ``create_all`` over pgvector tables; the middleware → ``_audit`` → ``write_audit`` path
+    The full ``src.main`` app is not used because its startup pulls InsightFace / ONNX and the
+    GPU queue; the middleware → ``_audit`` → ``write_audit`` path
     exercised here is exactly the one that silently failed in production.
     """
     company_id = uuid.uuid4()
@@ -137,7 +126,6 @@ def audited_client():
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        await _prepare_schema()
         async with async_session() as db:
             db.add(member)
             await db.commit()

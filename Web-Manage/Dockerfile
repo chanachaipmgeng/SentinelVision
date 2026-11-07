@@ -18,7 +18,9 @@ RUN npx ng build --configuration=production
 FROM nginx:1.27-alpine AS runtime
 COPY docker/nginx-spa.conf /etc/nginx/conf.d/default.conf
 COPY docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
-RUN chmod +x /docker-entrypoint.d/40-runtime-config.sh
+# Strip CR in case the build context came from a CRLF (Windows) checkout; the shebang must be clean.
+RUN sed -i 's/\r$//' /docker-entrypoint.d/40-runtime-config.sh \
+    && chmod +x /docker-entrypoint.d/40-runtime-config.sh
 COPY --from=build /app/dist/preview/browser /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

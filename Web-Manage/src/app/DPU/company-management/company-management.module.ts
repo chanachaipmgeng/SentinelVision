@@ -128,6 +128,11 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./audit-log/audit-log.component').then((m) => m.AuditLogComponent),
     },
+    {
+      path: 'company/devices',
+      loadComponent: () =>
+        import('./devices/devices.component').then((m) => m.DevicesComponent),
+    },
     ],
   },
 ];

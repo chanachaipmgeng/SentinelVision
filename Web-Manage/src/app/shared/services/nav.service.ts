@@ -351,6 +351,13 @@ export class NavService implements OnDestroy {
         moduleId: 'GOVERNANCE',
         permission: 'audit.read',
       },
+      {
+        icon: 'tablet',
+        path: '/company/devices',
+        title: 'จัดการอุปกรณ์ Kiosk',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+      },
     ];
   }
 

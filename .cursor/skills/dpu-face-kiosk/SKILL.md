@@ -36,7 +36,8 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 ## Auth contract
 
 - Every face HTTP route needs `Authorization: Bearer`; form `companyId` is bound to the caller (company admin of that company or system admin)
-- WS: first message `{"type":"session","companyId":..,"token":..,"latitude":..,"longitude":..}` — server validates the token and company before accepting frames. Without a valid token the server replies `{"type":"error","detail":"Invalid token"}`
+- WS: first message `{"type":"session","companyId":..,"token":..,"latitude":..,"longitude":..}` — server validates the token and company before accepting frames. Before `session_ok`, any other message (even `ping`), invalid JSON, a bad token, or 5 s of silence (`WS_KIOSK_AUTH_TIMEOUT_SECONDS`) gets `{"type":"error","code":"unauthenticated"|"invalid_session"|"auth_timeout",...}` then close 1008. Client gates `detect`/`identify`/`checkin` on `wsSessionOk` (set by `session_ok`)
+- Connection caps: `WS_KIOSK_MAX_CONN_PER_IP` (16) / `WS_KIOSK_MAX_CONN_PER_COMPANY` (64) per API process → `too_many_connections` + 1008; nginx `limit_conn kiosk_ws_per_ip 16` (HTTP 429 at handshake). Raise both for `scripts/kiosk-load/` runs from one host
 - Access tokens last `ACCESS_TOKEN_EXPIRE_MINUTES` (60). Server sends `token_expiring`; client calls `/auth/refresh-token` and re-sends `session` without dropping the socket. Reconnect always re-sends `session` from `TokenService`
 - Boxes come from WS `detected` only. Do not add face-api.js or `assets/models` back into the admin image
 - HTTP 503 `face_core_down` means the circuit is open; show a scan-unavailable state, do not hammer detect

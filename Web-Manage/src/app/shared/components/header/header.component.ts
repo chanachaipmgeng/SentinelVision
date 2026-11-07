@@ -35,16 +35,13 @@ export class HeaderComponent implements OnInit {
     private translate: TranslateService,
     private http: HttpClient) {
 
-    this.translate.use(
-      sessionStorage.getItem("Lang") != null
-        ? sessionStorage.getItem("Lang")!
-        : "th"
-    );
-
-    this.selectedLanguage =
+    const lang =
       sessionStorage.getItem("Lang") != null
         ? sessionStorage.getItem("Lang")!
         : "th";
+    this.translate.use(lang);
+    this.selectedLanguage = lang;
+    document.documentElement.lang = lang.startsWith("en") ? "en" : "th";
   }
 
   private loadPendingBadge(): void {
@@ -66,10 +63,11 @@ export class HeaderComponent implements OnInit {
   fullScreenIconVisible = true;
   exitFullScreenIconVisible = false;
 
-  changeLanguage(lang: any) {
+  changeLanguage(lang: string) {
     sessionStorage.setItem("Lang", lang);
     this.translate.use(lang);
     this.selectedLanguage = lang;
+    document.documentElement.lang = lang.startsWith('en') ? 'en' : 'th';
   }
 
 

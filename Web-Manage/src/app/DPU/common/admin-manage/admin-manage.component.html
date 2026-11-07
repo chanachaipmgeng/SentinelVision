@@ -1,8 +1,8 @@
-<app-page-header [title]="'จัดการสิทธิ์ผู้ดูแลระบบ'" [activeTitle]="'ผู้ดูแลระบบ'" [title1]="'ผู้ดูแลระบบ'"></app-page-header>
+<app-page-header [title]="'Admins'" [activeTitle]="'Admins'" [title1]="'Admins'"></app-page-header>
 
 <div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="ผู้ดูแลระบบ">
+    <app-page-toolbar title="Admins">
       <ng-container chips>
         <app-stat-chip>ทั้งหมด {{ itemsList.length }}</app-stat-chip>
         <app-stat-chip tone="ok">ใช้งาน {{ activeCount }}</app-stat-chip>
@@ -17,7 +17,7 @@
           <i class="ri-user-unfollow-line"></i><span>ปิดใช้</span>
         </button>
         <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn" (click)="deleteSelect()">
-          <i class="ri-delete-bin-line"></i><span>ลบ</span>
+          <i class="ri-delete-bin-line"></i><span>{{ 'Delete' | translate }}</span>
         </button>
         <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
           <i class="ri-add-line"></i><span>เพิ่มผู้ดูแล</span>
@@ -41,7 +41,7 @@
           *ngIf="!loading && pageItems.length === 0"
           icon="ri-shield-user-line"
           [message]="searchTerm ? 'ไม่พบผู้ดูแลตามคำค้น' : 'ยังไม่มีผู้ดูแลระบบ'"
-          [actionLabel]="searchTerm ? 'ล้างการค้นหา' : ''"
+          [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"
           (action)="clearSearch()">
         </app-empty-state>
         <div class="table-responsive" *ngIf="!loading && pageItems.length">
@@ -50,10 +50,10 @@
               <tr>
                 <th class="w-10"></th>
                 <th>ผู้ดูแล</th>
-                <th>อีเมล</th>
+                <th>{{ 'Email' | translate }}</th>
                 <th>เบอร์</th>
-                <th>สถานะ</th>
-                <th class="text-end">จัดการ</th>
+                <th>{{ 'Status' | translate }}</th>
+                <th class="text-end">{{ 'Manage' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -129,23 +129,23 @@
             <input type="password" class="form-control" [(ngModel)]="confirmPassword">
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ชื่อ</label>
+            <label class="form-label">{{ 'Name' | translate }}</label>
             <input type="text" class="form-control" [(ngModel)]="selectModel.firstName">
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">นามสกุล</label>
+            <label class="form-label">{{ 'Last name' | translate }}</label>
             <input type="text" class="form-control" [(ngModel)]="selectModel.lastName">
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">อีเมล</label>
+            <label class="form-label">{{ 'Email' | translate }}</label>
             <input type="text" class="form-control" [(ngModel)]="selectModel.email">
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">เบอร์ติดต่อ</label>
+            <label class="form-label">{{ 'Mobile' | translate }}</label>
             <input type="text" class="form-control" [(ngModel)]="selectModel.phoneNumber">
           </div>
           <div class="col-span-12">
-            <label class="form-label">สถานะ</label>
+            <label class="form-label">{{ 'Status' | translate }}</label>
             <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
               <ng-option [value]="0">Unactive</ng-option>
               <ng-option [value]="1">Active</ng-option>
@@ -155,8 +155,8 @@
         </div>
       </div>
       <div class="ti-modal-footer">
-        <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">ยกเลิก</button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">บันทึก</button>
+        <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">{{ 'Cancel' | translate }}</button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
       </div>
     </div>
   </div>

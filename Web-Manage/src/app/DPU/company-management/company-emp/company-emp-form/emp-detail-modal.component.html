@@ -25,17 +25,17 @@
             </div>
           </div>
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">ชื่อ</label>
+            <label for="deal-name" class="form-label">{{ 'Name' | translate }}</label>
             <input type="text" class="form-control" id="deal-name" placeholder="ชื่อ"
               [(ngModel)]="selectModel.member.firstName">
           </div>
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-lead-score" class="form-label">นามสกุล</label>
+            <label for="deal-lead-score" class="form-label">{{ 'Last name' | translate }}</label>
             <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
               [(ngModel)]="selectModel.member.lastName">
           </div>
           <div class="xl:col-span-12 col-span-12">
-            <label for="company-name" class="form-label">อีเมล <span class="text-danger">*</span></label>
+            <label for="company-name" class="form-label">{{ 'Email' | translate }} <span class="text-danger">*</span></label>
             <input type="email" class="form-control" id="company-name" placeholder="เช่น name@company.com"
               [(ngModel)]="selectModel.member.email">
             <p class="text-xs text-textmuted mt-1 mb-0">ต้องเป็นรูปแบบอีเมลจริง เช่น name&#64;company.com (ต้องมี &#64; และจุดในโดเมน)</p>
@@ -60,7 +60,7 @@
             <input type="date" class="form-control" [(ngModel)]="selectModel.member.birthDate">
           </div>
           <div class="xl:col-span-12 col-span-12">
-            <label class="form-label">ที่อยู่</label>
+            <label class="form-label">{{ 'Address' | translate }}</label>
             <textarea class="form-control" rows="2" [(ngModel)]="selectModel.member.address"></textarea>
           </div>
           <div class="xl:col-span-6 col-span-12">
@@ -83,7 +83,7 @@
           </div>
 
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">แผนก</label>
+            <label for="deal-name" class="form-label">{{ 'Department' | translate }}</label>
             <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
               [(ngModel)]="selectModel.department">
               @for(item of departmentList;track departmentList){
@@ -100,7 +100,7 @@
             </ng-select>
           </div>
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">ตำแหน่ง</label>
+            <label for="deal-name" class="form-label">{{ 'Position' | translate }}</label>
             <!-- <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
               [(ngModel)]="selectModel.position.positionId">
               @for(item of positionList;track positionList){
@@ -116,7 +116,7 @@
             </ng-select>
           </div>
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">ประเภท</label>
+            <label for="deal-name" class="form-label">{{ 'Type' | translate }}</label>
             <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
               [(ngModel)]="selectModel.empType">
               <ng-option [value]="0">รายวัน</ng-option>
@@ -124,16 +124,16 @@
             </ng-select>
           </div>
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">เงินเดือน</label>
+            <label for="deal-name" class="form-label">{{ 'Salary' | translate }}</label>
             <input type="text" class="form-control" id="company-name" placeholder="เงินเดือน"
               [(ngModel)]="selectModel.salary">
           </div>
 
           <div class="xl:col-span-6 col-span-12">
-            <label for="deal-name" class="form-label">สิทธิ์การใช้งาน</label>
+            <label for="deal-name" class="form-label">{{ 'Permissions' | translate }}</label>
             <ng-select name="choices-multiple-remove-button1" id="choices-multiple-remove-button1" placeholder=""
               [(ngModel)]="selectModel.companyRoleType">
-              <ng-option [value]="0">พนักงาน</ng-option>
+              <ng-option [value]="0">{{ 'Employee' | translate }}</ng-option>
               <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
             </ng-select>
           </div>
@@ -144,7 +144,7 @@
           data-hs-overlay="#modal-detail">
           ยกเลิก
         </button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save.emit()">บันทึก</button>
+        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save.emit()">{{ 'Save' | translate }}</button>
       </div>
     </div>
   </div>

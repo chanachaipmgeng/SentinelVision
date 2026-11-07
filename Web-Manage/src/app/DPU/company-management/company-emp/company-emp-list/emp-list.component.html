@@ -5,11 +5,11 @@
             <table class="table whitespace-nowrap emp-table mb-0">
               <thead>
                 <tr>
-                  <th scope="col">พนักงาน</th>
-                  <th scope="col">รหัส</th>
-                  <th scope="col">แผนก</th>
-                  <th scope="col">ตำแหน่ง</th>
-                  <th scope="col" class="text-end">จัดการ</th>
+                  <th scope="col">{{ 'Employee' | translate }}</th>
+                  <th scope="col">{{ 'ID' | translate }}</th>
+                  <th scope="col">{{ 'Department' | translate }}</th>
+                  <th scope="col">{{ 'Position' | translate }}</th>
+                  <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -73,15 +73,15 @@
               </div>
               <div class="emp-card-meta emp-card-meta--stack">
                 <div>
-                  <span class="emp-meta-label">รหัส</span>
+                  <span class="emp-meta-label">{{ 'ID' | translate }}</span>
                   <span class="emp-meta-value">{{ item.employeeId || '—' }}</span>
                 </div>
                 <div>
-                  <span class="emp-meta-label">แผนก</span>
+                  <span class="emp-meta-label">{{ 'Department' | translate }}</span>
                   <span class="emp-meta-value">{{ item.department?.thName || '—' }}</span>
                 </div>
                 <div>
-                  <span class="emp-meta-label">ตำแหน่ง</span>
+                  <span class="emp-meta-label">{{ 'Position' | translate }}</span>
                   <span class="emp-meta-value">{{ item.position?.thName || '—' }}</span>
                 </div>
               </div>

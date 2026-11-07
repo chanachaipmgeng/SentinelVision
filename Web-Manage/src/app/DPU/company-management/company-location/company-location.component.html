@@ -1,7 +1,7 @@
 <app-page-header
-  [title]="'สถานที่การลงเวลา'"
-  [activeTitle]="'จัดการบริษัท'"
-  [title1]="'สถานที่การลงเวลา'">
+  [title]="'Punch locations'"
+  [activeTitle]="'Manage companies'"
+  [title1]="'Punch locations'">
 </app-page-header>
 
 <div class="loc-page grid grid-cols-12 gap-x-6 gap-y-4">
@@ -33,9 +33,9 @@
             </div>
 
             <div class="loc-type-toggle" role="group" aria-label="กรองประเภท">
-              <button type="button" class="loc-type-btn" [class.active]="typeFilter === ''" (click)="setTypeFilter('')">ทั้งหมด</button>
-              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '0'" (click)="setTypeFilter('0')">ถาวร</button>
-              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '1'" (click)="setTypeFilter('1')">ชั่วคราว</button>
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === ''" (click)="setTypeFilter('')">{{ 'All' | translate }}</button>
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '0'" (click)="setTypeFilter('0')">{{ 'Permanent' | translate }}</button>
+              <button type="button" class="loc-type-btn" [class.active]="typeFilter === '1'" (click)="setTypeFilter('1')">{{ 'Temporary' | translate }}</button>
             </div>
 
             <button
@@ -44,7 +44,7 @@
               class="ti-btn ti-btn-danger-full modern-btn loc-tool-btn"
               (click)="deleteSelect()">
               <i class="ri-delete-bin-line"></i>
-              <span>ลบที่เลือก</span>
+              <span>{{ 'Delete selected' | translate }}</span>
             </button>
 
             <a
@@ -53,7 +53,7 @@
               (click)="new()"
               data-hs-overlay="#modal-detail">
               <i class="ri-add-line"></i>
-              <span>เพิ่มสถานที่</span>
+              <span>{{ 'Add location' | translate }}</span>
             </a>
           </div>
         </div>
@@ -183,11 +183,11 @@
       <div class="box-body loc-detail-body">
         <div class="loc-facts-grid">
           <div class="loc-fact">
-            <span class="loc-fact-label">พิกัด</span>
+            <span class="loc-fact-label">{{ 'Coordinates' | translate }}</span>
             <span class="loc-fact-value">{{ item.latitude }}, {{ item.longitude }}</span>
           </div>
           <div class="loc-fact">
-            <span class="loc-fact-label">รัศมี</span>
+            <span class="loc-fact-label">{{ 'Radius' | translate }}</span>
             <span class="loc-fact-value">{{ item.radius || 0 }} กม.</span>
           </div>
           <div class="loc-fact">
@@ -199,7 +199,7 @@
             <span class="loc-fact-value">{{ item.endDate ? (item.endDate | date: 'dd/MM/yyyy') : '—' }}</span>
           </div>
           <div class="loc-fact loc-fact--wide">
-            <span class="loc-fact-label">อัปเดตล่าสุด</span>
+            <span class="loc-fact-label">{{ 'Last updated' | translate }}</span>
             <span class="loc-fact-value">{{ item.updatedAt ? (item.updatedAt | date: 'dd/MM/yyyy HH:mm') : '—' }}</span>
           </div>
         </div>
@@ -207,7 +207,7 @@
         <div class="loc-detail-actions">
           <a [href]="mapsLink" target="_blank" rel="noopener noreferrer" class="ti-btn ti-btn-light modern-btn loc-tool-btn">
             <i class="ri-external-link-line"></i>
-            <span>เปิดใน Maps</span>
+            <span>{{ 'Open in Maps' | translate }}</span>
           </a>
           <button
             type="button"
@@ -215,11 +215,11 @@
             (click)="openEdit(item)"
             data-hs-overlay="#modal-detail">
             <i class="ri-pencil-line"></i>
-            <span>แก้ไข</span>
+            <span>{{ 'Edit' | translate }}</span>
           </button>
           <button type="button" class="ti-btn ti-btn-danger-full modern-btn loc-tool-btn" (click)="delete(item)">
             <i class="ri-delete-bin-line"></i>
-            <span>ลบ</span>
+            <span>{{ 'Delete' | translate }}</span>
           </button>
         </div>
 
@@ -266,7 +266,7 @@
       <div class="ti-modal-body px-4 loc-modal-body">
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12">
-            <label class="form-label">ชื่อสถานที่</label>
+            <label class="form-label">{{ 'Location name' | translate }}</label>
             <input [(ngModel)]="selectModel.locationName" type="text" placeholder="เช่น สำนักงานใหญ่"
               class="form-control">
           </div>
@@ -282,7 +282,7 @@
           </div>
 
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ประเภท</label>
+            <label class="form-label">{{ 'Type' | translate }}</label>
             <ng-select [(ngModel)]="selectModel.locationType" [clearable]="false" [appendTo]="'body'">
               <ng-option [value]="0">{{ 'PERMANENT' | translate }}</ng-option>
               <ng-option [value]="1">{{ 'TEMPORARY' | translate }}</ng-option>
@@ -305,12 +305,12 @@
           </div>
 
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ละติจูด</label>
+            <label class="form-label">{{ 'Latitude' | translate }}</label>
             <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.latitude"
               (ngModelChange)="changeMarker()">
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ลองจิจูด</label>
+            <label class="form-label">{{ 'Longitude' | translate }}</label>
             <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.longitude"
               (ngModelChange)="changeMarker()">
           </div>

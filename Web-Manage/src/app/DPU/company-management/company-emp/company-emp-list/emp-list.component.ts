@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { EmployeeModel } from '../../../models/employee.model';
 import { EmpListViewMode } from '../company-emp.helpers';
 
@@ -11,7 +12,7 @@ import { EmpListViewMode } from '../company-emp.helpers';
 @Component({
   selector: 'app-emp-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   templateUrl: './emp-list.component.html',
 })
 export class EmpListComponent {

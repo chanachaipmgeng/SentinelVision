@@ -31,17 +31,32 @@
     {{ toastMessage }}
   </div>
 
-  <div *ngIf="consentRequired" class="dpu-kiosk__consent" role="dialog" aria-modal="true">
+  <div
+    *ngIf="consentRequired"
+    class="dpu-kiosk__consent"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'kiosk.consent.aria' | translate"
+    [appFocusTrap]="consentRequired">
     <div class="dpu-kiosk__consent-card">
-      <h2>ความยินยอมข้อมูลชีวภาพ (PDPA)</h2>
+      <h2 id="kiosk-consent-title">{{ 'pdpa.consent.title' | translate }}</h2>
       <p class="dpu-kiosk__consent-version">
-        เวอร์ชันนโยบาย: {{ consentPolicy?.version || '1.0' }}
+        {{ 'pdpa.consent.version' | translate }}: {{ consentPolicy?.version || '1.0' }}
       </p>
-      <div class="dpu-kiosk__consent-text">{{ consentText() }}</div>
+      <div class="dpu-kiosk__consent-text" aria-describedby="kiosk-consent-title">{{ consentText() }}</div>
       <button type="button" class="dpu-kiosk__consent-accept" (click)="acceptConsentPolicy()">
-        ยอมรับและดำเนินการต่อ
+        {{ 'pdpa.consent.accept' | translate }}
       </button>
     </div>
+  </div>
+
+  <div *ngIf="degradedMode" class="dpu-kiosk__banner dpu-kiosk__banner--degraded" role="status" aria-live="polite">
+    {{ 'kiosk.degraded.banner' | translate }}
+    <span *ngIf="queuePending"> ({{ 'GPU queue busy' | translate }}: {{ queuePending }})</span>
+  </div>
+  <div *ngIf="offlineQueuedCount > 0" class="dpu-kiosk__banner dpu-kiosk__banner--offline" role="status" aria-live="polite">
+    {{ 'kiosk.offline.banner' | translate }} — {{ offlineQueuedCount }} {{ 'Pending offline punches' | translate }}
+    <span *ngIf="reconcilingOffline"> · {{ 'Reconciling offline punches' | translate }}</span>
   </div>
 
   <header class="dpu-kiosk__top">
@@ -50,19 +65,29 @@
       <h1 class="dpu-kiosk__title">{{ kioskTitle }}</h1>
     </div>
     <div class="dpu-kiosk__top-actions">
+      <button
+        type="button"
+        class="dpu-kiosk__home-btn"
+        (click)="toggleLargeText()"
+        [attr.aria-pressed]="largeTextMode"
+        [attr.title]="(largeTextMode ? 'kiosk.largeText.on' : 'kiosk.largeText.off') | translate"
+        [attr.aria-label]="'Large text' | translate">
+        <i class="ri-font-size" aria-hidden="true"></i>
+        <span>{{ 'Large text' | translate }}</span>
+      </button>
       @if (!isKioskDevice) {
-        <a routerLink="/company/scan-hub" class="dpu-kiosk__home-btn" title="Scan & Action Hub">
-          <i class="ri-radar-line"></i>
-          <span>Scan Hub</span>
+        <a routerLink="/company/scan-hub" class="dpu-kiosk__home-btn" [attr.title]="'Scan Hub' | translate">
+          <i class="ri-radar-line" aria-hidden="true"></i>
+          <span>{{ 'Scan Hub' | translate }}</span>
         </a>
-        <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" title="กลับหน้าหลัก">
-          <i class="ri-home-5-line"></i>
-          <span>หน้าหลัก</span>
+        <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" [attr.title]="'Home' | translate">
+          <i class="ri-home-5-line" aria-hidden="true"></i>
+          <span>{{ 'Home' | translate }}</span>
         </a>
       } @else {
-        <button type="button" class="dpu-kiosk__home-btn" (click)="unpairKiosk()" title="ยกเลิกการจับคู่อุปกรณ์นี้">
-          <i class="ri-link-unlink-m"></i>
-          <span>ยกเลิกจับคู่</span>
+        <button type="button" class="dpu-kiosk__home-btn" (click)="unpairKiosk()" [attr.title]="'Unpair' | translate">
+          <i class="ri-link-unlink-m" aria-hidden="true"></i>
+          <span>{{ 'Unpair' | translate }}</span>
         </button>
       }
       <div class="dpu-kiosk__clock" aria-live="polite">
@@ -72,7 +97,7 @@
     </div>
   </header>
 
-  <div class="dpu-kiosk__chips" aria-label="สถานะระบบและโหมดสแกน">
+  <div class="dpu-kiosk__chips" [attr.aria-label]="'System status and scan mode' | translate">
     <!-- Attendance / UNIFIED_HYBRID: punch chips -->
     <ng-container *ngIf="showPunchChips">
       <button
@@ -311,7 +336,7 @@
       <ng-container *ngIf="showAttendancePanel">
         <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
           <div>
-            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">วันนี้</h2>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">{{ 'Today' | translate }}</h2>
             <p class="dpu-kiosk__subtitle">รายชื่อที่ลงเวลาแล้ว</p>
           </div>
           <button type="button" class="dpu-kiosk__icon-btn" (click)="loadAttendance()" title="รีเฟรช">
@@ -326,11 +351,11 @@
           </div>
           <div class="dpu-kiosk__summary-card">
             <span class="dpu-kiosk__summary-val">{{ att.summary.inAreaCount }}</span>
-            <span class="dpu-kiosk__summary-label">ในพื้นที่</span>
+            <span class="dpu-kiosk__summary-label">{{ 'In area' | translate }}</span>
           </div>
           <div class="dpu-kiosk__summary-card is-warn">
             <span class="dpu-kiosk__summary-val">{{ att.summary.outsideCount }}</span>
-            <span class="dpu-kiosk__summary-label">นอกพื้นที่</span>
+            <span class="dpu-kiosk__summary-label">{{ 'Out of area' | translate }}</span>
           </div>
         </div>
 
@@ -350,9 +375,9 @@
                 · {{ person.department || '—' }}
               </p>
               <p class="dpu-kiosk__meta mb-0">
-                <span *ngIf="isOutside(person)">นอกพื้นที่</span>
-                <span *ngIf="!isOutside(person) && isCheckedOut(person)">ออกงาน</span>
-                <span *ngIf="!isOutside(person) && !isCheckedOut(person)">เข้างาน</span>
+                <span *ngIf="isOutside(person)">{{ 'Out of area' | translate }}</span>
+                <span *ngIf="!isOutside(person) && isCheckedOut(person)">{{ 'Check-out' | translate }}</span>
+                <span *ngIf="!isOutside(person) && !isCheckedOut(person)">{{ 'Check-in' | translate }}</span>
                 <span *ngIf="person.isLate"> · สาย {{ person.lateMinutes }} นาที</span>
                 <span *ngIf="person.overtimeMinutes && person.overtimeMinutes > 0"> · OT {{ person.overtimeMinutes }} นาที</span>
                 <span *ngIf="person.locationName"> · {{ person.locationName }}</span>
@@ -394,15 +419,15 @@
           <h3 class="dpu-kiosk__person">{{ latestResult.employeeName }}</h3>
           <dl class="dpu-kiosk__facts">
             <div>
-              <dt>รหัส</dt>
+              <dt>{{ 'ID' | translate }}</dt>
               <dd>{{ latestResult.employeeId || '-' }}</dd>
             </div>
             <div>
-              <dt>แผนก</dt>
+              <dt>{{ 'Department' | translate }}</dt>
               <dd>{{ latestResult.department || '-' }}</dd>
             </div>
             <div>
-              <dt>ตำแหน่ง</dt>
+              <dt>{{ 'Position' | translate }}</dt>
               <dd>{{ latestResult.position || '-' }}</dd>
             </div>
             <div *ngIf="latestResult.confidencePercent != null">
@@ -413,7 +438,7 @@
               </dd>
             </div>
             <div>
-              <dt>สถานที่</dt>
+              <dt>{{ 'Location' | translate }}</dt>
               <dd>{{ latestResult.locationName || '-' }}</dd>
             </div>
             <div>

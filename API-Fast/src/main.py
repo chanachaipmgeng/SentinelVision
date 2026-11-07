@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 import asyncio
 import logging
 
-from .config.database import engine, Base, async_session
+from .config.database import engine, Base, async_session, ensure_db_schema
 from .config.settings import settings
 from .security.jwt import assert_secret_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
@@ -110,6 +110,7 @@ async def startup():
 
     ensure_dirs()
     async with engine.begin() as conn:
+        await ensure_db_schema(conn)
         await prepare_pgvector(conn)
         await conn.run_sync(Base.metadata.create_all)
         await ensure_face_embedding_index(conn)

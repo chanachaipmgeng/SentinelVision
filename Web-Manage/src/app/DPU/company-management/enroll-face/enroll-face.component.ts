@@ -51,6 +51,16 @@ import {
   stationModeRequiresGps,
   stationModeTitle,
 } from '../scan-hub/scan-station-mode';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
+import { LocaleFormatService } from '../../../shared/services/locale-format.service';
+import {
+  KioskOfflineQueueService,
+  OfflinePunchPayload,
+} from './kiosk-offline-queue.service';
+
+/** GPU pending depth at/above this enters degraded mode (slower detect + banner). */
+const KIOSK_DEGRADED_QUEUE_PENDING = 8;
 
 // pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
 // drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
@@ -141,13 +151,13 @@ interface FaceTrack {
 @Component({
   selector: 'app-enroll-face',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, RouterModule],
+  imports: [CommonModule, FormsModule, SharedModule, RouterModule, TranslateModule, FocusTrapDirective],
   templateUrl: './enroll-face.component.html',
   styleUrl: './enroll-face.component.scss'
 })
 export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('video') video: ElementRef;
-  @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('video') video!: ElementRef<HTMLVideoElement>;
+  @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
   @ViewChild('clockDate') clockDateEl?: ElementRef<HTMLElement>;
   @ViewChild('decorHour') decorHourEl?: ElementRef<HTMLElement>;
@@ -187,6 +197,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   consentPolicy: { version?: string; textTh?: string; textEn?: string } | null = null;
   private readonly consentStoragePrefix = 'dpu.pdpa.consent.';
 
+  /** E6 kiosk large-text mode (html.dpu-kiosk-large-text). */
+  largeTextMode = false;
+  /** E8 degraded when GPU queue is backed up. */
+  degradedMode = false;
+  offlineQueuedCount = 0;
+  reconcilingOffline = false;
+
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
   checkingInCount = 0;
@@ -223,7 +240,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private renderRafId: number | null = null;
   private canvasDirty = false;
 
-  // Server-side detection (WS `detect`) — falls back to local face-api
+  // Server-side detection only (WS `detect`) — local face-api was removed (E8).
   private wsDetectInFlight = false;
   private lastWsDetectAt = 0;
   private wsDetectMisses = 0;
@@ -234,11 +251,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private lastDetectThumb: Uint8ClampedArray | null = null;
   private lastDetectionsAt = 0;
 
-  // Local face-api fallback health (devices without WebGL crash tfjs)
-  private localDetectReady = false;
-  private localDetectErrors = 0;
   private readonly memberCooldownUntil = new Map<string, number>();
   private checkInInFlight = 0;
+  private onlineHandler: (() => void) | null = null;
+  private offlineHandler: (() => void) | null = null;
 
   /**
    * 60fps easing toward latest detection.
@@ -292,6 +308,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     private route: ActivatedRoute,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
+    private offlineQueue: KioskOfflineQueueService,
+    private localeFormat: LocaleFormatService,
+    private translate: TranslateService,
   ) {
     const kiosk = this.tokenService.getKioskSession();
     const company = this.tokenService.getSelectCompany();
@@ -301,6 +320,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.isKioskDevice = !!kiosk;
     this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
     this.resolveStationContext();
+    this.largeTextMode = sessionStorage.getItem('dpu.kiosk.largeText') === '1';
   }
 
   /** Resolve `:stationMode` + zoneId/eventId query; timestamp-face stays ATTENDANCE. */
@@ -486,6 +506,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngOnInit() {
     document.documentElement.classList.add('dpu-kiosk-mode');
+    this.applyLargeTextClass();
     this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
     this.getCurrentLocation();
     unlockBeepAudio();
@@ -494,7 +515,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.loadModuleStationDefaults();
     this.loadZoneAndEventOptions();
     this.loadConsentPolicy();
-    this.prepareLocalDetector();
+    this.refreshOfflineQueueCount();
+    this.bindOnlineListeners();
     this.startVideo();
     this.getCompanyLocation();
     this.ngZone.runOutsideAngular(() => this.connectKioskWs());
@@ -509,6 +531,141 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         this.loadTtsSettings();
       }, 15000);
     });
+  }
+
+  toggleLargeText(): void {
+    this.largeTextMode = !this.largeTextMode;
+    sessionStorage.setItem('dpu.kiosk.largeText', this.largeTextMode ? '1' : '0');
+    this.applyLargeTextClass();
+  }
+
+  private applyLargeTextClass(): void {
+    document.documentElement.classList.toggle('dpu-kiosk-large-text', this.largeTextMode);
+  }
+
+  private bindOnlineListeners(): void {
+    this.onlineHandler = () => {
+      this.ngZone.run(() => {
+        void this.reconcileOfflineQueue();
+      });
+    };
+    this.offlineHandler = () => {
+      this.ngZone.run(() => this.cdr.detectChanges());
+    };
+    window.addEventListener('online', this.onlineHandler);
+    window.addEventListener('offline', this.offlineHandler);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      void this.reconcileOfflineQueue();
+    }
+  }
+
+  private async refreshOfflineQueueCount(): Promise<void> {
+    try {
+      this.offlineQueuedCount = await this.offlineQueue.count();
+      this.cdr.detectChanges();
+    } catch {
+      this.offlineQueuedCount = 0;
+    }
+  }
+
+  private async enqueueOfflinePunch(payload: {
+    images: string[];
+    latitude: number;
+    longitude: number;
+    punchType: string;
+    note: string;
+    zoneId?: string | null;
+    eventId?: string | null;
+    enableDoorRelay?: boolean;
+    totpOrPin?: string | null;
+  }): Promise<void> {
+    try {
+      await this.offlineQueue.enqueue({
+        companyId: this.companyId,
+        images: payload.images,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        punchType: payload.punchType,
+        stationMode: this.stationMode,
+        zoneId: payload.zoneId,
+        eventId: payload.eventId,
+        enableDoorRelay: payload.enableDoorRelay,
+        totpOrPin: payload.totpOrPin,
+        note: payload.note,
+      });
+      await this.refreshOfflineQueueCount();
+      this.notify(this.translate.instant('Queued while offline'), 'warning');
+    } catch {
+      this.notify('ไม่สามารถบันทึกคิวนอกสายได้', 'error');
+    }
+  }
+
+  /** Flush IndexedDB punches when connectivity returns. */
+  async reconcileOfflineQueue(): Promise<void> {
+    if (this.reconcilingOffline || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      return;
+    }
+    let rows: OfflinePunchPayload[] = [];
+    try {
+      rows = await this.offlineQueue.list();
+    } catch {
+      return;
+    }
+    if (!rows.length) {
+      this.offlineQueuedCount = 0;
+      return;
+    }
+    this.reconcilingOffline = true;
+    this.cdr.detectChanges();
+    for (const row of rows) {
+      try {
+        const formData = new FormData();
+        row.images.forEach((dataUrl, index) => {
+          formData.append('files', this.dataURLtoFile(dataUrl, `offline_${row.id}_${index}.jpg`));
+        });
+        formData.append('companyId', row.companyId);
+        formData.append('latitude', String(row.latitude));
+        formData.append('longitude', String(row.longitude));
+        formData.append('note', row.note || 'Face kiosk offline reconcile');
+        formData.append('punchType', row.punchType);
+        formData.append('stationMode', row.stationMode);
+        if (row.zoneId) {
+          formData.append('zoneId', row.zoneId);
+        }
+        if (row.eventId) {
+          formData.append('eventId', row.eventId);
+        }
+        if (row.enableDoorRelay) {
+          formData.append('enableDoorRelay', 'true');
+        }
+        if (row.totpOrPin) {
+          formData.append('totpOrPin', row.totpOrPin);
+        }
+        await new Promise<void>((resolve, reject) => {
+          this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
+            next: () => resolve(),
+            error: (err) => reject(err),
+          });
+        });
+        await this.offlineQueue.remove(row.id);
+      } catch (err: unknown) {
+        const status = (err as { status?: number })?.status;
+        await this.offlineQueue.markAttempt(row.id, `status=${status ?? 'network'}`);
+        if (this.offlineQueue.isLikelyOffline(err as { status?: number })) {
+          break;
+        }
+      }
+    }
+    this.reconcilingOffline = false;
+    await this.refreshOfflineQueueCount();
+  }
+
+  private updateDegradedMode(): void {
+    const next = this.queuePending >= KIOSK_DEGRADED_QUEUE_PENDING;
+    if (next !== this.degradedMode) {
+      this.degradedMode = next;
+      this.cdr.detectChanges();
+    }
   }
 
   private consentStorageKey(): string {
@@ -547,7 +704,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   consentText(): string {
-    const lang = (sessionStorage.getItem('Lang') || 'th').toLowerCase();
+    const lang = (
+      this.translate.currentLang ||
+      sessionStorage.getItem('Lang') ||
+      'th'
+    ).toLowerCase();
     if (lang.startsWith('en')) {
       return this.consentPolicy?.textEn || this.consentPolicy?.textTh || '';
     }
@@ -615,11 +776,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.startSceneClock();
   }
 
-  /** Server WS detect is the only detector. Local face-api models are not shipped. */
-  private async prepareLocalDetector(): Promise<void> {
-    this.localDetectReady = false;
-  }
-
   /** Decorative + header clock only — never trigger component CD (face/WS work). */
   private startSceneClock(): void {
     this.tickSceneClock();
@@ -640,7 +796,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       timeEl.textContent = `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
     }
     if (dateEl) {
-      dateEl.textContent = now.toLocaleDateString('en-GB', {
+      dateEl.textContent = this.localeFormat.formatDate(now, {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
@@ -687,6 +843,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     document.documentElement.classList.remove('dpu-kiosk-mode');
+    document.documentElement.classList.remove('dpu-kiosk-large-text');
+    if (this.onlineHandler) {
+      window.removeEventListener('online', this.onlineHandler);
+    }
+    if (this.offlineHandler) {
+      window.removeEventListener('offline', this.offlineHandler);
+    }
     this.destroyWs = true;
     this.imageSub?.unsubscribe();
     if (this.geoWatchId != null && navigator.geolocation) {
@@ -953,9 +1116,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.serverDetectFailures = 0;
     if (msg?.queue?.pending != null) {
       this.queuePending = Number(msg.queue.pending) || 0;
+      this.updateDegradedMode();
     }
 
-    const videoEl = this.video?.nativeElement as HTMLVideoElement | undefined;
+    const videoEl = this.video?.nativeElement;
     if (!videoEl) {
       return;
     }
@@ -966,11 +1130,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const sx = displayW / frameW;
     const sy = displayH / frameH;
 
-    const boxes: SmoothBox[] = (Array.isArray(msg.faces) ? msg.faces : []).map((f: any) => ({
-      x: Number(f.x) * sx,
-      y: Number(f.y) * sy,
-      width: Number(f.width) * sx,
-      height: Number(f.height) * sy,
+    const faces = Array.isArray(msg.faces) ? (msg.faces as Array<Record<string, unknown>>) : [];
+    const boxes: SmoothBox[] = faces.map((f) => ({
+      x: Number(f['x']) * sx,
+      y: Number(f['y']) * sy,
+      width: Number(f['width']) * sx,
+      height: Number(f['height']) * sy,
     }));
     this.processDetections(boxes, Date.now());
   }
@@ -979,9 +1144,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.wsDetectInFlight = false;
     this.serverDetectFailures += 1;
     if (this.serverDetectFailures >= 3) {
-      // Give the server a break; local face-api takes over meanwhile.
+      // Pause server detect briefly; do not fall back to local models (removed in E8).
       this.serverDetectPausedUntil = Date.now() + 30000;
       this.serverDetectFailures = 0;
+      this.degradedMode = true;
+      this.cdr.detectChanges();
     }
   }
 
@@ -1165,9 +1332,24 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       });
   }
 
-  private onKioskWsMessage(msg: any) {
+  private onKioskWsMessage(msg: {
+    type?: string;
+    queue?: { pending?: number };
+    trackId?: number | string;
+    memberId?: string;
+    member?: { memberId?: string; fullName?: string; firstName?: string };
+    employee?: { fullName?: string };
+    confidencePercent?: number;
+    dedupeSeconds?: number;
+    duplicate?: boolean;
+    intent?: string;
+    status?: number;
+    detail?: string;
+    [key: string]: unknown;
+  }) {
     if (msg?.queue?.pending != null) {
       this.queuePending = Number(msg.queue.pending) || 0;
+      this.updateDegradedMode();
     }
 
     switch (kioskWsSessionAction(msg)) {
@@ -1849,26 +2031,33 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
 
     this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
-      next: (response: any) => {
+      next: (response) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+        const body = response as {
+          memberId?: string;
+          member?: { memberId?: string; fullName?: string };
+          employee?: { fullName?: string };
+          dedupeSeconds?: number;
+          duplicate?: boolean;
+        };
         const t = this.tracks.find((x) => x.id === trackId);
-        const memberId = response.memberId || response.member?.memberId || t?.memberId;
+        const memberId = body.memberId || body.member?.memberId || t?.memberId;
         if (memberId) {
-          const dedupeMs = response.dedupeSeconds
-            ? Number(response.dedupeSeconds) * 1000
+          const dedupeMs = body.dedupeSeconds
+            ? Number(body.dedupeSeconds) * 1000
             : this.memberCooldownMs;
           this.setMemberCooldown(memberId, dedupeMs);
         }
 
         if (t) {
-          t.phase = response.duplicate ? 'cooldown' : 'done';
+          t.phase = body.duplicate ? 'cooldown' : 'done';
           t.memberId = memberId || t.memberId;
-          t.label = response.employee?.fullName || response.member?.fullName || t.label;
+          t.label = body.employee?.fullName || body.member?.fullName || t.label;
         }
 
-        this.handleCheckInSuccess(response, frames, t, !!response.duplicate);
+        this.handleCheckInSuccess(body, frames, t, !!body.duplicate);
       },
-      error: (error) => {
+      error: (error: { status?: number; error?: { detail?: string } }) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
         const t = this.tracks.find((x) => x.id === trackId);
         if (t) {
@@ -1878,6 +2067,21 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
         if (error?.status === 403) {
           this.applyAccessDenied(t, true);
+        } else if (this.offlineQueue.isLikelyOffline(error)) {
+          void this.enqueueOfflinePunch({
+            images: frames,
+            latitude: lat,
+            longitude: lng,
+            punchType,
+            note: 'Face kiosk walk-by check-in (offline queue)',
+            zoneId: this.zoneId,
+            eventId: this.eventId,
+            enableDoorRelay: this.doorRelayEnabled,
+            totpOrPin: this.zoneRequires2FA ? this.totpOrPin || null : null,
+          });
+          if (t) {
+            t.phase = 'done';
+          }
         } else {
           const detail = error.error?.detail || 'Check-in failed';
           this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');

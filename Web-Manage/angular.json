@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "ynex": {
+    "sentinelvision-web-manage": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -34,7 +34,6 @@
         "@schematics/angularervice": {
           "skipTests": true
         }
-
       },
       "root": "",
       "sourceRoot": "src",
@@ -44,7 +43,9 @@
           "builder": "@angular-devkit/build-angular:application",
           "options": {
             "allowedCommonJsDependencies": [
-              "dragula","can-use-dom","moment","leaflet","filepond","dropzone","apexcharts","sweetalert"
+              "can-use-dom",
+              "leaflet",
+              "sweetalert"
             ],
             "outputPath": "dist/preview",
             "index": "src/index.html",
@@ -58,7 +59,9 @@
               {
                 "glob": "**/*",
                 "input": "src/assets",
-                "ignore": ["**/models/**"],
+                "ignore": [
+                  "**/models/**"
+                ],
                 "output": "/assets"
               },
               "src/favicon.ico",
@@ -69,16 +72,16 @@
               "./node_modules/font-awesome/css/font-awesome.css"
             ],
             "scripts": [
-              "node_modules/preline/dist/preline.js",
-              "node_modules/apexcharts/dist/apexcharts.min.js"]
+              "node_modules/preline/dist/preline.js"
+            ]
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2mb",
-                  "maximumError": "8mb"
+                  "maximumWarning": "1800kb",
+                  "maximumError": "6mb"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -106,10 +109,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "ynex:build:production"
+              "buildTarget": "sentinelvision-web-manage:build:production"
             },
             "development": {
-              "buildTarget": "ynex:build:development"
+              "buildTarget": "sentinelvision-web-manage:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -117,7 +120,7 @@
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n",
           "options": {
-            "buildTarget": "ynex:build"
+            "buildTarget": "sentinelvision-web-manage:build"
           }
         },
         "test": {
@@ -134,7 +137,9 @@
               {
                 "glob": "**/*",
                 "input": "src/assets",
-                "ignore": ["**/models/**"],
+                "ignore": [
+                  "**/models/**"
+                ],
                 "output": "/assets"
               },
               "src/favicon.ico",
@@ -142,9 +147,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "./node_modules/font-awesome/css/font-awesome.css",
-              "./node_modules/filepond/dist/filepond.min.css"
-
+              "./node_modules/font-awesome/css/font-awesome.css"
             ],
             "scripts": [
               "node_modules/preline/dist/preline.js"

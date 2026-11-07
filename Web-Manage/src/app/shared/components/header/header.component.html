@@ -28,7 +28,7 @@
           class="header-element py-[1rem] md:px-[0.5rem] px-2 header-country hs-dropdown ti-dropdown hidden sm:block [--placement:bottom-left]">
           <button id="dropdown-flag" type="button"
             class="hs-dropdown-toggle ti-dropdown-toggle !p-0 flex-shrink-0 !border-0 !rounded-full !shadow-none"
-            aria-label="เปลี่ยนภาษา">
+            [attr.aria-label]="'a11y.languageSwitcher' | translate">
             <img src="./assets/images/flags/{{selectedLanguage}}.png" alt=""
               class="h-[1.25rem] w-[1.25rem] rounded-full">
           </button>
@@ -61,11 +61,11 @@
           </button>
           <div class="p-3 main-header-dropdown !-mt-3 hs-dropdown-menu ti-dropdown-menu !w-[14rem] border-0 hidden"
             aria-labelledby="dropdown-apps">
-            <p class="mb-2 px-1 text-[0.8rem] font-semibold text-defaulttextcolor">สิทธิ์การใช้งาน</p>
+            <p class="mb-2 px-1 text-[0.8rem] font-semibold text-defaulttextcolor">{{ 'Permissions' | translate }}</p>
             <a routerLink="/admin/home"
               class="dpu-header-app-link flex items-center gap-2 rounded-lg px-3 py-2.5 hover:bg-primary/5">
               <span class="dpu-header-app-icon"><i class="ri-shield-user-line"></i></span>
-              <span class="text-[0.82rem] font-semibold">ผู้ดูแลระบบ</span>
+              <span class="text-[0.82rem] font-semibold">{{ 'Admins' | translate }}</span>
             </a>
           </div>
         </div>

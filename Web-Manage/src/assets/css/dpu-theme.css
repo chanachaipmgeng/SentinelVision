@@ -1015,6 +1015,24 @@ body.dpu-login-body {
   background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.65));
 }
 
+/* Screen-reader-only helper (a11y captions / hints) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Kiosk large-text mode (E6) */
+html.dpu-kiosk-large-text {
+  font-size: 118%;
+}
+
 /* ---- Kiosk fullscreen (hide app chrome) ---- */
 html.dpu-kiosk-mode app-header,
 html.dpu-kiosk-mode app-sidebar,

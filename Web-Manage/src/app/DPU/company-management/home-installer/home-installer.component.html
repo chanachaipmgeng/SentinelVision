@@ -1,4 +1,4 @@
-<app-page-header [title]="'หน้าบริษัท'" [activeTitle]="'จัดการบริษัท'" [title1]="'หน้าบริษัท'"></app-page-header>
+<app-page-header [title]="'Company home'" [activeTitle]="'Manage companies'" [title1]="'Company home'"></app-page-header>
 
 <div class="dpu-company-home grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
@@ -26,7 +26,7 @@
           <div class="font-semibold text-danger">โหลดไม่สำเร็จ</div>
           <div class="text-sm text-dpu-muted">{{ error }}</div>
         </div>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadCompany()">ลองใหม่</button>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadCompany()">{{ 'Try again' | translate }}</button>
       </div>
     </div>
   </div>

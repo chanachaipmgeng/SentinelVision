@@ -1,6 +1,6 @@
 <app-page-header
   [title]="'ตั้งค่าระบบ'"
-  [activeTitle]="'ผู้ดูแลระบบ'"
+  [activeTitle]="'Admins'"
   [title1]="'เสียงพูด (TTS)'">
 </app-page-header>
 
@@ -16,7 +16,7 @@
           <button type="button" class="ti-btn ti-btn-light modern-btn sys-tool-btn"
             [disabled]="loading || saving" (click)="load()">
             <i class="ri-refresh-line"></i>
-            <span>รีเฟรช</span>
+            <span>{{ 'Refresh' | translate }}</span>
           </button>
           <button type="button" class="ti-btn ti-btn-primary-full modern-btn sys-tool-btn"
             [disabled]="loading || saving" (click)="save()">

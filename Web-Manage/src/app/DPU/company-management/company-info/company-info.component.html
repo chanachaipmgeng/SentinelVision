@@ -1,7 +1,7 @@
 <app-page-header
-  [title]="'ข้อมูลบริษัท'"
-  [activeTitle]="'จัดการบริษัท'"
-  [title1]="'ข้อมูลบริษัท'">
+  [title]="'Company info'"
+  [activeTitle]="'Manage companies'"
+  [title1]="'Company info'">
 </app-page-header>
 
 <div class="cinfo-page grid grid-cols-12 gap-x-6 gap-y-4">
@@ -11,7 +11,7 @@
       <div class="box-header cinfo-toolbar-header">
         <div class="cinfo-toolbar-inner">
           <div class="cinfo-toolbar-title">
-            <div class="box-title !mb-0">ข้อมูลบริษัท</div>
+            <div class="box-title !mb-0">{{ 'Company info' | translate }}</div>
             <span class="cinfo-stat-chip" *ngIf="companyModel.companyCode">รหัส {{ companyModel.companyCode }}</span>
             <span class="cinfo-status-pill" [attr.data-tone]="statusTone">
               {{ statusTone === 'ok' ? 'PUBLIC' : 'PENDING' }}
@@ -38,7 +38,7 @@
     <div class="box cinfo-loading modern-card glass">
       <div class="cinfo-empty">
         <span class="ti-spinner animation-spin cinfo-empty-spinner" role="status"></span>
-        <p>กำลังโหลดข้อมูลบริษัท...</p>
+        <p>{{ 'Loading company...' | translate }}</p>
       </div>
     </div>
   </div>
@@ -80,12 +80,12 @@
             </div>
             <div class="cinfo-form-grid">
               <div class="cinfo-field">
-                <label class="form-label" for="company-name">ชื่อบริษัท</label>
+                <label class="form-label" for="company-name">{{ 'Company name' | translate }}</label>
                 <input id="company-name" type="text" class="form-control"
                   [(ngModel)]="companyModel.companyName" placeholder="ชื่อบริษัท">
               </div>
               <div class="cinfo-field">
-                <label class="form-label" for="company-code">รหัสบริษัท</label>
+                <label class="form-label" for="company-code">{{ 'Company ID' | translate }}</label>
                 <input id="company-code" type="text" class="form-control"
                   [(ngModel)]="companyModel.companyCode" placeholder="CODE">
               </div>
@@ -96,7 +96,7 @@
                   placeholder="รายละเอียดบริษัท"></textarea>
               </div>
               <div class="cinfo-field cinfo-field--full">
-                <label class="form-label" for="company-address">ที่อยู่</label>
+                <label class="form-label" for="company-address">{{ 'Address' | translate }}</label>
                 <textarea id="company-address" class="form-control" rows="3"
                   [(ngModel)]="companyModel.address"
                   placeholder="ที่อยู่บริษัท"></textarea>
@@ -111,12 +111,12 @@
             </div>
             <div class="cinfo-form-grid">
               <div class="cinfo-field">
-                <label class="form-label" for="owner-name">ชื่อ-สกุล</label>
+                <label class="form-label" for="owner-name">{{ 'Fullname' | translate }}</label>
                 <input id="owner-name" type="text" class="form-control"
                   [(ngModel)]="companyModel.ownerName" placeholder="ชื่อ-สกุล">
               </div>
               <div class="cinfo-field">
-                <label class="form-label" for="owner-contact">เบอร์ติดต่อ</label>
+                <label class="form-label" for="owner-contact">{{ 'Mobile' | translate }}</label>
                 <input id="owner-contact" type="text" class="form-control"
                   [(ngModel)]="companyModel.contact" placeholder="เบอร์โทร / อีเมล">
               </div>
@@ -142,12 +142,12 @@
         <div class="box-body cinfo-map-body">
           <div class="cinfo-coord-grid">
             <div>
-              <label class="form-label">ละติจูด</label>
+              <label class="form-label">{{ 'Latitude' | translate }}</label>
               <input type="number" step="any" class="form-control"
                 [(ngModel)]="companyModel.latitude" (ngModelChange)="changeMarker()">
             </div>
             <div>
-              <label class="form-label">ลองจิจูด</label>
+              <label class="form-label">{{ 'Longitude' | translate }}</label>
               <input type="number" step="any" class="form-control"
                 [(ngModel)]="companyModel.longitude" (ngModelChange)="changeMarker()">
             </div>

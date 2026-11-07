@@ -58,7 +58,8 @@ import { TranslateModule } from '@ngx-translate/core';
     HoverEffectSidebarDirective,
     AuthenticationLayoutComponent,
     LandingSwitcherComponent,
-    LandingLayoutComponent
+    LandingLayoutComponent,
+    TranslateModule,
   ],
   providers: [ColorPickerService, AuthService , TranslateModule],
 })

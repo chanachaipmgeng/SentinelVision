@@ -1,6 +1,6 @@
 <app-page-header
   [title]="'ข้อมูลการลงเวลา'"
-  [activeTitle]="'จัดการบริษัท'"
+  [activeTitle]="'Manage companies'"
   [title1]="'ข้อมูลการลงเวลา'">
 </app-page-header>
 
@@ -50,7 +50,7 @@
             </button>
             <a routerLink="/company/approval-inbox" class="ti-btn ti-btn-warning-full modern-btn ts-tool-btn">
               <i class="ri-error-warning-line"></i>
-              <span>กล่องอนุมัติ</span>
+              <span>{{ 'Approval inbox' | translate }}</span>
             </a>
             <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn ts-tool-btn">
               <i class="ri-camera-line"></i>
@@ -58,7 +58,7 @@
             </a>
             <button type="button" class="ti-btn ti-btn-light modern-btn ts-tool-btn" (click)="resetFilters()">
               <i class="ri-filter-off-line"></i>
-              <span>ล้างตัวกรอง</span>
+              <span>{{ 'Clear filters' | translate }}</span>
             </button>
           </div>
         </div>
@@ -101,7 +101,7 @@
             [clearable]="true"
             [appendTo]="'body'"
             notFoundText="ไม่พบพนักงาน">
-            <ng-option value="">ทั้งหมด</ng-option>
+            <ng-option value="">{{ 'All' | translate }}</ng-option>
             @for (item of empList; track item.company_employeeId) {
               <ng-option [value]="item.company_employeeId">{{ item.getFullname() }}</ng-option>
             }
@@ -113,7 +113,7 @@
             [(ngModel)]="statusSelect"
             [clearable]="true"
             [appendTo]="'body'">
-            <ng-option value="">ทั้งหมด</ng-option>
+            <ng-option value="">{{ 'All' | translate }}</ng-option>
             <ng-option value="1">เข้างาน (Check-In)</ng-option>
             <ng-option value="4">พักนอก (Break-Out)</ng-option>
             <ng-option value="5">พักเข้า (Break-In)</ng-option>
@@ -128,7 +128,7 @@
             [disabled]="loading"
             (click)="getTimestamp()">
             <i class="ri-search-line" [class.ts-spin]="loading"></i>
-            <span>ค้นหา</span>
+            <span>{{ 'Search' | translate }}</span>
           </button>
         </div>
       </div>
@@ -218,7 +218,7 @@
       class="box ts-detail-panel modern-card glass animate-in zoom-in duration-400">
       <div class="box-header ts-panel-header">
         <div>
-          <div class="box-title !mb-0">รายละเอียดการลงเวลา</div>
+          <div class="box-title !mb-0">{{ 'Attendance details' | translate }}</div>
           <p class="ts-panel-sub mb-0">{{ item.timestamp | date: 'EEEE, dd MMMM yyyy HH:mm' }}</p>
         </div>
         <span class="ts-status-pill" [attr.data-tone]="statusTone(item)">
@@ -234,11 +234,11 @@
           <div class="ts-hero-photos">
             <figure class="ts-stamp-photo">
               <img [src]="item.getPicture()" alt="รูปตอนลงเวลา">
-              <figcaption>รูปตอนลงเวลา</figcaption>
+              <figcaption>{{ 'Punch photo' | translate }}</figcaption>
             </figure>
             <figure class="ts-profile-photo">
               <img [src]="item.employee.getPicture()" alt="รูปโปรไฟล์">
-              <figcaption>โปรไฟล์</figcaption>
+              <figcaption>{{ 'Profile' | translate }}</figcaption>
             </figure>
           </div>
 
@@ -253,7 +253,7 @@
 
             <dl class="ts-facts">
               <div>
-                <dt>เวลาลง</dt>
+                <dt>{{ 'Punch time' | translate }}</dt>
                 <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
               </div>
               <div *ngIf="item.isLate || (item.overtimeMinutes && item.overtimeMinutes > 0)">
@@ -264,7 +264,7 @@
                 </dd>
               </div>
               <div>
-                <dt>สถานที่</dt>
+                <dt>{{ 'Location' | translate }}</dt>
                 <dd>
                   <input
                     *ngIf="item.timestampType === 0"
@@ -276,7 +276,7 @@
                 </dd>
               </div>
               <div>
-                <dt>พิกัด</dt>
+                <dt>{{ 'Coordinates' | translate }}</dt>
                 <dd class="ts-coords">
                   {{ item.latitude }}, {{ item.longitude }}
                   <a class="ts-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
@@ -285,11 +285,11 @@
                 </dd>
               </div>
               <div *ngIf="item.note">
-                <dt>หมายเหตุ</dt>
+                <dt>{{ 'Note' | translate }}</dt>
                 <dd class="ts-note-text">{{ item.note }}</dd>
               </div>
               <div *ngIf="item.approvalStatus && item.approvalStatus !== 'NONE'">
-                <dt>อนุมัติ</dt>
+                <dt>{{ 'Approve' | translate }}</dt>
                 <dd>{{ item.approvalStatus }}<span *ngIf="item.rejectReason"> — {{ item.rejectReason }}</span></dd>
               </div>
             </dl>

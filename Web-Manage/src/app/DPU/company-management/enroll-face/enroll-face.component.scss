@@ -1131,6 +1131,44 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
   cursor: pointer;
 }
 
+.dpu-kiosk__banner {
+  position: relative;
+  z-index: 40;
+  margin: 0.5rem 1rem 0;
+  padding: 0.65rem 1rem;
+  border-radius: 0.65rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.dpu-kiosk__banner--degraded {
+  background: rgba(245, 158, 11, 0.92);
+  color: #1c1917;
+}
+.dpu-kiosk__banner--offline {
+  background: rgba(14, 116, 144, 0.92);
+  color: #ecfeff;
+}
+
+:host-context(html.dpu-kiosk-large-text) {
+  .dpu-kiosk__title {
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  }
+  .dpu-kiosk__eyebrow,
+  .dpu-kiosk__chip,
+  .dpu-kiosk__home-btn,
+  .dpu-kiosk__clock-time,
+  .dpu-kiosk__clock-date,
+  .dpu-kiosk__banner,
+  .dpu-kiosk__consent-card,
+  .dpu-kiosk__consent-text,
+  .dpu-kiosk__consent-accept {
+    font-size: 1.15em;
+  }
+  .dpu-kiosk__consent-card h2 {
+    font-size: 1.65rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dpu-kiosk__toast,
   .dpu-kiosk__latest,

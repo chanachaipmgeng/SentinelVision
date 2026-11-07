@@ -1,8 +1,8 @@
-<app-page-header [title]="'แผนก'" [activeTitle]="'จัดการบริษัท'" [title1]="'แผนก'"></app-page-header>
+<app-page-header [title]="'Department'" [activeTitle]="'Manage companies'" [title1]="'Department'"></app-page-header>
 
 <div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="แผนก">
+    <app-page-toolbar title="Department">
       <ng-container chips>
         <app-stat-chip>ทั้งหมด {{ itemsList.length }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</app-stat-chip>
@@ -19,7 +19,7 @@
           class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn"
           (click)="deleteSelect()">
           <i class="ri-delete-bin-line"></i>
-          <span>ลบที่เลือก</span>
+          <span>{{ 'Delete selected' | translate }}</span>
         </button>
         <a
           href="javascript:void(0);"
@@ -60,7 +60,7 @@
           *ngIf="!loading && pageItems.length === 0"
           icon="ri-organization-chart"
           [message]="searchTerm ? 'ไม่พบแผนกตามคำค้น' : 'ยังไม่มีแผนก'"
-          [actionLabel]="searchTerm ? 'ล้างการค้นหา' : ''"
+          [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"
           (action)="clearSearch()">
         </app-empty-state>
 
@@ -69,10 +69,10 @@
             <thead>
               <tr>
                 <th scope="col" class="!text-start w-10"></th>
-                <th scope="col" class="text-start">รหัส</th>
+                <th scope="col" class="text-start">{{ 'ID' | translate }}</th>
                 <th scope="col" class="text-start">ชื่อ (TH)</th>
                 <th scope="col" class="text-start">ชื่อ (EN)</th>
-                <th scope="col" class="text-end">จัดการ</th>
+                <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
               </tr>
             </thead>
             <tbody>

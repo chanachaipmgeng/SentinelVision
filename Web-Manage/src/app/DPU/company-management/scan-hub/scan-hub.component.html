@@ -12,7 +12,7 @@
         <app-stat-chip tone="ok" *ngIf="saveMessage">บันทึกแล้ว</app-stat-chip>
       </ng-container>
       <ng-container actions>
-        <a [routerLink]="homeLink()" class="ti-btn ti-btn-outline-light modern-btn">หน้าบริษัท</a>
+        <a [routerLink]="homeLink()" class="ti-btn ti-btn-outline-light modern-btn">{{ 'Company home' | translate }}</a>
         <button type="button" class="ti-btn ti-btn-outline-light modern-btn" (click)="openLegacyKiosk()">
           Kiosk เดิม
         </button>
@@ -43,7 +43,7 @@
             <div class="font-semibold text-danger">แจ้งเตือน</div>
             <div class="text-sm text-dpu-muted">{{ error }}</div>
           </div>
-          <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="reload()">ลองใหม่</button>
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="reload()">{{ 'Try again' | translate }}</button>
         </div>
       </div>
     </div>

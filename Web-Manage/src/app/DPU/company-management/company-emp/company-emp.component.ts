@@ -132,8 +132,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.companyId = this.tokenService.getSelectCompany().companyId;
   }
 
-  @ViewChild('video') video: ElementRef;
-  @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('video') video!: ElementRef;
+  @ViewChild('canvas') canvas!: ElementRef;
   capturedImage: string | null = null;
   uploadStatus: string = '';
   checkMatch = false;

@@ -134,7 +134,6 @@ export class WarningTimetampComponent implements OnInit {
       this.timestampService
         .approve(this.companyId, item.timestampId, {
           approve: true,
-          approvedBy: this.tokenService.getUserData()?.memberId,
         })
         .subscribe({
           next: () => {
@@ -172,7 +171,6 @@ export class WarningTimetampComponent implements OnInit {
         .approve(this.companyId, item.timestampId, {
           approve: false,
           rejectReason,
-          approvedBy: this.tokenService.getUserData()?.memberId,
         })
         .subscribe({
           next: () => {

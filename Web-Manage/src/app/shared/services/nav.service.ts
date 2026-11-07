@@ -172,6 +172,7 @@ export class NavService implements OnDestroy {
           { path: '/company/company-location', title: 'สถานที่ลงเวลา (GPS)', type: 'link' },
           { path: '/company/hr-schedule', title: 'กะงาน / วันลา / PDPA', type: 'link' },
           { path: '/company/timestamp-log', title: 'ประวัติการลงเวลา', type: 'link' },
+          { path: '/company/approval-inbox', title: 'กล่องอนุมัติ', type: 'link' },
           { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
         ],
       },

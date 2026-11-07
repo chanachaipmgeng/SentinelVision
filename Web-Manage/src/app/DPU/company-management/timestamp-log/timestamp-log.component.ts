@@ -164,7 +164,7 @@ export class TimestampLogComponent implements OnInit {
       });
   }
 
-  exportReport(format: 'xlsx' | 'csv' = 'xlsx') {
+  exportReport(format: 'xlsx' | 'csv' = 'xlsx', mode: 'raw' | 'payroll' = 'raw') {
     if (!this.companyId || this.exporting) return;
     this.exporting = true;
     const { from, to } = this.resolveDateRange();
@@ -176,7 +176,9 @@ export class TimestampLogComponent implements OnInit {
         this.empSelect || undefined,
         from.toISOString(),
         to.toISOString(),
-        this.statusSelect || undefined
+        this.statusSelect || undefined,
+        undefined,
+        mode
       )
       .subscribe({
         next: (blob) => {
@@ -185,7 +187,8 @@ export class TimestampLogComponent implements OnInit {
           const a = document.createElement('a');
           a.href = url;
           const dateStr = new Date().toISOString().slice(0, 10);
-          a.download = `attendance_report_${dateStr}.${format}`;
+          const prefix = mode === 'payroll' ? 'payroll_attendance' : 'attendance_report';
+          a.download = `${prefix}_${dateStr}.${format}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

@@ -14,4 +14,6 @@ from . import (  # noqa: F401
     sentinel,
     revoked_token,
     import_job,
+    attendance_daily,
+    approvals_payroll,
 )

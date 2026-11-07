@@ -16,7 +16,16 @@ from ..controllers.face_controller import clear_member_face_encodings
 from ..controllers import hr_controller
 from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding
-from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest
+from ..models.approvals_payroll import (
+    ApprovalRequestStatus,
+    LeaveBalance,
+    OtApprovalRequest,
+    PayrollPeriod,
+    PayrollPeriodStatus,
+    RegularizationRequest,
+)
+from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp
+from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest, WorkShift
 from ..models.member import Member
 from ..schemas.hr_schema import (
     AssignShiftBody,
@@ -26,10 +35,15 @@ from ..schemas.hr_schema import (
     WorkShiftCreate,
     WorkShiftUpdate,
 )
-from ..security.deps import assert_member_company_access, assert_request_company_access
+from ..security.deps import (
+    assert_member_company_access,
+    assert_request_company_access,
+    assert_request_company_membership,
+)
 from ..security.jwt import kiosk_refresh_ttl
 from ..security.kiosk_pairing import generate_pairing_code, hash_pairing_code, pairing_code_expiry
 from ..services import token_revocation_service as revocation
+from ..services.approval_gate import assert_can_approve_for_employee, can_approve_for_employee
 from ..services.attendance_summary_service import (
     recompute_company_holiday,
     recompute_leave_range,
@@ -46,8 +60,97 @@ from ..services.holiday_service import (
     thai_public_holidays,
     upsert_holidays,
 )
+from ..services.notification_service import emit_company_webhook_event
+from ..services.payroll_period_service import (
+    assert_date_not_locked,
+    assert_range_not_locked,
+    close_and_lock_period,
+    serialize_period,
+)
 
 router = APIRouter()
+
+
+def _leave_days(start_d: date, end_d: date) -> int:
+    return (end_d - start_d).days + 1
+
+
+async def _assert_no_leave_overlap(
+    db: AsyncSession,
+    company_id: UUID,
+    emp_id: UUID,
+    start_d: date,
+    end_d: date,
+    *,
+    exclude_leave_id: Optional[UUID] = None,
+) -> None:
+    stmt = select(LeaveRequest).where(
+        LeaveRequest.companyId == company_id,
+        LeaveRequest.company_employeeId == emp_id,
+        LeaveRequest.status.in_(("PENDING", "APPROVED")),
+        LeaveRequest.startDate <= end_d,
+        LeaveRequest.endDate >= start_d,
+    )
+    if exclude_leave_id:
+        stmt = stmt.where(LeaveRequest.leaveId != exclude_leave_id)
+    overlap = (await db.execute(stmt.limit(1))).scalar_one_or_none()
+    if overlap is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Leave request overlaps an existing PENDING or APPROVED leave",
+        )
+
+
+async def _get_or_create_leave_balance(
+    db: AsyncSession,
+    company_id: UUID,
+    emp_id: UUID,
+    leave_type: str,
+    year: int,
+) -> LeaveBalance:
+    row = (
+        await db.execute(
+            select(LeaveBalance).where(
+                LeaveBalance.companyId == company_id,
+                LeaveBalance.company_employeeId == emp_id,
+                LeaveBalance.leaveType == leave_type,
+                LeaveBalance.year == year,
+            )
+        )
+    ).scalar_one_or_none()
+    if row:
+        return row
+    row = LeaveBalance(
+        companyId=company_id,
+        company_employeeId=emp_id,
+        leaveType=leave_type,
+        year=year,
+        entitledDays=0,
+        usedDays=0,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def _assert_leave_balance_available(
+    db: AsyncSession,
+    company_id: UUID,
+    emp_id: UUID,
+    leave_type: str,
+    start_d: date,
+    end_d: date,
+) -> None:
+    days = float(_leave_days(start_d, end_d))
+    bal = await _get_or_create_leave_balance(db, company_id, emp_id, leave_type, start_d.year)
+    # If never configured (entitled=0), allow request but still track usage on approve.
+    if float(bal.entitledDays or 0) <= 0:
+        return
+    if bal.remainingDays < days:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Insufficient leave balance: remaining {bal.remainingDays}, requested {days}",
+        )
 
 
 @router.get("/company/{companyId}/shifts")
@@ -411,6 +514,10 @@ async def create_leave_request(
     reason = str(body.reason or "").strip()
     auto_approve = bool(body.autoApprove)
 
+    await assert_range_not_locked(db, companyId, start_d, end_d)
+    await _assert_no_leave_overlap(db, companyId, emp_id, start_d, end_d)
+    await _assert_leave_balance_available(db, companyId, emp_id, leave_type, start_d, end_d)
+
     lr = LeaveRequest(
         companyId=companyId,
         company_employeeId=emp_id,
@@ -422,6 +529,9 @@ async def create_leave_request(
         approvedAt=datetime.now(timezone.utc) if auto_approve else None,
     )
     db.add(lr)
+    if auto_approve:
+        bal = await _get_or_create_leave_balance(db, companyId, emp_id, leave_type, start_d.year)
+        bal.usedDays = float(bal.usedDays or 0) + float(_leave_days(start_d, end_d))
     await db.commit()
     await db.refresh(lr)
     if auto_approve:
@@ -440,34 +550,10 @@ async def approve_or_reject_leave(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    caller = await assert_request_company_access(request, db, companyId)
+    caller = await assert_request_company_membership(request, db, companyId)
     lr = await db.get(LeaveRequest, leaveId)
     if not lr or lr.companyId != companyId:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leave request not found")
-
-    if body.status is not None:
-        st = body.status
-        approve = st in (1, "1", "APPROVED", True)
-    else:
-        approve = bool(body.approve if body.approve is not None else True)
-
-    if approve:
-        lr.status = "APPROVED"
-        lr.rejectReason = None
-    else:
-        lr.status = "REJECTED"
-        lr.rejectReason = str(body.rejectReason or "ไม่อนุมัติ").strip()
-    lr.approvedBy = caller.memberId if caller else None
-    lr.approvedAt = datetime.now(timezone.utc)
-    await db.commit()
-    await db.refresh(lr)
-
-    try:
-        await recompute_leave_range(
-            companyId, lr.company_employeeId, lr.startDate, lr.endDate, db
-        )
-    except Exception:
-        pass
 
     emp = (
         await db.execute(
@@ -479,6 +565,47 @@ async def approve_or_reject_leave(
             )
         )
     ).scalar_one_or_none()
+    if not emp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    await assert_can_approve_for_employee(db, caller, companyId, emp)
+    await assert_range_not_locked(db, companyId, lr.startDate, lr.endDate)
+
+    if body.status is not None:
+        st = body.status
+        approve = st in (1, "1", "APPROVED", True)
+    else:
+        approve = bool(body.approve if body.approve is not None else True)
+
+    prev = (lr.status or "").upper()
+    if approve:
+        lr.status = "APPROVED"
+        lr.rejectReason = None
+        if prev != "APPROVED":
+            bal = await _get_or_create_leave_balance(
+                db, companyId, lr.company_employeeId, lr.leaveType, lr.startDate.year
+            )
+            days = float(_leave_days(lr.startDate, lr.endDate))
+            if float(bal.entitledDays or 0) > 0 and bal.remainingDays < days:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Insufficient leave balance: remaining {bal.remainingDays}, requested {days}",
+                )
+            bal.usedDays = float(bal.usedDays or 0) + days
+    else:
+        lr.status = "REJECTED"
+        lr.rejectReason = str(body.rejectReason or "ไม่อนุมัติ").strip()
+    # approvedBy from JWT only — ignore any client body field
+    lr.approvedBy = caller.memberId if caller else None
+    lr.approvedAt = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(lr)
+
+    try:
+        await recompute_leave_range(
+            companyId, lr.company_employeeId, lr.startDate, lr.endDate, db
+        )
+    except Exception:
+        pass
     return _serialize_leave(lr, emp)
 
 
@@ -743,3 +870,467 @@ async def revoke_kiosk_device(
         "revokedAt": device.revokedAt,
         "isActive": False,
     }
+
+
+# ---------------------------------------------------------------------------
+# C4 Approval Inbox + Regularization + Leave Balance + OT
+# ---------------------------------------------------------------------------
+def _serialize_regularization(row: RegularizationRequest, emp: Optional[CompanyEmployee]) -> dict:
+    member = emp.member if emp else None
+    full_name = (
+        f"{getattr(member, 'firstName', '') or ''} {getattr(member, 'lastName', '') or ''}".strip()
+        if member
+        else ""
+    ) or (getattr(member, "username", "") if member else "")
+    return {
+        "kind": "REGULARIZATION",
+        "requestId": str(row.requestId),
+        "companyId": str(row.companyId),
+        "company_employeeId": str(row.company_employeeId),
+        "employeeName": full_name,
+        "employeeId": (emp.employeeId if emp else "") or "",
+        "workDate": row.workDate.isoformat() if row.workDate else None,
+        "requestedTimestamp": row.requestedTimestamp,
+        "requestedType": row.requestedType,
+        "reason": row.reason or "",
+        "status": getattr(row.status, "value", row.status),
+        "approvedBy": str(row.approvedBy) if row.approvedBy else None,
+        "approvedAt": row.approvedAt,
+        "rejectReason": row.rejectReason or "",
+        "createdAt": row.createdAt,
+    }
+
+
+def _serialize_ot(row: OtApprovalRequest, emp: Optional[CompanyEmployee]) -> dict:
+    member = emp.member if emp else None
+    full_name = (
+        f"{getattr(member, 'firstName', '') or ''} {getattr(member, 'lastName', '') or ''}".strip()
+        if member
+        else ""
+    ) or (getattr(member, "username", "") if member else "")
+    return {
+        "kind": "OT",
+        "requestId": str(row.requestId),
+        "companyId": str(row.companyId),
+        "company_employeeId": str(row.company_employeeId),
+        "employeeName": full_name,
+        "employeeId": (emp.employeeId if emp else "") or "",
+        "workDate": row.workDate.isoformat() if row.workDate else None,
+        "otMinutes": int(row.otMinutes or 0),
+        "thresholdMinutes": row.thresholdMinutes,
+        "reason": row.reason or "",
+        "status": getattr(row.status, "value", row.status),
+        "requiresApproval": bool(row.requiresApproval),
+        "approvedBy": str(row.approvedBy) if row.approvedBy else None,
+        "approvedAt": row.approvedAt,
+        "rejectReason": row.rejectReason or "",
+        "createdAt": row.createdAt,
+    }
+
+
+async def _emps_map(db: AsyncSession, emp_ids: list[UUID]) -> dict[UUID, CompanyEmployee]:
+    if not emp_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(CompanyEmployee)
+            .where(CompanyEmployee.company_employeeId.in_(emp_ids))
+            .options(
+                selectinload(CompanyEmployee.member),
+                selectinload(CompanyEmployee.department),
+            )
+        )
+    ).scalars().all()
+    return {e.company_employeeId: e for e in rows}
+
+
+@router.get("/company/{companyId}/approvals")
+async def approval_inbox(
+    companyId: UUID,
+    request: Request,
+    status_filter: Optional[str] = "PENDING",
+    db: AsyncSession = Depends(get_db),
+):
+    """Mobile-first approval inbox: warning punches, leave, regularization, OT."""
+    caller = await assert_request_company_membership(request, db, companyId)
+    st = (status_filter or "PENDING").upper()
+
+    leaves = (
+        await db.execute(
+            select(LeaveRequest)
+            .where(LeaveRequest.companyId == companyId, LeaveRequest.status == st)
+            .order_by(LeaveRequest.createdAt.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+    regs = (
+        await db.execute(
+            select(RegularizationRequest)
+            .where(RegularizationRequest.companyId == companyId, RegularizationRequest.status == st)
+            .order_by(RegularizationRequest.createdAt.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+    ots = (
+        await db.execute(
+            select(OtApprovalRequest)
+            .where(OtApprovalRequest.companyId == companyId, OtApprovalRequest.status == st)
+            .order_by(OtApprovalRequest.createdAt.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+    punches = (
+        await db.execute(
+            select(EmployeeTimestamp)
+            .where(
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.approvalStatus == (ApprovalStatus.PENDING.value if st == "PENDING" else st),
+            )
+            .order_by(EmployeeTimestamp.timestamp.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+
+    emp_ids = (
+        [lr.company_employeeId for lr in leaves]
+        + [r.company_employeeId for r in regs]
+        + [o.company_employeeId for o in ots]
+        + [p.company_employeeId for p in punches]
+    )
+    emps = await _emps_map(db, emp_ids)
+
+    items: list[dict] = []
+    for lr in leaves:
+        emp = emps.get(lr.company_employeeId)
+        if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
+            continue
+        payload = _serialize_leave(lr, emp)
+        payload["kind"] = "LEAVE"
+        items.append(payload)
+    for r in regs:
+        emp = emps.get(r.company_employeeId)
+        if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
+            continue
+        items.append(_serialize_regularization(r, emp))
+    for o in ots:
+        emp = emps.get(o.company_employeeId)
+        if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
+            continue
+        items.append(_serialize_ot(o, emp))
+    for p in punches:
+        emp = emps.get(p.company_employeeId)
+        if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
+            continue
+        member = emp.member if emp else None
+        full_name = (
+            f"{getattr(member, 'firstName', '') or ''} {getattr(member, 'lastName', '') or ''}".strip()
+            if member
+            else ""
+        ) or (getattr(member, "username", "") if member else "")
+        items.append(
+            {
+                "kind": "TIMESTAMP",
+                "timestampId": str(p.timestampId),
+                "companyId": str(p.companyId),
+                "company_employeeId": str(p.company_employeeId),
+                "employeeName": full_name,
+                "employeeId": (emp.employeeId if emp else "") or "",
+                "timestamp": p.timestamp,
+                "locationName": p.locationName or "",
+                "note": p.note or "",
+                "approvalStatus": p.approvalStatus,
+                "status": p.approvalStatus,
+            }
+        )
+
+    items.sort(key=lambda x: str(x.get("createdAt") or x.get("timestamp") or ""), reverse=True)
+    return {"items": items, "total": len(items)}
+
+
+@router.get("/company/{companyId}/leave-balances")
+async def list_leave_balances(
+    companyId: UUID,
+    request: Request,
+    company_employeeId: Optional[UUID] = None,
+    year: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    stmt = select(LeaveBalance).where(LeaveBalance.companyId == companyId)
+    if company_employeeId:
+        stmt = stmt.where(LeaveBalance.company_employeeId == company_employeeId)
+    if year:
+        stmt = stmt.where(LeaveBalance.year == year)
+    rows = (await db.execute(stmt.order_by(LeaveBalance.year.desc()).limit(500))).scalars().all()
+    return {
+        "items": [
+            {
+                "balanceId": str(b.balanceId),
+                "company_employeeId": str(b.company_employeeId),
+                "leaveType": b.leaveType,
+                "year": b.year,
+                "entitledDays": float(b.entitledDays or 0),
+                "usedDays": float(b.usedDays or 0),
+                "remainingDays": b.remainingDays,
+            }
+            for b in rows
+        ]
+    }
+
+
+@router.put("/company/{companyId}/leave-balances")
+async def upsert_leave_balance(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    emp_id = UUID(str(body.get("company_employeeId") or ""))
+    leave_type = str(body.get("leaveType") or "ANNUAL").strip().upper()
+    year = int(body.get("year") or date.today().year)
+    bal = await _get_or_create_leave_balance(db, companyId, emp_id, leave_type, year)
+    if "entitledDays" in body:
+        bal.entitledDays = float(body["entitledDays"])
+    if "usedDays" in body:
+        bal.usedDays = float(body["usedDays"])
+    await db.commit()
+    await db.refresh(bal)
+    return {
+        "balanceId": str(bal.balanceId),
+        "company_employeeId": str(bal.company_employeeId),
+        "leaveType": bal.leaveType,
+        "year": bal.year,
+        "entitledDays": float(bal.entitledDays or 0),
+        "usedDays": float(bal.usedDays or 0),
+        "remainingDays": bal.remainingDays,
+    }
+
+
+@router.post("/company/{companyId}/regularizations")
+async def create_regularization(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    emp_id = UUID(str(body.get("company_employeeId") or ""))
+    emp = await db.get(CompanyEmployee, emp_id)
+    if not emp or emp.companyId != companyId or emp.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    try:
+        work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
+        req_ts = datetime.fromisoformat(str(body.get("requestedTimestamp") or "").replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate and requestedTimestamp required")
+    await assert_date_not_locked(db, companyId, work_d)
+    row = RegularizationRequest(
+        companyId=companyId,
+        company_employeeId=emp_id,
+        workDate=work_d,
+        requestedTimestamp=req_ts,
+        requestedType=int(body.get("requestedType") or 1),
+        reason=str(body.get("reason") or "").strip(),
+        status=ApprovalRequestStatus.PENDING.value,
+        originalTimestampId=UUID(str(body["originalTimestampId"])) if body.get("originalTimestampId") else None,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return _serialize_regularization(row, emp)
+
+
+@router.post("/company/{companyId}/regularizations/{requestId}/approval")
+async def decide_regularization(
+    companyId: UUID,
+    requestId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    caller = await assert_request_company_membership(request, db, companyId)
+    row = await db.get(RegularizationRequest, requestId)
+    if not row or row.companyId != companyId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regularization request not found")
+    emp = await db.get(CompanyEmployee, row.company_employeeId)
+    if not emp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    await assert_can_approve_for_employee(db, caller, companyId, emp)
+    await assert_date_not_locked(db, companyId, row.workDate)
+    approve = bool(body.get("approve", True))
+    if approve:
+        row.status = ApprovalRequestStatus.APPROVED.value
+        row.rejectReason = None
+    else:
+        row.status = ApprovalRequestStatus.REJECTED.value
+        row.rejectReason = str(body.get("rejectReason") or "ไม่อนุมัติ").strip()
+    row.approvedBy = caller.memberId if caller else None
+    row.approvedAt = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(row)
+    return _serialize_regularization(row, emp)
+
+
+@router.post("/company/{companyId}/ot-approvals")
+async def create_ot_approval(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    emp_id = UUID(str(body.get("company_employeeId") or ""))
+    emp = await db.get(CompanyEmployee, emp_id)
+    if not emp or emp.companyId != companyId or emp.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    try:
+        work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate required")
+    await assert_date_not_locked(db, companyId, work_d)
+    ot_minutes = int(body.get("otMinutes") or 0)
+    threshold = body.get("thresholdMinutes")
+    if threshold is None and emp.shiftId:
+        shift = await db.get(WorkShift, emp.shiftId)
+        if shift is not None:
+            threshold = getattr(shift, "otThresholdMinutes", None)
+    requires = True
+    if threshold is not None and ot_minutes <= int(threshold):
+        requires = False
+    row = OtApprovalRequest(
+        companyId=companyId,
+        company_employeeId=emp_id,
+        workDate=work_d,
+        otMinutes=ot_minutes,
+        thresholdMinutes=int(threshold) if threshold is not None else None,
+        reason=str(body.get("reason") or "").strip(),
+        status=(
+            ApprovalRequestStatus.APPROVED.value
+            if not requires
+            else ApprovalRequestStatus.PENDING.value
+        ),
+        requiresApproval=requires,
+        approvedAt=datetime.now(timezone.utc) if not requires else None,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return _serialize_ot(row, emp)
+
+
+@router.post("/company/{companyId}/ot-approvals/{requestId}/approval")
+async def decide_ot_approval(
+    companyId: UUID,
+    requestId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    caller = await assert_request_company_membership(request, db, companyId)
+    row = await db.get(OtApprovalRequest, requestId)
+    if not row or row.companyId != companyId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OT approval request not found")
+    emp = await db.get(CompanyEmployee, row.company_employeeId)
+    if not emp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
+    await assert_can_approve_for_employee(db, caller, companyId, emp)
+    await assert_date_not_locked(db, companyId, row.workDate)
+    approve = bool(body.get("approve", True))
+    if approve:
+        row.status = ApprovalRequestStatus.APPROVED.value
+        row.rejectReason = None
+    else:
+        row.status = ApprovalRequestStatus.REJECTED.value
+        row.rejectReason = str(body.get("rejectReason") or "ไม่อนุมัติ").strip()
+    row.approvedBy = caller.memberId if caller else None
+    row.approvedAt = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(row)
+    return _serialize_ot(row, emp)
+
+
+# ---------------------------------------------------------------------------
+# C5 Payroll periods
+# ---------------------------------------------------------------------------
+@router.get("/company/{companyId}/payroll-periods")
+async def list_payroll_periods(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    rows = (
+        await db.execute(
+            select(PayrollPeriod)
+            .where(PayrollPeriod.companyId == companyId)
+            .order_by(PayrollPeriod.startDate.desc())
+            .limit(100)
+        )
+    ).scalars().all()
+    return {"items": [serialize_period(p) for p in rows]}
+
+
+@router.post("/company/{companyId}/payroll-periods")
+async def create_payroll_period(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    try:
+        start_d = date.fromisoformat(str(body.get("startDate") or "")[:10])
+        end_d = date.fromisoformat(str(body.get("endDate") or "")[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required")
+    if end_d < start_d:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
+    period = PayrollPeriod(
+        companyId=companyId,
+        name=str(body.get("name") or "").strip() or None,
+        startDate=start_d,
+        endDate=end_d,
+        status=PayrollPeriodStatus.OPEN.value,
+    )
+    db.add(period)
+    await db.commit()
+    await db.refresh(period)
+    return serialize_period(period)
+
+
+@router.post("/company/{companyId}/payroll-periods/{periodId}/close")
+async def close_payroll_period(
+    companyId: UUID,
+    periodId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    caller = await assert_request_company_access(request, db, companyId)
+    period = await db.get(PayrollPeriod, periodId)
+    if not period or period.companyId != companyId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payroll period not found")
+    if caller is None or caller.memberId is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    period = await close_and_lock_period(db, period, caller.memberId)
+    try:
+        import asyncio
+
+        asyncio.create_task(
+            emit_company_webhook_event(
+                companyId,
+                "payroll.period.closed",
+                {
+                    "periodId": str(period.periodId),
+                    "companyId": str(companyId),
+                    "startDate": period.startDate.isoformat(),
+                    "endDate": period.endDate.isoformat(),
+                    "status": period.status,
+                    "lockedBy": str(period.lockedBy) if period.lockedBy else None,
+                    "lockedAt": period.lockedAt.isoformat() if period.lockedAt else None,
+                },
+            )
+        )
+    except Exception:
+        pass
+    return serialize_period(period)

@@ -633,7 +633,10 @@ async def approve_or_reject_timestamp(
     companyId: UUID,
     action: TimestampApprovalAction,
     db: AsyncSession,
+    *,
+    approved_by: Optional[UUID] = None,
 ):
+    """Decide a geofence warning punch. ``approved_by`` must come from the JWT caller — never the body."""
     result = await db.execute(
         select(EmployeeTimestamp)
         .where(
@@ -656,6 +659,29 @@ async def approve_or_reject_timestamp(
             detail="Only PENDING timestamps can be approved or rejected.",
         )
 
+    subject = timestamp.company_employee
+    if subject is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found for timestamp")
+
+    from ..models.member import Member
+    from ..services.approval_gate import assert_can_approve_for_employee
+
+    if approved_by is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    caller = await db.get(Member, approved_by)
+    if caller is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+    await assert_can_approve_for_employee(db, caller, companyId, subject)
+
+    # Period lock: cannot decide punches whose Bangkok date falls in a locked payroll period.
+    from ..services.payroll_period_service import assert_date_not_locked
+
+    punch_day = timestamp.timestamp
+    if punch_day is not None:
+        if punch_day.tzinfo is None:
+            punch_day = punch_day.replace(tzinfo=timezone.utc)
+        await assert_date_not_locked(db, companyId, punch_day.astimezone(get_bangkok_tz()).date())
+
     if action.approve:
         timestamp.approvalStatus = ApprovalStatus.APPROVED.value
         timestamp.timestampType = TimestampType.CHECK_IN
@@ -670,7 +696,8 @@ async def approve_or_reject_timestamp(
         timestamp.rejectReason = action.rejectReason.strip()
         timestamp.timestampType = TimestampType.DISAPPROVE
 
-    timestamp.approvedBy = action.approvedBy
+    # Ignore client-supplied action.approvedBy — JWT only.
+    timestamp.approvedBy = approved_by
     timestamp.approvedAt = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(timestamp)
@@ -701,7 +728,7 @@ async def approve_or_reject_timestamp(
                     "timestampId": str(timestamp.timestampId),
                     "company_employeeId": str(timestamp.company_employeeId),
                     "approvalStatus": timestamp.approvalStatus,
-                    "approvedBy": timestamp.approvedBy,
+                    "approvedBy": str(timestamp.approvedBy) if timestamp.approvedBy else None,
                     "rejectReason": timestamp.rejectReason,
                 },
             )

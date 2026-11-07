@@ -193,6 +193,10 @@ async def teardown_world(world: World) -> None:
             "b": f"%{cids['b']}",
         })
         for tbl in (
+            "leave_balance",
+            "regularization_request",
+            "ot_approval_request",
+            "payroll_period",
             "attendance_daily",
             "employee_timestamp",
             "face_encoding",

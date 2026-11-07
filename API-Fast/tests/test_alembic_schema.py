@@ -4,7 +4,7 @@
 * the head revision can be downgraded one step and re-applied
 * a database created by the legacy ``create_all`` startup path can be stamped and upgraded
 * revision 0007 backfills ``face_encoding.companyId`` (exercised through downgrade/upgrade)
-* revision ids fit ``alembic_version.version_num`` (VARCHAR(64) after 0011)
+* revision ids fit ``alembic_version.version_num`` (VARCHAR(64) after Phase C 0011)
 
 The database comes from tests/conftest.py (``TEST_DATABASE_URL`` or embedded pgserver).
 """
@@ -79,6 +79,7 @@ def test_revision_ids_fit_alembic_version_column():
     assert "0011_attendance_daily_shift_rules" in ids
     assert len("0011_attendance_daily_shift_rules") == 33
     assert "0012_punch_break_holiday" in ids
+    assert "0013_approvals_payroll_period" in ids
 
 
 def test_single_linear_head():

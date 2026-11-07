@@ -80,6 +80,7 @@ def test_revision_ids_fit_alembic_version_column():
     assert len("0011_attendance_daily_shift_rules") == 33
     assert "0012_punch_break_holiday" in ids
     assert "0013_approvals_payroll_period" in ids
+    assert "0014_rbac" in ids
 
 
 def test_single_linear_head():

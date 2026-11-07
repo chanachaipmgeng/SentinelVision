@@ -8,6 +8,7 @@ from ..config.database import get_db
 from ..models.system_setting import SystemSetting
 from ..security.deps import assert_company_access, get_current_member
 from ..services.notification_service import NotificationOutbox, enqueue
+from ..services import rbac_service
 
 router = APIRouter()
 
@@ -53,10 +54,13 @@ async def pending_count(
 @router.get("/company/{companyId}/settings")
 async def get_notify_settings(
     companyId: UUID,
+    request: Request,
     member=Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await rbac_service.assert_permission(
+        db, member, rbac_service.PERM_NOTIFICATIONS_MANAGE, companyId
+    )
     row = await db.get(SystemSetting, _notify_key(str(companyId)))
     default_cfg = {
         "email": "",
@@ -91,7 +95,9 @@ async def put_notify_settings(
     member=Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await rbac_service.assert_permission(
+        db, member, rbac_service.PERM_NOTIFICATIONS_MANAGE, companyId
+    )
     key = _notify_key(str(companyId))
     row = await db.get(SystemSetting, key)
     existing = row.value if (row and isinstance(row.value, dict)) else {}
@@ -129,7 +135,9 @@ async def test_notify(
     member=Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await rbac_service.assert_permission(
+        db, member, rbac_service.PERM_NOTIFICATIONS_MANAGE, companyId
+    )
     cid_str = str(companyId)
     row = await db.get(SystemSetting, _notify_key(cid_str))
     value = row.value if (row and isinstance(row.value, dict)) else {}
@@ -182,7 +190,9 @@ async def list_company_outbox(
     member=Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await rbac_service.assert_permission(
+        db, member, rbac_service.PERM_NOTIFICATIONS_MANAGE, companyId
+    )
     safe_limit = min(max(1, int(limit or 50)), 200)
     rows = (
         await db.execute(

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
 import { AuthService } from '../../services/auth.service';
+import { PermissionService } from '../../services/permission.service';
 import { TranslateService } from '@ngx-translate/core';
 import { UserProfileModel } from '../../../DPU/models/user.model';
 
@@ -30,6 +31,7 @@ export class HeaderComponent implements OnInit {
     private elementRef: ElementRef,
     private tokenService: TokenService,
     private authService: AuthService,
+    private permissionService: PermissionService,
     private translate: TranslateService,
     private http: HttpClient) {
 
@@ -216,8 +218,14 @@ export class HeaderComponent implements OnInit {
   logOut() {
     // Revoke the session server-side (access + refresh token family) before clearing storage.
     this.authService.logout(this.tokenService.getRefreshToken()).subscribe({
-      next: () => this.tokenService.signOut(),
-      error: () => this.tokenService.signOut(),
+      next: () => {
+        this.permissionService.clear();
+        this.tokenService.signOut();
+      },
+      error: () => {
+        this.permissionService.clear();
+        this.tokenService.signOut();
+      },
     });
   }
 }

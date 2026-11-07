@@ -5,6 +5,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NavigationEnd, Router } from '@angular/router';
 import { checkHoriMenu, switcherArrowFn } from './sidebar';
 import { TokenService } from '../../services/token.service';
+import { PermissionService } from '../../services/permission.service';
 import { CompanyModel } from '../../../DPU/models/company.model';
 import { CompanyModuleConfigService } from '../../../DPU/services/company-module-config.service';
 @Component({
@@ -76,7 +77,8 @@ export class SidebarComponent {
     public renderer: Renderer2,
     private elementRef: ElementRef,
     public tokenService: TokenService,
-    private moduleConfigService: CompanyModuleConfigService
+    private moduleConfigService: CompanyModuleConfigService,
+    private permissionService: PermissionService,
   ) {
     // this.companyModel = new CompanyModel(this.tokenService.getSelectCompany())
     this.screenWidth = window.innerWidth;
@@ -175,17 +177,26 @@ export class SidebarComponent {
       const raw = this.navServices.getCompanyMenu();
       const companyId = this.tokenService.getSelectCompany()?.companyId;
       if (!companyId) {
-        this.menuItems = raw;
+        this.menuItems = this.applyPermissionFilter(raw);
         this.ParentActive();
         return;
       }
-      this.moduleConfigService.getModuleConfig(companyId).subscribe({
-        next: (cfg) => {
-          this.menuItems = this.navServices.filterCompanyMenuByModules(
-            raw,
-            cfg.enabledModules
-          );
-          this.ParentActive();
+      this.permissionService.load(String(companyId)).subscribe({
+        next: () => {
+          this.moduleConfigService.getModuleConfig(companyId).subscribe({
+            next: (cfg) => {
+              const byModule = this.navServices.filterCompanyMenuByModules(
+                raw,
+                cfg.enabledModules
+              );
+              this.menuItems = this.applyPermissionFilter(byModule);
+              this.ParentActive();
+            },
+            error: () => {
+              this.menuItems = this.applyPermissionFilter(raw);
+              this.ParentActive();
+            },
+          });
         },
         error: () => {
           this.menuItems = raw;
@@ -193,9 +204,23 @@ export class SidebarComponent {
         },
       });
     } else {
-      this.menuItems = this.navServices.getCommonMenu();
-      this.ParentActive();
+      this.permissionService.load(null).subscribe({
+        next: () => {
+          this.menuItems = this.applyPermissionFilter(this.navServices.getCommonMenu());
+          this.ParentActive();
+        },
+        error: () => {
+          this.menuItems = this.navServices.getCommonMenu();
+          this.ParentActive();
+        },
+      });
     }
+  }
+
+  private applyPermissionFilter(items: Menu[]): Menu[] {
+    return this.navServices.filterMenuByPermissions(items, (code) =>
+      this.permissionService.has(code)
+    );
   }
 
 

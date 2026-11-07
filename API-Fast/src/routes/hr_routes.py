@@ -39,6 +39,7 @@ from ..security.deps import (
     assert_member_company_access,
     assert_request_company_access,
     assert_request_company_membership,
+    assert_request_permission,
 )
 from ..security.jwt import kiosk_refresh_ttl
 from ..security.kiosk_pairing import generate_pairing_code, hash_pairing_code, pairing_code_expiry
@@ -159,7 +160,7 @@ async def list_company_shifts(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.list_shifts(companyId, db)
 
 
@@ -170,7 +171,7 @@ async def create_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.create_shift(companyId, body, db)
 
 
@@ -182,7 +183,7 @@ async def update_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.update_shift(companyId, shiftId, body, db)
 
 
@@ -193,7 +194,7 @@ async def delete_company_shift(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
     return await hr_controller.delete_shift(companyId, shiftId, db)
 
 
@@ -221,7 +222,7 @@ async def list_company_holidays(
     end: Optional[date] = None,
 ):
     """List active holidays. Optional ``start``/``end`` (YYYY-MM-DD) for metrics consumers (C2)."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.holidays", companyId)
     rows = await list_active_holidays(db, companyId, start=start, end=end)
     return [serialize_holiday(r) for r in rows]
 
@@ -787,7 +788,7 @@ async def list_kiosk_devices(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "devices.manage", companyId)
     rows = (
         await db.execute(
             select(KioskDevice)
@@ -806,7 +807,7 @@ async def register_kiosk_device(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a device and return its one-time pairing code (shown once, never stored in clear)."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "devices.manage", companyId)
     name = str(body.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Device name is required")
@@ -834,7 +835,7 @@ async def reissue_kiosk_pairing_code(
     db: AsyncSession = Depends(get_db),
 ):
     """Re-pair an existing device: invalidates its current token family and issues a new code."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "devices.manage", companyId)
     device = await _get_company_device(db, companyId, deviceId)
     if device.revokedAt is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Kiosk device is revoked; register a new device")
@@ -858,7 +859,7 @@ async def revoke_kiosk_device(
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke the device: its token family is denied immediately and no pairing code remains."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "devices.manage", companyId)
     device = await _get_company_device(db, companyId, deviceId)
     await _revoke_device_tokens(db, device, reason=revocation.REASON_DEVICE_REVOKED)
     device.pairingCodeHash = None

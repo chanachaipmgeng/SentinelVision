@@ -11,25 +11,41 @@ from ..schemas.company_schema import CompanyUpdate, CompanyResponse , CompanyBas
 from typing import List
 
 from sqlalchemy import select
+from ..models.member import Member
+from ..security.deps import require_permission, require_system_admin
 from ..services.audit_service import AuditLog
 
 router = APIRouter()
 
 @router.get("", response_model=List[CompanyResponse])
-async def get_companies_route(db: AsyncSession = Depends(get_db)):
+async def get_companies_route(
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_system_admin),
+):
     return await get_all_companies(db)
 
 @router.get("/{companyId}", response_model=CompanyResponse)
-async def get_company_by_id_route(companyId: str, db: AsyncSession = Depends(get_db)):
+async def get_company_by_id_route(
+    companyId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.read")),
+):
     return await get_company_by_id(companyId, db)
 
 @router.post("", response_model=CompanyResponse)
-async def create_company_route(company: CompanyBase, db: AsyncSession = Depends(get_db)):
+async def create_company_route(
+    company: CompanyBase,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_system_admin),
+):
     return await create_company(company.dict(), db)
 
 @router.put("/{companyId}", response_model=CompanyResponse)
 async def update_company_route(
-    companyId: str, company_update: CompanyUpdate, db: AsyncSession = Depends(get_db)
+    companyId: str,
+    company_update: CompanyUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
 ):
     return await update_company(companyId, company_update.dict(exclude_unset=True), db)
 
@@ -38,6 +54,7 @@ async def list_audit_logs(
     companyId: str,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("audit.read")),
 ):
     rows = (
         await db.execute(

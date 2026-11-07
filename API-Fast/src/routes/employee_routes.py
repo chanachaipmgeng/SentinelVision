@@ -3,10 +3,12 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import io
+# Request used by mutating routes for actor + AuthzMiddleware state.
 
 from ..schemas.company_schema import CompanyResponse
 from ..config.database import get_db
-from ..security.deps import current_member_var
+from ..models.member import Member
+from ..security.deps import current_member_var, require_permission
 from ..controllers.company_employee_controller import (
     get_all_companyEmployees,
     get_company_employee_by_id,
@@ -37,6 +39,7 @@ async def get_companyEmployees_route(
     limit: int | None = None,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.read")),
 ):
     return await get_all_companyEmployees(companyId, db, limit=limit, offset=offset)
 
@@ -44,7 +47,9 @@ async def get_companyEmployees_route(
 # Excel import template (must be registered before /{company_employeeId})
 @router.get("/company/{companyId}/import-template")
 async def download_employee_import_template_route(
-    companyId: str, db: AsyncSession = Depends(get_db)
+    companyId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     data = await build_employee_import_template(companyId, db)
     return StreamingResponse(
@@ -62,31 +67,48 @@ async def import_employees_excel_route(
     file: UploadFile = File(...),
     photos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     return await import_employees_from_excel(companyId, file, db, photos=photos)
 
 
 # ดึงข้อมูลพนักงานในบริษัทตาม company_employeeId และ companyId
 @router.get("/company/{companyId}/{company_employeeId}", response_model=CompanyEmployeeResponse)
-async def get_company_employee_by_id_route(companyId: str, company_employeeId: str, db: AsyncSession = Depends(get_db)):
+async def get_company_employee_by_id_route(
+    companyId: str,
+    company_employeeId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.read")),
+):
     return await get_company_employee_by_id(company_employeeId, companyId, db)
 
 # ดึงข้อมูลพนักงานในบริษัทตาม memberId และ companyId
 @router.get("/company/{companyId}/member/{memberId}", response_model=CompanyEmployeeResponse)
-async def get_company_member_by_id_route(companyId: str, memberId: str, db: AsyncSession = Depends(get_db)):
+async def get_company_member_by_id_route(
+    companyId: str,
+    memberId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.read")),
+):
     return await get_company_member_by_id(memberId, companyId, db)
 
 # ดึงลูกน้อง company_employeeId และ companyId
 @router.get("/company/sub/{companyId}/{company_employeeId}", response_model=List[CompanyEmployeeResponse])
-async def get_company_sub_employee_by_id_route(companyId: str, company_employeeId: str, db: AsyncSession = Depends(get_db)):
+async def get_company_sub_employee_by_id_route(
+    companyId: str,
+    company_employeeId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.read")),
+):
     return await get_company_sub_employee_by_id(company_employeeId, companyId, db)
 
 # เพิ่มสมาชิกใหม่หรือนำสมาชิกที่มีอยู่แล้วเข้าสู่บริษัท
 @router.post("/company/{companyId}", response_model=CompanyEmployeeResponse)
 async def register_member_route(
-    companyId: str, 
-    member_data: CompanyEmployeePost, 
-    db: AsyncSession = Depends(get_db)
+    companyId: str,
+    member_data: CompanyEmployeePost,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     return await register_member(member_data, companyId, db)
 
@@ -97,13 +119,19 @@ async def update_company_employee_route(
     companyId: str,
     company_employee: CompanyEmployeeUpdate,
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     actor = getattr(request.state, "member", None) or current_member_var.get()
     return await update_company_employee(company_employee, companyId, db, actor=actor)
 
 # ลบพนักงานออกจากบริษัทตาม company_employeeId และ companyId
 @router.delete("/company/{companyId}/{company_employeeId}")
-async def delete_company_employee_route(companyId: str, company_employeeId: str, db: AsyncSession = Depends(get_db)):
+async def delete_company_employee_route(
+    companyId: str,
+    company_employeeId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
+):
     await delete_company_employee(company_employeeId, companyId, db)
     return {"detail": "Company Employee deleted successfully"}
 
@@ -125,6 +153,7 @@ async def start_import_job(
     file: UploadFile = File(...),
     photos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     from fastapi import HTTPException
 

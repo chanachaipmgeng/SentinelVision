@@ -11,7 +11,12 @@ from ..controllers.position_controller import (
     delete_position
 )
 from ..schemas.position_schema import PositionCreate, PositionUpdate, PositionResponse
-from ..security.deps import assert_request_company_access, require_request_system_admin
+from ..models.member import Member
+from ..security.deps import (
+    assert_request_permission,
+    require_permission,
+    require_request_system_admin,
+)
 
 router = APIRouter()
 
@@ -24,30 +29,33 @@ async def get_positions_route(request: Request, db: AsyncSession = Depends(get_d
 @router.get("/{positionId}", response_model=PositionResponse)
 async def get_position_by_id_route(request: Request, positionId: str, db: AsyncSession = Depends(get_db)):
     position = await get_position_by_id(positionId, db)
-    await assert_request_company_access(request, db, position.companyId)
+    await assert_request_permission(request, db, "positions.read", position.companyId)
     return position
 
 @router.get("/company/{companyId}", response_model=List[PositionResponse])
-async def get_positions_by_companyId_route(companyId: str, db: AsyncSession = Depends(get_db)):
+async def get_positions_by_companyId_route(
+    companyId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("positions.read")),
+):
     return await get_positions_by_companyId(companyId, db)
 
 @router.post("", response_model=PositionResponse)
 async def create_position_route(request: Request, position: PositionCreate, db: AsyncSession = Depends(get_db)):
-    await assert_request_company_access(request, db, position.companyId)
+    await assert_request_permission(request, db, "positions.write", position.companyId)
     return await create_position(position.dict(), db)
 
 @router.put("/{positionId}", response_model=PositionResponse)
 async def update_position_route(request: Request, positionId: str, position: PositionUpdate, db: AsyncSession = Depends(get_db)):
     existing = await get_position_by_id(positionId, db)
-    await assert_request_company_access(request, db, existing.companyId)
+    await assert_request_permission(request, db, "positions.write", existing.companyId)
     if position.companyId is not None and position.companyId != existing.companyId:
-        # Re-homing a position into another tenant needs admin rights there too.
-        await assert_request_company_access(request, db, position.companyId)
+        await assert_request_permission(request, db, "positions.write", position.companyId)
     return await update_position(positionId, position.dict(exclude_unset=True), db)
 
 @router.delete("/{positionId}")
 async def delete_position_route(request: Request, positionId: str, db: AsyncSession = Depends(get_db)):
     existing = await get_position_by_id(positionId, db)
-    await assert_request_company_access(request, db, existing.companyId)
+    await assert_request_permission(request, db, "positions.write", existing.companyId)
     await delete_position(positionId, db)
     return {"detail": "Position deleted successfully"}

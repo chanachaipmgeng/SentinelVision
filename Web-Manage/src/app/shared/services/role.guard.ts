@@ -1,41 +1,90 @@
 import { Injectable } from '@angular/core';
 import { ActivatedRouteSnapshot, CanActivate, CanActivateChild, Router } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { TokenService } from './token.service';
+import { PermissionService } from './permission.service';
 
 @Injectable({ providedIn: 'root' })
 export class RoleGuard implements CanActivate, CanActivateChild {
-  constructor(private router: Router, private tokenService: TokenService) {}
+  constructor(
+    private router: Router,
+    private tokenService: TokenService,
+    private permissions: PermissionService,
+  ) {}
 
-  canActivate(route: ActivatedRouteSnapshot): boolean {
+  canActivate(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
     return this.allow(route);
   }
 
-  canActivateChild(route: ActivatedRouteSnapshot): boolean {
+  canActivateChild(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
     return this.allow(route);
   }
 
-  private allow(route: ActivatedRouteSnapshot): boolean {
+  private allow(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
     if (!this.tokenService.getToken()) {
       this.router.navigate(['/auth/login']);
       return false;
     }
-    const role = String(this.tokenService.getUser()?.member?.role ?? '');
-    const isSystem = role === '99' || role === 'ADMIN_SYSTEM';
+
     let snap: ActivatedRouteSnapshot | null = route;
-    let need = '';
+    let area = '';
+    let requiredPerm = '';
     while (snap) {
+      if (snap.data?.['permission']) {
+        requiredPerm = String(snap.data['permission']);
+      }
       if (snap.data?.['area']) {
-        need = snap.data['area'];
+        area = snap.data['area'];
         break;
       }
       snap = snap.parent;
     }
-    if (need === 'admin' && !isSystem) {
-      this.router.navigate(['/auth/login']);
-      return false;
+
+    const companyId = this.tokenService.getSelectCompany()?.companyId
+      ? String(this.tokenService.getSelectCompany().companyId)
+      : null;
+
+    // Admin area: system.admin only (server-driven when snapshot is warm).
+    if (area === 'admin') {
+      if (this.permissions.isSystemAdmin()) {
+        return true;
+      }
+      return this.permissions.load(null).pipe(
+        map((snapPerm) => {
+          const ok =
+            snapPerm.permissions.includes('system.admin') ||
+            this.permissions.isSystemAdmin();
+          if (!ok) {
+            this.router.navigate(['/auth/login']);
+          }
+          return ok;
+        }),
+        catchError(() => {
+          this.router.navigate(['/auth/login']);
+          return of(false);
+        }),
+      );
     }
-    // System admins enter a company from /admin/manage-companys. Company pages
-    // then use the company saved by the home screen. Company admins stay out of /admin.
+
+    if (requiredPerm) {
+      return this.permissions.load(companyId).pipe(
+        map(() => {
+          const ok = this.permissions.has(requiredPerm);
+          if (!ok) {
+            this.router.navigate(['/company/dashboard']);
+          }
+          return ok;
+        }),
+        catchError(() => of(true)), // fail open to company shell; API still enforces
+      );
+    }
+
+    // Company pages: ensure permissions are loaded for nav filtering; do not
+    // block entry here (individual routes may set data.permission).
+    if (area === 'company' && companyId) {
+      this.permissions.load(companyId).subscribe();
+    }
     return true;
   }
 }

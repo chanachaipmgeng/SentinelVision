@@ -53,10 +53,15 @@ services:
       CUDA_VISIBLE_DEVICES: "1"
       NVIDIA_VISIBLE_DEVICES: "1"
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      # B7: import uploads land on the shared volume for the worker (nginx may route here).
+      RUN_BACKGROUND_JOBS_IN_API: ${RUN_BACKGROUND_JOBS_IN_API:-false}
+      IMPORT_JOB_DIR: /app/import_jobs
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
       - api_temp:/app/temp_images
+      - api_import_jobs:/app/import_jobs
     depends_on:
       db:
         condition: service_healthy

@@ -43,7 +43,7 @@ Every other route needs a Bearer token in the `Authorization` header. `?token=` 
 | CRUD | `/employees/company/{companyId}` | JWT | Company employees (`shiftId` and `member.biometricConsentAt` included). |
 | GET | `/employees/company/{companyId}/import-template` | JWT | Excel template. |
 | POST | `/employees/company/{companyId}/import` | JWT | multipart `file` (.xlsx) + optional `photos` (.zip). |
-| POST | `/employees/company/{companyId}/import-jobs` | JWT | Runs bulk import in background; poll `GET .../import-jobs/{jobId}`. |
+| POST | `/employees/company/{companyId}/import-jobs` | JWT | Stores the upload and queues an `import_job` for the `worker` service → `{jobId, status: "pending", progress}`. Poll `GET .../import-jobs/{jobId}` → `{jobId, status: pending\|running\|done\|failed, progress: {processed,total,success,failed,facesEnrolled}, result, error, attempts, createdAt, startedAt, finishedAt}`. |
 | GET | `/companys/{companyId}/audit-logs` | JWT | Paginated audit trail (`limit`, `offset`). |
 | GET/PUT | `/notifications/company/{companyId}/settings` | JWT | Configure `email`, `lineToken`, `webhookUrl`, `webhookSecret` (HMAC-SHA256 signing key), `cutoff` (`HH:MM`), and `events` (`attendance.checked_in`, `attendance.checked_out`, `attendance.approved`, `attendance.missing`). |
 | POST | `/notifications/company/{companyId}/test` | JWT | Enqueue signed test notification across configured channels (`X-DPU-Signature-256: v1=<hmac>`). |

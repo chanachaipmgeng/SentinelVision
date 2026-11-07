@@ -28,7 +28,7 @@ Invoke by mentioning the skill name or describing the matching task (agent auto-
 - Auth: `API-Fast/src/security/` — `jwt.py` (env `SECRET_KEY`, access 60 min, refresh 14 d), `middleware.py` (`AuthzMiddleware`: token required, company path binding, audit on writes), `deps.py` (`get_current_member`, `require_system_admin`, `assert_company_access`, `assert_request_company_access`), `passwords.py` (temp password, lockout)
 - Open paths only: `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/`
 - Frontend: `AuthGuard` + `RoleGuard`, single `HttpRequestInterceptor`, kiosk WS session sends `token`, `/auth/change-password` for first login
-- Services: `services/audit_service.py`, `notification_service.py` (outbox + SMTP/LINE worker + `ImportJob`), `storage_service.py` (retention), `observability.py` (request-id, JSON logs, `/metrics`), `face_match_service.py`
+- Services: `services/audit_service.py`, `notification_service.py` (outbox dispatcher + SMTP/LINE), `import_job_service.py` (B7 import hand-off: payload dir + `import_job` claim/progress), `storage_service.py` (retention), `observability.py` (B6: `prometheus_client` metrics, OTel tracing, JSON logs with request/company id, `/metrics`), `face_match_service.py`; `src/worker/` (B7 runner: `outbox` / `retention` / `imports` jobs, `python -m src.worker [--once]`, `RUN_BACKGROUND_JOBS_IN_API` for single-container dev)
 - Ops: `docs/RUNBOOK.md`, `scripts/backup.sh`, `docker-compose.prod.yml`, `.gitlab-ci.yml`, `API-Fast/alembic/` (baseline marker; runtime schema still via `create_all` + `schema_migrate`)
 
 ## Face check-in evolution (keep in sync)

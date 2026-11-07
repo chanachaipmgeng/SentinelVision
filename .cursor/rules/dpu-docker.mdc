@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Services
 
-`db` (pgvector), `api`, `admin`, `nginx` (:80)
+`db` (pgvector), `api`, `worker` (B7: outbox / retention / import jobs, `python -m src.worker`, CPU only, metrics `:9108`), `admin`, `nginx` (:80). Optional: `-f docker-compose.observability.yml` adds `prometheus` (:9090), `grafana` (:3000, needs `GRAFANA_ADMIN_PASSWORD`) and `otel-collector`.
 
 ### Local InsightFace (DPU holds GPUs)
 
@@ -36,7 +36,7 @@ Each process sees a single device as `cuda:0`. Do **not** set `FACE_DEVICES=cuda
 
 `-f docker-compose.loadtest.yml --profile loadtest` → `loadgen` service hits `http://nginx:80`. See [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md).
 
-All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks (`api` → `/ready`, `nginx` → `/health`).
+All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks (`api` → `/ready`, `worker` → `:9108/metrics`, `nginx` → `/health`).
 
 ## Required env
 
@@ -48,12 +48,12 @@ All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks 
 
 | Change | Rebuild |
 |--------|---------|
-| `API-Fast/src/**` | `api` **and** `api-gpu1` |
+| `API-Fast/src/**` | `api`, `api-gpu1` **and** `worker` (same image) |
 | `Web-Manage/**` | `admin` |
 | `docker/nginx/default.conf` or `default.dual-gpu.conf` | `nginx` |
 | `docker-compose.face-core.yml`, `API-Fast/Dockerfile.bff` | `api` (needs sibling face-core SDK) |
 
-API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` only — **not** source code. Recreate nginx together with the APIs so upstream IPs stay fresh.
+API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` / `import_jobs` (shared with `worker`) only — **not** source code. Recreate nginx together with the APIs so upstream IPs stay fresh.
 
 ## Nginx
 

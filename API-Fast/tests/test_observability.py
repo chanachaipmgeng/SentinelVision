@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 
-import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from fastapi.testclient import TestClient

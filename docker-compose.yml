@@ -58,10 +58,17 @@ services:
       FACE_DEVICE: "${FACE_DEVICE:-cuda:0}"
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+      # B7: outbox / retention / import processing run in the `worker` service below.
+      # true = single-container dev: run the same job loops inside the API process.
+      RUN_BACKGROUND_JOBS_IN_API: ${RUN_BACKGROUND_JOBS_IN_API:-false}
+      IMPORT_JOB_DIR: /app/import_jobs
+      # B6: OpenTelemetry is a no-op until an OTLP endpoint is set (see docker-compose.observability.yml).
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
       - api_temp:/app/temp_images
+      - api_import_jobs:/app/import_jobs
     depends_on:
       db:
         condition: service_healthy
@@ -78,6 +85,73 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
+      start_period: 60s
+
+  # B7 background worker: notification outbox dispatcher, attendance cutoff, storage / sentinel /
+  # import-payload retention and employee import processing. Same image as `api`, different
+  # entrypoint, no GPU (face enrollment during import runs InsightFace on CPU). Scale with
+  # `--scale worker=N`: every job claims rows with FOR UPDATE SKIP LOCKED.
+  worker:
+    build:
+      context: ./API-Fast
+      dockerfile: Dockerfile
+    container_name: dpu-worker
+    command: ["python", "-m", "src.worker"]
+    expose:
+      - "9108"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:-dpu_secret}@db:5432/${POSTGRES_DB:-dpu}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
+      IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
+      IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
+      IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
+      FACE_DEVICE: cpu
+      FACE_DEVICES: cpu
+      NVIDIA_VISIBLE_DEVICES: ""
+      WORKER_JOBS: ${WORKER_JOBS:-outbox,retention,imports}
+      WORKER_METRICS_PORT: "9108"
+      WORKER_IMPORT_POLL_SECONDS: ${WORKER_IMPORT_POLL_SECONDS:-2}
+      WORKER_RETENTION_INTERVAL_SECONDS: ${WORKER_RETENTION_INTERVAL_SECONDS:-3600}
+      WORKER_IMPORT_LEASE_SECONDS: ${WORKER_IMPORT_LEASE_SECONDS:-900}
+      WORKER_SHUTDOWN_GRACE_SECONDS: ${WORKER_SHUTDOWN_GRACE_SECONDS:-30}
+      NOTIFY_POLL_SECONDS: ${NOTIFY_POLL_SECONDS:-30}
+      IMPORT_JOB_DIR: /app/import_jobs
+      IMPORT_JOB_RETENTION_DAYS: ${IMPORT_JOB_RETENTION_DAYS:-7}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      IMAGE_RETENTION_DAYS: ${IMAGE_RETENTION_DAYS:-90}
+      TEMP_RETENTION_HOURS: ${TEMP_RETENTION_HOURS:-24}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    volumes:
+      - api_enrolled:/app/enrolled_images
+      - api_uploaded:/app/uploaded_images
+      - api_temp:/app/temp_images
+      - api_import_jobs:/app/import_jobs
+    depends_on:
+      db:
+        condition: service_healthy
+      # The API creates / migrates the schema on startup; the worker only needs the tables to exist.
+      api:
+        condition: service_healthy
+    stop_grace_period: 45s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9108/metrics')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
       start_period: 60s
 
   admin:
@@ -132,3 +206,4 @@ volumes:
   api_enrolled:
   api_uploaded:
   api_temp:
+  api_import_jobs:

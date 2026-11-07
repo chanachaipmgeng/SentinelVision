@@ -96,39 +96,18 @@ async def unhandled_error(request: Request, exc: Exception):
     )
 
 
-async def _retention_loop() -> None:
-    from .services.storage_service import retention_tick
-    from .routes.sentinel_routes import expire_sentinel_identities_tick
-
-    while True:
-        try:
-            r_stats = retention_tick()
-            s_stats = await expire_sentinel_identities_tick()
-            logger.info("retention %s sentinel=%s", r_stats, s_stats)
-        except Exception:
-            logger.exception("retention failed")
-        await asyncio.sleep(3600)
-
-
-async def _notify_loop() -> None:
-    from .services.notification_service import drain_outbox
-
-    while True:
-        try:
-            await drain_outbox()
-            from .services.notification_service import attendance_cutoff_tick
-
-            await attendance_cutoff_tick()
-        except Exception:
-            logger.exception("notify drain failed")
-        await asyncio.sleep(max(5, int(settings.NOTIFY_POLL_SECONDS)))
+# B7: outbox / retention / import processing live in the `worker` service (python -m src.worker).
+# RUN_BACKGROUND_JOBS_IN_API=true runs the same job loops inside this process (single-container dev).
+_in_process_jobs = None
 
 
 @app.on_event("startup")
 async def startup():
     from .services.storage_service import ensure_dirs
+    from .services.import_job_service import import_job_root
 
     ensure_dirs()
+    import_job_root().mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await ensure_db_schema(conn)
         await prepare_pgvector(conn)
@@ -145,15 +124,27 @@ async def startup():
             queue_size=settings.FACE_GPU_QUEUE_SIZE,
             devices=devices,
         )
-    asyncio.create_task(_retention_loop())
-    asyncio.create_task(_notify_loop())
     from .services.token_revocation_service import revocation_purge_loop
 
     asyncio.create_task(revocation_purge_loop())
 
+    global _in_process_jobs
+    if settings.RUN_BACKGROUND_JOBS_IN_API:
+        from .worker import WorkerRunner
+
+        _in_process_jobs = WorkerRunner(worker_id=f"api:{settings.WORKER_ID or 'in-process'}")
+        await _in_process_jobs.start()
+        logger.warning(
+            "RUN_BACKGROUND_JOBS_IN_API=true: outbox/retention/import jobs run inside the API process"
+        )
+    else:
+        logger.info("background jobs delegated to the worker service (RUN_BACKGROUND_JOBS_IN_API=false)")
+
 
 @app.on_event("shutdown")
 async def shutdown():
+    if _in_process_jobs is not None:
+        await _in_process_jobs.stop()
     shutdown_tracing()
 
 

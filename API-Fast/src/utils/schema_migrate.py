@@ -277,6 +277,20 @@ async def ensure_profile_and_approval_columns(connection) -> None:
         CREATE INDEX IF NOT EXISTS notification_outbox_status_created_idx
         ON notification_outbox ("status", "createdAt")
         """,
+        # B7 worker hand-off columns on import_job (mirrors alembic 0009_import_job_worker).
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "requestedBy" UUID',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "fileName" VARCHAR',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "photosFileName" VARCHAR',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "payloadDir" VARCHAR',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "progress" JSONB',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "attempts" INTEGER NOT NULL DEFAULT 0',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "lockedBy" VARCHAR',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "startedAt" TIMESTAMPTZ',
+        'ALTER TABLE import_job ADD COLUMN IF NOT EXISTS "heartbeatAt" TIMESTAMPTZ',
+        """
+        CREATE INDEX IF NOT EXISTS import_job_status_created_idx
+        ON import_job (status, "createdAt")
+        """,
         """
         DO $$ BEGIN
           CREATE UNIQUE INDEX uq_company_employee_member_company

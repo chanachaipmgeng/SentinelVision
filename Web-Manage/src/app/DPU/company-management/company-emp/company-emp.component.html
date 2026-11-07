@@ -617,7 +617,18 @@
     <div class="bg-white dark:bg-bodybg rounded-xl shadow-lg px-8 py-7 flex flex-col items-center gap-3 min-w-[260px]">
       <div class="ti-spinner animation-spin !w-10 !h-10 text-primary" role="status"></div>
       <div class="text-base font-semibold text-defaulttextcolor">กำลังนำเข้าพนักงาน...</div>
-      <div class="text-sm text-textmuted text-center">กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลและใบหน้า</div>
+      <div class="text-sm text-textmuted text-center">{{ importStatusText }}</div>
+      @if (importProgress?.total) {
+        <div class="w-full h-2 rounded-full bg-light overflow-hidden" role="progressbar"
+          [attr.aria-valuenow]="importProgress?.processed || 0" aria-valuemin="0" [attr.aria-valuemax]="importProgress?.total">
+          <div class="h-full bg-primary transition-all"
+            [style.width.%]="((importProgress?.processed || 0) / (importProgress?.total || 1)) * 100"></div>
+        </div>
+        <div class="text-xs text-textmuted">
+          {{ importProgress?.processed || 0 }} / {{ importProgress?.total }} แถว
+          · สำเร็จ {{ importProgress?.success || 0 }} · ไม่สำเร็จ {{ importProgress?.failed || 0 }}
+        </div>
+      }
     </div>
   </div>
 }

@@ -11,4 +11,5 @@ from . import (  # noqa: F401
     system_setting,
     hr_schedule,
     sentinel,
+    import_job,
 )

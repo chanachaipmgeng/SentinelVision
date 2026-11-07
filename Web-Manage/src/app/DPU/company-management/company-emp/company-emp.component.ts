@@ -8,7 +8,7 @@ import { TranslateModule, TranslateService } from "@ngx-translate/core";
 import { FlatpickrDefaults, FlatpickrModule } from "angularx-flatpickr";
 import { MatDatepickerModule } from "@angular/material/datepicker";
 import { EmployeeModel } from "../../models/employee.model";
-import { EmployeeService } from "../../services/employee.service";
+import { EmployeeImportProgress, EmployeeService } from "../../services/employee.service";
 import { TokenService } from "../../../shared/services/token.service";
 import swal from 'sweetalert';
 import { DepartmentService } from "../../services/department.service";
@@ -110,6 +110,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   _searchTerm = "";
   isEdit = false;
   isImporting = false;
+  importProgress: EmployeeImportProgress | null = null;
+  importStatusText = 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลและใบหน้า';
   @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
   @ViewChild('importPhotosInput') importPhotosInput?: ElementRef<HTMLInputElement>;
   private pendingImportExcel: File | null = null;
@@ -1192,9 +1194,16 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       return;
     }
     this.isImporting = true;
+    this.importProgress = null;
+    this.importStatusText = 'กำลังอัปโหลดไฟล์...';
     this.cdr.detectChanges();
     this.employeeService.startImportJob(this.companyId, file, photosZip).subscribe({
-      next: (job) => this.pollImportJob(job.jobId),
+      next: (job) => {
+        this.importStatusText = 'รอคิวประมวลผล (worker)...';
+        this.importProgress = job.progress || null;
+        this.cdr.detectChanges();
+        this.pollImportJob(job.jobId);
+      },
       error: (err) => {
         this.isImporting = false;
         this.cdr.detectChanges();
@@ -1219,6 +1228,12 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
           swal('นำเข้าไม่สำเร็จ', job.error || 'import failed', 'error');
           return;
         }
+        this.importProgress = job.progress || null;
+        this.importStatusText =
+          job.status === 'running'
+            ? 'ระบบกำลังบันทึกข้อมูลและใบหน้า'
+            : 'รอคิวประมวลผล (worker)...';
+        this.cdr.detectChanges();
         setTimeout(() => this.pollImportJob(jobId), 2000);
       },
       error: (err) => {

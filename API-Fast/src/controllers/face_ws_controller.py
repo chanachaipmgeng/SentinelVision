@@ -631,9 +631,12 @@ async def _authenticate_session(data: dict) -> Tuple[UUID, int]:
         verify_kiosk_token_db,
     )
     from ..security.jwt import decode_token
+    from ..services.token_revocation_service import is_token_revoked
 
     token = str(data.get("token") or "")
     decoded = decode_token(token, expected_typ=None)
+    if await is_token_revoked(decoded):
+        raise HTTPException(status_code=401, detail="Token has been revoked")
     token_exp = int(decoded.get("exp") or 0)
     if token_exp and time.time() > token_exp:
         raise HTTPException(status_code=401, detail="Token has expired")

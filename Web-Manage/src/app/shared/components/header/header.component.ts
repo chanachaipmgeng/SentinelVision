@@ -2,6 +2,7 @@ import { Component, ElementRef, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
+import { AuthService } from '../../services/auth.service';
 import { TranslateService } from '@ngx-translate/core';
 import { UserProfileModel } from '../../../DPU/models/user.model';
 
@@ -28,6 +29,7 @@ export class HeaderComponent implements OnInit {
   constructor(public navServices: NavService,
     private elementRef: ElementRef,
     private tokenService: TokenService,
+    private authService: AuthService,
     private translate: TranslateService,
     private http: HttpClient) {
 
@@ -212,6 +214,10 @@ export class HeaderComponent implements OnInit {
   }
 
   logOut() {
-    this.tokenService.signOut();
+    // Revoke the session server-side (access + refresh token family) before clearing storage.
+    this.authService.logout(this.tokenService.getRefreshToken()).subscribe({
+      next: () => this.tokenService.signOut(),
+      error: () => this.tokenService.signOut(),
+    });
   }
 }

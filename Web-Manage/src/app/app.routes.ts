@@ -19,6 +19,12 @@ export const App_Route: Route[] = [
   { path: 'auth/login', component: LoginComponent, data: { animation: 'Login' } },
   { path: 'auth/reset-password', component: CoverComponent, data: { animation: 'ResetPassword' } },
   {
+    // Kiosk tablets pair here with a one-time code; no token ever travels in the URL.
+    path: 'kiosk/pair',
+    loadComponent: () =>
+      import('./authentication/kiosk-pair/kiosk-pair.component').then((m) => m.KioskPairComponent),
+  },
+  {
     path: 'auth/change-password',
     canActivate: [AuthGuard],
     loadComponent: () =>

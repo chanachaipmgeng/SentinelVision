@@ -26,6 +26,7 @@ from .models import (  # noqa: F401
     system_setting,
     hr_schedule,
     sentinel,
+    revoked_token,
 )
 from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
 from .utils.schema_migrate import ensure_profile_and_approval_columns
@@ -134,6 +135,9 @@ async def startup():
         )
     asyncio.create_task(_retention_loop())
     asyncio.create_task(_notify_loop())
+    from .services.token_revocation_service import revocation_purge_loop
+
+    asyncio.create_task(revocation_purge_loop())
 
 
 @app.get("/health")

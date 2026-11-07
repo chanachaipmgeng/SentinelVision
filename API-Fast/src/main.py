@@ -25,6 +25,7 @@ from .models import (  # noqa: F401
     face_encoding,
     system_setting,
     hr_schedule,
+    sentinel,
 )
 from .models.face_encoding import prepare_pgvector, ensure_face_embedding_index
 from .utils.schema_migrate import ensure_profile_and_approval_columns
@@ -43,6 +44,7 @@ from .routes import (
     dashboard_routes,
     notification_routes,
     hr_routes,
+    sentinel_routes,
 )
 
 assert_secret_configured()
@@ -51,8 +53,8 @@ configure_logging()
 logger = logging.getLogger("dpu.api")
 
 app = FastAPI(
-    title="DPU Attendance API",
-    version="3.0.0",
+    title="SentinelVision Unified Biometric & Security API",
+    version="4.0.0",
     redirect_slashes=False,
     docs_url="/docs" if settings.EXPOSE_API_DOCS else None,
     redoc_url="/redoc" if settings.EXPOSE_API_DOCS else None,
@@ -193,6 +195,7 @@ app.include_router(system_routes.router, prefix="/system")
 app.include_router(dashboard_routes.router, prefix="/dashboard")
 app.include_router(notification_routes.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(hr_routes.router, prefix="/hr", tags=["HR Schedule & PDPA"])
+app.include_router(sentinel_routes.router, prefix="/sentinel", tags=["SentinelVision Security & Access"])
 
 app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
 app.mount("/enrolled_images", StaticFiles(directory="enrolled_images"), name="enrolled_images")

@@ -1,8 +1,8 @@
-<app-page-header [title]="'แดชบอร์ด'" [activeTitle]="'จัดการบริษัท'" [title1]="'แดชบอร์ด'"></app-page-header>
+<app-page-header [title]="'SentinelVision — แดชบอร์ดภาพรวมอัตลักษณ์และการลงเวลา'" [activeTitle]="'SentinelVision Command'" [title1]="'แดชบอร์ด'"></app-page-header>
 
 <div class="dpu-dashboard grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="ภาพรวมการลงเวลา">
+    <app-page-toolbar title="ภาพรวมการลงเวลาและศูนย์ความปลอดภัย">
       <ng-container chips>
         <app-stat-chip tone="ok" *ngIf="stats">วันนี้ {{ stats.summary.checkInsToday }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="stats">7 วัน {{ weekTotal }}</app-stat-chip>
@@ -20,10 +20,13 @@
           <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-broadcast-off-line'"></i>
           <span>{{ liveOn ? 'หยุดสด' : 'เปิดสด' }}</span>
         </button>
+        <a routerLink="/company/sentinel-center" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
+          <i class="ri-shield-flash-line"></i><span>Sentinel Center</span>
+        </a>
         <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
           <i class="ri-checkbox-circle-line"></i><span>อนุมัติ</span>
         </a>
-        <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
+        <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
           <i class="ri-camera-line"></i><span>Kiosk</span>
         </a>
         <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh"
@@ -92,7 +95,7 @@
     </div>
 
     <!-- Charts -->
-    <div class="xl:col-span-8 col-span-12">
+    <div class="xl:col-span-8 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
         <div class="box-header">
           <h5 class="box-title !mb-0">แนวโน้ม 7 วัน</h5>
@@ -102,7 +105,7 @@
         </div>
       </div>
     </div>
-    <div class="xl:col-span-4 col-span-12">
+    <div class="xl:col-span-4 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
         <div class="box-header">
           <h5 class="box-title !mb-0">สัดส่วนวันนี้</h5>
@@ -114,7 +117,7 @@
     </div>
 
     <!-- Map + realtime feed -->
-    <div class="xl:col-span-7 col-span-12">
+    <div class="xl:col-span-7 col-span-12 sv-contain-region">
       <div class="box modern-card glass">
         <div class="box-header flex items-center justify-between gap-2">
           <div>
@@ -135,7 +138,7 @@
       </div>
     </div>
 
-    <div class="xl:col-span-5 col-span-12">
+    <div class="xl:col-span-5 col-span-12 sv-contain-region">
       <div class="box modern-card glass dpu-live-panel">
         <div class="box-header flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">

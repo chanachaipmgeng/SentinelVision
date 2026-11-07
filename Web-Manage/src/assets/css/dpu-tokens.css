@@ -1,15 +1,5 @@
 /**
- * DPU Design Tokens — shared reference (Admin + Mobile)
- * Keep values in sync with Webview-Mobile/src/assets/css/dpu-tokens.css
- *
- * Brand:    --dpu-brand #0f766e, --dpu-brand-hover #0d9488, --dpu-brand-deep #0b4f4a
- * Ink:      --dpu-ink #0f172a, --dpu-muted #64748b
- * Surface:  --dpu-surface #eef2f6, --dpu-surface-elevated / --dpu-card #ffffff
- * Border:   --dpu-border #e2e8f0
- * Semantic: --dpu-danger #b91c1c, --dpu-success #15803d, --dpu-warning #b45309
- * Shape:    --dpu-radius 14px (admin) / 16px (mobile), --dpu-radius-sm 10px
- * Motion:   --dpu-ease cubic-bezier(0.22,1,0.36,1), --dpu-duration 0.35s
- * Font:     --dpu-font "Noto Sans Thai", "Manrope", system-ui, sans-serif
+ * DPU & SentinelVision Design Tokens — shared reference (Admin + Mobile)
  */
 :root {
   --dpu-brand: #0f766e;
@@ -33,4 +23,14 @@
   --dpu-duration: 0.35s;
   --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
   --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
+
+  /* SentinelVision Unified Security & Identity Palette */
+  --sv-critical: #dc2626;
+  --sv-critical-soft: rgba(220, 38, 38, 0.12);
+  --sv-vip: #7c3aed;
+  --sv-vip-soft: rgba(124, 58, 237, 0.12);
+  --sv-access: #0284c7;
+  --sv-access-soft: rgba(2, 132, 199, 0.12);
+  --sv-event: #d97706;
+  --sv-event-soft: rgba(217, 119, 6, 0.12);
 }

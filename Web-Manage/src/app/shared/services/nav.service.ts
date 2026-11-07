@@ -127,15 +127,31 @@ export class NavService implements OnDestroy {
 
   getCompanyMenu() {
     return [
-      { headTitle: 'จัดการบริษัท' },
+      { headTitle: 'SENTINELVISION COMMAND' },
       {
         icon: 'home',
         path: '/company/dashboard',
-        title: 'แดชบอร์ด',
+        title: 'แดชบอร์ดภาพรวม',
         type: 'link',
       },
       {
-        title: 'จัดการข้อมูลบริษัท',
+        icon: 'shield-quarter',
+        path: '/company/sentinel-center',
+        title: 'ศูนย์ความปลอดภัย & Access',
+        type: 'link',
+        badgeValue: 'AI',
+        badgeClass: 'primary',
+        badgeText: 'primary',
+      },
+      {
+        icon: 'camera',
+        path: '/company/timestamp-face',
+        title: 'Kiosk สแกนใบหน้าสด',
+        type: 'link',
+      },
+      { headTitle: 'IDENTITY & ORGANIZATION' },
+      {
+        title: 'องค์กรและบุคลากร',
         icon: 'buildings',
         type: 'sub',
         active: false,
@@ -143,21 +159,32 @@ export class NavService implements OnDestroy {
           { path: '/company/company-info', title: 'ข้อมูลบริษัท', type: 'link' },
           { path: '/company/company-department', title: 'จัดการแผนก', type: 'link' },
           { path: '/company/company-position', title: 'จัดการตำแหน่ง', type: 'link' },
-          { path: '/company/company-emp', title: 'พนักงาน', type: 'link' },
+          { path: '/company/company-emp', title: 'ทะเบียนพนักงาน & ใบหน้า', type: 'link' },
         ],
       },
+      { headTitle: 'TIME, SECURITY & GOVERNANCE' },
       {
-        title: 'จัดการข้อมูลการลงเวลา',
+        title: 'เวลาทำงาน & กะงาน (HR)',
         icon: 'time',
         type: 'sub',
         active: false,
         children: [
-          { path: '/company/company-location', title: 'สถานที่การลงเวลา', type: 'link' },
+          { path: '/company/company-location', title: 'สถานที่ลงเวลา (GPS)', type: 'link' },
           { path: '/company/hr-schedule', title: 'กะงาน / วันลา / PDPA', type: 'link' },
-          { path: '/company/timestamp-log', title: 'ข้อมูลการลงเวลา', type: 'link' },
+          { path: '/company/timestamp-log', title: 'ประวัติการลงเวลา', type: 'link' },
           { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
-          { path: '/company/timestamp-face', title: 'Kiosk ใบหน้า', type: 'link' },
-          { path: '/company/audit-log', title: 'ประวัติการใช้งาน', type: 'link' },
+        ],
+      },
+      {
+        title: 'ความปลอดภัย & อีเวนต์',
+        icon: 'lock-alt',
+        type: 'sub',
+        active: false,
+        children: [
+          { path: '/company/sentinel-center', title: 'Watchlist / Blacklist / VIP', type: 'link' },
+          { path: '/company/sentinel-center', title: 'Access Control & Visitor Pass', type: 'link' },
+          { path: '/company/sentinel-center', title: 'Smart Events & Muster Roll', type: 'link' },
+          { path: '/company/audit-log', title: 'ประวัติการใช้งาน (Audit Log)', type: 'link' },
         ],
       },
     ];

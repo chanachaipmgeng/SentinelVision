@@ -248,10 +248,16 @@ async def add_face(
                 detail="No face detected in the image.",
             )
 
+        from ..config.settings import settings as _settings
+        from ..models.face_encoding import DEFAULT_FACE_MODEL_VERSION
+
         new_face_encoding = FaceEncoding(
             memberId=member.memberId,
             companyId=owner_company_id,
             embedding=encoding,
+            modelVersion=(
+                getattr(_settings, "FACE_MODEL_VERSION", None) or DEFAULT_FACE_MODEL_VERSION
+            ),
         )
         db.add(new_face_encoding)
         await db.commit()
@@ -1076,6 +1082,7 @@ async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
             "faceEncodingId": str(enc.faceEncodingId),
             "memberId": str(enc.memberId),
             "companyId": str(enc.companyId) if enc.companyId else None,
+            "modelVersion": getattr(enc, "modelVersion", None),
             "createdAt": enc.createdAt,
             "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg",
         }

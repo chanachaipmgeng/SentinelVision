@@ -21,6 +21,27 @@ class Settings(BaseSettings):
     FACE_ANTISPOOF_MIN_CHROMA_STD: float = 2.0
     FACE_ANTISPOOF_MAX_SPECULAR_RATIO: float = 0.22
 
+    # D8 PAD (MiniFASNet-compatible ONNX). Empty = heuristic only. See docs/FACE-PAD.md.
+    FACE_PAD_MODEL_PATH: str = ""
+    FACE_PAD_MIN_LIVE_SCORE: float = 0.80
+    FACE_PAD_FAIL_CLOSED: bool = True
+    # Embedding pack / model pin stored on FaceEncoding.modelVersion at enroll.
+    FACE_MODEL_VERSION: str = "buffalo_l"
+    # Enrollment quality gate (face ratio / pose / sharpness) on add-face.
+    ENROLL_QUALITY_GATE_ENABLED: bool = True
+    ENROLL_MIN_FACE_RATIO: float = 0.08
+    ENROLL_MAX_YAW_DEG: float = 25.0
+    ENROLL_MAX_ROLL_DEG: float = 20.0
+    ENROLL_MIN_SHARPNESS: float = 25.0
+
+    # D7 app rate limits (per IP / minute). 0 disables. Complements nginx limit_req.
+    REDIS_URL: str = ""
+    RATE_LIMIT_LOGIN_PER_MINUTE: int = 20
+    RATE_LIMIT_IDENTIFY_PER_MINUTE: int = 120
+    RATE_LIMIT_IMPORT_PER_MINUTE: int = 10
+    # D6 Idempotency-Key TTL for punch create + import-jobs.
+    IDEMPOTENCY_TTL_SECONDS: int = 86400
+
     # Soft dedupe: skip creating another timestamp for same employee within this window (0 = off)
     CHECK_IN_DEDUPE_SECONDS: int = 300
 

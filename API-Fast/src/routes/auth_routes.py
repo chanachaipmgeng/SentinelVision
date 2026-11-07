@@ -42,6 +42,7 @@ from ..security.passwords import assert_not_locked, hash_password, register_fail
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
 from ..services import token_revocation_service as revocation
+from ..services.rate_limit_service import rate_limit_login
 from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
 
 router = APIRouter()
@@ -121,7 +122,11 @@ def _tokens(member: Member, *, family: Optional[str] = None) -> dict:
 
 
 @router.post("/login", response_model=Token)
-async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_login),
+):
     result = await db.execute(select(Member).where(Member.username == request.username))
     member = result.scalars().first()
     if not member or getattr(member, "deletedAt", None) is not None:

@@ -14,8 +14,10 @@ from starlette.responses import JSONResponse
 from ..config.database import async_session
 from ..config.settings import settings
 from ..models.member import Member, RoleType
+from ..schemas.error_schema import error_body, http_exception_code, sanitize_public_message
 from ..services.observability import set_company_context
 from ..services.token_revocation_service import is_token_revoked
+from ..utils.api_paths import canonical_api_path
 from .deps import (
     assert_company_access,
     current_kiosk_company_var,
@@ -25,6 +27,19 @@ from .deps import (
 )
 from ..services.approval_gate import assert_company_membership
 from .jwt import decode_token
+
+
+def _error(status_code: int, detail: str, request: Request | None = None) -> JSONResponse:
+    rid = getattr(request.state, "request_id", None) if request is not None else None
+    return JSONResponse(
+        error_body(
+            code=http_exception_code(status_code, detail),
+            message=sanitize_public_message(detail, status_code=status_code),
+            status_code=status_code,
+            request_id=rid,
+        ),
+        status_code=status_code,
+    )
 
 logger = logging.getLogger("dpu.authz")
 
@@ -153,7 +168,10 @@ def _is_kiosk_path_allowed(method: str, path: str) -> bool:
 
 class AuthzMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path.rstrip("/") or "/"
+        raw_path = request.url.path.rstrip("/") or "/"
+        # Authz + kiosk allow-lists operate on the legacy shape so /api/v1 and
+        # /companies aliases share the same rules as /companys and root paths.
+        path = canonical_api_path(raw_path)
         if request.method == "OPTIONS" or path == "/" or path.startswith(_OPEN_PREFIXES):
             return await call_next(request)
         if path == "/notifications/system":
@@ -163,23 +181,24 @@ class AuthzMiddleware(BaseHTTPMiddleware):
 
         token = _token_from(request)
         if not token:
-            return JSONResponse({"detail": "Authorization required"}, status_code=401)
+            return _error(401, "Authorization required", request)
 
         try:
             raw_payload = decode_token(token, expected_typ=None)
         except Exception as exc:
             code = getattr(exc, "status_code", 401)
             detail = getattr(exc, "detail", "Invalid token")
-            return JSONResponse({"detail": detail}, status_code=code)
+            return _error(code, detail if isinstance(detail, str) else "Invalid token", request)
 
         if await is_token_revoked(raw_payload):
-            return JSONResponse({"detail": "Token has been revoked"}, status_code=401)
+            return _error(401, "Token has been revoked", request)
 
         if raw_payload.get("typ") == "kiosk":
             if not _is_kiosk_path_allowed(request.method, path):
-                return JSONResponse(
-                    {"detail": "Kiosk device token is restricted to kiosk check-in endpoints only"},
-                    status_code=403,
+                return _error(
+                    403,
+                    "Kiosk device token is restricted to kiosk check-in endpoints only",
+                    request,
                 )
             async with async_session() as db:
                 try:
@@ -187,12 +206,13 @@ class AuthzMiddleware(BaseHTTPMiddleware):
                 except Exception as exc:
                     code = getattr(exc, "status_code", 401)
                     detail = getattr(exc, "detail", "Invalid kiosk token")
-                    return JSONResponse({"detail": detail}, status_code=code)
+                    return _error(code, detail if isinstance(detail, str) else "Invalid kiosk token", request)
                 cid = _company_id(path)
                 if cid and UUID(cid) != device.companyId:
-                    return JSONResponse(
-                        {"detail": "Kiosk device token does not match requested company"},
-                        status_code=403,
+                    return _error(
+                        403,
+                        "Kiosk device token does not match requested company",
+                        request,
                     )
                 request.state.kiosk_company_id = device.companyId
                 request.state.kiosk_device_id = device.deviceId
@@ -209,7 +229,7 @@ class AuthzMiddleware(BaseHTTPMiddleware):
             except Exception as exc:
                 code = getattr(exc, "status_code", 401)
                 detail = getattr(exc, "detail", "Invalid token")
-                return JSONResponse({"detail": detail}, status_code=code)
+                return _error(code, detail if isinstance(detail, str) else "Invalid token", request)
 
             request.state.member = member
             token_ctx = current_member_var.set(member)
@@ -247,25 +267,25 @@ async def _authorize(request: Request, db, member: Member, path: str):
             # company admins may read TTS; writes stay system-admin
             if not (path.startswith("/system") and request.method == "GET"):
                 if request.method != "GET":
-                    return JSONResponse({"detail": "System admin required"}, status_code=403)
+                    return _error(403, "System admin required", request)
         if path.startswith("/members") and not _is_system_admin(member):
-            return JSONResponse({"detail": "System admin required"}, status_code=403)
+            return _error(403, "System admin required", request)
         return None
 
     if path in {"/companys", "/departments", "/positions"} and request.method != "GET":
         if not _is_system_admin(member) and path == "/companys":
-            return JSONResponse({"detail": "System admin required"}, status_code=403)
+            return _error(403, "System admin required", request)
 
     if path == "/companys" and request.method == "GET" and not _is_system_admin(member):
-        return JSONResponse({"detail": "System admin required"}, status_code=403)
+        return _error(403, "System admin required", request)
 
     if path in _SYSTEM_ADMIN_LISTINGS and request.method == "GET" and not _is_system_admin(member):
-        return JSONResponse({"detail": "System admin required"}, status_code=403)
+        return _error(403, "System admin required", request)
 
     self_m = _MEMBER_SELF.search(path)
     if self_m and not _is_system_admin(member):
         if str(member.memberId) != self_m.group(1):
-            return JSONResponse({"detail": "Cannot list another member's companies"}, status_code=403)
+            return _error(403, "Cannot list another member's companies", request)
         return None
 
     cid = _company_id(path)
@@ -285,7 +305,7 @@ async def _authorize(request: Request, db, member: Member, path: str):
         except Exception as exc:
             code = getattr(exc, "status_code", 403)
             detail = getattr(exc, "detail", "Forbidden")
-            return JSONResponse({"detail": detail}, status_code=code)
+            return _error(code, detail if isinstance(detail, str) else "Forbidden", request)
     return None
 
 

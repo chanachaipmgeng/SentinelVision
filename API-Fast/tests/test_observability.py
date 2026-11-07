@@ -56,6 +56,14 @@ def test_metrics_endpoint_exposes_new_series_and_content_type():
     obs.observe_face_gpu_job("checkin", wait_seconds=0.01, processing_seconds=0.05, result="ok")
     obs.observe_face_gpu_job("detect", wait_seconds=0.5, processing_seconds=0.0, result="stale")
     obs.observe_face_match("pgvector_member", 0.004)
+    obs.observe_face_match_decision(
+        "pgvector_member",
+        accepted=True,
+        distance=0.22,
+        expected_member_id="a",
+        matched_member_id="b",
+    )
+    obs.observe_face_match_decision("pgvector_member", accepted=False, distance=0.55)
     obs.ws_kiosk_connections.inc()
     obs.set_outbox_backlog(3, None)
     obs.set_ready_status("db", True)
@@ -76,6 +84,9 @@ def test_metrics_endpoint_exposes_new_series_and_content_type():
         'dpu_face_gpu_processing_seconds_bucket{kind="checkin",le="0.05"}',
         'dpu_face_gpu_jobs_total{kind="detect",result="stale"}',
         'dpu_face_match_duration_seconds_count{source="pgvector_member"}',
+        'dpu_face_match_decisions_total{decision="accept",source="pgvector_member"}',
+        'dpu_face_far_events_total{source="pgvector_member"}',
+        'dpu_face_frr_events_total{source="pgvector_member"}',
         "dpu_ws_kiosk_connections ",
         "dpu_outbox_pending 3.0",
         "dpu_outbox_oldest_pending_age_seconds",

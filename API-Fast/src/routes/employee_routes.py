@@ -28,6 +28,9 @@ from ..schemas.company_employee_schema import (
     CompanyEmployeeResponse,
     EmployeeImportResult,
 )
+from ..services.idempotency_service import idempotent_json
+from ..services.rate_limit_service import rate_limit_import
+
 router = APIRouter()
 
 # ดึงข้อมูลพนักงานในบริษัททั้งหมดตาม companyId
@@ -58,12 +61,19 @@ async def download_employee_import_template_route(
 
 @router.post("/company/{companyId}/import", response_model=EmployeeImportResult)
 async def import_employees_excel_route(
+    request: Request,
     companyId: str,
     file: UploadFile = File(...),
     photos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_import),
 ):
-    return await import_employees_from_excel(companyId, file, db, photos=photos)
+    async def _run():
+        return await import_employees_from_excel(companyId, file, db, photos=photos)
+
+    return await idempotent_json(
+        request, scope="employees.import", company_id=companyId, compute=_run
+    )
 
 
 # ดึงข้อมูลพนักงานในบริษัทตาม company_employeeId และ companyId
@@ -125,6 +135,7 @@ async def start_import_job(
     file: UploadFile = File(...),
     photos: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_import),
 ):
     from fastapi import HTTPException
 
@@ -146,15 +157,21 @@ async def start_import_job(
         photos_data = await photos.read()
 
     actor = getattr(request.state, "member", None) or current_member_var.get()
-    job = await create_import_job(
-        companyId,
-        file_name=file.filename,
-        data=data,
-        photos_name=getattr(photos, "filename", None),
-        photos_data=photos_data,
-        requested_by=getattr(actor, "memberId", None),
+
+    async def _run():
+        job = await create_import_job(
+            companyId,
+            file_name=file.filename,
+            data=data,
+            photos_name=getattr(photos, "filename", None),
+            photos_data=photos_data,
+            requested_by=getattr(actor, "memberId", None),
+        )
+        return {"jobId": str(job.id), "status": job.status, "progress": job.progress}
+
+    return await idempotent_json(
+        request, scope="employees.import_job", company_id=companyId, compute=_run
     )
-    return {"jobId": str(job.id), "status": job.status, "progress": job.progress}
 
 
 @router.get("/company/{companyId}/import-jobs/{jobId}")

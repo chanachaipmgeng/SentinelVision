@@ -20,6 +20,8 @@ httpx
 authlib==1.9.5
 alembic
 psycopg[binary]
+# D7 rate limits / D6 idempotency (optional REDIS_URL; in-process fallback without it).
+redis>=5.0
 # Observability (B6): Prometheus exposition + optional OpenTelemetry tracing (OTLP/HTTP).
 prometheus_client>=0.20
 opentelemetry-sdk>=1.25

@@ -2,6 +2,10 @@
 
 Base URL in Docker: same origin as the UI (nginx), e.g. `http://localhost`.
 
+**API v1 (Phase D6):** every public router is also mounted under `/api/v1` (e.g. `/api/v1/auth/login`). `/companies` is an alias of the legacy `/companys` spelling (both at root and under `/api/v1`). Errors use `{ "error": { "code", "message", "status", "requestId?" }, "detail" }` — `detail` mirrors `error.message` for older clients; 5xx never echoes raw exception text. Punch create (`POST /timestamp/company/{id}`) and employee import (`POST …/import`, `…/import-jobs`) honour `Idempotency-Key` (replay returns the first response).
+
+**App rate limits (Phase D7):** login / identify / import are limited in-process (Redis when `REDIS_URL` is set) in addition to nginx `limit_req` → HTTP `429` `{ "error": { "code": "rate_limited" } }`.
+
 Interactive docs are off unless `EXPOSE_API_DOCS=true`. Liveness: `GET /health`. Readiness: `GET /ready`. Prometheus counters, gauges & histograms: `GET /metrics`. Every response includes `X-Request-Id` and W3C `traceparent` headers.
 
 ## Auth & Enterprise Identity (MFA / SSO)
@@ -37,7 +41,7 @@ Every other route needs a Bearer token in the `Authorization` header. `?token=` 
 |--------|------|------|-------|
 | GET/PUT/DELETE | `/members/{id}` | JWT | Soft-delete on `DELETE`. |
 | POST | `/members/` | JWT | Create member. |
-| CRUD | `/companys/` | JWT | Companies. |
+| CRUD | `/companys/` and `/companies/` (also under `/api/v1`) | JWT | Companies. |
 | CRUD | `/company-locations/company/{companyId}` | JWT | Geofence sites (`latitude`, `longitude`, `radius`). |
 | CRUD | `/departments/`, `/positions/` | JWT | Company-scoped departments & positions (`shiftId` included on departments). |
 | CRUD | `/employees/company/{companyId}` | JWT | Company employees (`shiftId` and `member.biometricConsentAt` included). |

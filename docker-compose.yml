@@ -32,6 +32,27 @@ services:
         max-size: "20m"
         max-file: "5"
 
+  # D7: shared Redis for app rate limits + Idempotency-Key (optional; API falls back to memory).
+  redis:
+    image: redis:7-alpine
+    container_name: dpu-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    expose:
+      - "6379"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   api:
     build:
       context: ./API-Fast
@@ -41,6 +62,12 @@ services:
       - "8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RATE_LIMIT_LOGIN_PER_MINUTE: ${RATE_LIMIT_LOGIN_PER_MINUTE:-20}
+      RATE_LIMIT_IDENTIFY_PER_MINUTE: ${RATE_LIMIT_IDENTIFY_PER_MINUTE:-120}
+      RATE_LIMIT_IMPORT_PER_MINUTE: ${RATE_LIMIT_IMPORT_PER_MINUTE:-10}
+      FACE_PAD_MODEL_PATH: ${FACE_PAD_MODEL_PATH:-}
+      FACE_MODEL_VERSION: ${FACE_MODEL_VERSION:-buffalo_l}
       # production (default) refuses weak SECRET_KEY / example DB password at startup;
       # development only warns about the DB password (SECRET_KEY is always enforced).
       APP_ENV: ${APP_ENV:-production}
@@ -86,6 +113,8 @@ services:
       - api_import_jobs:/app/import_jobs
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     restart: unless-stopped
     security_opt:

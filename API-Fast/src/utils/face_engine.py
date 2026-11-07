@@ -10,10 +10,11 @@ import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
 
+from .enrollment_quality import check_enrollment_quality_bgr
 from .image_quality import check_image_quality_bgr
 from .liveness_detection import (
+    check_liveness_frame_bgr,
     check_multi_frame_liveness,
-    check_passive_antispoof_bgr,
     cosine_distance,
 )
 from ..config.settings import settings
@@ -414,17 +415,39 @@ def generate_face_encoding(
     *,
     require_quality: bool = True,
     blur_threshold: Optional[float] = None,
+    for_enrollment: bool = True,
 ) -> Optional[List[float]]:
-    """Quality-check + InsightFace 512-d embedding for enrollment."""
+    """Quality-check + InsightFace 512-d embedding for enrollment.
+
+    When ``for_enrollment`` is true (default) the Phase D8 enrollment quality gate
+    (face size / pose / sharpness) runs in addition to blur/brightness.
+    """
     try:
-        result = extract_face_features(
-            image_path,
-            require_quality=require_quality,
-            blur_threshold=blur_threshold,
-        )
-        if result is None:
+        image = _read_bgr(image_path)
+        if image is None:
             return None
-        return result[0]
+        # Prefer detector path so we get landmarks for the enrollment pose gate.
+        faces = get_face_app().get(image)
+        face = _largest_face(faces)
+        if face is None or face.normed_embedding is None:
+            return None
+        bbox = face.bbox.astype(np.float32)
+        kps = getattr(face, "kps", None)
+        if for_enrollment and require_quality and bool(
+            getattr(settings, "ENROLL_QUALITY_GATE_ENABLED", True)
+        ):
+            ok, message, _scores = check_enrollment_quality_bgr(
+                image, bbox, kps, blur_threshold=blur_threshold
+            )
+            if not ok:
+                raise ValueError(message)
+        elif require_quality:
+            is_good, message = check_image_quality_bgr(
+                image, bbox, blur_threshold=blur_threshold
+            )
+            if not is_good:
+                raise ValueError(message)
+        return face.normed_embedding.astype(np.float32).tolist()
     except ValueError:
         raise
     except Exception as e:
@@ -434,8 +457,8 @@ def generate_face_encoding(
 
 def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
     """
-    Multi-frame liveness (same person + motion + passive anti-spoof) then return middle-frame embedding.
-    Raises ValueError on failure.
+    Multi-frame liveness (same person + motion + passive anti-spoof / PAD) then
+    return middle-frame embedding. Raises ValueError on failure.
     """
     if not image_paths:
         raise ValueError("No image frames provided for liveness check")
@@ -454,19 +477,13 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
         raise ValueError(f"Liveness check failed: {reason}")
 
     mid = image_paths[len(image_paths) // 2]
-    if bool(getattr(settings, "FACE_ANTISPOOF_ENABLED", True)):
-        mid_img = _read_bgr(mid)
-        mid_bbox = frames[len(frames) // 2]["bbox"] if frames[len(frames) // 2] else None
-        passed, spoof_msg = check_passive_antispoof_bgr(
-            mid_img,
-            mid_bbox,
-            min_chroma_std=float(getattr(settings, "FACE_ANTISPOOF_MIN_CHROMA_STD", 2.0)),
-            max_specular_ratio=float(getattr(settings, "FACE_ANTISPOOF_MAX_SPECULAR_RATIO", 0.22)),
-        )
-        if not passed:
-            raise ValueError(spoof_msg)
+    mid_img = _read_bgr(mid)
+    mid_bbox = frames[len(frames) // 2]["bbox"] if frames[len(frames) // 2] else None
+    passed, spoof_msg = check_liveness_frame_bgr(mid_img, mid_bbox)
+    if not passed:
+        raise ValueError(spoof_msg)
 
-    encoding = generate_face_encoding(mid)
+    encoding = generate_face_encoding(mid, for_enrollment=False)
     if encoding is None:
         raise ValueError("Could not generate face encoding from validation frame.")
     return encoding
@@ -481,9 +498,6 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
         raise ValueError("No image frames provided for walk-by check-in")
 
     candidates: List[List[float]] = []
-    antispoof_enabled = bool(getattr(settings, "FACE_ANTISPOOF_ENABLED", True))
-    min_chroma = float(getattr(settings, "FACE_ANTISPOOF_MIN_CHROMA_STD", 2.0))
-    max_spec = float(getattr(settings, "FACE_ANTISPOOF_MAX_SPECULAR_RATIO", 0.22))
 
     for image in frames:
         result = extract_face_features_bgr(
@@ -495,15 +509,9 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
             continue
         encoding, bbox = result
         check_image_quality_bgr(image, bbox)
-        if antispoof_enabled:
-            passed, spoof_msg = check_passive_antispoof_bgr(
-                image,
-                bbox,
-                min_chroma_std=min_chroma,
-                max_specular_ratio=max_spec,
-            )
-            if not passed:
-                raise ValueError(spoof_msg)
+        passed, spoof_msg = check_liveness_frame_bgr(image, bbox)
+        if not passed:
+            raise ValueError(spoof_msg)
         candidates.append(encoding)
 
     if not candidates:

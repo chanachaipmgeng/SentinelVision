@@ -145,7 +145,7 @@ Since Phase B1 the API **never** creates or alters tables itself (`create_all` a
 | Upgrade after a deploy | `alembic upgrade head` (expand/contract: run **before** restarting replicas) |
 | Database created by the old startup path (pre-B1, no `alembic_version` table) | `alembic stamp 0008_revocation_kiosk_pairing && alembic upgrade head` — the stamp records what `create_all` + `schema_migrate` already applied; `0009` adds the import_job worker columns and `0010` tightens the nullable columns, adds the `face_encoding` HNSW index / `company_employee` unique indexes / `approved_by` FK when missing |
 | Database stamped at `0001_baseline` or `0002_schema_migrate` earlier | `alembic upgrade head` (all later revisions are idempotent) |
-| Verify | `alembic current` shows `0011_attendance_daily_shift_rules (head)`; `alembic check` prints `No new upgrade operations detected.` |
+| Verify | `alembic current` shows `0017_face_assurance (head)` after Phase D (through placeholder 0014–0016 + face assurance); `alembic check` prints `No new upgrade operations detected.` |
 | Roll back the last revision | `alembic downgrade -1` (only `0007`, `0009`, `0010` and `0011` have real `downgrade()`; `0002`–`0006`/`0008` are history markers and cannot be reverted automatically) |
 | New schema change | edit the model → `alembic revision --autogenerate -m "..."` → review the file (revision ids ≤ 32 chars) → `alembic upgrade head` → `alembic check` — the test suite (`tests/test_alembic_schema.py`) fails on any model/DB drift |
 

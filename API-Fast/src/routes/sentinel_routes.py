@@ -1440,18 +1440,25 @@ async def evaluate_kiosk_sentinel_match(
     )
     db.add(inc)
     if itype in ("BLACKLIST", "POI"):
+        # Staff-only channel: carries the full who/where/when/snapshot that the kiosk
+        # response deliberately omits (see face_controller.kiosk_access_denied).
         db.add(
             NotificationOutbox(
                 companyId=company_id,
                 event="sentinel.blacklist_detected",
                 channel="webhook",
                 payload={
+                    "companyId": str(company_id),
+                    "identityId": str(ident.identityId),
                     "subjectName": ident.fullName,
                     "identityType": itype,
                     "severity": ident.severity,
                     "alertNote": ident.alertNote,
                     "zoneName": "Live Face Kiosk",
+                    "detectedAt": datetime.now(timezone.utc).isoformat(),
                     "confidencePercent": confidence_pct,
+                    "distance": round(float(distance), 6),
+                    "snapshotUrl": ident.pictureUrl,
                 },
             )
         )

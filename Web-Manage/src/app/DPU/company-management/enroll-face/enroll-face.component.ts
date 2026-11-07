@@ -227,6 +227,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private readonly cropPad = 0.4;
   /** Backoff after a failed crop/check-in — keep short so walk-by can retry quickly. */
   private readonly retryFailMs = 900;
+  /** Access denied (403, e.g. watchlist hit): back off longer so the kiosk does not hammer the alert path. */
+  private readonly accessDeniedRetryMs = 10_000;
+  /** Public-screen copy for a 403; never echo the server detail for denied faces. */
+  private readonly accessDeniedMessage = 'ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่';
+  private readonly accessDeniedLabel = 'ไม่สามารถลงเวลาได้';
   private readonly checkInEndpoint = '/face/members/check-in-walkby';
 
   constructor(
@@ -929,11 +934,36 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           t.retryAfter = Date.now() + this.retryFailMs;
           t.captureFrames = [];
         }
-        if (msg.detail) {
-          this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${msg.detail}`, 'warning');
-        }
+      }
+      if (Number(msg.status) === 403) {
+        this.applyAccessDenied(t ?? undefined, msg.intent === 'checkin');
+      } else if (msg.intent === 'checkin' && msg.detail) {
+        this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${msg.detail}`, 'warning');
       }
       this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Generic denied state for a 403 from identify / check-in (e.g. a watchlist hit).
+   * The server already withholds identity; the kiosk must not echo any detail,
+   * keep a stale label, or retry immediately.
+   */
+  private applyAccessDenied(track: FaceTrack | undefined, showToast: boolean) {
+    if (track) {
+      track.memberId = null;
+      track.confidence = null;
+      track.label = this.accessDeniedLabel;
+      track.identifyInFlight = false;
+      track.lastIdentifyAt = Date.now() + this.accessDeniedRetryMs;
+      if (track.phase === 'capturing') {
+        track.phase = 'watching';
+        track.captureFrames = [];
+      }
+      track.retryAfter = Date.now() + this.accessDeniedRetryMs;
+    }
+    if (showToast) {
+      this.notify(this.accessDeniedMessage, 'error');
     }
   }
 
@@ -1359,10 +1389,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (error) => {
         const t = this.tracks.find((x) => x.id === trackId);
         if (t) {
           t.identifyInFlight = false;
+        }
+        if (error?.status === 403) {
+          this.applyAccessDenied(t, false);
+          this.cdr.detectChanges();
         }
       },
     });
@@ -1485,8 +1519,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           t.retryAfter = Date.now() + this.retryFailMs;
           t.captureFrames = [];
         }
-        const detail = error.error?.detail || 'Check-in failed';
-        this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
+        if (error?.status === 403) {
+          this.applyAccessDenied(t, true);
+        } else {
+          const detail = error.error?.detail || 'Check-in failed';
+          this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
+        }
         this.cdr.detectChanges();
       },
     });

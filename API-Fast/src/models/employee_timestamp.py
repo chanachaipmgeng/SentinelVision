@@ -12,6 +12,8 @@ class TimestampType(enum.Enum):
     CHECK_OUT = 2
     WARNING = 0
     DISAPPROVE = 3
+    BREAK_OUT = 4
+    BREAK_IN = 5
 
 
 class ApprovalStatus(str, enum.Enum):

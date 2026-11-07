@@ -46,6 +46,8 @@ class CompanyHoliday(Base):
     )
     holidayDate = Column("holiday_date", Date, nullable=False)
     name = Column(String(150), nullable=False)
+    # MANUAL | CSV | ICAL | THAI_PRESET (C6 import provenance)
+    source = Column(String(30), nullable=False, default="MANUAL", server_default="MANUAL")
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 

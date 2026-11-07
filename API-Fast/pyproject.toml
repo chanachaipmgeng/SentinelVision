@@ -32,6 +32,7 @@ ignore = [
 "tests/test_authz_matrix.py" = ["E402"]
 "tests/test_punch_shift_export.py" = ["E402"]
 "tests/test_attendance_summary_shift_rules.py" = ["E402"]
+"tests/test_punch_break_holiday.py" = ["E402"]
 "tests/test_outbox_claiming.py" = ["E402"]
 "tests/test_tenant_isolation.py" = ["E402"]
 "tests/test_alembic_schema.py" = ["E402"]

@@ -34,6 +34,18 @@ from ..services.attendance_summary_service import (
     recompute_company_holiday,
     recompute_leave_range,
 )
+from ..services.holiday_service import (
+    SOURCE_CSV,
+    SOURCE_ICAL,
+    SOURCE_MANUAL,
+    SOURCE_THAI_PRESET,
+    list_active_holidays,
+    parse_holiday_csv,
+    parse_holiday_ical,
+    serialize_holiday,
+    thai_public_holidays,
+    upsert_holidays,
+)
 
 router = APIRouter()
 
@@ -102,25 +114,13 @@ async def list_company_holidays(
     companyId: UUID,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    start: Optional[date] = None,
+    end: Optional[date] = None,
 ):
+    """List active holidays. Optional ``start``/``end`` (YYYY-MM-DD) for metrics consumers (C2)."""
     await assert_request_company_access(request, db, companyId)
-    rows = (
-        await db.execute(
-            select(CompanyHoliday)
-            .where(CompanyHoliday.companyId == companyId, CompanyHoliday.deletedAt.is_(None))
-            .order_by(CompanyHoliday.holidayDate.asc())
-        )
-    ).scalars().all()
-    return [
-        {
-            "holidayId": str(r.holidayId),
-            "companyId": str(r.companyId),
-            "holidayDate": r.holidayDate.isoformat() if r.holidayDate else None,
-            "name": r.name,
-            "createdAt": r.createdAt,
-        }
-        for r in rows
-    ]
+    rows = await list_active_holidays(db, companyId, start=start, end=end)
+    return [serialize_holiday(r) for r in rows]
 
 
 @router.post("/company/{companyId}/holidays")
@@ -137,20 +137,141 @@ async def create_company_holiday(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid holidayDate format")
 
-    row = CompanyHoliday(companyId=companyId, holidayDate=parsed_date, name=body.name)
-    db.add(row)
-    await db.commit()
-    await db.refresh(row)
+    name = str(body.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")
+
+    result = await upsert_holidays(
+        db, companyId, [(parsed_date, name)], source=SOURCE_MANUAL
+    )
+    rows = await list_active_holidays(db, companyId, start=parsed_date, end=parsed_date)
+    row = rows[0] if rows else None
+    if not row:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Holiday save failed")
     try:
         await recompute_company_holiday(companyId, parsed_date, db)
     except Exception:
         pass
-    return {
-        "holidayId": str(row.holidayId),
-        "companyId": str(row.companyId),
-        "holidayDate": row.holidayDate.isoformat(),
-        "name": row.name,
-    }
+    payload = serialize_holiday(row)
+    payload["upsert"] = result
+    return payload
+
+
+@router.post("/company/{companyId}/holidays/import")
+async def import_company_holidays(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Import holidays from CSV or iCal (``.ics``).
+
+    Accepts multipart (``file`` + optional ``format``) or JSON
+    ``{"format":"csv"|"ical","content":"..."}``.
+    """
+    await assert_request_company_access(request, db, companyId)
+    raw = ""
+    filename = ""
+    fmt = ""
+    content_type = (request.headers.get("content-type") or "").lower()
+
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        upload = form.get("file")
+        fmt = str(form.get("format") or "").strip().lower()
+        text_val = form.get("text") or form.get("content")
+        if upload is not None and hasattr(upload, "read"):
+            filename = (getattr(upload, "filename", None) or "").lower()
+            raw_bytes = await upload.read()
+            raw = raw_bytes.decode("utf-8", errors="replace") if isinstance(raw_bytes, (bytes, bytearray)) else str(raw_bytes)
+        elif text_val:
+            raw = str(text_val)
+    else:
+        try:
+            body = await request.json()
+        except Exception:
+            body = None
+        if isinstance(body, dict):
+            raw = str(body.get("content") or body.get("text") or "")
+            fmt = str(body.get("format") or "").strip().lower()
+
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide file upload or text/content body",
+        )
+
+    if not fmt:
+        if filename.endswith(".ics") or filename.endswith(".ical") or "BEGIN:VCALENDAR" in raw.upper():
+            fmt = "ical"
+        else:
+            fmt = "csv"
+
+    if fmt in ("ical", "ics"):
+        items = parse_holiday_ical(raw)
+        source = SOURCE_ICAL
+    elif fmt == "csv":
+        items = parse_holiday_csv(raw)
+        source = SOURCE_CSV
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="format must be csv or ical",
+        )
+
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No holiday rows found in import payload",
+        )
+
+    result = await upsert_holidays(db, companyId, items, source=source)
+    for d, _name in items:
+        try:
+            await recompute_company_holiday(companyId, d, db)
+        except Exception:
+            pass
+    return {"imported": len(items), **result}
+
+
+@router.post("/company/{companyId}/holidays/thai-preset")
+async def apply_thai_holiday_preset(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    year: Optional[int] = None,
+):
+    """Seed Thai public holidays for a year (default: current Asia/Bangkok year)."""
+    await assert_request_company_access(request, db, companyId)
+    year_val = year
+    if year_val is None:
+        try:
+            body = await request.json()
+            if isinstance(body, dict) and body.get("year") is not None:
+                year_val = body.get("year")
+        except Exception:
+            year_val = None
+    if year_val is None:
+        try:
+            from zoneinfo import ZoneInfo
+
+            year_val = datetime.now(ZoneInfo("Asia/Bangkok")).year
+        except Exception:
+            year_val = datetime.now(timezone.utc).year
+    try:
+        year_i = int(year_val)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid year")
+    if year_i < 2000 or year_i > 2100:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="year out of range")
+
+    items = thai_public_holidays(year_i)
+    result = await upsert_holidays(db, companyId, items, source=SOURCE_THAI_PRESET)
+    for d, _name in items:
+        try:
+            await recompute_company_holiday(companyId, d, db)
+        except Exception:
+            pass
+    return {"year": year_i, "imported": len(items), **result}
 
 
 @router.delete("/company/{companyId}/holidays/{holidayId}")

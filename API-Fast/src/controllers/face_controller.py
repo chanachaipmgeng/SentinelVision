@@ -29,6 +29,19 @@ from ..clients.face_core_client import face_core_enabled, get_face_core_client, 
 
 UPLOAD_DIR = Path("./uploaded_images")
 
+# Shown on the public kiosk screen when a watchlist (BLACKLIST/POI) hit denies access.
+# Must stay generic: the full alert (identity, list type, snapshot) goes to
+# sentinel_incident_log + notification_outbox in evaluate_kiosk_sentinel_match.
+KIOSK_ACCESS_DENIED_MESSAGE = "ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่"
+
+
+def kiosk_access_denied() -> HTTPException:
+    """Generic 403 for kiosk-facing responses; carries no identity or list-type fields."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=KIOSK_ACCESS_DENIED_MESSAGE,
+    )
+
 
 def _company_code(company_id: UUID) -> str:
     return str(company_id)
@@ -338,13 +351,13 @@ async def _resolve_match_response(
         except Exception:
             sentinel_meta = None
 
+    # Watchlist denial wins over an employee match: the incident + outbox alert were
+    # already written by evaluate_kiosk_sentinel_match; the kiosk only sees a generic refusal.
+    if sentinel_meta is not None and not sentinel_meta.get("accessGranted", True):
+        raise kiosk_access_denied()
+
     if not match:
         if sentinel_meta is not None:
-            if not sentinel_meta.get("accessGranted", True):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Security Watchlist Alert: {sentinel_meta.get('fullName')} ({sentinel_meta.get('identityType')})",
-                )
             return {
                 "memberId": sentinel_meta["identityId"],
                 "faceEncodingId": sentinel_meta["identityId"],

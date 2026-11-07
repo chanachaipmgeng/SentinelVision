@@ -186,18 +186,41 @@ export class EmployeeService {
     if (photosZip) {
       formData.append('photos', photosZip);
     }
-    return this.http.post<{ jobId: string; status: string }>(
+    return this.http.post<EmployeeImportJob>(
       this.apiBaseUrl + '/' + companyId + '/import-jobs',
       formData
     );
   }
 
   importJob(companyId: string, jobId: string) {
-    return this.http.get<{ status: string; result: any; error: string }>(
+    return this.http.get<EmployeeImportJob>(
       this.apiBaseUrl + '/' + companyId + '/import-jobs/' + jobId
     );
   }
 
+}
+
+export interface EmployeeImportProgress {
+  processed: number;
+  total: number | null;
+  success: number;
+  failed: number;
+  facesEnrolled: number;
+}
+
+/** B7: import jobs are processed by the background worker; the UI polls this until done/failed. */
+export interface EmployeeImportJob {
+  jobId: string;
+  companyId?: string;
+  status: 'pending' | 'running' | 'done' | 'failed' | string;
+  progress?: EmployeeImportProgress | null;
+  result?: EmployeeImportResult | null;
+  error?: string | null;
+  fileName?: string | null;
+  attempts?: number;
+  createdAt?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
 }
 
 export interface EmployeeImportCreatedRow {

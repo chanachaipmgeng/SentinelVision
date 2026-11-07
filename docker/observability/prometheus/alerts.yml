@@ -1,0 +1,128 @@
+# Alert rules for the DPU stack. Route them to your Alertmanager / on-call tool; thresholds
+# match docs/RUNBOOK.md ("Observability & alerts"). Tune `for:` to your traffic profile.
+groups:
+  - name: dpu-availability
+    rules:
+      - alert: DpuApiDown
+        expr: up{job="dpu-api", instance_role="api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "dpu-api scrape target down"
+          runbook: "docs/RUNBOOK.md#502-after-recreate"
+
+      - alert: DpuReadyFailing
+        expr: min by (instance, component) (dpu_ready_status{job="dpu-api"}) == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "/ready failing on {{ $labels.instance }} ({{ $labels.component }})"
+          runbook: "docs/RUNBOOK.md#observability--alerts"
+
+      - alert: DpuWorkerDown
+        expr: up{job="dpu-worker"} == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "dpu-worker scrape target down — outbox, retention and imports are not running"
+          runbook: "docs/RUNBOOK.md#background-worker"
+
+  - name: dpu-http
+    rules:
+      - alert: DpuHigh5xxRate
+        expr: |
+          sum(rate(dpu_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(dpu_http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "More than 5% of HTTP responses are 5xx"
+
+      - alert: DpuSlowApiP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(dpu_http_request_duration_seconds_bucket{route!~"/metrics|/health|/ready"}[5m]))
+          ) > 2
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "API p95 latency above 2s"
+
+  - name: dpu-face-queue
+    rules:
+      - alert: DpuFaceQueueSaturated
+        expr: |
+          dpu_face_gpu_queue_pending_total / clamp_min(dpu_face_gpu_queue_capacity, 1) > 0.8
+        for: 3m
+        labels: {severity: warning}
+        annotations:
+          summary: "Face GPU queue above 80% of capacity on {{ $labels.instance }}"
+          runbook: "docs/KIOSK-LOADTEST-SATURATION.md"
+
+      - alert: DpuFaceQueueWaitHigh
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(dpu_face_gpu_queue_wait_seconds_bucket{kind="checkin"}[5m]))) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Check-in jobs wait more than 1s (p95) in the GPU queue"
+
+      - alert: DpuFaceJobsFailing
+        expr: |
+          sum(rate(dpu_face_gpu_jobs_total{result="error"}[5m]))
+            / clamp_min(sum(rate(dpu_face_gpu_jobs_total[5m])), 0.001) > 0.1
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 10% of face GPU jobs raise"
+
+  - name: dpu-background-jobs
+    rules:
+      - alert: DpuOutboxLag
+        expr: max(dpu_outbox_oldest_pending_age_seconds) > 300
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Oldest pending notification is older than 5 minutes (dispatcher lag)"
+          runbook: "docs/RUNBOOK.md#multi-replica-notification-outbox"
+
+      - alert: DpuOutboxBacklog
+        expr: max(dpu_outbox_pending) > 500
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 500 pending outbox rows"
+
+      - alert: DpuOutboxDeliveryFailures
+        expr: sum(increase(dpu_outbox_deliveries_total{result="failed"}[30m])) > 10
+        labels: {severity: warning}
+        annotations:
+          summary: "Outbox rows exhausted their retries in the last 30 minutes"
+
+      - alert: DpuJobNotSucceeding
+        expr: |
+          (time() - max by (job_name) (dpu_job_last_success_timestamp_seconds)) > 7200
+            and on (job_name) max by (job_name) (dpu_job_runs_total) > 0
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Background job {{ $labels.job_name }} has not succeeded for 2h"
+
+      - alert: DpuImportJobsStuck
+        expr: max(dpu_import_jobs_pending) > 0 and max(up{job="dpu-worker"}) == 0
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Import jobs are queued but no worker is running"
+          runbook: "docs/RUNBOOK.md#background-worker"
+
+  - name: dpu-db
+    rules:
+      - alert: DpuDbPoolExhausted
+        expr: |
+          dpu_db_pool_checked_out >= (dpu_db_pool_size + clamp_min(dpu_db_pool_overflow, 0))
+            and dpu_db_pool_overflow >= 20
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "SQLAlchemy pool fully checked out (incl. overflow) on {{ $labels.instance }}"

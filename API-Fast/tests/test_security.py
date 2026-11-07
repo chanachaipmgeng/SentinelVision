@@ -233,8 +233,9 @@ def test_observability_histograms_and_traceparent():
     observe_histogram("dpu_face_gpu_latency_ms", 18.5)
     observe_histogram("dpu_pgvector_search_ms", 4.2)
     prom_text = render_metrics()
-    assert "dpu_face_gpu_latency_ms_bucket" in prom_text
-    assert "dpu_pgvector_search_ms_count" in prom_text
+    # Legacy millisecond names map onto the prometheus_client base-unit series (B6).
+    assert 'dpu_face_gpu_processing_seconds_bucket{kind="other",le="0.025"}' in prom_text
+    assert 'dpu_face_match_duration_seconds_count{source="pgvector"}' in prom_text
 
     summary = get_observability_summary()
     assert summary["histograms"]["dpu_face_gpu_latency_ms"]["count"] >= 1

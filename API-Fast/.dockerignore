@@ -6,6 +6,7 @@ venv
 temp_images
 enrolled_images
 uploaded_images
+import_jobs
 *.faiss
 *.pkl
 .git

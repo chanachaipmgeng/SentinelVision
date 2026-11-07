@@ -11,7 +11,15 @@ from .security.jwt import assert_secret_configured
 from .security.oidc import assert_oidc_configured
 from .clients.face_core_client import assert_face_core_configured, face_core_enabled, ping_face_core
 from .security.middleware import AuthzMiddleware
-from .services.observability import RequestIdMiddleware, configure_logging, render_metrics
+from .services.observability import (
+    METRICS_CONTENT_TYPE,
+    RequestIdMiddleware,
+    configure_logging,
+    render_metrics,
+    set_ready_status,
+    setup_tracing,
+    shutdown_tracing,
+)
 from .services import audit_service, notification_service  # noqa: F401  register tables
 
 # Register all ORM models on Base.metadata before create_all
@@ -52,7 +60,7 @@ from .routes import (
 assert_secret_configured()
 assert_oidc_configured()
 assert_face_core_configured()
-configure_logging()
+configure_logging("api")
 logger = logging.getLogger("dpu.api")
 
 app = FastAPI(
@@ -73,6 +81,8 @@ app.add_middleware(
 )
 app.add_middleware(AuthzMiddleware)
 app.add_middleware(RequestIdMiddleware)
+# OTel server spans wrap everything above (no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set).
+setup_tracing(app, engine=engine)
 
 
 @app.exception_handler(Exception)
@@ -86,39 +96,18 @@ async def unhandled_error(request: Request, exc: Exception):
     )
 
 
-async def _retention_loop() -> None:
-    from .services.storage_service import retention_tick
-    from .routes.sentinel_routes import expire_sentinel_identities_tick
-
-    while True:
-        try:
-            r_stats = retention_tick()
-            s_stats = await expire_sentinel_identities_tick()
-            logger.info("retention %s sentinel=%s", r_stats, s_stats)
-        except Exception:
-            logger.exception("retention failed")
-        await asyncio.sleep(3600)
-
-
-async def _notify_loop() -> None:
-    from .services.notification_service import drain_outbox
-
-    while True:
-        try:
-            await drain_outbox()
-            from .services.notification_service import attendance_cutoff_tick
-
-            await attendance_cutoff_tick()
-        except Exception:
-            logger.exception("notify drain failed")
-        await asyncio.sleep(max(5, int(settings.NOTIFY_POLL_SECONDS)))
+# B7: outbox / retention / import processing live in the `worker` service (python -m src.worker).
+# RUN_BACKGROUND_JOBS_IN_API=true runs the same job loops inside this process (single-container dev).
+_in_process_jobs = None
 
 
 @app.on_event("startup")
 async def startup():
     from .services.storage_service import ensure_dirs
+    from .services.import_job_service import import_job_root
 
     ensure_dirs()
+    import_job_root().mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await ensure_db_schema(conn)
         await prepare_pgvector(conn)
@@ -135,11 +124,28 @@ async def startup():
             queue_size=settings.FACE_GPU_QUEUE_SIZE,
             devices=devices,
         )
-    asyncio.create_task(_retention_loop())
-    asyncio.create_task(_notify_loop())
     from .services.token_revocation_service import revocation_purge_loop
 
     asyncio.create_task(revocation_purge_loop())
+
+    global _in_process_jobs
+    if settings.RUN_BACKGROUND_JOBS_IN_API:
+        from .worker import WorkerRunner
+
+        _in_process_jobs = WorkerRunner(worker_id=f"api:{settings.WORKER_ID or 'in-process'}")
+        await _in_process_jobs.start()
+        logger.warning(
+            "RUN_BACKGROUND_JOBS_IN_API=true: outbox/retention/import jobs run inside the API process"
+        )
+    else:
+        logger.info("background jobs delegated to the worker service (RUN_BACKGROUND_JOBS_IN_API=false)")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _in_process_jobs is not None:
+        await _in_process_jobs.stop()
+    shutdown_tracing()
 
 
 @app.get("/health")
@@ -156,24 +162,31 @@ async def ready():
         async with async_session() as db:
             await db.execute(text("SELECT 1"))
     except Exception as exc:
+        set_ready_status("db", False)
         return JSONResponse({"status": "down", "db": str(exc)}, status_code=503)
+    set_ready_status("db", True)
     queue = {"source": "face-core"} if face_core_enabled() else face_gpu_queue_stats()
     if face_core_enabled():
         try:
             queue = await ping_face_core()
         except Exception as exc:
+            set_ready_status("face_core", False)
             return JSONResponse(
                 {"status": "down", "faceCore": str(exc), "code": "face_core_down"},
                 status_code=503,
             )
+        set_ready_status("face_core", True)
     elif not queue.get("started"):
+        set_ready_status("face_queue", False)
         return JSONResponse({"status": "down", "queue": queue}, status_code=503)
+    else:
+        set_ready_status("face_queue", True)
     return {"status": "ok", "queue": queue}
 
 
 @app.get("/metrics")
 async def metrics():
-    return PlainTextResponse(render_metrics(), media_type="text/plain; version=0.0.4")
+    return PlainTextResponse(render_metrics(), media_type=METRICS_CONTENT_TYPE)
 
 
 @app.get("/")

@@ -20,6 +20,17 @@ services:
       - default
       - dev-net
 
+  worker:
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${SHARED_PG_USER:-localdev}:${SHARED_PG_PASSWORD:-localdev_secret}@dev-postgres:5432/${SHARED_PG_DB:-localdev}
+      DB_SCHEMA: ${DB_SCHEMA:-dpu}
+    depends_on: !reset
+      api:
+        condition: service_healthy
+    networks:
+      - default
+      - dev-net
+
   # Merged when docker-compose.gpu.yml is also on the command line.
   api-gpu1:
     environment:

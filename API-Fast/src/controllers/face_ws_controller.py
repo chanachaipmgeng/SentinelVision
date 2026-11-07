@@ -30,7 +30,7 @@ from ..controllers.face_controller import (
     _resolve_match_response,
 )
 from ..clients.face_core_client import face_core_enabled, get_face_core_client
-from ..services.observability import inc_gauge
+from ..services.observability import ws_kiosk_connections
 from ..utils.face_engine import (
     decode_image_bytes,
     detect_faces_bgr,
@@ -671,7 +671,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
         return
 
     await websocket.accept()
-    inc_gauge("dpu_ws_active_kiosks", 1.0)
+    ws_kiosk_connections.inc()
     company_id: Optional[UUID] = None
     company_key: Optional[str] = None
     authenticated = False
@@ -944,7 +944,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
         except Exception:
             pass
     finally:
-        inc_gauge("dpu_ws_active_kiosks", -1.0)
+        ws_kiosk_connections.dec()
         _release_slot(_conn_by_ip, client_ip)
         if company_key is not None:
             _release_slot(_conn_by_company, company_key)

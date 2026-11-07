@@ -116,97 +116,54 @@ async def get_companies_by_admin_route(memberId: str, db: AsyncSession = Depends
     return await get_companies_admin(memberId, db)
 
 
-class _BytesUpload:
-    def __init__(self, name: str, data: bytes):
-        self.filename = name
-        self._data = data
-
-    async def read(self) -> bytes:
-        return self._data
-
-
-async def _run_import_job(job_id, company_id: str, filename: str, data: bytes, photos_name, photos_data):
-    from uuid import UUID
-    from datetime import datetime, timezone
-
-    from ..config.database import async_session
-    from ..services.notification_service import ImportJob, enqueue
-
-    async with async_session() as db:
-        job = await db.get(ImportJob, job_id)
-        if job:
-            job.status = "running"
-            await db.commit()
-        try:
-            result = await import_employees_from_excel(
-                company_id,
-                _BytesUpload(filename, data),
-                db,
-                photos=_BytesUpload(photos_name, photos_data) if photos_data else None,
-            )
-            job = await db.get(ImportJob, job_id)
-            if job:
-                job.status = "done"
-                job.result = result if isinstance(result, dict) else {"ok": True}
-                job.finishedAt = datetime.now(timezone.utc)
-            await db.commit()
-            await enqueue(
-                "import.finished",
-                "line",
-                {"body": f"Import finished for company {company_id}"},
-                company_id=company_id,
-            )
-        except Exception as exc:
-            job = await db.get(ImportJob, job_id)
-            if job:
-                job.status = "failed"
-                job.error = str(exc)[:500]
-                job.finishedAt = datetime.now(timezone.utc)
-                await db.commit()
-
-
+# B7: the API only validates + persists the upload; the `worker` service processes the job
+# (or this process does when RUN_BACKGROUND_JOBS_IN_API=true). UI polls GET .../import-jobs/{jobId}.
 @router.post("/company/{companyId}/import-jobs")
 async def start_import_job(
+    request: Request,
     companyId: str,
     file: UploadFile = File(...),
     photos: UploadFile | None = File(None),
+    db: AsyncSession = Depends(get_db),
 ):
-    import asyncio
-    from uuid import uuid4
+    from fastapi import HTTPException
 
-    from ..config.database import async_session
-    from ..services.notification_service import ImportJob
+    from ..models.company import Company
+    from ..services.import_job_service import create_import_job
 
+    if not await db.get(Company, companyId):
+        raise HTTPException(status_code=404, detail="Company not found")
+    filename = (file.filename or "").lower()
+    if not filename.endswith((".xlsx", ".xlsm")):
+        raise HTTPException(status_code=400, detail="กรุณาอัปโหลดไฟล์ Excel (.xlsx)")
     data = await file.read()
-    photos_data = await photos.read() if photos else None
-    job_id = uuid4()
-    async with async_session() as db:
-        db.add(
-            ImportJob(
-                id=job_id,
-                companyId=companyId,
-                status="pending",
-            )
-        )
-        await db.commit()
-    asyncio.create_task(
-        _run_import_job(job_id, companyId, file.filename or "import.xlsx", data, getattr(photos, "filename", None), photos_data)
+    if not data:
+        raise HTTPException(status_code=400, detail="ไฟล์ว่าง")
+    photos_data = None
+    if photos is not None and photos.filename:
+        if not photos.filename.lower().endswith(".zip"):
+            raise HTTPException(status_code=400, detail="ไฟล์รูปต้องเป็น ZIP (.zip) รวมรูป jpg/png")
+        photos_data = await photos.read()
+
+    actor = getattr(request.state, "member", None) or current_member_var.get()
+    job = await create_import_job(
+        companyId,
+        file_name=file.filename,
+        data=data,
+        photos_name=getattr(photos, "filename", None),
+        photos_data=photos_data,
+        requested_by=getattr(actor, "memberId", None),
     )
-    return {"jobId": str(job_id), "status": "pending"}
+    return {"jobId": str(job.id), "status": job.status, "progress": job.progress}
 
 
 @router.get("/company/{companyId}/import-jobs/{jobId}")
-async def get_import_job(companyId: str, jobId: str, db: AsyncSession = Depends(get_db)):
-    from ..services.notification_service import ImportJob
+async def get_import_job_route(companyId: str, jobId: str, db: AsyncSession = Depends(get_db)):
+    from fastapi import HTTPException
 
-    job = await db.get(ImportJob, jobId)
+    from ..services.import_job_service import get_import_job
+
+    job = await get_import_job(db, jobId)
     if not job or str(job.companyId) != companyId:
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=404, detail="Import job not found")
-    return {
-        "jobId": str(job.id),
-        "status": job.status,
-        "result": job.result,
-        "error": job.error,
-    }
+    return job.to_public()

@@ -12,36 +12,30 @@ from sqlalchemy.orm import selectinload
 
 from ..config.database import get_db
 from ..config.settings import settings
-from ..controllers.employee_timestamp_controller import (
-    get_company_shift_settings,
-    update_company_shift_settings,
-)
 from ..controllers.face_controller import clear_member_face_encodings
+from ..controllers import hr_controller
 from ..models.company_employee import CompanyEmployee
-from ..models.department import Department
 from ..models.face_encoding import FaceEncoding
-from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest, WorkShift
+from ..models.hr_schedule import CompanyHoliday, KioskDevice, LeaveRequest
 from ..models.member import Member
+from ..schemas.hr_schema import (
+    AssignShiftBody,
+    CompanyHolidayCreate,
+    LeaveApprovalBody,
+    LeaveRequestCreate,
+    WorkShiftCreate,
+    WorkShiftUpdate,
+)
 from ..security.deps import assert_member_company_access, assert_request_company_access
 from ..security.jwt import kiosk_refresh_ttl
 from ..security.kiosk_pairing import generate_pairing_code, hash_pairing_code, pairing_code_expiry
 from ..services import token_revocation_service as revocation
+from ..services.attendance_summary_service import (
+    recompute_company_holiday,
+    recompute_leave_range,
+)
 
 router = APIRouter()
-
-
-def _serialize_shift(ws: WorkShift) -> dict:
-    return {
-        "shiftId": str(ws.shiftId),
-        "companyId": str(ws.companyId),
-        "name": ws.name,
-        "startTime": ws.startTime,
-        "endTime": ws.endTime,
-        "graceMinutes": int(ws.graceMinutes or 0),
-        "isCrossMidnight": bool(ws.isCrossMidnight),
-        "isDefault": bool(ws.isDefault),
-        "createdAt": ws.createdAt,
-    }
 
 
 @router.get("/company/{companyId}/shifts")
@@ -51,119 +45,30 @@ async def list_company_shifts(
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    rows = (
-        await db.execute(
-            select(WorkShift)
-            .where(WorkShift.companyId == companyId, WorkShift.deletedAt.is_(None))
-            .order_by(WorkShift.isDefault.desc(), WorkShift.createdAt.asc())
-        )
-    ).scalars().all()
-    default_cfg = await get_company_shift_settings(companyId, db)
-    return {
-        "defaultSetting": default_cfg,
-        "shifts": [_serialize_shift(r) for r in rows],
-    }
+    return await hr_controller.list_shifts(companyId, db)
 
 
 @router.post("/company/{companyId}/shifts")
 async def create_company_shift(
     companyId: UUID,
-    body: dict,
+    body: WorkShiftCreate,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    name = str(body.get("name") or "").strip()
-    if not name:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Shift name is required")
-    start_time = str(body.get("startTime") or "09:00").strip()
-    end_time = str(body.get("endTime") or "18:00").strip()
-    grace = max(0, int(body.get("graceMinutes", 15) or 0))
-    is_cross = bool(body.get("isCrossMidnight", False))
-    is_default = bool(body.get("isDefault", False))
-
-    if is_default:
-        existing_defaults = (
-            await db.execute(
-                select(WorkShift).where(
-                    WorkShift.companyId == companyId,
-                    WorkShift.isDefault.is_(True),
-                    WorkShift.deletedAt.is_(None),
-                )
-            )
-        ).scalars().all()
-        for ed in existing_defaults:
-            ed.isDefault = False
-
-    ws = WorkShift(
-        companyId=companyId,
-        name=name,
-        startTime=start_time,
-        endTime=end_time,
-        graceMinutes=grace,
-        isCrossMidnight=is_cross,
-        isDefault=is_default,
-    )
-    db.add(ws)
-    await db.commit()
-    await db.refresh(ws)
-    if is_default:
-        await update_company_shift_settings(
-            companyId,
-            {
-                "name": name,
-                "startTime": start_time,
-                "endTime": end_time,
-                "graceMinutes": grace,
-                "isCrossMidnight": is_cross,
-            },
-            db,
-        )
-    return _serialize_shift(ws)
+    return await hr_controller.create_shift(companyId, body, db)
 
 
 @router.put("/company/{companyId}/shifts/{shiftId}")
 async def update_company_shift(
     companyId: UUID,
     shiftId: UUID,
-    body: dict,
+    body: WorkShiftUpdate,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    ws = await db.get(WorkShift, shiftId)
-    if not ws or ws.companyId != companyId or ws.deletedAt is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
-
-    if "name" in body and str(body["name"]).strip():
-        ws.name = str(body["name"]).strip()
-    if "startTime" in body:
-        ws.startTime = str(body["startTime"]).strip()
-    if "endTime" in body:
-        ws.endTime = str(body["endTime"]).strip()
-    if "graceMinutes" in body:
-        ws.graceMinutes = max(0, int(body["graceMinutes"] or 0))
-    if "isCrossMidnight" in body:
-        ws.isCrossMidnight = bool(body["isCrossMidnight"])
-    if "isDefault" in body:
-        new_def = bool(body["isDefault"])
-        if new_def:
-            others = (
-                await db.execute(
-                    select(WorkShift).where(
-                        WorkShift.companyId == companyId,
-                        WorkShift.shiftId != shiftId,
-                        WorkShift.deletedAt.is_(None),
-                    )
-                )
-            ).scalars().all()
-            for o in others:
-                o.isDefault = False
-        ws.isDefault = new_def
-
-    await db.commit()
-    await db.refresh(ws)
-    return _serialize_shift(ws)
+    return await hr_controller.update_shift(companyId, shiftId, body, db)
 
 
 @router.delete("/company/{companyId}/shifts/{shiftId}")
@@ -174,52 +79,19 @@ async def delete_company_shift(
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    ws = await db.get(WorkShift, shiftId)
-    if not ws or ws.companyId != companyId or ws.deletedAt is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
-    ws.deletedAt = datetime.now(timezone.utc)
-    await db.commit()
-    return {"deleted": True, "shiftId": str(shiftId)}
+    return await hr_controller.delete_shift(companyId, shiftId, db)
 
 
 @router.put("/company/{companyId}/assign-shift")
 async def assign_shift(
     companyId: UUID,
-    body: dict,
+    body: AssignShiftBody,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """Assign a shiftId (or None to clear) to a department or an employee."""
     await assert_request_company_access(request, db, companyId)
-    raw_shift_id = body.get("shiftId")
-    shift_uuid = UUID(str(raw_shift_id)) if raw_shift_id else None
-    if shift_uuid:
-        ws = await db.get(WorkShift, shift_uuid)
-        if not ws or ws.companyId != companyId or ws.deletedAt is not None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift not found")
-
-    if body.get("departmentId"):
-        dept_id = UUID(str(body["departmentId"]))
-        dept = await db.get(Department, dept_id)
-        if not dept or dept.companyId != companyId or dept.deletedAt is not None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
-        dept.shiftId = shift_uuid
-        await db.commit()
-        return {"assigned": "department", "departmentId": str(dept_id), "shiftId": str(shift_uuid) if shift_uuid else None}
-
-    if body.get("company_employeeId"):
-        emp_id = UUID(str(body["company_employeeId"]))
-        emp = await db.get(CompanyEmployee, emp_id)
-        if not emp or emp.companyId != companyId or emp.deletedAt is not None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
-        emp.shiftId = shift_uuid
-        await db.commit()
-        return {"assigned": "employee", "company_employeeId": str(emp_id), "shiftId": str(shift_uuid) if shift_uuid else None}
-
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Provide departmentId or company_employeeId",
-    )
+    return await hr_controller.assign_shift(companyId, body, db)
 
 
 # ---------------------------------------------------------------------------
@@ -254,27 +126,25 @@ async def list_company_holidays(
 @router.post("/company/{companyId}/holidays")
 async def create_company_holiday(
     companyId: UUID,
-    body: dict,
+    body: CompanyHolidayCreate,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    name = str(body.get("name") or "").strip()
-    raw_date = str(body.get("holidayDate") or "").strip()[:10]
-    if not name or not raw_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="holidayDate (YYYY-MM-DD) and name are required",
-        )
+    raw_date = str(body.holidayDate or "").strip()[:10]
     try:
         parsed_date = date.fromisoformat(raw_date)
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid holidayDate format")
 
-    row = CompanyHoliday(companyId=companyId, holidayDate=parsed_date, name=name)
+    row = CompanyHoliday(companyId=companyId, holidayDate=parsed_date, name=body.name)
     db.add(row)
     await db.commit()
     await db.refresh(row)
+    try:
+        await recompute_company_holiday(companyId, parsed_date, db)
+    except Exception:
+        pass
     return {
         "holidayId": str(row.holidayId),
         "companyId": str(row.companyId),
@@ -294,8 +164,13 @@ async def delete_company_holiday(
     row = await db.get(CompanyHoliday, holidayId)
     if not row or row.companyId != companyId or row.deletedAt is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Holiday not found")
+    holiday_date = row.holidayDate
     row.deletedAt = datetime.now(timezone.utc)
     await db.commit()
+    try:
+        await recompute_company_holiday(companyId, holiday_date, db)
+    except Exception:
+        pass
     return {"deleted": True, "holidayId": str(holidayId)}
 
 
@@ -380,15 +255,12 @@ async def list_leave_requests(
 @router.post("/company/{companyId}/leaves")
 async def create_leave_request(
     companyId: UUID,
-    body: dict,
+    body: LeaveRequestCreate,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     await assert_request_company_access(request, db, companyId)
-    raw_emp = body.get("company_employeeId")
-    if not raw_emp:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="company_employeeId is required")
-    emp_id = UUID(str(raw_emp))
+    emp_id = body.company_employeeId
     emp = (
         await db.execute(
             select(CompanyEmployee)
@@ -407,16 +279,16 @@ async def create_leave_request(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found in company")
 
     try:
-        start_d = date.fromisoformat(str(body.get("startDate") or "")[:10])
-        end_d = date.fromisoformat(str(body.get("endDate") or "")[:10])
+        start_d = date.fromisoformat(str(body.startDate or "")[:10])
+        end_d = date.fromisoformat(str(body.endDate or "")[:10])
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate are required")
     if end_d < start_d:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
 
-    leave_type = str(body.get("leaveType") or "ANNUAL").strip().upper()
-    reason = str(body.get("reason") or "").strip()
-    auto_approve = bool(body.get("autoApprove", False))
+    leave_type = str(body.leaveType or "ANNUAL").strip().upper()
+    reason = str(body.reason or "").strip()
+    auto_approve = bool(body.autoApprove)
 
     lr = LeaveRequest(
         companyId=companyId,
@@ -431,6 +303,11 @@ async def create_leave_request(
     db.add(lr)
     await db.commit()
     await db.refresh(lr)
+    if auto_approve:
+        try:
+            await recompute_leave_range(companyId, emp_id, start_d, end_d, db)
+        except Exception:
+            pass
     return _serialize_leave(lr, emp)
 
 
@@ -438,7 +315,7 @@ async def create_leave_request(
 async def approve_or_reject_leave(
     companyId: UUID,
     leaveId: UUID,
-    body: dict,
+    body: LeaveApprovalBody,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
@@ -447,22 +324,29 @@ async def approve_or_reject_leave(
     if not lr or lr.companyId != companyId:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leave request not found")
 
-    if "status" in body:
-        st = body["status"]
+    if body.status is not None:
+        st = body.status
         approve = st in (1, "1", "APPROVED", True)
     else:
-        approve = bool(body.get("approve", True))
+        approve = bool(body.approve if body.approve is not None else True)
 
     if approve:
         lr.status = "APPROVED"
         lr.rejectReason = None
     else:
         lr.status = "REJECTED"
-        lr.rejectReason = str(body.get("rejectReason") or "ไม่อนุมัติ").strip()
+        lr.rejectReason = str(body.rejectReason or "ไม่อนุมัติ").strip()
     lr.approvedBy = caller.memberId if caller else None
     lr.approvedAt = datetime.now(timezone.utc)
     await db.commit()
     await db.refresh(lr)
+
+    try:
+        await recompute_leave_range(
+            companyId, lr.company_employeeId, lr.startDate, lr.endDate, db
+        )
+    except Exception:
+        pass
 
     emp = (
         await db.execute(

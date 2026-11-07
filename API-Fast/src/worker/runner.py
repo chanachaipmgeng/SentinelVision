@@ -30,6 +30,7 @@ JOBS: Dict[str, JobSpec] = {
     "outbox": JobSpec("outbox", job_bodies.run_outbox_tick),
     "retention": JobSpec("retention", job_bodies.run_retention_tick),
     "imports": JobSpec("imports", job_bodies.run_imports_tick, takes_context=True),
+    "attendance_summary": JobSpec("attendance_summary", job_bodies.run_attendance_summary_tick),
 }
 
 

@@ -53,6 +53,13 @@ async def run_imports_tick(
     return {"processed": processed}
 
 
+async def run_attendance_summary_tick() -> Dict[str, Any]:
+    """C1 nightly: recompute yesterday's ``attendance_daily`` rows for every active employee."""
+    from ..services.attendance_summary_service import recompute_yesterday_all
+
+    return await recompute_yesterday_all(lookback_days=1)
+
+
 def poll_interval(job: str) -> float:
     if job == "outbox":
         return float(max(5, int(settings.NOTIFY_POLL_SECONDS)))
@@ -60,4 +67,6 @@ def poll_interval(job: str) -> float:
         return float(max(60, int(settings.WORKER_RETENTION_INTERVAL_SECONDS)))
     if job == "imports":
         return float(max(1, int(settings.WORKER_IMPORT_POLL_SECONDS)))
+    if job == "attendance_summary":
+        return float(max(300, int(settings.WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS)))
     return 60.0

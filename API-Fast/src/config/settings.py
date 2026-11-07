@@ -114,10 +114,12 @@ class Settings(BaseSettings):
     # single-container dev setup to run the same loops inside the API process instead.
     RUN_BACKGROUND_JOBS_IN_API: bool = False
     WORKER_ID: str = ""
-    WORKER_JOBS: str = "outbox,retention,imports"
+    WORKER_JOBS: str = "outbox,retention,imports,attendance_summary"
     WORKER_METRICS_PORT: int = 9108
     WORKER_RETENTION_INTERVAL_SECONDS: int = 3600
     WORKER_IMPORT_POLL_SECONDS: int = 2
+    # C1 nightly attendance_daily recompute (default 6h; hooks cover same-day punches).
+    WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS: int = 21600
     # A running import whose heartbeat is older than this is considered orphaned (worker died).
     WORKER_IMPORT_LEASE_SECONDS: int = 900
     WORKER_SHUTDOWN_GRACE_SECONDS: int = 30

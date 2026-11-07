@@ -31,6 +31,7 @@ ignore = [
 # DB-backed test modules skip at import time (`pytest.skip(allow_module_level=True)`) before importing src.
 "tests/test_authz_matrix.py" = ["E402"]
 "tests/test_punch_shift_export.py" = ["E402"]
+"tests/test_attendance_summary_shift_rules.py" = ["E402"]
 "tests/test_outbox_claiming.py" = ["E402"]
 "tests/test_tenant_isolation.py" = ["E402"]
 "tests/test_alembic_schema.py" = ["E402"]
@@ -88,6 +89,8 @@ module = [
     "src.security.middleware",
     "src.security.oidc",
     "src.services.face_match_service",
+    # C1: SQLAlchemy Column[] comparisons on attendance_daily lookups.
+    "src.services.attendance_summary_service",
     # B7 import hand-off: same legacy `Column()` attribute typing as the controllers above.
     "src.services.import_job_service",
     "src.services.observability",

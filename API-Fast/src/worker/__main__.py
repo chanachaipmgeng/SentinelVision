@@ -20,7 +20,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--jobs",
         default=settings.WORKER_JOBS,
-        help="comma list of jobs to run (outbox,retention,imports); default from WORKER_JOBS",
+        help="comma list of jobs to run (outbox,retention,imports,attendance_summary); default from WORKER_JOBS",
     )
     parser.add_argument("--worker-id", default=None, help="override WORKER_ID (shown in import_job.lockedBy)")
     parser.add_argument(

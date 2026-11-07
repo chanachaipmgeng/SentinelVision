@@ -143,7 +143,9 @@ def _is_kiosk_path_allowed(method: str, path: str) -> bool:
     if path.startswith("/sentinel/company/"):
         if path.endswith("/scan") and method == "POST":
             return True
-        if (path.endswith("/edge-sync") or path.endswith("/zones")) and method == "GET":
+        if method == "GET" and path.endswith(
+            ("/edge-sync", "/zones", "/events", "/module-config")
+        ):
             return True
         return False
     return path.startswith(_KIOSK_ALLOWED_PREFIXES)

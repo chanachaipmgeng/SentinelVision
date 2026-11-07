@@ -412,6 +412,51 @@ async def _handle_identify(
         _cleanup(paths)
 
 
+async def _resolve_station_context(
+    db,
+    company_id: UUID,
+    *,
+    station_mode: Optional[str],
+    zone_id: Optional[str],
+    event_id: Optional[str],
+) -> Tuple[str, Optional[str], Optional[str], dict]:
+    """Merge session/checkin overrides with company module-config defaults."""
+    from ..services.company_module_service import (
+        VALID_STATION_MODES,
+        get_company_module_config,
+    )
+
+    cfg = await get_company_module_config(db, company_id)
+    mode = str(station_mode or cfg.get("defaultStationMode") or "ATTENDANCE").strip().upper()
+    if mode not in VALID_STATION_MODES:
+        mode = "ATTENDANCE"
+    resolved_zone = zone_id or cfg.get("defaultZoneId")
+    resolved_event = event_id or cfg.get("defaultEventId")
+    return mode, resolved_zone, resolved_event, cfg
+
+
+async def _maybe_attendance_door_relay(
+    db,
+    company_id: UUID,
+    *,
+    zone_id: Optional[str],
+    rules: dict,
+    subject_name: str,
+    force: bool = False,
+) -> bool:
+    """Fire zone relay after attendance when enableDoorRelayOnAttendance or UNIFIED_HYBRID."""
+    if not force and not bool((rules or {}).get("enableDoorRelayOnAttendance", False)):
+        return False
+    if not zone_id:
+        return False
+    from ..routes.sentinel_routes import maybe_dispatch_zone_relay, resolve_scan_zone
+
+    zone, _ = await resolve_scan_zone(db, company_id, zone_id, "ACCESS_CONTROL")
+    return await maybe_dispatch_zone_relay(
+        zone, subject_name=subject_name or "Employee", identity_type="EMPLOYEE"
+    )
+
+
 async def _handle_checkin(
     websocket: WebSocket,
     *,
@@ -423,6 +468,10 @@ async def _handle_checkin(
     longitude: float,
     note: Optional[str],
     punch_type: Optional[str],
+    station_mode: Optional[str],
+    zone_id: Optional[str],
+    event_id: Optional[str],
+    totp_or_pin: Optional[str],
     send_lock: asyncio.Lock,
     identify_cache: _IdentifyCache,
 ) -> None:
@@ -449,7 +498,17 @@ async def _handle_checkin(
         mid_bytes = contents[len(contents) // 2]
 
         async with async_session() as db:
-            if face_core_enabled():
+            mode, resolved_zone, resolved_event, module_cfg = await _resolve_station_context(
+                db,
+                company_id,
+                station_mode=station_mode,
+                zone_id=zone_id,
+                event_id=event_id,
+            )
+            rules = module_cfg.get("scanActionRules") or {}
+            attendance_like = mode in ("ATTENDANCE", "UNIFIED_HYBRID")
+
+            if attendance_like and face_core_enabled():
                 for content in contents:
                     paths.append(_write_temp_bytes(content))
                 mid_path = paths[len(paths) // 2]
@@ -468,8 +527,30 @@ async def _handle_checkin(
                     default_note="Face kiosk websocket walk-by",
                     punch_type=punch_type,
                 )
+                emp = result.get("employee") or {}
+                subject = (
+                    f"{emp.get('firstName') or ''} {emp.get('lastName') or ''}".strip()
+                    or emp.get("username")
+                    or "Employee"
+                )
+                relay_ok = await _maybe_attendance_door_relay(
+                    db,
+                    company_id,
+                    zone_id=resolved_zone,
+                    rules=rules,
+                    subject_name=subject,
+                    force=(mode == "UNIFIED_HYBRID"),
+                )
+                result = {
+                    **result,
+                    "stationMode": mode,
+                    "doorRelayTriggered": relay_ok,
+                    "accessGranted": True if result.get("checkedIn") or result.get("duplicate") else result.get("accessGranted"),
+                }
+                if mode == "UNIFIED_HYBRID":
+                    result["decision"] = "ATTENDANCE_AND_ACCESS"
                 queue = await _face_core_queue_stats(company_id)
-            else:
+            elif attendance_like:
                 loop = asyncio.get_running_loop()
                 frames = []
                 for content in contents:
@@ -504,7 +585,74 @@ async def _handle_checkin(
                     default_note="Face kiosk websocket walk-by",
                     punch_type=punch_type,
                 )
+                emp = result.get("employee") or {}
+                subject = (
+                    f"{emp.get('firstName') or ''} {emp.get('lastName') or ''}".strip()
+                    or emp.get("username")
+                    or "Employee"
+                )
+                relay_ok = await _maybe_attendance_door_relay(
+                    db,
+                    company_id,
+                    zone_id=resolved_zone,
+                    rules=rules,
+                    subject_name=subject,
+                    force=(mode == "UNIFIED_HYBRID"),
+                )
+                result = {
+                    **result,
+                    "stationMode": mode,
+                    "doorRelayTriggered": relay_ok,
+                }
+                if mode == "UNIFIED_HYBRID":
+                    result["decision"] = "ATTENDANCE_AND_ACCESS"
+                    result["accessGranted"] = bool(
+                        result.get("checkedIn") or result.get("duplicate") or relay_ok
+                    )
                 queue = face_gpu_queue_stats()
+            else:
+                # Non-attendance station modes: Decision Engine via sentinel helpers.
+                from ..routes.sentinel_routes import evaluate_unified_scan_decision
+
+                loop = asyncio.get_running_loop()
+                frames = []
+                for content in contents:
+                    frame = await loop.run_in_executor(
+                        get_decode_executor(),
+                        lambda c=content: decode_image_bytes(c),
+                    )
+                    frames.append(frame)
+                cached = identify_cache.get(
+                    track_id,
+                    max_age_s=float(settings.FACE_IDENTIFY_CACHE_SECONDS),
+                )
+                if cached is not None:
+                    encoding = cached
+                else:
+                    encoding = await run_on_face_gpu(
+                        lambda fs=list(frames): get_walkby_encoding_frames(fs),
+                        kind="checkin",
+                        company_id=company_id,
+                    )
+                if encoding is None:
+                    raise HTTPException(status_code=400, detail="No face detected in the image.")
+                result = await evaluate_unified_scan_decision(
+                    db,
+                    company_id,
+                    encoding,
+                    station_mode=mode,
+                    zone_id=resolved_zone,
+                    event_id=resolved_event,
+                    totp_or_pin=totp_or_pin,
+                    snapshot_url=None,
+                    scan_action_rules=rules,
+                )
+                result = {**result, "stationMode": mode}
+                queue = (
+                    await _face_core_queue_stats(company_id)
+                    if face_core_enabled()
+                    else face_gpu_queue_stats()
+                )
 
         await _send(
             websocket,
@@ -678,6 +826,10 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     auth_deadline = time.monotonic() + auth_timeout
     latitude = 0.0
     longitude = 0.0
+    session_station_mode: Optional[str] = None
+    session_zone_id: Optional[str] = None
+    session_event_id: Optional[str] = None
+    session_totp_or_pin: Optional[str] = None
     send_lock = asyncio.Lock()
     task_sem = asyncio.Semaphore(4)
     token_exp = 0
@@ -750,6 +902,14 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 try:
                     latitude = float(data.get("latitude", 0) or 0)
                     longitude = float(data.get("longitude", 0) or 0)
+                    if data.get("stationMode") is not None:
+                        session_station_mode = str(data.get("stationMode") or "").strip().upper() or None
+                    if data.get("zoneId") is not None:
+                        session_zone_id = str(data.get("zoneId") or "").strip() or None
+                    if data.get("eventId") is not None:
+                        session_event_id = str(data.get("eventId") or "").strip() or None
+                    if data.get("totpOrPin") is not None:
+                        session_totp_or_pin = str(data.get("totpOrPin") or "").strip() or None
                     new_company_id, new_token_exp = await _authenticate_session(data)
                 except Exception as exc:
                     detail = getattr(exc, "detail", None) or "Invalid session payload"
@@ -893,7 +1053,14 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     latitude = float(data.get("latitude") or 0)
                 if data.get("longitude") is not None:
                     longitude = float(data.get("longitude") or 0)
-                if abs(latitude) < 1e-6 and abs(longitude) < 1e-6:
+                checkin_mode = (
+                    str(data.get("stationMode") or "").strip().upper()
+                    if data.get("stationMode") is not None
+                    else session_station_mode
+                )
+                # Non-attendance station modes may run without GPS (door / event / watchlist).
+                mode_for_gps = checkin_mode or "ATTENDANCE"
+                if mode_for_gps in ("ATTENDANCE", "UNIFIED_HYBRID") and abs(latitude) < 1e-6 and abs(longitude) < 1e-6:
                     await _send(
                         websocket,
                         {
@@ -909,6 +1076,21 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         lock=send_lock,
                     )
                     continue
+                checkin_zone = (
+                    str(data.get("zoneId") or "").strip() or None
+                    if data.get("zoneId") is not None
+                    else session_zone_id
+                )
+                checkin_event = (
+                    str(data.get("eventId") or "").strip() or None
+                    if data.get("eventId") is not None
+                    else session_event_id
+                )
+                checkin_totp = (
+                    str(data.get("totpOrPin") or "").strip() or None
+                    if data.get("totpOrPin") is not None
+                    else session_totp_or_pin
+                )
                 asyncio.create_task(
                     _run_bounded(
                         task_sem,
@@ -922,6 +1104,10 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             longitude=longitude,
                             note=data.get("note"),
                             punch_type=data.get("punchType"),
+                            station_mode=checkin_mode,
+                            zone_id=checkin_zone,
+                            event_id=checkin_event,
+                            totp_or_pin=checkin_totp,
                             send_lock=send_lock,
                             identify_cache=identify_cache,
                         ),

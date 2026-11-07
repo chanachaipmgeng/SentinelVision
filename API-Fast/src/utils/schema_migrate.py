@@ -102,6 +102,31 @@ async def ensure_profile_and_approval_columns(connection) -> None:
         CREATE INDEX IF NOT EXISTS kiosk_device_company_idx
         ON kiosk_device ("companyId", revoked_at)
         """,
+        "ALTER TABLE kiosk_device ALTER COLUMN token_hash DROP NOT NULL",
+        "ALTER TABLE kiosk_device ADD COLUMN IF NOT EXISTS token_family VARCHAR(64)",
+        "ALTER TABLE kiosk_device ADD COLUMN IF NOT EXISTS pairing_code_hash VARCHAR(128)",
+        "ALTER TABLE kiosk_device ADD COLUMN IF NOT EXISTS pairing_expires_at TIMESTAMPTZ",
+        "ALTER TABLE kiosk_device ADD COLUMN IF NOT EXISTS paired_at TIMESTAMPTZ",
+        """
+        CREATE INDEX IF NOT EXISTS kiosk_device_pairing_code_idx
+        ON kiosk_device (pairing_code_hash)
+        WHERE pairing_code_hash IS NOT NULL
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS revoked_token (
+            jti VARCHAR(96) PRIMARY KEY,
+            family_id VARCHAR(64),
+            scope VARCHAR(10) NOT NULL DEFAULT 'token',
+            exp TIMESTAMPTZ NOT NULL,
+            reason VARCHAR(40),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS revoked_token_family_idx
+        ON revoked_token (family_id, scope)
+        """,
+        "CREATE INDEX IF NOT EXISTS revoked_token_exp_idx ON revoked_token (exp)",
         """
         CREATE TABLE IF NOT EXISTS sentinel_identity (
             "identityId" UUID PRIMARY KEY,

@@ -40,7 +40,8 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 - Access tokens last `ACCESS_TOKEN_EXPIRE_MINUTES` (60). Server sends `token_expiring`; client calls `/auth/refresh-token` and re-sends `session` without dropping the socket. Reconnect always re-sends `session` from `TokenService`
 - Boxes come from WS `detected` only. Do not add face-api.js or `assets/models` back into the admin image
 - HTTP 503 `face_core_down` means the circuit is open; show a scan-unavailable state, do not hammer detect
-- Punch photo URLs from the kiosk use `authedImage()` → `/images/<file>?token=<jwt>`
+- Punch photos from the kiosk use `authedImage()` → `AuthedImageService.urlFor()` (HttpClient + Bearer → blob URL). Never put a token in a URL
+- Kiosk tablets pair at `/kiosk/pair` with a one-time code (`POST /auth/kiosk/pair`); the device token pair lives in `sessionStorage` (`TokenService.getKioskSession()`) and rotates via `/auth/kiosk/refresh`
 
 ## GPU / backpressure
 

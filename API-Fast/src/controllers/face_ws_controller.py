@@ -611,8 +611,12 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         )
                         from ..security.jwt import decode_token
 
+                        from ..services.token_revocation_service import is_token_revoked
+
                         token = str(data.get("token") or "")
                         decoded = decode_token(token, expected_typ=None)
+                        if await is_token_revoked(decoded):
+                            raise HTTPException(status_code=401, detail="Token has been revoked")
                         token_exp = int(decoded.get("exp") or 0)
                         token_warned = False
                         async with async_session() as db:

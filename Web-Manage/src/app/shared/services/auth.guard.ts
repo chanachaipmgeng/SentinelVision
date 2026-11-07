@@ -7,6 +7,8 @@ import {
 } from '@angular/router';
 import { TokenService } from './token.service';
 
+const KIOSK_ROUTE = '/company/timestamp-face';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -14,57 +16,38 @@ export class AuthGuard implements CanActivate {
 
   constructor(private router: Router, private tokenService: TokenService) { }
 
-  private tryHydrateKioskToken(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
-    const qToken =
-      route.queryParams?.['kioskToken'] ||
-      this.extractQueryParam(state?.url || '', 'kioskToken');
-    if (!qToken) {
+  /**
+   * Kiosk devices authenticate through the pairing screen (`/kiosk/pair`), never through a
+   * token in the URL. A kiosk session may only open the kiosk route itself.
+   */
+  private redirectFor(url: string): string {
+    return (url || '').startsWith(KIOSK_ROUTE) ? '/kiosk/pair' : '/auth/login';
+  }
+
+  private check(state: RouterStateSnapshot): boolean {
+    const url = state?.url || '';
+    if (this.tokenService.isKioskSession()) {
+      if (url.startsWith(KIOSK_ROUTE)) {
+        return true;
+      }
+      this.router.navigate([KIOSK_ROUTE]);
       return false;
     }
-    try {
-      const parts = String(qToken).split('.');
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        if (payload?.typ === 'kiosk' && payload?.companyId) {
-          this.tokenService.saveToken(String(qToken));
-          this.tokenService.saveSelectCompany({
-            companyId: String(payload.companyId),
-            companyName: 'Kiosk Device',
-          } as any);
-          return true;
-        }
-      }
-    } catch {
-      // Ignore malformed token
-    }
-    return false;
-  }
-
-  private extractQueryParam(url: string, key: string): string | null {
-    const qIdx = url.indexOf('?');
-    if (qIdx < 0) return null;
-    const params = new URLSearchParams(url.slice(qIdx + 1));
-    return params.get(key);
-  }
-
-  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
-    this.tryHydrateKioskToken(route, state);
     if (this.tokenService.getToken()) {
-      if (state.url == '/') {
+      if (url == '/') {
         this.router.navigate(['/admin/member-manage']);
       }
       return true;
     }
-    this.router.navigate(['/auth/login']);
+    this.router.navigate([this.redirectFor(url)]);
     return false;
   }
 
+  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
+    return this.check(state);
+  }
+
   canActivateChild(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
-    this.tryHydrateKioskToken(route, state);
-    if (this.tokenService.getToken()) {
-      return true;
-    }
-    this.router.navigate(['/auth/login']);
-    return false;
+    return this.check(state);
   }
 }

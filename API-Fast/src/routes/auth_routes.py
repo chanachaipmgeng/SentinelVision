@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
+from typing import Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -8,13 +12,33 @@ from passlib.context import CryptContext
 
 from ..config.database import get_db
 from ..config.settings import settings
+from ..models.hr_schedule import KioskDevice
 from ..models.member import Member
 from ..schemas.auth_schema import LoginRequest, Token
 from ..security.deps import get_current_member
-from ..security.jwt import create_access_token, create_refresh_token, decode_token
+from ..security.jwt import (
+    ALGORITHM,
+    TYP_ACCESS,
+    TYP_KIOSK_REFRESH,
+    TYP_REFRESH,
+    create_kiosk_token_pair,
+    create_token_pair,
+    decode_token,
+    hash_kiosk_token,
+    kiosk_refresh_ttl,
+    kiosk_token_ttl,
+    refresh_token_ttl,
+    token_exp_datetime,
+)
+from ..security.kiosk_pairing import (
+    assert_pair_attempt_allowed,
+    hash_pairing_code,
+    normalize_pairing_code,
+)
 from ..security.passwords import assert_not_locked, hash_password, register_failure, register_success
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
+from ..services import token_revocation_service as revocation
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -49,9 +73,23 @@ class OidcLoginRequest(BaseModel):
     idToken: str
 
 
-def _tokens(member: Member) -> dict:
-    access = create_access_token(str(member.memberId), member.username)
-    refresh = create_refresh_token(str(member.memberId), member.username)
+class LogoutRequest(BaseModel):
+    refreshToken: str | None = None
+    refresh_token: str | None = None
+
+
+class KioskPairRequest(BaseModel):
+    pairingCode: str
+    deviceFingerprint: str | None = None
+
+
+class KioskRefreshRequest(BaseModel):
+    refreshToken: str | None = None
+    refresh_token: str | None = None
+
+
+def _tokens(member: Member, *, family: Optional[str] = None) -> dict:
+    access, refresh = create_token_pair(str(member.memberId), member.username, family=family)
     return {
         "member": member,
         "access_token": access,
@@ -96,14 +134,36 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     return _tokens(member)
 
 
+async def _assert_refresh_not_revoked(db: AsyncSession, payload: dict, *, refresh_ttl) -> None:
+    """Reject revoked refresh tokens. Presenting an already-rotated token is reuse: a stolen
+    copy is being replayed, so the whole family is revoked and both parties are logged out."""
+    jti = payload.get("jti")
+    fam = payload.get("fam")
+    if not jti and not fam:
+        return
+    hit = await revocation.lookup_revocation(db, jti, fam)
+    if hit is None:
+        return
+    if hit["scope"] == revocation.SCOPE_TOKEN and hit.get("reason") == revocation.REASON_ROTATED and fam:
+        await revocation.revoke_family(
+            db,
+            fam,
+            revocation.family_expiry_for(payload, refresh_ttl=refresh_ttl),
+            reason=revocation.REASON_REUSE,
+        )
+        await db.commit()
+        raise HTTPException(status_code=401, detail="Refresh token reuse detected; session revoked")
+    raise HTTPException(status_code=401, detail="Refresh token has been revoked")
+
+
 @router.post("/refresh-token")
 @router.post("/refresh")
 async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     raw = body.refreshToken or body.refresh_token
     if not raw:
         raise HTTPException(status_code=401, detail="Refresh token required")
-    payload = decode_token(raw, expected_typ="refresh")
-    from uuid import UUID
+    payload = decode_token(raw, expected_typ=TYP_REFRESH)
+    await _assert_refresh_not_revoked(db, payload, refresh_ttl=refresh_token_ttl())
 
     member = await db.get(Member, UUID(str(payload["memberId"])))
     if not member or getattr(member, "deletedAt", None) is not None:
@@ -112,8 +172,162 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
     status_val = getattr(member.status, "value", member.status)
     if status_val in (0, "DISABLED"):
         raise HTTPException(status_code=403, detail="Account disabled")
-    issued = _tokens(member)
-    return issued
+    # Rotation: the presented refresh token is single-use; the new pair stays in the same family.
+    await revocation.revoke_token_payload(db, payload, reason=revocation.REASON_ROTATED)
+    await db.commit()
+    return _tokens(member, family=payload.get("fam"))
+
+
+def _bearer_payload_allow_expired(request: Request) -> Optional[dict]:
+    """Signature-verified access token from the Authorization header, ignoring ``exp`` so a
+    client can still log out (revoke its refresh token) after the access token lapsed."""
+    header = request.headers.get("authorization") or ""
+    if not header.lower().startswith("bearer "):
+        return None
+    raw = header.split(" ", 1)[1].strip()
+    try:
+        payload = pyjwt.decode(
+            raw, settings.SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False}
+        )
+    except pyjwt.InvalidTokenError:
+        return None
+    if payload.get("typ", TYP_ACCESS) != TYP_ACCESS or not payload.get("memberId"):
+        return None
+    return payload
+
+
+@router.post("/logout")
+async def logout(body: LogoutRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    """Revoke the current session: the access token (header), the refresh token (body) and the
+    family they share. Idempotent; works with an expired access token as long as it is ours."""
+    access_payload = _bearer_payload_allow_expired(request)
+    refresh_payload = None
+    raw_refresh = body.refreshToken or body.refresh_token
+    if raw_refresh:
+        try:
+            refresh_payload = decode_token(raw_refresh, expected_typ=TYP_REFRESH)
+        except HTTPException:
+            refresh_payload = None
+    if access_payload is None and refresh_payload is None:
+        raise HTTPException(status_code=401, detail="No valid token to revoke")
+
+    revoked = 0
+    family = None
+    family_exp = datetime.now(timezone.utc) + refresh_token_ttl()
+    for payload in (access_payload, refresh_payload):
+        if not payload:
+            continue
+        family = family or payload.get("fam")
+        if payload.get("typ") == TYP_REFRESH:
+            family_exp = max(family_exp, token_exp_datetime(payload))
+        if payload.get("jti"):
+            await revocation.revoke_token_payload(db, payload, reason=revocation.REASON_LOGOUT)
+            revoked += 1
+    if family:
+        await revocation.revoke_family(db, family, family_exp, reason=revocation.REASON_LOGOUT)
+    await db.commit()
+
+    member_id = (access_payload or refresh_payload or {}).get("memberId")
+    member = await db.get(Member, UUID(str(member_id))) if member_id else None
+    if member is not None:
+        await write_audit(actor=member, action="LOGOUT", path="/auth/logout", status_code=200)
+    return {"ok": True, "revokedTokens": revoked, "familyRevoked": bool(family)}
+
+
+# ---------------------------------------------------------------------------
+# Kiosk device pairing: one-time code → device-scoped token pair (short TTL, refreshable)
+# ---------------------------------------------------------------------------
+def _client_ip(request: Request) -> str:
+    xff = (request.headers.get("x-forwarded-for") or "").strip()
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _kiosk_session(device: KioskDevice, access: str, refresh: str) -> dict:
+    return {
+        "deviceToken": access,
+        "deviceRefreshToken": refresh,
+        "token_type": "bearer",
+        "expiresIn": int(kiosk_token_ttl().total_seconds()),
+        "refreshExpiresIn": int(kiosk_refresh_ttl().total_seconds()),
+        "deviceId": str(device.deviceId),
+        "companyId": str(device.companyId),
+        "locationId": str(device.locationId) if device.locationId else None,
+        "deviceName": device.name,
+    }
+
+
+@router.post("/kiosk/pair")
+async def kiosk_pair(body: KioskPairRequest, request: Request, db: AsyncSession = Depends(get_db)):
+    assert_pair_attempt_allowed(_client_ip(request))
+    code = normalize_pairing_code(body.pairingCode)
+    if len(code) < 6:
+        raise HTTPException(status_code=401, detail="Invalid pairing code")
+    device = (
+        await db.execute(select(KioskDevice).where(KioskDevice.pairingCodeHash == hash_pairing_code(code)))
+    ).scalars().first()
+    if device is None:
+        raise HTTPException(status_code=401, detail="Invalid pairing code")
+    if device.revokedAt is not None:
+        raise HTTPException(status_code=401, detail="Kiosk device has been revoked")
+    now = datetime.now(timezone.utc)
+    expires_at = device.pairingExpiresAt
+    if expires_at is not None and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at is None or expires_at <= now:
+        device.pairingCodeHash = None
+        device.pairingExpiresAt = None
+        await db.commit()
+        raise HTTPException(status_code=401, detail="Pairing code has expired")
+
+    # Single use: consume the code and start a fresh token family for this device.
+    if device.tokenFamily:
+        await revocation.revoke_family(db, device.tokenFamily, now + kiosk_refresh_ttl(), reason=revocation.REASON_REPAIR)
+    access, refresh = create_kiosk_token_pair(
+        str(device.deviceId),
+        str(device.companyId),
+        location_id=str(device.locationId) if device.locationId else None,
+    )
+    device.pairingCodeHash = None
+    device.pairingExpiresAt = None
+    device.tokenHash = hash_kiosk_token(access)
+    device.tokenFamily = decode_token(access, expected_typ="kiosk").get("fam")
+    device.pairedAt = now
+    device.lastSeenAt = now
+    await db.commit()
+    await db.refresh(device)
+    return _kiosk_session(device, access, refresh)
+
+
+@router.post("/kiosk/refresh")
+async def kiosk_refresh(body: KioskRefreshRequest, db: AsyncSession = Depends(get_db)):
+    raw = body.refreshToken or body.refresh_token
+    if not raw:
+        raise HTTPException(status_code=401, detail="Refresh token required")
+    payload = decode_token(raw, expected_typ=TYP_KIOSK_REFRESH)
+    await _assert_refresh_not_revoked(db, payload, refresh_ttl=kiosk_refresh_ttl())
+
+    device = await db.get(KioskDevice, UUID(str(payload["deviceId"])))
+    if device is None or str(device.companyId) != str(payload["companyId"]):
+        raise HTTPException(status_code=401, detail="Kiosk device not found")
+    if device.revokedAt is not None:
+        raise HTTPException(status_code=401, detail="Kiosk device has been revoked")
+    if not device.tokenFamily or device.tokenFamily != payload.get("fam"):
+        raise HTTPException(status_code=401, detail="Kiosk device must be paired again")
+
+    await revocation.revoke_token_payload(db, payload, reason=revocation.REASON_ROTATED)
+    access, refresh = create_kiosk_token_pair(
+        str(device.deviceId),
+        str(device.companyId),
+        location_id=str(device.locationId) if device.locationId else None,
+        family=device.tokenFamily,
+    )
+    device.tokenHash = hash_kiosk_token(access)
+    device.lastSeenAt = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(device)
+    return _kiosk_session(device, access, refresh)
 
 
 @router.post("/change-password")

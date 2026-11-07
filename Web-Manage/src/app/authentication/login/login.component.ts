@@ -48,6 +48,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     private empServie: EmployeeService
   ) {
     localStorage.clear();
+    this.tokenService.clearKioskSession();
   }
 
   ngOnInit(): void {

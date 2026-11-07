@@ -80,7 +80,14 @@ class KioskDevice(Base):
     )
     locationId = Column("location_id", UUID(as_uuid=True), nullable=True)
     name = Column(String(120), nullable=False)
-    tokenHash = Column("token_hash", String(128), nullable=False)
+    # sha256 of the current device token; NULL until the kiosk completes pairing.
+    tokenHash = Column("token_hash", String(128), nullable=True)
+    # ``fam`` claim shared by the device token + its refresh token; revoked on re-pair / revoke.
+    tokenFamily = Column("token_family", String(64), nullable=True)
+    # One-time pairing code (sha256) + expiry; cleared once exchanged at /auth/kiosk/pair.
+    pairingCodeHash = Column("pairing_code_hash", String(128), nullable=True)
+    pairingExpiresAt = Column("pairing_expires_at", DateTime(timezone=True), nullable=True)
+    pairedAt = Column("paired_at", DateTime(timezone=True), nullable=True)
     lastSeenAt = Column("last_seen_at", DateTime(timezone=True), nullable=True)
     revokedAt = Column("revoked_at", DateTime(timezone=True), nullable=True)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())

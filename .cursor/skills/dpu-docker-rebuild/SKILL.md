@@ -84,7 +84,7 @@ Dual-GPU nginx uses a static upstream list — recreate `dpu-nginx` whenever `ap
 2. `GET /companys` with a company-admin token → 403; with system admin → 200
 3. `GET /employees/company/{otherCompanyId}` as company admin → 403
 4. `POST /auth/refresh-token` with `refreshToken` → new pair; with the access token → 401
-5. `GET /images/x.jpg` → 401; `?token=` → 404 (authorized, missing file)
+5. `GET /images/x.jpg` → 401; `?token=` → still 401 (rejected unless `AUTH_ALLOW_QUERY_TOKEN=true`); with `Authorization: Bearer` → 404 (authorized, missing file)
 6. Kiosk WS `session` without `token` → `{"type":"error"}`
 
 ## Capacity / loadtest

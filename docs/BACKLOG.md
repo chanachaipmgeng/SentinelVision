@@ -30,9 +30,9 @@
 
 ## Completed — Phase 4: Enterprise Identity (SSO / MFA), Kiosk Device Tokens & Passive Anti-Spoofing
 - [x] **TOTP Two-Factor Authentication (RFC 6238) & OIDC SSO:** Standard-library RFC 6238 TOTP (`src/security/totp.py`), `/auth/mfa/{status,setup,enable,disable}`, `/auth/sso/oidc`, and 6-digit `totpCode` verification on `/auth/login` (`MFA_REQUIRED` challenge in `LoginComponent`)
-- [x] **Dedicated Kiosk Device Provisioning & Scoped Tokens (`KioskDevice`):** Revocable, company-bound `typ="kiosk"` JWTs (`kiosk_device` table with `token_hash`, `last_seen_at`, `revoked_at`), strict route & WebSocket scope isolation (`AuthzMiddleware` + `/face/ws/kiosk`), and automatic `?kioskToken=` hydration in `AuthGuard`
+- [x] **Dedicated Kiosk Device Provisioning & Scoped Tokens (`KioskDevice`):** Revocable, company-bound `typ="kiosk"` JWTs (`kiosk_device` table with `token_hash`, `last_seen_at`, `revoked_at`), strict route & WebSocket scope isolation (`AuthzMiddleware` + `/face/ws/kiosk`), and one-time pairing codes (`/kiosk/pair` → `/auth/kiosk/pair`, replaced the former `?kioskToken=` URL flow in A5)
 - [x] **Single-Frame Passive Anti-Spoofing (`check_passive_antispoof_bgr`):** YCrCb skin chrominance variance + specular screen glare/reflection checks integrated into both walk-by (`get_walkby_encoding_frames`) and multi-frame (`verify_liveness_and_get_encoding`) face recognition paths
-- [x] **Admin UI Tab 5 (`อุปกรณ์ Kiosk & 2FA`):** Provision/revoke Kiosk devices with one-click Kiosk URL copy + setup/enable/disable TOTP 2FA in `HrScheduleComponent`
+- [x] **Admin UI Tab 5 (`อุปกรณ์ Kiosk & 2FA`):** Provision/revoke/re-pair Kiosk devices with a one-time pairing code + setup/enable/disable TOTP 2FA in `HrScheduleComponent`
 
 ## Completed — Phase 5: Cloud-Native Observability, Object Storage (S3/MinIO) & Signed Payroll Webhooks
 - [x] **S3 / MinIO Object Storage (`src/services/storage_service.py`):** AWS Signature V4 (`AWS4-HMAC-SHA256`) object storage client and presigned URL generator (`generate_presigned_url`, `store_image_bytes`, `store_image_file`, `read_image_bytes`, `delete_stored_image`) integrated across enrollment, check-in photos, file uploads, and PDPA erasure

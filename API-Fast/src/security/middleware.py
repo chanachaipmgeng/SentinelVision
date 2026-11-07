@@ -12,7 +12,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from ..config.database import async_session
+from ..config.settings import settings
 from ..models.member import Member, RoleType
+from ..services.token_revocation_service import is_token_revoked
 from .deps import (
     assert_company_access,
     current_kiosk_company_var,
@@ -42,6 +44,9 @@ _OPEN_PREFIXES = (
     "/auth/login",
     "/auth/refresh",
     "/auth/refresh-token",
+    "/auth/logout",
+    "/auth/kiosk/pair",
+    "/auth/kiosk/refresh",
     "/auth/sso/oidc",
     "/health",
     "/ready",
@@ -125,6 +130,9 @@ class AuthzMiddleware(BaseHTTPMiddleware):
             detail = getattr(exc, "detail", "Invalid token")
             return JSONResponse({"detail": detail}, status_code=code)
 
+        if await is_token_revoked(raw_payload):
+            return JSONResponse({"detail": "Token has been revoked"}, status_code=401)
+
         if raw_payload.get("typ") == "kiosk":
             if not _is_kiosk_path_allowed(request.method, path):
                 return JSONResponse(
@@ -179,7 +187,13 @@ def _token_from(request: Request) -> str:
     header = request.headers.get("authorization") or ""
     if header.lower().startswith("bearer "):
         return header.split(" ", 1)[1].strip()
-    return (request.query_params.get("token") or "").strip()
+    # `?token=` leaks credentials into proxy/browser logs. Only honoured behind the
+    # deprecation flag AUTH_ALLOW_QUERY_TOKEN (default off); will be removed.
+    query_token = (request.query_params.get("token") or "").strip()
+    if query_token and settings.AUTH_ALLOW_QUERY_TOKEN:
+        logger.warning("deprecated ?token= used path=%s ip=%s", request.url.path, _client_ip(request))
+        return query_token
+    return ""
 
 
 async def _authorize(request: Request, db, member: Member, path: str):

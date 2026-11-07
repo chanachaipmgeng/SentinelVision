@@ -15,7 +15,8 @@ alwaysApply: false
 - Prefer **WebSocket** `/face/ws/kiosk` for identify + walk-by check-in; HTTP fallback if WS down
 - Crop faces before send; do not upload full frames for multi-person
 - Cap concurrent check-ins / identifies; never global-lock the whole camera for one person
-- WS session payload comes from `enroll-face/kiosk-ws-client.ts` (`buildKioskSession`) and includes the JWT; punch photos use `authedImage()` (`?token=`)
+- WS session payload comes from `enroll-face/kiosk-ws-client.ts` (`buildKioskSession`) and includes the JWT; punch photos use `authedImage()` → `AuthedImageService` (Bearer fetch → blob URL, no `?token=`)
+- Kiosk auth: one-time pairing code at `/kiosk/pair` → `POST /auth/kiosk/pair` → device token pair in `sessionStorage` (`TokenService.getKioskSession()`); `AuthGuard` never reads tokens from the URL
 
 ## Attendance Log & Export (`/company/timestamp-log`)
 
@@ -26,7 +27,8 @@ alwaysApply: false
 ## Auth / routing
 
 - `AuthGuard` on the content layout; `RoleGuard` with `data.area` (`admin` | `company`) on `common.module.ts` / `company-management.module.ts`
-- `HttpRequestInterceptor` is the only HTTP stack (`provideHttpClient(withInterceptorsFromDi())`); it refreshes on **401/403** via `/auth/refresh-token` and must not log URLs
+- `HttpRequestInterceptor` is the only HTTP stack (`provideHttpClient(withInterceptorsFromDi())`); it refreshes on **401/403** via `AuthService.refreshSession()` (`/auth/refresh-token` or `/auth/kiosk/refresh`; refresh tokens rotate) and must not log URLs
+- Logout must call `AuthService.logout()` (`POST /auth/logout`) before `TokenService.signOut()`
 - Login saves `access_token` + `refresh_token`; `mustChangePassword` → `/auth/change-password`
 - Header badge reads `GET /notifications/pending-count`; no hard-coded counts
 - Company audit + notification settings page: `/company/audit-log`

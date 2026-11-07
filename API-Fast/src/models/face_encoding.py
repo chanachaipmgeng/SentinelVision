@@ -2,7 +2,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
-from ..config.database import Base
+from ..config.database import Base, DB_SCHEMA
 from uuid import uuid4
 from datetime import datetime
 
@@ -24,19 +24,21 @@ class FaceEncoding(Base):
 
 
 async def prepare_pgvector(connection) -> None:
-    """Enable extension and drop legacy face_encoding schema if needed."""
+    """Enable extension and verify face_encoding schema."""
     await connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
+    target_schema = DB_SCHEMA or "public"
     table_exists = (
         await connection.execute(
             text(
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables
-                    WHERE table_schema = 'public' AND table_name = 'face_encoding'
+                    WHERE table_schema = :schema AND table_name = 'face_encoding'
                 )
                 """
-            )
+            ),
+            {"schema": target_schema},
         )
     ).scalar()
 
@@ -48,9 +50,10 @@ async def prepare_pgvector(connection) -> None:
             text(
                 """
                 SELECT column_name FROM information_schema.columns
-                WHERE table_schema = 'public' AND table_name = 'face_encoding'
+                WHERE table_schema = :schema AND table_name = 'face_encoding'
                 """
-            )
+            ),
+            {"schema": target_schema},
         )
     ).fetchall()
     column_names = {row[0] for row in columns}

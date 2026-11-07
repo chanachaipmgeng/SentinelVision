@@ -153,6 +153,7 @@ export class NavService implements OnDestroy {
         active: false,
         children: [
           { path: '/company/company-location', title: 'สถานที่การลงเวลา', type: 'link' },
+          { path: '/company/hr-schedule', title: 'กะงาน / วันลา / PDPA', type: 'link' },
           { path: '/company/timestamp-log', title: 'ข้อมูลการลงเวลา', type: 'link' },
           { path: '/company/warning-timestamp-log', title: 'อนุมัติการลงเวลา', type: 'link' },
           { path: '/company/timestamp-face', title: 'Kiosk ใบหน้า', type: 'link' },

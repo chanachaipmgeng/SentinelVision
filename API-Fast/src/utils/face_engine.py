@@ -1,4 +1,4 @@
-"""InsightFace (buffalo_l) face embedding + multi-frame liveness."""
+"""InsightFace (buffalo_l) face embedding + multi-frame & passive anti-spoofing liveness."""
 
 from __future__ import annotations
 
@@ -11,7 +11,11 @@ import numpy as np
 from insightface.app import FaceAnalysis
 
 from .image_quality import check_image_quality, check_image_quality_bgr
-from .liveness_detection import check_multi_frame_liveness, cosine_distance
+from .liveness_detection import (
+    check_multi_frame_liveness,
+    check_passive_antispoof_bgr,
+    cosine_distance,
+)
 from ..config.settings import settings
 
 _face_apps: dict = {}
@@ -105,9 +109,6 @@ def get_face_app(device: Optional[str] = None, *, det_size: Optional[int] = None
         if cached is not None:
             return cached
         providers, ctx_id = _resolve_providers_and_ctx(device)
-        # Pin CUDA EP to the requested device. InsightFace's prepare(ctx_id=N)
-        # alone does not always set ORT provider_options device_id — without
-        # this, cuda:0 and cuda:1 both land on GPU0.
         provider_options = None
         if ctx_id >= 0 and providers and providers[0] == "CUDAExecutionProvider":
             provider_options = [{"device_id": ctx_id}, {}]
@@ -165,16 +166,10 @@ def detect_bbox(image_path: str) -> Optional[np.ndarray]:
 
 
 def decode_image_bytes(image_bytes: bytes, *, for_detect: bool = False) -> np.ndarray:
-    """JPEG/PNG decode outside the GPU worker so inference slots stay busy.
-
-    When for_detect=True and the payload looks large, use IMREAD_REDUCED_COLOR_2
-    (½ resolution) — detect only needs FACE_DETECT_DET_SIZE (320), so frames
-    wider than ~2× that gain nothing from a full-res decode.
-    """
+    """JPEG/PNG decode outside the GPU worker so inference slots stay busy."""
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
     image = None
     if for_detect and len(image_bytes) >= 80_000:
-        # Halved decode avoids paying full JPEG cost for kiosk/mosaic frames.
         image = cv2.imdecode(arr, cv2.IMREAD_REDUCED_COLOR_2)
     if image is None:
         image = cv2.imdecode(arr, cv2.IMREAD_COLOR)
@@ -183,8 +178,6 @@ def decode_image_bytes(image_bytes: bytes, *, for_detect: bool = False) -> np.nd
     if for_detect:
         height, width = image.shape[:2]
         det = int(settings.FACE_DETECT_DET_SIZE)
-        # If still wider than 2× det_size, downscale before GPU (CPU resize is
-        # cheaper than feeding a huge tensor into the detector).
         if width > 2 * det:
             scale = (2.0 * det) / float(width)
             image = cv2.resize(
@@ -196,11 +189,7 @@ def decode_image_bytes(image_bytes: bytes, *, for_detect: bool = False) -> np.nd
 
 
 def detect_faces_bgr(image: np.ndarray) -> dict:
-    """
-    Fast detection-only pass for the kiosk stream (no embeddings).
-    Uses FACE_DETECT_DET_SIZE (320) — not the 640 embed model.
-    Returns frame size + face boxes [{x, y, width, height, score}].
-    """
+    """Fast detection-only pass for the kiosk stream (no embeddings)."""
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
@@ -251,7 +240,6 @@ def _embed_from_det(
     """Run recognition on a pre-detected face (skips the 640 embed detector)."""
     from insightface.app.common import Face
 
-    # Recognition lives on the embed-sized app so model weights match enrollment.
     app = get_face_app(det_size=int(settings.FACE_EMBED_DET_SIZE))
     face = Face(
         bbox=np.asarray(bbox[:4], dtype=np.float32),
@@ -260,7 +248,6 @@ def _embed_from_det(
     )
     rec = app.models.get("recognition")
     if rec is None:
-        # Fallback: full pipeline (detect+embed) if recognition key missing.
         faces = app.get(image)
         largest = _largest_face(faces)
         if largest is None or largest.normed_embedding is None:
@@ -279,13 +266,7 @@ def extract_face_features_bgr(
     blur_threshold: Optional[float] = None,
     fast_detect: bool = True,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
-    """
-    Detect the largest face and return (normed_embedding list, bbox).
-
-    When ``fast_detect`` is True, run det at FACE_DETECT_DET_SIZE (320) then
-    recognition only — avoids a second full detect at 640. Set False for the
-    legacy FaceAnalysis.get path (enrollment / HTTP).
-    """
+    """Detect the largest face and return (normed_embedding list, bbox)."""
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
 
@@ -352,21 +333,13 @@ def extract_face_features_from_crop_bgr(
     require_quality: bool = False,
     blur_threshold: Optional[float] = None,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
-    """
-    Embed a pre-cropped face image for Edge / Smart Camera clients.
-
-    Prefers a cheap det@FACE_DETECT_DET_SIZE pass on the small crop (real
-    keypoints → ArcFace). Falls back to full-crop bbox + synthetic landmarks
-    only if the detector finds nothing (already-aligned square crops).
-    """
+    """Embed a pre-cropped face image for Edge / Smart Camera clients."""
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
     if height < 32 or width < 32:
         raise ValueError("Crop too small for embedding")
 
-    # Prefer enrollment-compatible det@640 on the *small crop* (still much cheaper
-    # than det@640 on a full kiosk frame). Fall back to fast det@320, then synthetic.
     try:
         features = extract_face_features_bgr(
             image,
@@ -426,10 +399,7 @@ def extract_face_features(
     require_quality: bool = True,
     blur_threshold: Optional[float] = None,
 ) -> Optional[Tuple[List[float], np.ndarray]]:
-    """
-    Detect the largest face and return (normed_embedding list, bbox).
-    Path-based wrapper for enrollment / HTTP — uses the legacy 640 detect path.
-    """
+    """Detect the largest face and return (normed_embedding list, bbox)."""
     image = _read_bgr(image_path)
     return extract_face_features_bgr(
         image,
@@ -464,7 +434,7 @@ def generate_face_encoding(
 
 def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
     """
-    Multi-frame liveness (same person + motion) then return middle-frame embedding.
+    Multi-frame liveness (same person + motion + passive anti-spoof) then return middle-frame embedding.
     Raises ValueError on failure.
     """
     if not image_paths:
@@ -475,7 +445,6 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
         bbox = detect_bbox(path)
         frames.append({"bbox": bbox, "embedding": None} if bbox is not None else None)
 
-    # Motion uses boxes only. Same-person uses the first and middle embeddings.
     is_live, reason = check_multi_frame_liveness(
         frames,
         same_person_max_distance=settings.LIVENESS_SAME_PERSON_MAX_DISTANCE,
@@ -485,6 +454,18 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
         raise ValueError(f"Liveness check failed: {reason}")
 
     mid = image_paths[len(image_paths) // 2]
+    if bool(getattr(settings, "FACE_ANTISPOOF_ENABLED", True)):
+        mid_img = _read_bgr(mid)
+        mid_bbox = frames[len(frames) // 2]["bbox"] if frames[len(frames) // 2] else None
+        passed, spoof_msg = check_passive_antispoof_bgr(
+            mid_img,
+            mid_bbox,
+            min_chroma_std=float(getattr(settings, "FACE_ANTISPOOF_MIN_CHROMA_STD", 2.0)),
+            max_specular_ratio=float(getattr(settings, "FACE_ANTISPOOF_MAX_SPECULAR_RATIO", 0.22)),
+        )
+        if not passed:
+            raise ValueError(spoof_msg)
+
     encoding = generate_face_encoding(mid)
     if encoding is None:
         raise ValueError("Could not generate face encoding from validation frame.")
@@ -494,13 +475,16 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
 def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
     """
     Walk-by mode on in-memory BGR frames (no temp files).
-    Uses fast det@320 + recognition when FACE_FAST_EMBED_DETECT is on.
-    Soft quality check after inference — never a second GPU pass.
+    Uses fast det@320 + recognition + passive single-frame anti-spoofing when enabled.
     """
     if not frames:
         raise ValueError("No image frames provided for walk-by check-in")
 
     candidates: List[List[float]] = []
+    antispoof_enabled = bool(getattr(settings, "FACE_ANTISPOOF_ENABLED", True))
+    min_chroma = float(getattr(settings, "FACE_ANTISPOOF_MIN_CHROMA_STD", 2.0))
+    max_spec = float(getattr(settings, "FACE_ANTISPOOF_MAX_SPECULAR_RATIO", 0.22))
+
     for image in frames:
         result = extract_face_features_bgr(
             image,
@@ -511,6 +495,15 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
             continue
         encoding, bbox = result
         check_image_quality_bgr(image, bbox)
+        if antispoof_enabled:
+            passed, spoof_msg = check_passive_antispoof_bgr(
+                image,
+                bbox,
+                min_chroma_std=min_chroma,
+                max_specular_ratio=max_spec,
+            )
+            if not passed:
+                raise ValueError(spoof_msg)
         candidates.append(encoding)
 
     if not candidates:
@@ -530,7 +523,7 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
 
 def get_walkby_encoding(image_paths: List[str]) -> List[float]:
     """
-    Walk-by mode: 1–2 frames, no head-motion liveness.
+    Walk-by mode: 1–2 frames, no head-motion liveness (uses passive anti-spoof).
     Path-based wrapper — loads frames then delegates to get_walkby_encoding_frames.
     """
     if not image_paths:

@@ -1,13 +1,16 @@
-import os
 from pathlib import Path
 from uuid import uuid4
 import base64
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
-from fastapi.responses import JSONResponse, FileResponse
-import aiofiles
+from fastapi.responses import JSONResponse, FileResponse, Response
 
 from ..config.settings import settings
 from ..security.deps import get_current_member
+from ..services.storage_service import (
+    generate_presigned_url,
+    read_image_bytes,
+    store_image_bytes,
+)
 
 router = APIRouter(dependencies=[Depends(get_current_member)])
 
@@ -36,15 +39,16 @@ def _sniff(content: bytes) -> str:
 async def _save_bytes(content: bytes) -> JSONResponse:
     ext = _sniff(content)
     new_filename = f"{uuid4()}{ext}"
-    path = UPLOAD_DIR / new_filename
-    async with aiofiles.open(path, "wb") as out_file:
-        await out_file.write(content)
+    mime = "image/png" if ext == ".png" else "image/jpeg"
+    store_image_bytes("uploaded_images", new_filename, content, content_type=mime)
+    presigned = generate_presigned_url("uploaded_images", new_filename)
     return JSONResponse(
         status_code=200,
         content={
             "message": "File uploaded successfully",
             "filename": new_filename,
             "path": f"/images/{new_filename}",
+            "presignedUrl": presigned,
         },
     )
 
@@ -73,27 +77,33 @@ async def upload_image_base64(base64_image: str = Form(...)):
     return await _save_bytes(content)
 
 
-def _resolve(filename: str) -> Path:
+def _resolve_local(filename: str) -> Path:
     safe = _safe_name(filename)
     path = (UPLOAD_DIR / safe).resolve()
     if UPLOAD_DIR.resolve() not in path.parents and path != UPLOAD_DIR.resolve():
         raise HTTPException(status_code=400, detail="Invalid filename")
-    if not path.is_file():
-        raise HTTPException(status_code=404, detail="Image not found")
     return path
 
 
 @router.get("/get-image/{filename}")
 async def get_image(filename: str):
-    path = _resolve(filename)
+    path = _resolve_local(filename)
     media = "image/png" if path.suffix == ".png" else "image/jpeg"
-    return FileResponse(path, media_type=media, filename=path.name)
+    if path.is_file():
+        return FileResponse(path, media_type=media, filename=path.name)
+    data = read_image_bytes("uploaded_images", path.name)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return Response(content=data, media_type=media)
 
 
 @router.get("/get-image-base64/{filename}")
 async def get_image_base64(filename: str):
-    path = _resolve(filename)
-    encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
+    path = _resolve_local(filename)
+    data = read_image_bytes("uploaded_images", path.name)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    encoded = base64.b64encode(data).decode("utf-8")
     mime = "image/png" if path.suffix == ".png" else "image/jpeg"
     return JSONResponse(
         content={"filename": path.name, "mime_type": mime, "data": f"data:{mime};base64,{encoded}"}

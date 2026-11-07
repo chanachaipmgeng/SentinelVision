@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { TimestampModel } from '../models/timestamp.model';
@@ -46,6 +46,34 @@ export class TimestampService {
       );
   }
 
+  exportReport(
+    companyId: string,
+    format: 'xlsx' | 'csv' = 'xlsx',
+    company_employeeId?: string,
+    startDate?: string,
+    endDate?: string,
+    timestampType?: string,
+    approvalStatus?: string
+  ): Observable<Blob> {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (company_employeeId) params.set('company_employeeId', company_employeeId);
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (timestampType) params.set('timestampType', timestampType);
+    if (approvalStatus) params.set('approvalStatus', approvalStatus);
+    const url = `/timestamp/export/company/${companyId}?${params.toString()}`;
+    return this.http.get(url, { responseType: 'blob' });
+  }
+
+  getShiftSettings(companyId: string): Observable<any> {
+    return this.http.get(`${this.apiBaseUrl}/${companyId}/shift-settings`);
+  }
+
+  updateShiftSettings(companyId: string, body: any): Observable<any> {
+    return this.http.put(`${this.apiBaseUrl}/${companyId}/shift-settings`, body);
+  }
+
   approve(companyId: string, timestampId: string, body: { approve: boolean; rejectReason?: string; approvedBy?: string }) {
     return this.http.post<TimestampModel>(
       this.apiBaseUrl + "/" + companyId + "/" + timestampId + "/approval",
@@ -77,7 +105,6 @@ export class TimestampService {
       })
       .pipe(
         switchMap((checkData: any) => {
-          //console.log("checkData="+checkData)
           const size = 500;
 
           const numOfPages = checkData.totalElements / size;
@@ -100,10 +127,7 @@ export class TimestampService {
               return data;
             })
           );
-
         })
-
-
       );
   }
 

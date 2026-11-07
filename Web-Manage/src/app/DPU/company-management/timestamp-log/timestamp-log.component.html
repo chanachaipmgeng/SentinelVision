@@ -13,12 +13,32 @@
           <div class="ts-toolbar-title">
             <div class="box-title !mb-0">ประวัติการลงเวลา</div>
             <span class="ts-stat-chip">ทั้งหมด {{ totalAll }}</span>
-            <span class="ts-stat-chip ts-stat-chip--success">ปกติ {{ completeCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--success">ในพื้นที่ {{ completeCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="checkOutCount > 0">ออกงาน {{ checkOutCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--danger" *ngIf="lateCount > 0">สาย {{ lateCount }}</span>
             <span class="ts-stat-chip ts-stat-chip--danger">Absent {{ absentCount }}</span>
             <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
           </div>
 
           <div class="ts-toolbar-actions">
+            <button
+              type="button"
+              class="ti-btn ti-btn-success-full modern-btn ts-tool-btn"
+              [disabled]="exporting"
+              (click)="exportReport('xlsx')"
+              title="ส่งออกรายงาน Excel (.xlsx)">
+              <i class="ri-file-excel-2-line"></i>
+              <span>Export Excel</span>
+            </button>
+            <button
+              type="button"
+              class="ti-btn ti-btn-light modern-btn ts-tool-btn"
+              [disabled]="exporting"
+              (click)="exportReport('csv')"
+              title="ส่งออกรายงาน CSV (.csv)">
+              <i class="ri-file-text-line"></i>
+              <span>Export CSV</span>
+            </button>
             <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-warning-full modern-btn ts-tool-btn">
               <i class="ri-error-warning-line"></i>
               <span>คิวอนุมัติ</span>
@@ -85,7 +105,9 @@
             [clearable]="true"
             [appendTo]="'body'">
             <ng-option value="">ทั้งหมด</ng-option>
-            <ng-option value="1">Complete</ng-option>
+            <ng-option value="1">เข้างาน (Check-In)</ng-option>
+            <ng-option value="2">ออกงาน (Check-Out)</ng-option>
+            <ng-option value="0">Warning (นอกพื้นที่)</ng-option>
             <ng-option value="3">Absent</ng-option>
           </ng-select>
 
@@ -215,12 +237,20 @@
               <span class="ts-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
               <span class="ts-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>
               <span class="ts-info-chip"><i class="ri-briefcase-line"></i>{{ item.employee.position.getName() || '—' }}</span>
+              <span class="ts-info-chip" *ngIf="item.shiftName"><i class="ri-time-line"></i>{{ item.shiftName }}</span>
             </div>
 
             <dl class="ts-facts">
               <div>
                 <dt>เวลาลง</dt>
                 <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+              </div>
+              <div *ngIf="item.isLate || (item.overtimeMinutes && item.overtimeMinutes > 0)">
+                <dt>กะ / เวลาทำงาน</dt>
+                <dd>
+                  <span *ngIf="item.isLate">สาย {{ item.lateMinutes }} นาที</span>
+                  <span *ngIf="item.overtimeMinutes && item.overtimeMinutes > 0">OT {{ item.overtimeMinutes }} นาที</span>
+                </dd>
               </div>
               <div>
                 <dt>สถานที่</dt>

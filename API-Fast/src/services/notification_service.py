@@ -1,18 +1,27 @@
-"""Notification outbox (email / LINE) with retry."""
+"""Notification outbox (email / LINE / HMAC-SHA256 signed webhook) with multi-replica locking & non-blocking I/O."""
 from __future__ import annotations
 
+import asyncio
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+import hashlib
+import hmac
+import json
 import logging
 import smtplib
-from email.message import EmailMessage
+import time
 from typing import Any, Optional
+import urllib.parse
+import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Integer, String, select
+from sqlalchemy import Column, DateTime, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.sql import func
 
 from ..config.database import Base, async_session
 from ..config.settings import settings
+from ..models.system_setting import SystemSetting
 
 logger = logging.getLogger("dpu.notify")
 
@@ -43,6 +52,40 @@ class ImportJob(Base):
     finishedAt = Column(DateTime(timezone=True), nullable=True)
 
 
+def compute_webhook_signature(secret: str, timestamp_str: str, body_bytes: bytes) -> str:
+    """
+    Compute HMAC-SHA256 webhook signature over `<timestamp>.<raw_json_body>`.
+    Returns `v1=<hex_digest>`.
+    """
+    key = (secret or "").encode("utf-8")
+    msg = f"{timestamp_str}.".encode("utf-8") + (body_bytes or b"")
+    digest = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    return f"v1={digest}"
+
+
+def verify_webhook_signature(
+    secret: str,
+    timestamp_str: str,
+    body_bytes: bytes,
+    signature_header: str,
+    *,
+    tolerance_seconds: int = 300,
+    now_ts: Optional[int] = None,
+) -> bool:
+    """Constant-time verification of `X-DPU-Signature-256` and replay timestamp window."""
+    if not secret or not timestamp_str or not signature_header:
+        return False
+    try:
+        ts_val = int(timestamp_str)
+    except ValueError:
+        return False
+    ref_now = int(now_ts if now_ts is not None else time.time())
+    if tolerance_seconds > 0 and abs(ref_now - ts_val) > tolerance_seconds:
+        return False
+    expected = compute_webhook_signature(secret, timestamp_str, body_bytes)
+    return hmac.compare_digest(expected, signature_header.strip())
+
+
 async def enqueue(
     event: str,
     channel: str,
@@ -56,12 +99,55 @@ async def enqueue(
                 companyId=UUID(str(company_id)) if company_id else None,
                 event=event,
                 channel=channel,
-                payload=payload,
+                payload={**(payload or {}), "event": event, "companyId": str(company_id) if company_id else None},
                 status="pending",
                 attempts=0,
             )
         )
         await db.commit()
+
+
+async def emit_company_webhook_event(
+    company_id: UUID | str,
+    event: str,
+    data: dict[str, Any],
+) -> bool:
+    """
+    If the company has configured a webhookUrl in `notify:{companyId}` and subscribed to `event`
+    (or `*`), enqueue a signed outbound webhook event for Payroll / ERP integration.
+    """
+    cid_str = str(company_id)
+    async with async_session() as db:
+        row = await db.get(SystemSetting, f"notify:{cid_str}")
+        cfg = row.value if (row and isinstance(row.value, dict)) else {}
+        webhook_url = str(cfg.get("webhookUrl") or "").strip()
+        if not webhook_url:
+            return False
+        subscribed = cfg.get("events")
+        if isinstance(subscribed, list) and subscribed:
+            if event not in subscribed and "*" not in subscribed:
+                return False
+        webhook_secret = str(cfg.get("webhookSecret") or settings.WEBHOOK_SIGNING_SECRET or "").strip()
+        db.add(
+            NotificationOutbox(
+                companyId=UUID(cid_str),
+                event=event,
+                channel="webhook",
+                payload={
+                    "webhookUrl": webhook_url,
+                    "webhookSecret": webhook_secret,
+                    "event": event,
+                    "companyId": cid_str,
+                    "subject": f"DPU Attendance Event: {event}",
+                    "body": f"Event {event} triggered for company {cid_str}",
+                    "data": data,
+                },
+                status="pending",
+                attempts=0,
+            )
+        )
+        await db.commit()
+        return True
 
 
 def _send_email(payload: dict) -> None:
@@ -86,16 +172,6 @@ def _send_line(payload: dict) -> None:
     if not token:
         logger.info("notify line skipped (no token)")
         return
-    import urllib.request
-
-    data = json_bytes({"message": payload.get("body") or payload.get("subject") or ""})
-    req = urllib.request.Request(
-        "https://notify-api.line.me/api/notify",
-        data=data,
-        headers={"Authorization": f"Bearer {token}"},
-        method="POST",
-    )
-    # LINE Notify expects form body; Messaging API is different. Use form.
     form = urllib.parse.urlencode({"message": payload.get("body") or ""}).encode()
     req = urllib.request.Request(
         "https://notify-api.line.me/api/notify",
@@ -111,27 +187,65 @@ def _send_line(payload: dict) -> None:
             raise RuntimeError(f"LINE notify HTTP {resp.status}")
 
 
+def _send_webhook(payload: dict, *, delivery_id: str = "") -> None:
+    url = (payload.get("webhookUrl") or "").strip()
+    if not url:
+        logger.info("notify webhook skipped (no webhookUrl)")
+        return
+    event_name = str(payload.get("event") or "notification")
+    ts_str = str(int(time.time()))
+    body = json_bytes(
+        {
+            "event": event_name,
+            "subject": payload.get("subject") or "DPU Attendance",
+            "text": payload.get("body") or payload.get("subject") or "",
+            "companyId": payload.get("companyId"),
+            "timestamp": int(ts_str),
+            "data": payload.get("data") or {},
+        }
+    )
+    headers = {
+        "Content-Type": "application/json",
+        "X-DPU-Event": event_name,
+        "X-DPU-Timestamp": ts_str,
+    }
+    if delivery_id:
+        headers["X-DPU-Delivery-Id"] = delivery_id
+
+    secret = str(payload.get("webhookSecret") or settings.WEBHOOK_SIGNING_SECRET or "").strip()
+    if secret:
+        headers["X-DPU-Signature-256"] = compute_webhook_signature(secret, ts_str, body)
+
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers=headers,
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        if resp.status >= 300:
+            raise RuntimeError(f"Webhook HTTP {resp.status}")
+
+
 def json_bytes(obj) -> bytes:
-    import json
-
-    return json.dumps(obj).encode()
-
-
-import urllib.parse  # noqa: E402
+    return json.dumps(obj, default=str, separators=(",", ":")).encode("utf-8")
 
 
 _cutoff_sent: set[str] = set()
 
 
+def _bangkok_tz():
+    try:
+        from zoneinfo import ZoneInfo
+
+        return ZoneInfo("Asia/Bangkok")
+    except Exception:
+        return timezone(timedelta(hours=7))
+
+
 async def attendance_cutoff_tick() -> int:
     """Enqueue one late/missing notice per company per day after notify:{id}.cutoff (HH:MM)."""
-    from datetime import datetime
-
-    from sqlalchemy import text
-
-    from ..config.database import async_session
-
-    now = datetime.now()
+    now = datetime.now(_bangkok_tz())
     day = now.date().isoformat()
     queued = 0
     async with async_session() as db:
@@ -154,6 +268,38 @@ async def attendance_cutoff_tick() -> int:
             marker = f"{day}:{company_id}"
             if marker in _cutoff_sent:
                 continue
+            marker_key = f"cutoff_sent:{company_id}"
+            existing_marker = await db.get(SystemSetting, marker_key)
+            if existing_marker and isinstance(existing_marker.value, dict):
+                if existing_marker.value.get("day") == day:
+                    _cutoff_sent.add(marker)
+                    continue
+
+            # Skip missing check-in alerts on company holidays
+            is_holiday = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT 1 FROM company_holiday
+                        WHERE "companyId" = :cid
+                          AND holiday_date = :bkk_day
+                          AND deleted_at IS NULL
+                        LIMIT 1
+                        """
+                    ),
+                    {"cid": company_id, "bkk_day": now.date()},
+                )
+            ).first()
+            if is_holiday:
+                if existing_marker:
+                    existing_marker.value = {"day": day}
+                else:
+                    db.add(SystemSetting(key=marker_key, value={"day": day}))
+                await db.commit()
+                _cutoff_sent.add(marker)
+                continue
+
+            # Exclude employees on APPROVED leave today
             missing = (
                 await db.execute(
                     text(
@@ -163,24 +309,44 @@ async def attendance_cutoff_tick() -> int:
                           AND NOT EXISTS (
                             SELECT 1 FROM employee_timestamp t
                             WHERE t."company_employeeId" = ce."company_employeeId"
-                              AND t."timestamp"::date = CURRENT_DATE
+                              AND (t."timestamp" AT TIME ZONE 'Asia/Bangkok')::date = :bkk_day
+                          )
+                          AND NOT EXISTS (
+                            SELECT 1 FROM leave_request lr
+                            WHERE lr."company_employeeId" = ce."company_employeeId"
+                              AND lr.status IN ('APPROVED', '1')
+                              AND lr.start_date <= :bkk_day
+                              AND lr.end_date >= :bkk_day
                           )
                         """
                     ),
-                    {"cid": company_id},
+                    {"cid": company_id, "bkk_day": now.date()},
                 )
             ).scalar_one()
+            if existing_marker:
+                existing_marker.value = {"day": day}
+            else:
+                db.add(SystemSetting(key=marker_key, value={"day": day}))
+            await db.commit()
             _cutoff_sent.add(marker)
             if int(missing or 0) <= 0:
                 continue
+            channel = (
+                "webhook"
+                if value.get("webhookUrl")
+                else ("line" if value.get("lineToken") else "email")
+            )
             await enqueue(
                 "attendance.missing",
-                "line" if value.get("lineToken") else "email",
+                channel,
                 {
                     "to": value.get("email") or "",
                     "lineToken": value.get("lineToken") or "",
+                    "webhookUrl": value.get("webhookUrl") or "",
+                    "webhookSecret": value.get("webhookSecret") or "",
                     "subject": "DPU missing check-in",
                     "body": f"{missing} employees have no check-in today",
+                    "data": {"missingCount": int(missing), "date": day},
                 },
                 company_id=company_id,
             )
@@ -188,8 +354,21 @@ async def attendance_cutoff_tick() -> int:
     return queued
 
 
+def _backoff_ready(row: NotificationOutbox, now_utc: datetime) -> bool:
+    """Exponential backoff gate: 0s on attempt 0, then 15s, 30s, 60s, 120s."""
+    attempts = int(row.attempts or 0)
+    if attempts <= 0 or not row.createdAt:
+        return True
+    created = row.createdAt
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    wait_seconds = min(300, (2 ** (attempts - 1)) * 15)
+    return (now_utc - created).total_seconds() >= wait_seconds
+
+
 async def drain_outbox(limit: int = 20) -> int:
     sent = 0
+    now_utc = datetime.now(timezone.utc)
     async with async_session() as db:
         rows = (
             await db.execute(
@@ -197,15 +376,22 @@ async def drain_outbox(limit: int = 20) -> int:
                 .where(NotificationOutbox.status == "pending")
                 .order_by(NotificationOutbox.createdAt)
                 .limit(limit)
+                .with_for_update(skip_locked=True)
             )
         ).scalars().all()
         for row in rows:
+            if not _backoff_ready(row, now_utc):
+                continue
             row.attempts = int(row.attempts or 0) + 1
             try:
                 if row.channel == "email":
-                    _send_email(row.payload or {})
+                    await asyncio.to_thread(_send_email, row.payload or {})
                 elif row.channel == "line":
-                    _send_line(row.payload or {})
+                    await asyncio.to_thread(_send_line, row.payload or {})
+                elif row.channel == "webhook":
+                    await asyncio.to_thread(
+                        _send_webhook, row.payload or {}, delivery_id=str(row.id)
+                    )
                 else:
                     raise RuntimeError(f"unknown channel {row.channel}")
                 row.status = "sent"

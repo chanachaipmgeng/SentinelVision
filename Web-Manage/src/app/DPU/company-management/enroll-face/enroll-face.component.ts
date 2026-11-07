@@ -35,6 +35,8 @@ import {
 const WS_CONNECTING = 0;
 const WS_OPEN = 1;
 
+export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'CHECK_OUT';
+
 export interface CheckInFeedItem {
   id: string;
   employeeName: string;
@@ -50,6 +52,10 @@ export interface CheckInFeedItem {
   confidencePercent?: number | null;
   matchQuality?: string | null;
   distance?: number | null;
+  timestampType?: number;
+  isLate?: boolean;
+  lateMinutes?: number;
+  overtimeMinutes?: number;
 }
 
 export interface KioskRosterPerson {
@@ -64,13 +70,18 @@ export interface KioskRosterPerson {
   locationName?: string;
   photoTimestamp?: string | null;
   approvalStatus?: string;
+  isLate?: boolean;
+  lateMinutes?: number;
+  overtimeMinutes?: number;
 }
 
 export interface KioskAttendance {
   summary: {
     checkedInCount: number;
     inAreaCount: number;
+    checkedOutCount?: number;
     outsideCount: number;
+    lateCount?: number;
     day?: string;
   };
   checkedIn: KioskRosterPerson[];
@@ -127,6 +138,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   locationReady = false;
   errorMessage: string | null = null;
   private geoWatchId: number | null = null;
+
+  /** Hybrid punch mode: AUTO (first scan = in, next = out) or explicit CHECK_IN / CHECK_OUT */
+  punchMode: KioskPunchMode = 'AUTO';
 
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
@@ -228,6 +242,26 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.companyId = company.companyId;
     this.companyName = company.companyName || 'บริษัท';
     this.homeLink = `/company/home/${this.companyId}`;
+  }
+
+  setPunchMode(mode: KioskPunchMode): void {
+    if (this.punchMode === mode) return;
+    this.punchMode = mode;
+    // Reset local cooldowns and active track phases so employees switching mode can scan right away
+    this.memberCooldownUntil.clear();
+    for (const t of this.tracks) {
+      if (t.phase === 'done' || t.phase === 'cooldown') {
+        t.phase = 'watching';
+        t.firstSeenAt = Date.now();
+      }
+    }
+    const modeLabel =
+      mode === 'CHECK_IN'
+        ? 'โหมดเข้างาน (Check-In)'
+        : mode === 'CHECK_OUT'
+          ? 'โหมดออกงาน (Check-Out)'
+          : 'โหมดอัตโนมัติ (Hybrid)';
+    this.notify(`สลับเป็น ${modeLabel}`, 'info');
   }
 
   get checkedInCount(): number {
@@ -1172,7 +1206,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     ctx.save();
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
-    // One rounded neon stroke + soft glow (no corner brackets / double border).
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 2.75;
     ctx.shadowColor = glow;
@@ -1396,6 +1429,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const requestId = this.nextWsRequestId(trackId);
     const lat = this.location.latitude;
     const lng = this.location.longitude;
+    const punchType = this.punchMode;
 
     if (
       this.wsSend({
@@ -1406,6 +1440,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         latitude: lat,
         longitude: lng,
         note: 'Face kiosk websocket walk-by',
+        punchType,
       })
     ) {
       return;
@@ -1420,6 +1455,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     formData.append('latitude', String(lat));
     formData.append('longitude', String(lng));
     formData.append('note', 'Face kiosk walk-by check-in');
+    formData.append('punchType', punchType);
 
     this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
       next: (response: any) => {
@@ -1473,8 +1509,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           ? Number(tsTypeRaw)
           : tsTypeRaw === 'WARNING' || tsTypeRaw === 'Warning'
             ? 0
-            : 1;
+            : tsTypeRaw === 'CHECK_OUT'
+              ? 2
+              : 1;
     const isWarning = !!response.isWarning || tsTypeNum === 0;
+    const isCheckOut = tsTypeNum === 2;
+    const isLate = !!ts.isLate;
+    const lateMinutes = Number(ts.lateMinutes || 0);
+    const overtimeMinutes = Number(ts.overtimeMinutes || 0);
     const employeeName =
       employee.fullName ||
       member.fullName ||
@@ -1509,8 +1551,16 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       track.confidence = Number.isFinite(confidencePercent) ? confidencePercent : track.confidence;
     }
 
-    let statusLabel = isWarning ? 'Warning — นอกพื้นที่' : 'ลงเวลาปกติ';
-    let statusKind: CheckInFeedItem['statusKind'] = isWarning ? 'warning' : 'success';
+    let statusLabel = isWarning
+      ? 'Warning — นอกพื้นที่'
+      : isCheckOut
+        ? overtimeMinutes > 0
+          ? `ออกงาน (OT ${overtimeMinutes} นาที)`
+          : 'ลงเวลาออกงาน'
+        : isLate && lateMinutes > 0
+          ? `เข้างาน (สาย ${lateMinutes} นาที)`
+          : 'ลงเวลาเข้างาน';
+    let statusKind: CheckInFeedItem['statusKind'] = isWarning || isLate ? 'warning' : 'success';
     if (isDuplicate) {
       statusLabel = isWarning ? 'บันทึกแล้ว (Warning)' : 'ลงเวลาไปแล้ว';
       statusKind = 'info';
@@ -1531,6 +1581,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       confidencePercent: Number.isFinite(confidencePercent) ? confidencePercent : null,
       matchQuality: response.matchQuality ?? null,
       distance: response.distance != null ? Number(response.distance) : null,
+      timestampType: tsTypeNum,
+      isLate,
+      lateMinutes,
+      overtimeMinutes,
     };
 
     this.prependFeed(item);
@@ -1556,7 +1610,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         ? `${employeeName} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`
         : isWarning
           ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
-          : `ลงเวลาสำเร็จ: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
+          : `${statusLabel}: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
       isDuplicate ? 'info' : isWarning ? 'warning' : 'success',
     );
   }
@@ -1650,6 +1704,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   isOutside(person: KioskRosterPerson): boolean {
     return Number(person.timestampType) === 0;
+  }
+
+  isCheckedOut(person: KioskRosterPerson): boolean {
+    return Number(person.timestampType) === 2;
   }
 
   private notify(message: string, kind: 'success' | 'warning' | 'error' | 'info') {

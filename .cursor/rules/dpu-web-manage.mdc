@@ -10,12 +10,18 @@ alwaysApply: false
 
 - Route: `/company/timestamp-face` → `enroll-face` standalone component
 - Fullscreen chrome: `html.dpu-kiosk-mode` (set by `content-layout` + component) hides header/sidebar/footer — CSS in `assets/css/dpu-theme.css`
-- Multi-person: IoU tracks, smooth boxes, per-`memberId` cooldown
+- Hybrid Punch Mode: `punchMode` (`AUTO` | `CHECK_IN` | `CHECK_OUT`) selector chips on the kiosk top bar; passed as `punchType` in WS `checkin` and HTTP fallback `FormData`
+- Multi-person: IoU tracks, smooth boxes, per-`memberId` cooldown (cleared when operator explicitly toggles `punchMode`)
 - Prefer **WebSocket** `/face/ws/kiosk` for identify + walk-by check-in; HTTP fallback if WS down
 - Crop faces before send; do not upload full frames for multi-person
 - Cap concurrent check-ins / identifies; never global-lock the whole camera for one person
-- Do not change face WS / GPU / check-in logic when only polishing kiosk layout
 - WS session payload comes from `enroll-face/kiosk-ws-client.ts` (`buildKioskSession`) and includes the JWT; punch photos use `authedImage()` (`?token=`)
+
+## Attendance Log & Export (`/company/timestamp-log`)
+
+- Filter by date range, employee, and status (`1 = เข้างาน`, `2 = ออกงาน`, `0 = Warning นอกพื้นที่`, `3 = Absent`)
+- Displays Late (`lateMinutes`) and Overtime (`overtimeMinutes`) shift metrics
+- Toolbar includes **Export Excel (`.xlsx`)** and **Export CSV (`.csv`)** via `TimestampService.exportReport(...)`
 
 ## Auth / routing
 
@@ -40,15 +46,6 @@ Prefer these over inventing new list chrome:
 | List CSS | `shared/styles/dpu-list-page.css` |
 | Brand tokens | `assets/css/dpu-theme.css` (`--dpu-brand` teal `#0f766e`) |
 
-Patterns: `app-page-header` + toolbar (title/chips/search/actions) + table or cards + modal CRUD; client-side filter then paginate; `ng-select` with `[appendTo]="'body'"`; labeled buttons without `ti-btn-sm`.
-
-## Shell (header / sidebar / content)
-
-- Layout: `shared/layouts/content-layout/` — keep `<app-switcher class="dpu-hidden-switcher">` mounted
-- Header/sidebar: declutter only; preserve Ynex `data-toggled` / `data-nav-layout` behavior
-- Menus: `shared/services/nav.service.ts` — `getCommonMenu()` (admin) vs `getCompanyMenu()` (company)
-- Theme lock: `html.dpu-theme-lock` hides dark toggle + theme switcher UI
-
 ## Angular habits
 
 - Standalone components where the feature already is standalone
@@ -57,9 +54,3 @@ Patterns: `app-page-header` + toolbar (title/chips/search/actions) + table or ca
 - Rebuild `admin` image after UI changes: `docker compose ... up -d --build admin`
 - Removed and must stay out: `shared/prismData`, Firebase / `@angular/fire`, `react`, `gsap`, `ng-gallery`, `ngx-editor`; import `Validators` from `@angular/forms`
 - Budget: initial warn 2 MB / error 8 MB (`angular.json`) — trim before adding a new chart/map library
-
-## UI
-
-- Keep kiosk overlay readable (name + confidence on box); avoid cluttering the first camera viewport
-- Toast + feed panel for results; soft-fail walk-by misses (toast, retry track) instead of spamming error feed
-- Thai UI copy is OK for kiosk and admin screens; keep code/comments in English unless the file already uses Thai

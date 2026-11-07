@@ -11,39 +11,36 @@ alwaysApply: false
 - Embeddings: InsightFace `buffalo_l`, `vector(512)` in `face_encoding`
 - Devices: prefer **one visible GPU per API process** (`CUDA_VISIBLE_DEVICES` + `FACE_DEVICES=cuda:0`). Dual-GPU host → `api` + `api-gpu1` via `docker-compose.gpu.yml`
 - `get_face_app` must pass ORT `provider_options=[{"device_id": N}, {}]` — `prepare(ctx_id=N)` alone can leave both sessions on GPU0
-- In-process queue: `run_on_face_gpu` + `set_thread_device`; JPEG decode uses a **separate** ThreadPoolExecutor (`get_decode_executor`) with `decode_image_bytes(..., for_detect=True)` / `IMREAD_REDUCED` for large frames
+- In-process queue: **all** InsightFace inference (`generate_face_encoding`, `verify_liveness_and_get_encoding`, `extract_face_features*`, `detect_faces*`) must run via `run_on_face_gpu`; JPEG decode uses a **separate** ThreadPoolExecutor (`get_decode_executor`)
 - Detect-only path uses `FACE_DETECT_DET_SIZE` (320); embedding uses `FACE_EMBED_DET_SIZE` (640)
 - Threshold: `FACE_RECOGNITION_THRESHOLD` (cosine distance; match if `< threshold`)
-- 1:N match lives in `services/face_match_service.py` (`SET LOCAL hnsw.ef_search` + JOIN `company_employee`)
+- 1:N match lives in `services/face_match_service.py` (`SET LOCAL hnsw.ef_search` + JOIN `company_employee` + JOIN `member` filtering `deletedAt IS NULL` and `Member.status == ENABLE`)
 
-## Auth
+## Auth & Multi-Tenancy
 
-- `FACE_ROUTES_REQUIRE_JWT=true` by default. HTTP routes get the member from `AuthzMiddleware`; form `companyId` is bound with `assert_request_company_access`
-- WS `/face/ws/kiosk`: `session` message must include `token`; company access is checked before frames are accepted
-- WS `detect` returns `dropped: true` when the queue passes `WS_QUEUE_BACKPRESSURE`; kiosk should slow capture
+- `FACE_ROUTES_REQUIRE_JWT=true` by default. HTTP routes get the member from `AuthzMiddleware`; form `companyId` is bound with `assert_request_company_access`; `memberId` / `faceEncodingId` routes use `assert_member_company_access` / `assert_encoding_company_access`
+- WS `/face/ws/kiosk`: `session` message must include `token`; company access is checked before frames are accepted, and `token_exp` is enforced on every frame
+- WS `detect` returns `dropped: true` when the queue passes `WS_QUEUE_BACKPRESSURE` or per-connection `task_sem` (`Semaphore(4)`) is full
 
 ## Endpoints (do not regress)
 
 | Path | Mode |
 |------|------|
-| `POST /face/members/{id}/add-face` | enroll |
-| `POST /face/members/check-face-emp` | multi-frame + liveness match (**companyId** required) |
+| `POST /face/members/{id}/add-face` | enroll (via `run_on_face_gpu`) |
+| `POST /face/members/check-face-emp` | multi-frame + liveness match (**companyId** required, via `run_on_face_gpu`) |
 | `POST /face/members/identify` | 1 frame, label only (**companyId** required) |
-| `POST /face/members/check-in` | secure: liveness + timestamp |
-| `POST /face/members/check-in-walkby` | 1–2 frames, no motion liveness |
-| `WS /face/ws/kiosk` | stream identify/checkin via GPU queue |
+| `POST /face/members/check-in` | secure: liveness + timestamp (optional `punchType`: `AUTO` \| `CHECK_IN` \| `CHECK_OUT`) |
+| `POST /face/members/check-in-walkby` | 1–3 frames, no motion liveness (optional `punchType`: `AUTO` \| `CHECK_IN` \| `CHECK_OUT`) |
+| `WS /face/ws/kiosk` | stream identify/checkin via GPU queue (supports `punchType`) |
 | `GET /face/queue-stats` | queue health |
 
-Shared finalize: `_finalize_check_in` (match **within company** → company employee → dedupe → photo → timestamp).
+Shared finalize: `_finalize_check_in` (match **within company** → active company employee → dedupe (with explicit mode bypass) → photo → hybrid `create_timestamp` with shift Late/OT).
 
 ## Rules
 
-- Face 1:N search must be company-scoped (`companyId`) — never match across companies
+- Face 1:N search must be company-scoped (`companyId`) and active-employee-scoped — never match across companies or against soft-deleted/disabled members
 - Prefer extending `face_controller` / `face_engine` / `face_gpu_queue` over new parallel pipelines
-- Walk-by / WS: no head-motion liveness; still require a detectable face (+ same-person if 2+ frames)
-- Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true`, do not double-insert
+- Dedupe: `CHECK_IN_DEDUPE_SECONDS` (default 300) — return `duplicate: true` in `AUTO` mode; allow explicit `CHECK_OUT` after recent `CHECK_IN` (`_should_bypass_dedupe_for_explicit_mode`)
 - Outside geofence: `create_timestamp` needs a `note` — kiosk sends a default note
-- Nginx: WebSocket needs `^~ /face/ws/` with `Upgrade` headers (`default.conf` or dual-GPU `default.dual-gpu.conf`)
-- Single-host capacity: dual/hexa API first (`docs/KIOSK-LOADTEST-SATURATION.md`); Face Core BFF for cross-host — tune Core workers/queue/pending/rate + GPU `device_ids` pin (`docs/FACE-CORE-IDENTIFY-CAPACITY.md` §6.7) before cutover
 - Do not add `DROP TABLE` or `create_all`-style destructive steps at startup; schema changes go in `utils/schema_migrate.py` (idempotent SQL) and an Alembic revision under `API-Fast/alembic/versions/`
 - Mutating handlers are audited by the middleware; do not log passwords, tokens, or embeddings

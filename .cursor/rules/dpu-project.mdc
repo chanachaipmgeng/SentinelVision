@@ -5,18 +5,18 @@ alwaysApply: true
 
 # DPU Attendance — project defaults
 
-Face check-in system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core BFF (`FACE_CORE_ENABLED`). Docker stack behind nginx.
+Face check-in & HR attendance system: InsightFace `buffalo_l` (512-d) + pgvector, or Face Core BFF (`FACE_CORE_ENABLED`). Docker stack behind nginx.
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `API-Fast/` | FastAPI + InsightFace + GPU queue |
+| `API-Fast/` | FastAPI + InsightFace + GPU queue + Hybrid Check-In/Out + Shift Late/OT + Excel/CSV Export |
 | `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
 | `docker/` | nginx gateway + DB init |
-| `docs/` | SETUP, ARCHITECTURE, API, RUNBOOK, agent guide (`CURSOR-AGENT.md`) |
-| `API-Fast/src/security/` | JWT, authz middleware, tenancy deps, passwords/lockout |
-| `API-Fast/src/services/` | audit, notification outbox, storage retention, observability, face match |
+| `docs/` | SETUP, ARCHITECTURE, API, RUNBOOK, BACKLOG, agent guide (`CURSOR-AGENT.md`) |
+| `API-Fast/src/security/` | JWT, authz middleware, tenancy deps (`assert_company_access`, `assert_member_company_access`, `assert_encoding_company_access`), passwords/lockout |
+| `API-Fast/src/services/` | audit, multi-replica notification outbox (`FOR UPDATE SKIP LOCKED`), storage retention, observability, face match |
 | `.cursor/rules/` | Always-on + scoped agent rules |
 | `.cursor/skills/` | Task workflows (`dpu-face-kiosk`, `dpu-docker-rebuild`, `dpu-web-manage-ui`) |
 
@@ -47,16 +47,16 @@ docker compose -f docker-compose.yml -f docker-compose.face-core-remote.yml up -
 
 Code is **baked into images** — rebuild after source changes (`api`, `api-gpu1`, `admin`, `nginx` as needed).
 
-## Security baseline (enterprise upgrade)
+## Security & Performance Baseline (Phase 1 & Phase 2)
 
 - `SECRET_KEY` ≥ 32 chars from env; API refuses the placeholder when `AUTH_FAIL_FAST=true`
 - Every route except `/auth/login`, `/auth/refresh*`, `/health`, `/ready`, `/metrics`, `/` requires a Bearer JWT (`src/security/middleware.py` `AuthzMiddleware`)
-- `companyId` in a path, form, or body must be bound to the caller: use `assert_request_company_access(request, db, companyId)` from `src/security/deps.py`
-- New members get a random temporary password + `mustChangePassword`; never write `1234`
-- Kiosk WebSocket `session` carries `token`; server sends `token_expiring` when < 5 min remain
-- BFF: `FACE_CORE_API_KEY` required when `FACE_CORE_ENABLED=true`; `/ready` pings Face Core; 503 `face_core_down` opens a ~15s circuit (also tripped by Face Core 429 pending/rate — raise Core `FACE_GPU_MAX_PENDING_PER_COMPANY` / `RATE_LIMIT_*` under multi-kiosk)
-- Deletes set `deletedAt` (member, company, employee, department, position, location) — list queries hide them
-- Writes are audited (`audit_log`); notifications go through `notification_outbox`
+- `companyId`, `memberId`, and `faceEncodingId` in paths/forms/bodies must be bound to the caller via `assert_request_company_access`, `assert_member_company_access`, or `assert_encoding_company_access` in `src/security/deps.py`
+- Both `/auth/login` and `/auth/refresh` enforce `assert_not_locked` and verify active status (`StatusType.ENABLE`)
+- 1:N face matching (`search_face_pgvector`) and check-in finalization filter active employees only (`CompanyEmployee.deletedAt IS NULL`, `Member.deletedAt IS NULL`, `Member.status == ENABLE`)
+- Kiosk WebSocket `session` carries `token`, continuously enforces `token_exp`, and caps per-connection in-flight tasks via `asyncio.Semaphore(4)`
+- Hybrid Check-In / Check-Out (`AUTO` / `CHECK_IN` / `CHECK_OUT`), per-company work shifts (`shift:{companyId}`), and `.xlsx`/`.csv` exports are aligned to `Asia/Bangkok` timezone
+- Writes are audited asynchronously (`asyncio.create_task(_audit(...))`); notifications go through `notification_outbox` with `SELECT ... FOR UPDATE SKIP LOCKED` and `asyncio.to_thread`
 
 ## Agent defaults
 

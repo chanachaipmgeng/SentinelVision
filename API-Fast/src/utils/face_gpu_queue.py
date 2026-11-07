@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Deque, Dict, Literal, Optional
 from uuid import UUID
 
+from ..services.observability import observe_histogram
+
 logger = logging.getLogger(__name__)
 
 JobKind = Literal["checkin", "identify", "detect", "other"]
@@ -203,6 +205,7 @@ async def _worker_loop(worker_id: int) -> None:
 
         device = job.device or _devices[worker_id % len(_devices)]
         _active += 1
+        t0 = time.perf_counter()
         try:
             result = await loop.run_in_executor(
                 _executor, lambda fn=job.fn, device=device: _call_on_device(fn, device)
@@ -214,6 +217,7 @@ async def _worker_loop(worker_id: int) -> None:
                 job.future.set_exception(exc)
             logger.warning("Face GPU worker %s job failed: %s", worker_id, exc)
         finally:
+            observe_histogram("dpu_face_gpu_latency_ms", (time.perf_counter() - t0) * 1000.0)
             _active = max(0, _active - 1)
             _completed += 1
 
@@ -232,7 +236,11 @@ async def run_on_face_gpu(
     global _pending_total
     if not _started or _wake is None:
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(_executor, fn)
+        t0 = time.perf_counter()
+        try:
+            return await loop.run_in_executor(_executor, fn)
+        finally:
+            observe_histogram("dpu_face_gpu_latency_ms", (time.perf_counter() - t0) * 1000.0)
 
     # Soft backpressure: wait until under maxsize (same as old Queue.put).
     while _pending_total >= _maxsize:

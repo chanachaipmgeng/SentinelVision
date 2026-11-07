@@ -3,11 +3,20 @@ from sqlalchemy import select, func, and_, cast, Date
 from sqlalchemy.orm import selectinload
 from fastapi import HTTPException, status
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ..models.employee_timestamp import EmployeeTimestamp, TimestampType, ApprovalStatus
 from ..models.company_employee import CompanyEmployee
 from ..models.company_location import CompanyLocation
+
+
+def _bangkok_tz():
+    try:
+        from zoneinfo import ZoneInfo
+
+        return ZoneInfo("Asia/Bangkok")
+    except Exception:
+        return timezone(timedelta(hours=7))
 
 
 def _ts_type_value(ts_type) -> int:
@@ -45,14 +54,19 @@ def _activity_item(ts: EmployeeTimestamp) -> dict:
         "picture": picture,
         "approvalStatus": ts.approvalStatus or ApprovalStatus.NONE.value,
         "note": ts.note or "",
+        "isLate": bool(getattr(ts, "isLate", False)),
+        "lateMinutes": int(getattr(ts, "lateMinutes", 0) or 0),
+        "overtimeMinutes": int(getattr(ts, "overtimeMinutes", 0) or 0),
+        "shiftName": getattr(ts, "shiftName", None),
     }
 
 
 async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
     """Aggregated check-in stats, chart, map points, and recent activity for the company dashboard."""
     try:
-        now = datetime.utcnow()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tz = _bangkok_tz()
+        now_local = datetime.now(tz)
+        today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
         seven_days_ago = today_start - timedelta(days=7)
 
         # --- Summary counts today ---
@@ -72,6 +86,24 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
             )
         )
         outside_today = (await db.execute(stmt_outside)).scalar_one_or_none() or 0
+
+        stmt_checkout = select(func.count(EmployeeTimestamp.timestampId)).where(
+            and_(
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.timestamp >= today_start,
+                EmployeeTimestamp.timestampType == TimestampType.CHECK_OUT,
+            )
+        )
+        check_outs_today = (await db.execute(stmt_checkout)).scalar_one_or_none() or 0
+
+        stmt_late = select(func.count(EmployeeTimestamp.timestampId)).where(
+            and_(
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.timestamp >= today_start,
+                EmployeeTimestamp.isLate.is_(True),
+            )
+        )
+        late_today = (await db.execute(stmt_late)).scalar_one_or_none() or 0
 
         stmt_pending = select(func.count(EmployeeTimestamp.timestampId)).where(
             and_(
@@ -133,7 +165,10 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
             map_points.append(item)
 
         # --- Company locations (default map center / HQ pins) ---
-        stmt_locs = select(CompanyLocation).where(CompanyLocation.companyId == companyId)
+        stmt_locs = select(CompanyLocation).where(
+            CompanyLocation.companyId == companyId,
+            CompanyLocation.deletedAt.is_(None),
+        )
         loc_raw = (await db.execute(stmt_locs)).scalars().all()
         company_locations = []
         for loc in loc_raw:
@@ -192,6 +227,8 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
                 "checkInsToday": check_ins_today,
                 "inAreaToday": in_area_today,
                 "outsideToday": outside_today,
+                "checkOutsToday": check_outs_today,
+                "lateToday": late_today,
                 "pendingApproval": pending_approval,
             },
             "chartData": {
@@ -199,12 +236,14 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
                 "todayBreakdown": {
                     "inArea": in_area_today,
                     "outside": outside_today,
+                    "checkOuts": check_outs_today,
+                    "late": late_today,
                 },
             },
             "mapPoints": map_points,
             "companyLocations": company_locations,
             "recentActivity": recent_activity,
-            "serverTime": now.isoformat() + "Z",
+            "serverTime": now_local.isoformat(),
         }
 
     except Exception as e:

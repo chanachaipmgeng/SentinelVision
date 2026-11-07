@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Depends, Request, UploadFile, File, Form, WebSocket
-from ..security.deps import assert_request_company_access
+from ..security.deps import (
+    assert_encoding_company_access,
+    assert_member_company_access,
+    assert_request_company_access,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from ..config.database import get_db
@@ -59,11 +63,13 @@ async def kiosk_attendance_route(
 
 @router.post("/members/{memberId}/add-face")
 async def add_face_route(
+    request: Request,
     memberId: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
+    await assert_member_company_access(request, db, memberId)
     return await add_face(memberId, file, db)
 
 
@@ -116,13 +122,14 @@ async def check_in_face_route(
     latitude: float = Form(...),
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
+    punchType: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Secure mode: multi-frame liveness + match + timestamp."""
     await assert_request_company_access(request, db, companyId)
     return await check_in_face(
-        files, companyId, latitude, longitude, db, note=note
+        files, companyId, latitude, longitude, db, note=note, punch_type=punchType
     )
 
 
@@ -134,44 +141,59 @@ async def check_in_face_walkby_route(
     latitude: float = Form(...),
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
+    punchType: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Walk-by mode: 1–2 frames, no motion liveness (multi-person pass-through)."""
     await assert_request_company_access(request, db, companyId)
     return await check_in_face_walkby(
-        files, companyId, latitude, longitude, db, note=note
+        files, companyId, latitude, longitude, db, note=note, punch_type=punchType
     )
 
 
 @router.get("/members/{memberId}/encodings", response_model=List[dict])
 async def get_encodings_route(
-    memberId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
+    request: Request,
+    memberId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
+    await assert_member_company_access(request, db, memberId)
     return await get_encodings_for_member(memberId, db)
 
 
 @router.post("/members/{memberId}/verify")
 async def verify_member_face_route(
+    request: Request,
     memberId: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Test-scan vs this member only — returns confidence %, no timestamp."""
+    await assert_member_company_access(request, db, memberId)
     return await verify_member_face(memberId, file, db)
 
 
 @router.delete("/members/{memberId}/encodings")
 async def clear_member_encodings_route(
-    memberId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
+    request: Request,
+    memberId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Clear all enrolled faces for one member."""
+    await assert_member_company_access(request, db, memberId)
     return await clear_member_face_encodings(memberId, db)
 
 
 @router.delete("/encodings/{faceEncodingId}")
 async def delete_encoding_route(
-    faceEncodingId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
+    request: Request,
+    faceEncodingId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
+    await assert_encoding_company_access(request, db, faceEncodingId)
     return await delete_face_encoding(faceEncodingId, db)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import hashlib
 from typing import Any, Optional
 
 import jwt
@@ -30,6 +31,10 @@ def assert_secret_configured() -> None:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def hash_kiosk_token(token: str) -> str:
+    return hashlib.sha256((token or "").strip().encode("utf-8")).hexdigest()
 
 
 def create_token(member_id: str, username: str, *, typ: str, expires: timedelta) -> str:
@@ -61,6 +66,26 @@ def create_refresh_token(member_id: str, username: str) -> str:
     )
 
 
+def create_kiosk_token(
+    device_id: str,
+    company_id: str,
+    *,
+    location_id: Optional[str] = None,
+    expires_days: Optional[int] = None,
+) -> str:
+    days = max(1, int(expires_days or getattr(settings, "KIOSK_TOKEN_EXPIRE_DAYS", 365)))
+    payload: dict[str, Any] = {
+        "deviceId": str(device_id),
+        "companyId": str(company_id),
+        "typ": "kiosk",
+        "exp": _now() + timedelta(days=days),
+        "iat": _now(),
+    }
+    if location_id:
+        payload["locationId"] = str(location_id)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
 def decode_token(token: str, *, expected_typ: Optional[str] = "access") -> dict[str, Any]:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
@@ -71,6 +96,10 @@ def decode_token(token: str, *, expected_typ: Optional[str] = "access") -> dict[
     typ = payload.get("typ") or "access"
     if expected_typ and typ != expected_typ:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong token type")
+    if typ == "kiosk":
+        if not payload.get("deviceId") or not payload.get("companyId"):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid kiosk token")
+        return payload
     if not payload.get("memberId"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return payload

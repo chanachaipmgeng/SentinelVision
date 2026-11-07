@@ -81,6 +81,19 @@
             </button>
           </div>
         </div>
+        @if (mfaRequired) {
+          <div class="col-span-12">
+            <label for="signin-totp" class="form-label">รหัสยืนยันตัวตน 2 ชั้น (6 หลัก - Authenticator)</label>
+            <input
+              type="text"
+              maxlength="6"
+              class="form-control form-control-lg w-full tracking-widest text-center font-mono"
+              id="signin-totp"
+              placeholder="000000"
+              formControlName="totpCode"
+              autocomplete="one-time-code">
+          </div>
+        }
         <div class="col-span-12 mt-4">
           <button
             type="submit"

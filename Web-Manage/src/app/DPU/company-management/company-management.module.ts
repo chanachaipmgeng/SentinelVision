@@ -67,6 +67,11 @@ export const companyRoutes: Routes = [
         import('./warning-timetamp/warning-timetamp.component').then((m) => m.WarningTimetampComponent),
     },
     {
+      path: 'company/hr-schedule',
+      loadComponent: () =>
+        import('./hr-schedule/hr-schedule.component').then((m) => m.HrScheduleComponent),
+    },
+    {
       path: 'company/audit-log',
       loadComponent: () =>
         import('./audit-log/audit-log.component').then((m) => m.AuditLogComponent),

@@ -21,6 +21,8 @@ import { EmployeeService } from '../../DPU/services/employee.service';
 export class LoginComponent implements OnInit, OnDestroy {
   username = '';
   password = '';
+  totpCode = '';
+  mfaRequired = false;
   errorMessage = '';
   showLoader = false;
   _error: { name: string; message: string } = { name: '', message: '' };
@@ -52,6 +54,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.loginForm = this.formBuilder.group({
       username: ['', Validators.required],
       password: ['', Validators.required],
+      totpCode: [''],
     });
     this.renderer.addClass(this.document.body, 'dpu-login-body');
     this.tickClock();
@@ -75,11 +78,17 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   login() {
     this.showLoader = true;
+    this.error = '';
     const body: LoginModel = new LoginModel();
     body.username = this.username;
     body.password = this.password;
+    const totpVal = this.loginForm.controls['totpCode']?.value || '';
     this.authService
-      .login(this.loginForm.controls['username'].value, this.loginForm.controls['password'].value)
+      .login(
+        this.loginForm.controls['username'].value,
+        this.loginForm.controls['password'].value,
+        totpVal
+      )
       .subscribe(
         (result) => {
           this.tokenService.saveToken(result.access_token || result.accessToken || '');
@@ -103,9 +112,18 @@ export class LoginComponent implements OnInit, OnDestroy {
             this.showLoader = false;
           }
         },
-        () => {
+        (err) => {
           this.showLoader = false;
-          this.error = 'Username หรือ Password ไม่ถูกต้อง';
+          const detail = err?.error?.detail || '';
+          if (detail === 'MFA_REQUIRED') {
+            this.mfaRequired = true;
+            this.error = 'บัญชีนี้เปิดใช้งาน 2FA กรุณากรอกรหัส 6 หลักจากแอป Authenticator';
+          } else if (detail === 'Invalid 2FA authenticator code') {
+            this.mfaRequired = true;
+            this.error = 'รหัสยืนยันตัวตน 2FA ไม่ถูกต้อง';
+          } else {
+            this.error = 'Username หรือ Password ไม่ถูกต้อง';
+          }
         }
       );
   }

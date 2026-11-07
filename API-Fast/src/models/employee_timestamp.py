@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Enum, ForeignKey, Float, Text
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum, ForeignKey, Float, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -47,5 +47,9 @@ class EmployeeTimestamp(Base):
     approvedBy = Column("approved_by", UUID(as_uuid=True), nullable=True)
     approvedAt = Column("approved_at", DateTime(timezone=True), nullable=True)
     rejectReason = Column("reject_reason", String, nullable=True)
+    isLate = Column("is_late", Boolean, nullable=False, default=False, server_default="false")
+    lateMinutes = Column("late_minutes", Integer, nullable=False, default=0, server_default="0")
+    overtimeMinutes = Column("overtime_minutes", Integer, nullable=False, default=0, server_default="0")
+    shiftName = Column("shift_name", String(100), nullable=True)
 
     company_employee = relationship("CompanyEmployee", back_populates="timestamps")

@@ -37,14 +37,21 @@
       <h1 class="dpu-kiosk__title">สแกนใบหน้าอัจฉริยะ (Attendance &amp; Access)</h1>
     </div>
     <div class="dpu-kiosk__top-actions">
-      <a routerLink="/company/sentinel-center" class="dpu-kiosk__home-btn" title="เปิดศูนย์ความปลอดภัย SentinelVision">
-        <i class="ri-shield-flash-line"></i>
-        <span>Sentinel Center</span>
-      </a>
-      <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" title="กลับหน้าหลัก">
-        <i class="ri-home-5-line"></i>
-        <span>หน้าหลัก</span>
-      </a>
+      @if (!isKioskDevice) {
+        <a routerLink="/company/sentinel-center" class="dpu-kiosk__home-btn" title="เปิดศูนย์ความปลอดภัย SentinelVision">
+          <i class="ri-shield-flash-line"></i>
+          <span>Sentinel Center</span>
+        </a>
+        <a [routerLink]="homeLink" class="dpu-kiosk__home-btn" title="กลับหน้าหลัก">
+          <i class="ri-home-5-line"></i>
+          <span>หน้าหลัก</span>
+        </a>
+      } @else {
+        <button type="button" class="dpu-kiosk__home-btn" (click)="unpairKiosk()" title="ยกเลิกการจับคู่อุปกรณ์นี้">
+          <i class="ri-link-unlink-m"></i>
+          <span>ยกเลิกจับคู่</span>
+        </button>
+      }
       <div class="dpu-kiosk__clock" aria-live="polite">
         <span #clockTime class="dpu-kiosk__clock-time"></span>
         <span #clockDate class="dpu-kiosk__clock-date"></span>

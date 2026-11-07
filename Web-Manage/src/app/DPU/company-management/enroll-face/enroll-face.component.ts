@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
+import { AuthedImageService } from '../../../shared/services/authed-image.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
@@ -240,15 +241,33 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     private http: HttpClient,
     private tokenService: TokenService,
     private authService: AuthService,
+    private authedImages: AuthedImageService,
     private comLocationService: CompanyLocationService,
     private systemSettingService: SystemSettingService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
   ) {
+    const kiosk = this.tokenService.getKioskSession();
     const company = this.tokenService.getSelectCompany();
-    this.companyId = company.companyId;
-    this.companyName = company.companyName || 'บริษัท';
-    this.homeLink = `/company/home/${this.companyId}`;
+    // A paired kiosk is bound to its device record; the admin-selected company is only a fallback.
+    this.companyId = kiosk?.companyId || company.companyId;
+    this.companyName = company.companyName || kiosk?.deviceName || 'บริษัท';
+    this.isKioskDevice = !!kiosk;
+    this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
+  }
+
+  /** True when this tab holds a device-scoped kiosk session (paired via one-time code). */
+  isKioskDevice = false;
+
+  private imageSub?: { unsubscribe(): void };
+
+  /** Forget the device session on this tablet (admin must issue a new pairing code). */
+  unpairKiosk(): void {
+    this.destroyWs = true;
+    this.authService.logout(this.tokenService.getRefreshToken()).subscribe({
+      next: () => this.tokenService.signOut(),
+      error: () => this.tokenService.signOut(),
+    });
   }
 
   setPunchMode(mode: KioskPunchMode): void {
@@ -322,6 +341,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngOnInit() {
     document.documentElement.classList.add('dpu-kiosk-mode');
+    this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
     this.getCurrentLocation();
     unlockBeepAudio();
     unlockSpeech();
@@ -416,6 +436,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy() {
     document.documentElement.classList.remove('dpu-kiosk-mode');
     this.destroyWs = true;
+    this.imageSub?.unsubscribe();
     if (this.geoWatchId != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(this.geoWatchId);
       this.geoWatchId = null;
@@ -867,17 +888,26 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     if (!refresh) {
       return;
     }
-    this.authService.refreshToken(refresh.replace('Bearer ', '')).subscribe({
-      next: (token) => {
-        if (token?.accessToken) {
-          this.tokenService.saveToken(token.accessToken);
-        }
-        if (token?.refreshToken) {
-          this.tokenService.saveRefreshToken(token.refreshToken);
-        }
-        this.sendWsSession();
-      },
-    });
+    // Rotation: the refresh token we hold is single-use; the server returns a new pair.
+    this.authService
+      .refreshSession(refresh.replace('Bearer ', ''), this.tokenService.isKioskSession())
+      .subscribe({
+        next: (tokens) => {
+          if (tokens.accessToken) {
+            this.tokenService.saveToken(tokens.accessToken);
+          }
+          if (tokens.refreshToken) {
+            this.tokenService.saveRefreshToken(tokens.refreshToken);
+          }
+          this.sendWsSession();
+        },
+        error: () => {
+          // Revoked / reused refresh token: the device must be paired again.
+          this.notify('เซสชันอุปกรณ์หมดอายุ กรุณาจับคู่ตู้ Kiosk ใหม่', 'error');
+          this.destroyWs = true;
+          this.tokenService.signOut();
+        },
+      });
   }
 
   private onKioskWsMessage(msg: any) {
@@ -901,6 +931,14 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       this.wsSessionOk = false;
       this.refreshKioskToken();
       return;
+    }
+
+    if (msg.type === 'error' && !msg.intent) {
+      const detail = String(msg.detail || '');
+      if (msg.code === 'token_expired' || /expired|revoked/i.test(detail)) {
+        this.refreshKioskToken();
+        return;
+      }
     }
 
     if (msg.type === 'identified') {
@@ -1756,10 +1794,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     return './assets/images/faces/1.jpg';
   }
 
+  /** Protected punch photo via Bearer-authenticated fetch → blob URL (no token in the URL). */
   private authedImage(file: string): string {
-    const base = `${environment.baseUrl || ''}/images/${file}`.replace(/([^:]\/)\/+/g, '$1');
-    const token = this.tokenService.getToken();
-    return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+    return this.authedImages.urlFor(file, './assets/images/faces/1.jpg');
   }
 
   isOutside(person: KioskRosterPerson): boolean {

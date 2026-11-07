@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -36,15 +36,29 @@ from ..services.rate_limit_service import rate_limit_import
 router = APIRouter()
 
 # ดึงข้อมูลพนักงานในบริษัททั้งหมดตาม companyId
-@router.get("/company/{companyId}", response_model=List[CompanyEmployeeResponse])
+# When paged=1 returns {items,total,limit,offset}; otherwise a bare list (legacy callers).
+@router.get("/company/{companyId}")
 async def get_companyEmployees_route(
     companyId: str,
     limit: int | None = None,
     offset: int = 0,
+    q: str | None = Query(None),
+    sort_by: str | None = Query(None),
+    sort_dir: str = Query("asc"),
+    paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("employees.read")),
 ):
-    return await get_all_companyEmployees(companyId, db, limit=limit, offset=offset)
+    return await get_all_companyEmployees(
+        companyId,
+        db,
+        limit=limit,
+        offset=offset,
+        q=q,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+        paged=paged,
+    )
 
 
 # Excel import template (must be registered before /{company_employeeId})

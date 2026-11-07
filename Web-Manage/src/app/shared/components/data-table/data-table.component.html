@@ -1,0 +1,58 @@
+<div class="dpu-data-table">
+  <div class="dpu-data-table__toolbar" *ngIf="showSearch">
+    <label class="dpu-data-table__search">
+      <i class="ri-search-line" aria-hidden="true"></i>
+      <input
+        type="search"
+        [ngModel]="search"
+        (ngModelChange)="onSearchInput($event)"
+        (keydown)="onSearchKeydown($event)"
+        [placeholder]="searchPlaceholder"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+
+  <div class="dpu-data-table__scroll" [class.is-loading]="loading">
+    <table>
+      <thead>
+        <tr>
+          <th
+            *ngFor="let col of columns"
+            [class.is-sortable]="col.sortable"
+            (click)="toggleSort(col)"
+          >
+            {{ col.header }}{{ sortIndicator(col) }}
+          </th>
+        </tr>
+      </thead>
+      <tbody *ngIf="rows?.length; else empty">
+        <tr *ngFor="let row of rows; trackBy: trackRow">
+          <td *ngFor="let col of columns" [ngClass]="cellClass(row, col)">
+            <ng-container *ngIf="cellTemplate; else plain">
+              <ng-container
+                *ngTemplateOutlet="cellTemplate; context: { $implicit: row, column: col, row: row }"
+              ></ng-container>
+            </ng-container>
+            <ng-template #plain>{{ cellValue(row, col) }}</ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #empty>
+    <div class="dpu-data-table__empty" *ngIf="!loading">
+      <strong>{{ emptyTitle }}</strong>
+      <p *ngIf="emptyHint">{{ emptyHint }}</p>
+    </div>
+    <div class="dpu-data-table__empty" *ngIf="loading">กำลังโหลด…</div>
+  </ng-template>
+
+  <app-simple-pager
+    [pageIndex]="pageIndex"
+    [pageSize]="pageSize"
+    [total]="total"
+    (pageIndexChange)="onPage($event)"
+  ></app-simple-pager>
+</div>

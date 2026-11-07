@@ -33,20 +33,18 @@ import { EmpImportService } from './company-emp-import/emp-import.service';
 import { EmpListComponent } from './company-emp-list/emp-list.component';
 import {
   EmpListViewMode,
-  clampPageIndex,
-  filterEmployees,
   formatApiError,
   pageEnd as calcPageEnd,
   pageSizeForView,
   pageStart as calcPageStart,
   readStoredListView,
   saveErrorTitle,
-  slicePage,
   totalPages,
   translateApiMessage,
   validateEmployeeForm,
   writeStoredListView,
 } from './company-emp.helpers';
+import { clampPageIndex } from '../../../shared/utils/data-table-query';
 
 /**
  * Company employees shell — toolbar + list/form/import/enroll children.
@@ -84,23 +82,29 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
 
   uploaderProfile: FileUploader | undefined;
   uploadErrorMsg = '';
+  /** Current page rows from server (Phase E2). */
   itemsList: EmployeeModel[] = [];
-  filteredSource: EmployeeModel[] = [];
   filterList: EmployeeModel[] = [];
   selectModel: EmployeeModel = new EmployeeModel();
   departmentList: DepartmentModel[] = [];
   positionList: PositionModel[] = [];
   pageIndex = 0;
   pageSize = 10;
+  /** Total matching rows from server page envelope. */
+  serverTotal = 0;
+  listLoading = false;
   listViewMode: EmpListViewMode = 'cards';
   selectedMemberId: string | null = null;
   selectedMemberName = '';
   companyId = '';
   _searchTerm = '';
+  sortBy: string | null = 'employeeId';
+  sortDir: 'asc' | 'desc' | null = 'asc';
   isEdit = false;
   isImporting = false;
   importProgress: EmployeeImportProgress | null = null;
   importStatusText = 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลและใบหน้า';
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   private readonly bodyModalIds = ['modal-face', 'modal-detail', 'modal-face-management'];
   private movedModalNodes: HTMLElement[] = [];
@@ -111,11 +115,12 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   set searchTerm(val: string) {
     this.pageIndex = 0;
     this._searchTerm = val ?? '';
-    this.applyFilter();
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.reloadEmployees(), 250);
   }
 
   get totalFiltered(): number {
-    return this.filteredSource.length;
+    return this.serverTotal;
   }
 
   get totalPages(): number {
@@ -162,16 +167,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
     this.faceEnrollModal?.closeFaceEnrollModal();
     this.movedModalNodes.forEach((el) => el.remove());
     this.movedModalNodes = [];
   }
 
   ngOnInit(): void {
-    this.employeeService.getLists(this.companyId).subscribe((result) => {
-      this.itemsList = result || [];
-      this.applyFilter();
-    });
+    this.reloadEmployees();
     this.getDepartment();
     this.getPosition();
   }
@@ -181,8 +184,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.listViewMode = mode;
     this.pageSize = pageSizeForView(mode);
     this.pageIndex = 0;
-    this.updatePagedItems();
     writeStoredListView(mode);
+    this.reloadEmployees();
   }
 
   getDepartment(): void {
@@ -197,16 +200,38 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  applyFilter(): void {
-    this.filteredSource = filterEmployees(this.itemsList, this._searchTerm);
-    this.pageIndex = clampPageIndex(this.pageIndex, this.totalFiltered, this.pageSize);
-    this.updatePagedItems();
+  /** Server-side pagination / filter / sort (Phase E2). */
+  reloadEmployees(): void {
+    if (!this.companyId) return;
+    this.listLoading = true;
+    this.employeeService
+      .getPage(this.companyId, {
+        pageIndex: this.pageIndex,
+        pageSize: this.pageSize,
+        q: this._searchTerm,
+        sortBy: this.sortBy,
+        sortDir: this.sortDir || 'asc',
+      })
+      .subscribe({
+        next: (page) => {
+          this.serverTotal = page.total;
+          this.pageIndex = clampPageIndex(this.pageIndex, page.total, this.pageSize);
+          this.itemsList = page.items || [];
+          this.filterList = this.itemsList;
+          this.listLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.listLoading = false;
+          swal('Error', 'โหลดรายชื่อพนักงานไม่สำเร็จ', 'error');
+        },
+      });
   }
 
   goToPage(index: number): void {
     if (index < 0 || index >= this.totalPages) return;
     this.pageIndex = index;
-    this.updatePagedItems();
+    this.reloadEmployees();
   }
 
   nextPage(): void {
@@ -215,13 +240,6 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
 
   prevPage(): void {
     this.goToPage(this.pageIndex - 1);
-  }
-
-  updatePagedItems(): void {
-    if (!this.filteredSource?.length && !this._searchTerm) {
-      this.filteredSource = [...(this.itemsList || [])];
-    }
-    this.filterList = slicePage(this.filteredSource, this.pageIndex, this.pageSize);
   }
 
   delete(item: EmployeeModel): void {

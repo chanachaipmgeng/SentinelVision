@@ -7,8 +7,9 @@
         <div class="emp-toolbar-inner">
           <div class="emp-toolbar-title">
             <div class="box-title !mb-0">พนักงาน</div>
-            <span class="emp-stat-chip">ทั้งหมด {{ itemsList.length }}</span>
+            <span class="emp-stat-chip">ทั้งหมด {{ serverTotal }}</span>
             <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
+            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="listLoading">กำลังโหลด…</span>
           </div>
 
           <div class="emp-toolbar-controls">

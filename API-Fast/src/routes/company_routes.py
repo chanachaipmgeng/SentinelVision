@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import asc, desc, func, or_, select
 
 from ..config.database import get_db
 from ..controllers.company_controller import (
@@ -13,6 +13,7 @@ from ..controllers.company_controller import (
 )
 from ..models.member import Member
 from ..schemas.company_schema import CompanyUpdate, CompanyResponse, CompanyBase
+from ..schemas.page_schema import page_envelope
 from ..security.deps import (
     assert_request_company_access,
     require_permission,
@@ -20,6 +21,13 @@ from ..security.deps import (
 )
 from ..services.audit_service import AuditLog
 from ..services import tenant_quota_service as tenant_svc
+
+_AUDIT_SORT_COLUMNS = {
+    "occurredAt": AuditLog.occurredAt,
+    "action": AuditLog.action,
+    "path": AuditLog.path,
+    "statusCode": AuditLog.statusCode,
+}
 
 router = APIRouter()
 
@@ -95,19 +103,41 @@ async def list_audit_logs(
     companyId: str,
     request: Request,
     limit: int = 100,
+    offset: int = 0,
+    q: str | None = Query(None),
+    sort_by: str | None = Query(None),
+    sort_dir: str = Query("desc"),
+    paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("audit.read")),
 ):
     await assert_request_company_access(request, db, companyId)
-    rows = (
-        await db.execute(
-            select(AuditLog)
-            .where(AuditLog.companyId == companyId)
-            .order_by(AuditLog.occurredAt.desc())
-            .limit(min(max(limit, 1), 500))
+    safe_limit = min(max(int(limit or 100), 1), 500)
+    safe_offset = max(0, int(offset or 0))
+    query = select(AuditLog).where(AuditLog.companyId == companyId)
+    needle = (q or "").strip()
+    if needle:
+        like = f"%{needle}%"
+        query = query.where(
+            or_(
+                AuditLog.action.ilike(like),
+                AuditLog.path.ilike(like),
+                AuditLog.statusCode.ilike(like),
+                AuditLog.ip.ilike(like),
+                AuditLog.actorRole.ilike(like),
+            )
         )
+
+    total = int(
+        (await db.execute(select(func.count()).select_from(query.order_by(None).subquery()))).scalar_one()
+        or 0
+    )
+    sort_col = _AUDIT_SORT_COLUMNS.get(sort_by or "", AuditLog.occurredAt)
+    order = asc(sort_col) if (sort_dir or "").lower() == "asc" else desc(sort_col)
+    rows = (
+        await db.execute(query.order_by(order).offset(safe_offset).limit(safe_limit))
     ).scalars().all()
-    return [
+    items = [
         {
             "id": str(r.id),
             "occurredAt": r.occurredAt.isoformat() if r.occurredAt else None,
@@ -120,6 +150,9 @@ async def list_audit_logs(
         }
         for r in rows
     ]
+    if paged:
+        return page_envelope(items, total=total, limit=safe_limit, offset=safe_offset)
+    return items
 
 
 # ---------------------------------------------------------------------------

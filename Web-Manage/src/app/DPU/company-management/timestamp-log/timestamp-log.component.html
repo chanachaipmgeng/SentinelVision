@@ -126,7 +126,7 @@
             type="button"
             class="ti-btn ti-btn-primary-full modern-btn ts-search-btn"
             [disabled]="loading"
-            (click)="getTimestamp()">
+            (click)="pageIndex = 0; getTimestamp()">
             <i class="ri-search-line" [class.ts-spin]="loading"></i>
             <span>ค้นหา</span>
           </button>

@@ -1359,3 +1359,112 @@ async def get_edge_sync_manifest(
         "activeZones": [_serialize_zone(z) for z in zones],
         "generatedAt": datetime.now(timezone.utc),
     }
+
+
+
+async def expire_sentinel_identities_tick() -> dict:
+    """
+    PDPA Automated Biometric Expiry Sweeper:
+    Finds active SentinelIdentity rows whose `expiresAt < now()`, marks them `EXPIRED`,
+    and purges their 512-d `embedding` vector from pgvector.
+    """
+    from ..config.database import async_session
+
+    now = datetime.now(timezone.utc)
+    expired_count = 0
+    async with async_session() as db:
+        rows = (
+            await db.execute(
+                select(SentinelIdentity).where(
+                    SentinelIdentity.deletedAt.is_(None),
+                    SentinelIdentity.status == "ACTIVE",
+                    SentinelIdentity.expiresAt.is_not(None),
+                    SentinelIdentity.expiresAt < now,
+                )
+            )
+        ).scalars().all()
+        for ident in rows:
+            ident.status = "EXPIRED"
+            ident.embedding = None
+            expired_count += 1
+        if expired_count > 0:
+            await db.commit()
+    return {"expiredIdentitiesPurged": expired_count}
+
+
+async def evaluate_kiosk_sentinel_match(
+    db: AsyncSession,
+    company_id: UUID,
+    target_encoding: List[float],
+    threshold: float,
+) -> Optional[dict]:
+    """
+    Evaluates a live Kiosk face embedding against `sentinel_identity`.
+    Logs an incident and dispatches a silent webhook if `BLACKLIST`/`POI` is detected,
+    or returns enriched `sentinelMatch` metadata for `VIP`/`VISITOR`/`EVENT_ATTENDEE`.
+    """
+    match = await search_sentinel_identity_pgvector(
+        db, target_encoding, threshold, companyId=company_id
+    )
+    if match is None:
+        return None
+    ident, distance = match
+    confidence_pct = round(max(0.0, min(1.0, 1.0 - float(distance))) * 100.0, 2)
+    itype = ident.identityType
+
+    event_type = (
+        "BLACKLIST_ALERT"
+        if itype in ("BLACKLIST", "POI")
+        else ("VIP_ARRIVAL" if itype == "VIP" else ("EVENT_CHECKIN" if itype == "EVENT_ATTENDEE" else "VISITOR_CHECKIN"))
+    )
+    severity = "CRITICAL" if itype == "BLACKLIST" else ("WARNING" if itype == "POI" else "INFO")
+    action_taken = (
+        f"Kiosk Silent Alert ({ident.alertNote or 'Watchlist match'})"
+        if itype in ("BLACKLIST", "POI")
+        else (f"Kiosk Seat: {ident.seatNumber}" if ident.seatNumber else f"Kiosk Verified ({itype})")
+    )
+
+    inc = SentinelIncidentLog(
+        companyId=company_id,
+        eventType=event_type,
+        severity=severity,
+        identityId=ident.identityId,
+        subjectName=ident.fullName,
+        identityType=itype,
+        zoneName="Live Face Kiosk",
+        eventId=ident.eventId,
+        confidencePercent=confidence_pct,
+        distance=round(float(distance), 6),
+        snapshotUrl=ident.pictureUrl,
+        actionTaken=action_taken,
+    )
+    db.add(inc)
+    if itype in ("BLACKLIST", "POI"):
+        db.add(
+            NotificationOutbox(
+                companyId=company_id,
+                event="sentinel.blacklist_detected",
+                channel="webhook",
+                payload={
+                    "subjectName": ident.fullName,
+                    "identityType": itype,
+                    "severity": ident.severity,
+                    "alertNote": ident.alertNote,
+                    "zoneName": "Live Face Kiosk",
+                    "confidencePercent": confidence_pct,
+                },
+            )
+        )
+    await db.commit()
+    return {
+        "identityId": str(ident.identityId),
+        "identityType": itype,
+        "fullName": ident.fullName,
+        "severity": ident.severity,
+        "alertNote": ident.alertNote,
+        "seatNumber": ident.seatNumber,
+        "pictureUrl": ident.pictureUrl,
+        "distance": round(float(distance), 6),
+        "confidencePercent": confidence_pct,
+        "accessGranted": itype not in ("BLACKLIST", "POI"),
+    }

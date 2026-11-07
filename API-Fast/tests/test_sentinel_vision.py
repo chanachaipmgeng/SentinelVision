@@ -107,3 +107,14 @@ def test_sentinel_serializers():
     s_inc = _serialize_incident(inc)
     assert s_inc["eventType"] == "BLACKLIST_ALERT"
     assert s_inc["confidencePercent"] == 96.4
+
+
+
+def test_nginx_configs_include_sentinel_prefix():
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parents[2]
+    for conf_name in ("default.conf", "default.dual-gpu.conf", "default.quad-gpu.conf"):
+        conf_path = repo_root / "docker" / "nginx" / conf_name
+        text = conf_path.read_text(encoding="utf-8")
+        assert "|hr|sentinel|" in text, f"{conf_name} is missing 'sentinel' in FastAPI proxy regex"

@@ -93,3 +93,24 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | POST | `/system/rebuild-index` | No-op stub (`pgvector` HNSW index is live). |
 | POST | `/api/upload-image/` | Store uploaded photo (returns `path` and optional S3 `presignedUrl`). |
 | GET | `/images/...`, `/enrolled_images/...` | Gated by JWT Bearer header or `?token=`. |
+
+
+## SentinelVision Security, Access Control, Watchlist, Visitor & Smart Events (`/sentinel`)
+
+All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company authorization via `AuthzMiddleware` and `assert_request_company_access`. Kiosk Device Tokens (`typ="kiosk"`) are restricted to `POST /sentinel/company/{companyId}/scan`, `GET /sentinel/company/{companyId}/edge-sync`, and `GET /sentinel/company/{companyId}/zones`.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/sentinel/company/{companyId}/overview` | JWT | Unified KPIs (`blacklistAndPoiCount`, `vipCount`, `activeVisitorCount`, `eventAttendeeCount`, `activeZonesCount`, `liveEventsCount`, `unacknowledgedAlerts`, `buildingOccupancyCount`), **Live Emergency Muster Roll** (`musterRoll`), and `recentIncidents`. |
+| GET/POST | `/sentinel/company/{companyId}/identities` | JWT | List or create non-employee Sentinel identities (`BLACKLIST`, `POI`, `VIP`, `VISITOR`, `EVENT_ATTENDEE`) with optional PDPA `expiresAt`, `severity`, `alertNote`, `visitPurpose`, `seatNumber`, `eventId`, `allowedZoneIds`. |
+| PUT/DELETE | `/sentinel/company/{companyId}/identities/{identityId}` | JWT | Update or revoke/soft-delete a Sentinel identity (purges `embedding` vector on delete). |
+| POST | `/sentinel/company/{companyId}/identities/{identityId}/enroll-face` | JWT | Multipart `file` upload; extracts 512-d InsightFace `buffalo_l` embedding via `run_on_face_gpu` and stores in `sentinel_identity.embedding`. |
+| GET/POST | `/sentinel/company/{companyId}/zones` | JWT / Kiosk (`GET`) | List or create Smart Access Control door/kiosk zones (`stationMode`, `allowedIdentityTypes`, `scheduleStart`, `scheduleEnd`, `require2FA`, `relayWebhookUrl`, `relaySecret`). |
+| PUT/DELETE | `/sentinel/company/{companyId}/zones/{zoneId}` | JWT | Update or deactivate an Access Control zone. |
+| POST | `/sentinel/company/{companyId}/zones/{zoneId}/trigger` | JWT | Remote manual unlock / test pulse for an Access Control door relay; logs `ACCESS_GRANTED` incident. |
+| GET/POST | `/sentinel/company/{companyId}/events` | JWT | List or create Smart Event / Seminar campaigns (`name`, `locationName`, `startAt`, `endAt`, `welcomeMessage`, `capacity`, `autoExpireDays`). |
+| DELETE | `/sentinel/company/{companyId}/events/{eventId}` | JWT | Close and soft-delete an event campaign. |
+| POST | `/sentinel/company/{companyId}/scan` | JWT / Kiosk | Unified 1:N Biometric Scan (`file`, optional `zoneId`, `eventId`, `stationMode`, `totpOrPin`): evaluates `BLACKLIST`/`POI` silent alarms, Access Control rules, IoT door relay, Event seat lookup, and Employee verification. |
+| GET | `/sentinel/company/{companyId}/incidents` | JWT | Paginated security & access incident log (`eventType`, `severity`, `limit`, `offset`). |
+| POST | `/sentinel/company/{companyId}/incidents/{incidentId}/acknowledge` | JWT | Acknowledge a `WARNING` or `CRITICAL` security incident. |
+| GET | `/sentinel/company/{companyId}/edge-sync` | JWT / Kiosk | Offline-First Edge Kiosk embedding manifest (`manifestVersion`, `employeeVectorsCount`, `sentinelVectorsCount`, `totalActiveVectors`, `activeZones`). |

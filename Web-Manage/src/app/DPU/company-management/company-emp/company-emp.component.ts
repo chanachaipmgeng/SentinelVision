@@ -369,6 +369,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         this.cdr.detectChanges();
         const formData = new FormData();
         formData.append('file', item.file, item.file.name || `face-${i + 1}.jpg`);
+        formData.append('companyId', this.companyId);
         await firstValueFrom(
           this.http.post(environment.baseUrl + `/face/members/${memberId}/add-face`, formData),
         );
@@ -758,6 +759,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         const file = this.dataURLtoFile(step.preview!, `face-${step.id}.jpg`);
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('companyId', this.companyId);
         await firstValueFrom(
           this.http.post(environment.baseUrl + `/face/members/${memberId}/add-face`, formData),
         );

@@ -11,17 +11,21 @@ from ..controllers.department_controller import (
     delete_department
 )
 from ..schemas.department_schema import DepartmentCreate, DepartmentUpdate, DepartmentResponse
-from ..security.deps import assert_request_company_access
+from ..security.deps import assert_request_company_access, require_request_system_admin
 
 router = APIRouter()
 
 @router.get("", response_model=List[DepartmentResponse])
-async def get_departments_route(db: AsyncSession = Depends(get_db)):
+async def get_departments_route(request: Request, db: AsyncSession = Depends(get_db)):
+    """Cross-tenant listing — system admin only (Web-Manage uses /company/{companyId})."""
+    require_request_system_admin(request)
     return await get_all_departments(db)
 
 @router.get("/{departmentId}", response_model=DepartmentResponse)
-async def get_department_by_id_route(departmentId: str, db: AsyncSession = Depends(get_db)):
-    return await get_department_by_id(departmentId, db)
+async def get_department_by_id_route(request: Request, departmentId: str, db: AsyncSession = Depends(get_db)):
+    department = await get_department_by_id(departmentId, db)
+    await assert_request_company_access(request, db, department.companyId)
+    return department
 
 @router.get("/company/{companyId}", response_model=List[DepartmentResponse])
 async def get_departments_by_companyId_route(companyId: str, db: AsyncSession = Depends(get_db)):
@@ -36,6 +40,9 @@ async def create_department_route(request: Request, department: DepartmentCreate
 async def update_department_route(request: Request, departmentId: str, department: DepartmentUpdate, db: AsyncSession = Depends(get_db)):
     existing = await get_department_by_id(departmentId, db)
     await assert_request_company_access(request, db, existing.companyId)
+    if department.companyId is not None and department.companyId != existing.companyId:
+        # Re-homing a department into another tenant needs admin rights there too.
+        await assert_request_company_access(request, db, department.companyId)
     return await update_department(departmentId, department.dict(exclude_unset=True), db)
 
 @router.delete("/{departmentId}")

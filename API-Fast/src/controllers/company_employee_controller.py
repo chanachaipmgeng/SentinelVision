@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -262,10 +263,58 @@ async def register_member(
         "temporaryPassword": temporary_password,
     }
     
+def _is_system_admin(member: Member | None) -> bool:
+    if member is None:
+        return False
+    role = member.role
+    if role == RoleType.ADMIN_SYSTEM:
+        return True
+    return getattr(role, "value", role) in (99, RoleType.ADMIN_SYSTEM.value)
+
+
+def _normalize_email(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+async def assert_member_email_change_allowed(
+    db: AsyncSession, member: Member, new_email: str | None, actor: Member | None
+) -> None:
+    """``Member.email`` is the global login identity shared across tenants.
+
+    A company admin may change it only for a member whose single active employment is
+    in their own company. Members with more than one active company, or system-admin
+    members, can only have their email changed by a system admin (or via self-service).
+    """
+    if new_email is None or _normalize_email(new_email) == _normalize_email(member.email):
+        return
+    if _is_system_admin(actor):
+        return
+    if _is_system_admin(member):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a system admin can change a system admin's email",
+        )
+    active_companies = await db.execute(
+        select(func.count(CompanyEmployee.company_employeeId)).where(
+            CompanyEmployee.memberId == member.memberId,
+            CompanyEmployee.deletedAt.is_(None),
+        )
+    )
+    if (active_companies.scalar_one() or 0) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Email is the member's global login identity and this member belongs to "
+                "more than one company; only a system admin can change it"
+            ),
+        )
+
+
 async def update_company_employee(
     company_employee_data: CompanyEmployeeUpdate,
     companyId: str,
-    db: AsyncSession
+    db: AsyncSession,
+    actor: Member | None = None,
 ):
     # ดึงข้อมูล CompanyEmployee
     company_employee = await get_company_employee_by_id(company_employee_data.company_employeeId, companyId, db)
@@ -296,6 +345,7 @@ async def update_company_employee(
     if member_info:
         member = await db.get(Member, company_employee.memberId)
         if member:
+            await assert_member_email_change_allowed(db, member, member_info.email, actor)
             if member_info.firstName is not None:
                 member.firstName = member_info.firstName
             if member_info.lastName is not None:

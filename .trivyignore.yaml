@@ -91,5 +91,13 @@ vulnerabilities:
     statement: "pip's vendored pkg_resources SBOM entry; the vulnerable PackageIndex module is not shipped."
     expired_at: 2027-03-31
 
-# misconfigurations: none. Every image runs as a non-root USER since B4 (api/worker uid 10001,
-# admin/nginx uid 101, backup uid 1000), so DS-0002 no longer needs an allow-list entry.
+misconfigurations:
+  # Every product image runs as a non-root USER since B4 (api/worker uid 10001, admin/nginx uid 101,
+  # backup uid 1000). The only remaining root container is the kiosk load generator: a
+  # loadtest-profile-only tool (never part of a deployment) that writes results into bind-mounted
+  # host directories, so a fixed non-root uid would need matching host chown on every test box.
+  - id: DS-0002
+    paths:
+      - scripts/kiosk-load/Dockerfile
+    statement: "Load-test generator only (compose profile loadtest); writes to bind-mounted result dirs. Not deployed."
+    expired_at: 2027-03-31

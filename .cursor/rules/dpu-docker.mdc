@@ -34,7 +34,7 @@ Each process sees a single device as `cuda:0`. Do **not** set `FACE_DEVICES=cuda
 
 ### Loadtest generator
 
-`-f docker-compose.loadtest.yml --profile loadtest` → `loadgen` service hits `http://nginx:80`. See [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md).
+`-f docker-compose.loadtest.yml --profile loadtest` → `loadgen` service hits `http://nginx:8080`. See [docs/KIOSK-LOADTEST-SATURATION.md](../../docs/KIOSK-LOADTEST-SATURATION.md).
 
 All services: `restart: unless-stopped`, `json-file` log rotation, healthchecks (`api` → `/ready`, `worker` → `:9108/metrics`, `nginx` → `/health`).
 

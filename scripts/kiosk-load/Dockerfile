@@ -13,7 +13,7 @@ COPY kiosk_load.py poll_queue.py summarize_capacity.py ./
 # Sample face is downloaded on first --prepare / ensure_face_image()
 RUN mkdir -p /app/.cache /results
 
-ENV KIOSK_LOAD_BASE_URL=http://nginx:80 \
+ENV KIOSK_LOAD_BASE_URL=http://nginx:8080 \
     PYTHONUNBUFFERED=1
 
 ENTRYPOINT ["python", "kiosk_load.py"]

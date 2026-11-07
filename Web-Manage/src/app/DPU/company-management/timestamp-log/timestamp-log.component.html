@@ -25,23 +25,32 @@
               type="button"
               class="ti-btn ti-btn-success-full modern-btn ts-tool-btn"
               [disabled]="exporting"
-              (click)="exportReport('xlsx')"
-              title="ส่งออกรายงาน Excel (.xlsx)">
+              (click)="exportReport('xlsx', 'payroll')"
+              title="Payroll Excel: สรุปรายวัน + รายละเอียด punch (ไม่จำกัด 5000)">
               <i class="ri-file-excel-2-line"></i>
-              <span>Export Excel</span>
+              <span>Payroll Excel</span>
             </button>
             <button
               type="button"
               class="ti-btn ti-btn-light modern-btn ts-tool-btn"
               [disabled]="exporting"
-              (click)="exportReport('csv')"
-              title="ส่งออกรายงาน CSV (.csv)">
+              (click)="exportReport('csv', 'payroll')"
+              title="Payroll CSV streaming (summary + detail)">
               <i class="ri-file-text-line"></i>
-              <span>Export CSV</span>
+              <span>Payroll CSV</span>
             </button>
-            <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-warning-full modern-btn ts-tool-btn">
+            <button
+              type="button"
+              class="ti-btn ti-btn-light modern-btn ts-tool-btn"
+              [disabled]="exporting"
+              (click)="exportReport('xlsx', 'raw')"
+              title="Export punch ดิบ (จำกัด 5000)">
+              <i class="ri-download-2-line"></i>
+              <span>Raw Excel</span>
+            </button>
+            <a routerLink="/company/approval-inbox" class="ti-btn ti-btn-warning-full modern-btn ts-tool-btn">
               <i class="ri-error-warning-line"></i>
-              <span>คิวอนุมัติ</span>
+              <span>กล่องอนุมัติ</span>
             </a>
             <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn ts-tool-btn">
               <i class="ri-camera-line"></i>

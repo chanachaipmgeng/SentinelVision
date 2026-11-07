@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 import io
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
@@ -27,6 +27,11 @@ from ..schemas.employee_timestamp_schema import (
     EmployeeTimestampBase,
     TimestampApprovalAction,
 )
+from ..security.deps import assert_request_company_access, assert_request_company_membership
+from ..services.payroll_export_service import (
+    build_payroll_xlsx_bytes,
+    iter_payroll_csv_chunks,
+)
 
 router = APIRouter()
 
@@ -51,6 +56,13 @@ def _parse_dt(v: Optional[str]) -> Optional[datetime]:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Invalid datetime: {v}",
         ) from exc
+
+
+def _parse_date(v: Optional[str]) -> Optional[date]:
+    dt = _parse_dt(v)
+    if dt is None:
+        return None
+    return dt.date() if hasattr(dt, "date") else dt
 
 
 def _parse_int(v: Optional[str]) -> Optional[int]:
@@ -81,7 +93,9 @@ async def put_shift_settings_route(
 @router.get("/export/company/{companyId}")
 async def export_timestamps_route(
     companyId: str,
+    request: Request,
     format: str = Query("xlsx"),
+    mode: str = Query("raw"),
     company_employeeId: Optional[str] = Query(None),
     startDate: Optional[str] = Query(None),
     endDate: Optional[str] = Query(None),
@@ -90,9 +104,36 @@ async def export_timestamps_route(
     limit: int = Query(5000, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
 ):
+    await assert_request_company_access(request, db, companyId)
+    fmt = (format or "xlsx").strip().lower()
+    export_mode = (mode or "raw").strip().lower()
+    emp_id = _blank(company_employeeId)
+    emp_uuid = UUID(emp_id) if emp_id else None
+    start_d = _parse_date(startDate)
+    end_d = _parse_date(endDate)
+
+    # C5 payroll path: stream summary + detail, no 5000 in-memory cap.
+    if export_mode in ("payroll", "summary", "full"):
+        if fmt == "csv":
+            return StreamingResponse(
+                iter_payroll_csv_chunks(db, UUID(str(companyId)), start_d, end_d, emp_uuid),
+                media_type="text/csv; charset=utf-8",
+                headers={
+                    "Content-Disposition": 'attachment; filename="payroll-attendance.csv"'
+                },
+            )
+        data = await build_payroll_xlsx_bytes(db, UUID(str(companyId)), start_d, end_d, emp_uuid)
+        return StreamingResponse(
+            io.BytesIO(data),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": 'attachment; filename="payroll-attendance.xlsx"'
+            },
+        )
+
     items = await search_timestamps(
         companyId,
-        _blank(company_employeeId),
+        emp_id,
         _parse_dt(startDate),
         _parse_dt(endDate),
         _parse_int(timestampType),
@@ -101,7 +142,6 @@ async def export_timestamps_route(
         limit=limit,
         offset=0,
     )
-    fmt = (format or "xlsx").strip().lower()
     if fmt == "csv":
         data = build_timestamps_csv(items)
         return Response(
@@ -189,6 +229,11 @@ async def approve_timestamp_route(
     companyId: UUID,
     timestampId: UUID,
     action: TimestampApprovalAction,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    return await approve_or_reject_timestamp(timestampId, companyId, action, db)
+    caller = await assert_request_company_membership(request, db, companyId)
+    approved_by = caller.memberId if caller else None
+    return await approve_or_reject_timestamp(
+        timestampId, companyId, action, db, approved_by=approved_by
+    )

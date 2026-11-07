@@ -36,9 +36,11 @@ class EmployeeTimestampUpdate(BaseModel):
 
 
 class TimestampApprovalAction(BaseModel):
+    """Client may still send approvedBy for back-compat; server always ignores it (JWT only)."""
+
     approve: bool
     rejectReason: Optional[str] = None
-    approvedBy: Optional[UUID] = None
+    approvedBy: Optional[UUID] = None  # ignored — set from JWT in the controller
 
 
 class MemberResponse(BaseModel):

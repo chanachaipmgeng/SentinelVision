@@ -1,17 +1,38 @@
-# Local env / secrets
+# Local env / secrets (keep *.example tracked)
 .env
+.env.*
+!.env.example
 API-Fast/.env
+API-Fast/.env.*
+!API-Fast/.env.example
+# Per-deployment Web-Manage runtime config (Google Maps key etc.) — copy from config.example.json
+Web-Manage/src/assets/config.json
+
+# Face images / punch photos / enrollment uploads (biometric PII — never commit)
+API-Fast/temp_images/
+API-Fast/enrolled_images/
+API-Fast/uploaded_images/
+API-Fast/uploads/
+API-Fast/dataset/
+API-Fast/**/*.jpg
+API-Fast/**/*.jpeg
+API-Fast/**/*.png
+API-Fast/**/*.webp
 
 # Runtime / legacy ML artifacts
 *.faiss
 *.pkl
 *.rar
 *_id_map.pkl
-API-Fast/temp_images/
-API-Fast/enrolled_images/
-API-Fast/uploaded_images/
-API-Fast/uploads/
-API-Fast/dataset/
+
+# Scratch spreadsheets & load-test result dumps (keep curated reports under docs/)
+API-Fast/*.xlsx
+API-Fast/*.xls
+API-Fast/*.csv
+API-Fast/_inspect_*
+ผลโหลดเทส/
+loadtest-results/
+scripts/kiosk-load/results/
 
 # Node / Angular
 node_modules/

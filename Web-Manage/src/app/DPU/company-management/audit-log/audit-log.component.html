@@ -88,22 +88,12 @@
   </div>
 
   <div class="col-span-12">
-    <div class="box modern-card glass">
-      <div class="box-body">
-        <h3 class="text-base font-semibold mb-3">แจ้งเตือน</h3>
-        <label class="form-label">อีเมล</label>
-        <input class="form-control mb-2" [(ngModel)]="email" />
-        <label class="form-label">LINE token</label>
-        <input class="form-control mb-3" [(ngModel)]="lineToken" />
-        <div class="flex gap-2">
-          <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="saveNotify()">
-            บันทึก
-          </button>
-          <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="testNotify()">
-            ทดสอบ
-          </button>
-        </div>
-      </div>
-    </div>
+    <p class="text-sm text-dpu-muted mb-2">
+      {{ 'settingsHub.notify.movedHint' | translate }}
+      <a routerLink="/company/settings/notifications" class="text-primary font-semibold">
+        {{ 'settingsHub.notify.openInSettings' | translate }} <i class="ri-arrow-right-line"></i>
+      </a>
+    </p>
+    <app-notification-settings-panel [companyId]="companyId"></app-notification-settings-panel>
   </div>
 </div>

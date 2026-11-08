@@ -1,49 +1,49 @@
-<app-page-header [title]="'รายงาน'" [activeTitle]="'ลงเวลา'" [title1]="'Reports'"></app-page-header>
+<app-page-header [title]="'Reports'" [activeTitle]="'Attendance'" [title1]="'Reports'"></app-page-header>
 
 <div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="รายงานการลงเวลา">
+    <app-page-toolbar title="Attendance reports">
       <ng-container controls>
         <button type="button" class="ti-btn ti-btn-primary-full modern-btn" [disabled]="busy" (click)="export()">
           <i class="ri-download-2-line"></i>
-          ส่งออก
+          {{ 'Export' | translate }}
         </button>
       </ng-container>
     </app-page-toolbar>
-    <p class="text-sm text-dpu-muted mb-3">สรุปรายเดือน / รายคน — ดาวน์โหลด Excel หรือ CSV (ดิบหรือ payroll)</p>
+    <p class="text-sm text-dpu-muted mb-3">{{ 'reports.blurb' | translate }}</p>
   </div>
 
   <div class="col-span-12 lg:col-span-6">
     <div class="box modern-card glass">
-      <div class="box-header"><div class="box-title">ตัวกรอง</div></div>
+      <div class="box-header"><div class="box-title">{{ 'Filter' | translate }}</div></div>
       <div class="box-body space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="form-label">ตั้งแต่</label>
+            <label class="form-label">{{ 'From date' | translate }}</label>
             <input type="date" class="form-control" [(ngModel)]="draft.startDate" />
           </div>
           <div>
-            <label class="form-label">ถึง</label>
+            <label class="form-label">{{ 'To date' | translate }}</label>
             <input type="date" class="form-control" [(ngModel)]="draft.endDate" />
           </div>
         </div>
         <div>
-          <label class="form-label">พนักงาน (ว่าง = ทั้งบริษัท)</label>
+          <label class="form-label">{{ 'Employee (blank = whole company)' | translate }}</label>
           <select class="form-control" [(ngModel)]="draft.company_employeeId">
-            <option value="">— ทั้งหมด —</option>
+            <option value="">— {{ 'All' | translate }} —</option>
             <option *ngFor="let e of employees" [value]="e.company_employeeId">{{ e.label }}</option>
           </select>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="form-label">โหมด</label>
+            <label class="form-label">{{ 'Mode' | translate }}</label>
             <select class="form-control" [(ngModel)]="draft.mode">
-              <option value="raw">รายการดิบ</option>
-              <option value="payroll">Payroll summary</option>
+              <option value="raw">{{ 'Raw punches' | translate }}</option>
+              <option value="payroll">{{ 'Payroll summary' | translate }}</option>
             </select>
           </div>
           <div>
-            <label class="form-label">รูปแบบ</label>
+            <label class="form-label">{{ 'Format' | translate }}</label>
             <select class="form-control" [(ngModel)]="draft.format">
               <option value="xlsx">Excel (.xlsx)</option>
               <option value="csv">CSV</option>

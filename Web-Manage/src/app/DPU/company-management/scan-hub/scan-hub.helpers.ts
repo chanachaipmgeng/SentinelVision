@@ -31,32 +31,32 @@ const MODULE_META: Record<
   { label: string; hint: string; icon: string; stationMode: StationMode | null }
 > = {
   ATTENDANCE: {
-    label: 'ลงเวลาทำงาน',
-    hint: 'จุดสแกน Hybrid / Check-In / Check-Out',
+    label: 'module.attendance',
+    hint: 'module.attendance.hint',
     icon: 'ri-time-line',
     stationMode: 'ATTENDANCE',
   },
   ACCESS_CONTROL: {
-    label: 'ควบคุมประตู',
-    hint: 'ตรวจสิทธิ์โซนและสั่งเปิด Relay',
+    label: 'module.access',
+    hint: 'module.access.hint',
     icon: 'ri-door-lock-line',
     stationMode: 'ACCESS_CONTROL',
   },
   WATCHLIST: {
-    label: 'เฝ้าระวัง & VIP',
-    hint: 'Walk-by screening Blacklist / VIP',
+    label: 'module.watchlist',
+    hint: 'module.watchlist.hint',
     icon: 'ri-alarm-warning-line',
     stationMode: 'WATCHLIST_MONITOR',
   },
   VISITOR: {
-    label: 'ผู้มาติดต่อ',
-    hint: 'ยืนยันบัตร Visitor และ Muster Roll',
+    label: 'module.visitor',
+    hint: 'module.visitor.hint',
     icon: 'ri-user-shared-line',
     stationMode: 'VISITOR_CHECKIN',
   },
   EVENTS: {
-    label: 'งานอีเวนต์',
-    hint: 'เช็คอินผู้ร่วมงานและเลขที่นั่ง',
+    label: 'module.events',
+    hint: 'module.events.hint',
     icon: 'ri-calendar-event-line',
     stationMode: 'EVENT_CHECKIN',
   },

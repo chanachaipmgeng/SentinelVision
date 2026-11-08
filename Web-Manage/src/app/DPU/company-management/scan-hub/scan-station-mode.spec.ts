@@ -46,7 +46,7 @@ describe('scan-station-mode', () => {
       expect(ctx.routeHadMode).toBeTrue();
       expect(isAccessChrome(ctx.stationMode)).toBeTrue();
       expect(isWatchlistChrome(ctx.stationMode)).toBeFalse();
-      expect(stationModeTitle(ctx.stationMode)).toContain('Access Control');
+      expect(stationModeTitle(ctx.stationMode)).toBe('station.access');
     });
 
     it('updates mode when navigating access → watchlist → visitor → event', () => {

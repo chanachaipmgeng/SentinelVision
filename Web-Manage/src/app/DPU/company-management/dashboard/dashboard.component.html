@@ -1,24 +1,28 @@
-<app-page-header [title]="'SentinelVision — แดชบอร์ดภาพรวมอัตลักษณ์และการลงเวลา'" [activeTitle]="'SentinelVision Command'" [title1]="'แดชบอร์ด'"></app-page-header>
+<app-page-header
+  [title]="'dashboard.pageTitle'"
+  [activeTitle]="'SentinelVision Command'"
+  [title1]="'Dashboard'">
+</app-page-header>
 
 <div class="dpu-dashboard grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="ภาพรวมการลงเวลาและศูนย์ความปลอดภัย">
+    <app-page-toolbar title="dashboard.toolbarTitle">
       <ng-container chips>
-        <app-stat-chip tone="ok" *ngIf="stats">วันนี้ {{ stats.summary.checkInsToday }}</app-stat-chip>
-        <app-stat-chip tone="soft" *ngIf="stats">7 วัน {{ weekTotal }}</app-stat-chip>
-        <app-stat-chip tone="warn" *ngIf="stats">นอกพื้นที่ {{ outsideToday }}</app-stat-chip>
-        <app-stat-chip tone="danger" *ngIf="stats && pendingApproval">รออนุมัติ {{ pendingApproval }}</app-stat-chip>
+        <app-stat-chip tone="ok" *ngIf="stats">{{ 'Today' | translate }} {{ stats.summary.checkInsToday }}</app-stat-chip>
+        <app-stat-chip tone="soft" *ngIf="stats">{{ 'Last 7 days' | translate }} {{ weekTotal }}</app-stat-chip>
+        <app-stat-chip tone="warn" *ngIf="stats">{{ 'Out of area' | translate }} {{ outsideToday }}</app-stat-chip>
+        <app-stat-chip tone="danger" *ngIf="stats && pendingApproval">{{ 'Pending approval' | translate }} {{ pendingApproval }}</app-stat-chip>
         <app-stat-chip [tone]="liveOn ? 'ok' : 'soft'">
-          {{ liveOn ? 'Realtime เปิด' : 'Realtime ปิด' }}
+          {{ (liveOn ? 'Realtime on' : 'Realtime off') | translate }}
         </app-stat-chip>
       </ng-container>
       <ng-container controls>
         <span class="dpu-dash-updated" *ngIf="lastUpdated">
-          อัปเดต {{ lastUpdated | date:'HH:mm:ss' }}
+          {{ 'Updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }}
         </span>
         <button type="button" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh" (click)="toggleLive()">
           <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-broadcast-off-line'"></i>
-          <span>{{ liveOn ? 'หยุดสด' : 'เปิดสด' }}</span>
+          <span>{{ (liveOn ? 'Stop live' : 'Go live') | translate }}</span>
         </button>
         <a routerLink="/company/sentinel-center" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
           <i class="ri-shield-flash-line"></i><span>Sentinel Center</span>
@@ -41,7 +45,7 @@
   <div class="col-span-12" *ngIf="isLoading">
     <div class="box modern-card glass">
       <div class="box-body">
-        <app-empty-state [loading]="true" message="กำลังโหลดแดชบอร์ด..."></app-empty-state>
+        <app-empty-state [loading]="true" message="Loading dashboard..."></app-empty-state>
       </div>
     </div>
   </div>
@@ -50,7 +54,7 @@
     <div class="box modern-card glass dpu-dash-error">
       <div class="box-body flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div class="font-semibold text-danger">โหลดไม่สำเร็จ</div>
+          <div class="font-semibold text-danger">{{ 'Load failed' | translate }}</div>
           <div class="text-sm text-dpu-muted">{{ error }}</div>
         </div>
         <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats(true)">{{ 'Try again' | translate }}</button>
@@ -63,7 +67,7 @@
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
       <div class="box dpu-stat-card modern-card glass">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">ลงเวลาวันนี้</p>
+          <p class="mb-0 text-dpu-muted">{{ 'Punches today' | translate }}</p>
           <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.summary.checkInsToday }}</div>
         </div>
       </div>
@@ -71,7 +75,7 @@
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
       <div class="box dpu-stat-card modern-card glass">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">ในพื้นที่วันนี้</p>
+          <p class="mb-0 text-dpu-muted">{{ 'In area today' | translate }}</p>
           <div class="text-2xl font-semibold text-dpu-brand-deep">{{ inAreaToday }}</div>
         </div>
       </div>
@@ -79,7 +83,7 @@
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
       <div class="box dpu-stat-card modern-card glass">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">นอกพื้นที่วันนี้</p>
+          <p class="mb-0 text-dpu-muted">{{ 'Out of area today' | translate }}</p>
           <div class="text-2xl font-semibold" [class.text-danger]="outsideToday > 0">{{ outsideToday }}</div>
         </div>
       </div>
@@ -89,7 +93,7 @@
         <div class="box-body">
           <p class="mb-0 text-dpu-muted">{{ 'Pending approval' | translate }}</p>
           <div class="text-2xl font-semibold" [class.text-warning]="pendingApproval > 0">{{ pendingApproval }}</div>
-          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link">ไปคิวอนุมัติ</a>
+          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link">{{ 'Go to approval queue' | translate }}</a>
         </div>
       </div>
     </div>
@@ -98,7 +102,7 @@
     <div class="xl:col-span-8 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
         <div class="box-header">
-          <h5 class="box-title !mb-0">แนวโน้ม 7 วัน</h5>
+          <h5 class="box-title !mb-0">{{ '7-day trend' | translate }}</h5>
         </div>
         <div class="box-body">
           <div echarts [options]="trendChart" class="h-72"></div>
@@ -108,7 +112,7 @@
     <div class="xl:col-span-4 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
         <div class="box-header">
-          <h5 class="box-title !mb-0">สัดส่วนวันนี้</h5>
+          <h5 class="box-title !mb-0">{{ 'Today mix' | translate }}</h5>
         </div>
         <div class="box-body">
           <div echarts [options]="mixChart" class="h-72"></div>
@@ -121,12 +125,12 @@
       <div class="box modern-card glass">
         <div class="box-header flex items-center justify-between gap-2">
           <div>
-            <h5 class="box-title !mb-0">แผนที่ลงเวลาวันนี้</h5>
+            <h5 class="box-title !mb-0">{{ 'Today punch map' | translate }}</h5>
             <p class="mb-0 text-xs text-dpu-muted">
-              มุมมองเริ่มต้นที่บริษัท · จุดเข้ม = บริษัท · เขียว = ในพื้นที่ · ส้ม = นอกพื้นที่
+              {{ 'dashboard.mapHint' | translate }}
             </p>
           </div>
-          <span class="dpu-muted-count">{{ mapPoints.length }} จุดลงเวลา</span>
+          <span class="dpu-muted-count">{{ mapPoints.length }} {{ 'punch points' | translate }}</span>
         </div>
         <div class="box-body">
           <app-checkin-map
@@ -143,15 +147,15 @@
         <div class="box-header flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             <span class="dpu-live-dot" [class.is-on]="liveOn"></span>
-            <h5 class="box-title !mb-0">ลงเวลาล่าสุด (Realtime)</h5>
+            <h5 class="box-title !mb-0">{{ 'Latest punches (Realtime)' | translate }}</h5>
           </div>
-          <a routerLink="/company/timestamp-log" class="dpu-dash-link">ดูทั้งหมด</a>
+          <a routerLink="/company/timestamp-log" class="dpu-dash-link">{{ 'View all' | translate }}</a>
         </div>
         <div class="box-body !p-0">
           <app-empty-state
             *ngIf="!stats.recentActivity?.length"
             icon="ri-time-line"
-            message="ยังไม่มีกิจกรรมล่าสุด">
+            message="No recent activity">
           </app-empty-state>
           <ul class="dpu-live-feed" *ngIf="stats.recentActivity?.length">
             @for (activity of stats.recentActivity; track activity.timestampId || $index) {
@@ -163,12 +167,12 @@
                     <time>{{ activity.timestamp | date:'HH:mm:ss' }}</time>
                   </div>
                   <div class="dpu-live-meta">
-                    <span *ngIf="activity.employeeId">รหัส {{ activity.employeeId }} · </span>
-                    {{ activity.locationName || (isInArea(activity) ? 'ในพื้นที่' : 'นอกพื้นที่') }}
+                    <span *ngIf="activity.employeeId">{{ 'ID' | translate }} {{ activity.employeeId }} · </span>
+                    {{ activity.locationName || ((isInArea(activity) ? 'In area' : 'Out of area') | translate) }}
                   </div>
                   <div class="dpu-live-tags">
                     <span class="badge" [ngClass]="isInArea(activity) ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
-                      {{ isInArea(activity) ? 'ในพื้นที่' : 'นอกพื้นที่' }}
+                      {{ (isInArea(activity) ? 'In area' : 'Out of area') | translate }}
                     </span>
                     <span class="badge bg-warning/10 text-warning" *ngIf="activity.approvalStatus === 'PENDING'">PENDING</span>
                   </div>

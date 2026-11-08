@@ -1,7 +1,7 @@
 <app-page-header
-  [title]="'อนุมัติการลงเวลา'"
+  [title]="'Approve attendance'"
   [activeTitle]="'Manage companies'"
-  [title1]="'อนุมัติการลงเวลานอกพื้นที่'">
+  [title1]="'Approve out-of-area punches'">
 </app-page-header>
 
 <div class="warn-page grid grid-cols-12 gap-x-6 gap-y-4">
@@ -11,9 +11,9 @@
       <div class="box-header warn-toolbar-header">
         <div class="warn-toolbar-inner">
           <div class="warn-toolbar-title">
-            <div class="box-title !mb-0">คิวอนุมัติลงเวลานอกพื้นที่</div>
-            <span class="warn-stat-chip warn-stat-chip--alert">รออนุมัติ {{ pendingCount }}</span>
-            <span class="warn-stat-chip warn-stat-chip--soft" *ngIf="searchTerm">พบ {{ shownCount }}</span>
+            <div class="box-title !mb-0">{{ 'Out-of-area approval queue' | translate }}</div>
+            <span class="warn-stat-chip warn-stat-chip--alert">{{ 'Pending approval' | translate }} {{ pendingCount }}</span>
+            <span class="warn-stat-chip warn-stat-chip--soft" *ngIf="searchTerm">{{ 'Found' | translate }} {{ shownCount }}</span>
           </div>
 
           <div class="warn-toolbar-controls">
@@ -23,14 +23,14 @@
                 class="form-control warn-search-input"
                 type="search"
                 [(ngModel)]="searchTerm"
-                placeholder="ค้นหาชื่อ รหัส แผนก สถานที่ หมายเหตุ..."
-                aria-label="ค้นหารายการรออนุมัติ">
+                placeholder="{{'Search name ID dept location note...' | translate}}"
+                [attr.aria-label]="'Search pending approvals' | translate">
               <button
                 *ngIf="searchTerm"
                 type="button"
                 class="warn-search-clear"
                 (click)="clearSearch()"
-                title="ล้างคำค้น">
+                [attr.title]="'Clear query' | translate">
                 <i class="ri-close-line"></i>
               </button>
             </div>
@@ -52,22 +52,22 @@
   <div class="col-span-12 xl:col-span-5">
     <div class="box warn-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
       <div class="box-header warn-panel-header">
-        <div class="box-title !mb-0">รายการรอตรวจ</div>
-        <span class="warn-muted-count">{{ shownCount }} รายการ</span>
+        <div class="box-title !mb-0">{{ 'Pending review list' | translate }}</div>
+        <span class="warn-muted-count">{{ shownCount }} {{ 'items' | translate }}</span>
       </div>
 
       <div class="box-body warn-list-body">
         <div *ngIf="loading" class="warn-empty">
           <span class="ti-spinner animation-spin warn-empty-spinner" role="status"></span>
-          <p>กำลังโหลดคิวอนุมัติ...</p>
+          <p>{{ 'Loading approval queue...' | translate }}</p>
         </div>
 
         <div *ngIf="!loading && filteredItems.length === 0" class="warn-empty">
           <i class="ri-checkbox-circle-line warn-empty-icon"></i>
-          <p *ngIf="!searchTerm">ไม่มีรายการรออนุมัติ</p>
-          <p *ngIf="searchTerm">ไม่พบผลลัพธ์สำหรับ “{{ searchTerm }}”</p>
+          <p *ngIf="!searchTerm">{{ 'No pending approvals' | translate }}</p>
+          <p *ngIf="searchTerm">{{ 'No results for' | translate }} “{{ searchTerm }}”</p>
           <button *ngIf="searchTerm" type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearSearch()">
-            ล้างการค้นหา
+            {{ 'Clear search' | translate }}
           </button>
         </div>
 
@@ -110,7 +110,7 @@
       class="box warn-detail-panel modern-card glass warn-detail-placeholder animate-in fade-in duration-500">
       <div class="warn-empty">
         <i class="ri-map-pin-user-line warn-empty-icon"></i>
-        <p>เลือกรายการจากคิวเพื่อดูรายละเอียด แผนที่ และอนุมัติ</p>
+        <p>{{ 'Select a queue item to review map and approve' | translate }}</p>
       </div>
     </div>
 
@@ -120,7 +120,7 @@
       <div class="box-header warn-panel-header">
         <div>
           <div class="box-title !mb-0">{{ 'Attendance details' | translate }}</div>
-          <p class="warn-panel-sub mb-0">นอกพื้นที่ / รออนุมัติ</p>
+          <p class="warn-panel-sub mb-0">{{ 'Out of area / pending' | translate }}</p>
         </div>
         <span class="warn-status-pill">
           <i class="ri-error-warning-line"></i>
@@ -163,7 +163,7 @@
                 <dd class="warn-coords">
                   {{ item.latitude }}, {{ item.longitude }}
                   <a class="warn-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
-                    เปิดใน Maps <i class="ri-external-link-line"></i>
+                    {{ 'Open in Maps' | translate }} <i class="ri-external-link-line"></i>
                   </a>
                 </dd>
               </div>
@@ -180,7 +180,7 @@
                 [disabled]="actionBusy"
                 (click)="approve(item)">
                 <i class="ri-check-line"></i>
-                อนุมัติ
+                {{ 'Approve' | translate }}
               </button>
               <button
                 type="button"
@@ -188,7 +188,7 @@
                 [disabled]="actionBusy"
                 (click)="reject(item)">
                 <i class="ri-close-line"></i>
-                ปฏิเสธ
+                {{ 'Reject' | translate }}
               </button>
             </div>
           </div>
@@ -196,7 +196,7 @@
 
         <div class="warn-map-block">
           <div class="warn-map-caption">
-            <span><i class="ri-map-pin-2-fill"></i> ตำแหน่งที่ลงเวลา</span>
+            <span><i class="ri-map-pin-2-fill"></i> {{ 'Punch location' | translate }}</span>
             <span class="warn-map-coords">{{ mapLat | number:'1.5-5' }}, {{ mapLng | number:'1.5-5' }}</span>
           </div>
           <div class="warn-map-frame">

@@ -56,7 +56,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
             snapPerm.permissions.includes('system.admin') ||
             this.permissions.isSystemAdmin();
           if (!ok) {
-            this.router.navigate(['/auth/login']);
+            this.router.navigate(['/error/403']);
           }
           return ok;
         }),
@@ -72,7 +72,7 @@ export class RoleGuard implements CanActivate, CanActivateChild {
         map(() => {
           const ok = this.permissions.has(requiredPerm);
           if (!ok) {
-            this.router.navigate(['/company/dashboard']);
+            this.router.navigate(['/error/403']);
           }
           return ok;
         }),

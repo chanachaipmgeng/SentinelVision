@@ -6,22 +6,53 @@ import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampService } from '../../services/timestamp.service';
 import { ApprovalInboxItem, ApprovalService } from '../../services/approval.service';
+import { KpiGridComponent, KpiItem } from '../../../shared/components/kpi-grid/kpi-grid.component';
+import { SavedViewsBarComponent } from '../../../shared/components/saved-views-bar/saved-views-bar.component';
+import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
 import swal from 'sweetalert';
+
+interface ApprovalInboxViewFilters {
+  q: string;
+  kind: string;
+}
+
+const KIND_ICONS: Record<string, string> = {
+  LEAVE: 'ri-calendar-event-line',
+  TIMESTAMP: 'ri-map-pin-warning-line',
+  REGULARIZATION: 'ri-time-line',
+  OT: 'ri-timer-flash-line',
+};
 
 @Component({
   selector: 'app-approval-inbox',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, RouterModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SharedModule,
+    RouterModule,
+    KpiGridComponent,
+    SavedViewsBarComponent,
+    SideDrawerComponent,
+    SkeletonLoaderComponent,
+  ],
   templateUrl: './approval-inbox.component.html',
-  styleUrls: ['./approval-inbox.component.css'],
+  styleUrls: ['./approval-inbox.component.css', '../../../shared/styles/dpu-filter-toolbar.css'],
   encapsulation: ViewEncapsulation.None,
 })
 export class ApprovalInboxComponent implements OnInit {
+  readonly kinds = ['LEAVE', 'TIMESTAMP', 'REGULARIZATION', 'OT'];
+
   companyId = '';
   loading = false;
   actionBusy = false;
+  drawerOpen = false;
   items: ApprovalInboxItem[] = [];
   selected?: ApprovalInboxItem;
+  kindFilter = '';
+  kpis: KpiItem[] = [];
+  savedFilters: ApprovalInboxViewFilters = { q: '', kind: '' };
   private _searchTerm = '';
 
   get searchTerm(): string {
@@ -44,6 +75,7 @@ export class ApprovalInboxComponent implements OnInit {
     private token: TokenService
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
+    this.kpis = this.buildKpis();
   }
 
   ngOnInit(): void {
@@ -69,21 +101,36 @@ export class ApprovalInboxComponent implements OnInit {
 
   applyFilter(preferKey?: string): void {
     const q = (this._searchTerm || '').trim().toLowerCase();
-    this.filtered = !q
-      ? [...this.items]
-      : this.items.filter((x) => this.haystack(x).includes(q));
-    if (!this.filtered.length) {
-      this.selected = undefined;
-      return;
-    }
-    const preferred =
-      (preferKey && this.filtered.find((x) => this.selectedKey(x) === preferKey)) ||
-      (this.selected && this.filtered.find((x) => this.selectedKey(x) === this.selectedKey(this.selected)));
-    this.selected = preferred || this.filtered[0];
+    const kind = this.kindFilter;
+    this.filtered = this.items.filter(
+      (x) => (!kind || x.kind === kind) && (!q || this.haystack(x).includes(q))
+    );
+    this.kpis = this.buildKpis();
+    this.savedFilters = { q: this._searchTerm || '', kind };
+    const key = preferKey || this.selectedKey(this.selected);
+    this.selected = key ? this.filtered.find((x) => this.selectedKey(x) === key) : undefined;
+    if (!this.selected) this.drawerOpen = false;
   }
 
   select(item: ApprovalInboxItem): void {
     this.selected = item;
+    this.drawerOpen = true;
+  }
+
+  setKind(kind: string): void {
+    this.kindFilter = kind || '';
+    this.applyFilter();
+  }
+
+  onKpiClick(key: string): void {
+    this.setKind(key === 'ALL' || key === this.kindFilter ? '' : key);
+  }
+
+  applySavedView(filters: Partial<ApprovalInboxViewFilters> | null): void {
+    if (!filters) return;
+    this.kindFilter = filters.kind || '';
+    this._searchTerm = filters.q || '';
+    this.applyFilter();
   }
 
   isSelected(item: ApprovalInboxItem): boolean {
@@ -166,6 +213,28 @@ export class ApprovalInboxComponent implements OnInit {
 
   itemDelay(i: number): number {
     return Math.min(i, 8) * 40;
+  }
+
+  private buildKpis(): KpiItem[] {
+    const count = (kind: string) => this.items.filter((x) => x.kind === kind).length;
+    return [
+      {
+        key: 'ALL',
+        label: 'listKit.approvalInbox.kpiAll',
+        value: this.items.length,
+        icon: 'ri-inbox-line',
+        tone: 'brand',
+      },
+      ...this.kinds.map(
+        (kind): KpiItem => ({
+          key: kind,
+          label: `listKit.approvalInbox.kind.${kind}`,
+          value: count(kind),
+          icon: KIND_ICONS[kind],
+          tone: count(kind) ? 'warning' : 'muted',
+        })
+      ),
+    ];
   }
 
   private selectedKey(item?: ApprovalInboxItem): string {

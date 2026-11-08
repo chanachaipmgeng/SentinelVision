@@ -53,50 +53,7 @@
   gap: 0.5rem;
 }
 
-.inbox-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: min(100%, 16rem);
-}
-
-.inbox-search i {
-  position: absolute;
-  left: 0.7rem;
-  color: var(--dpu-muted, #64748b);
-}
-
-.inbox-search input {
-  width: 100%;
-  padding: 0.55rem 2rem 0.55rem 2rem;
-  border: 1px solid var(--dpu-border, #e2e8f0);
-  border-radius: var(--dpu-radius-sm, 10px);
-  background: #fff;
-}
-
-.inbox-search-clear {
-  position: absolute;
-  right: 0.35rem;
-  border: 0;
-  background: transparent;
-  color: var(--dpu-muted, #64748b);
-}
-
-.inbox-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--inbox-gap);
-}
-
-@media (min-width: 900px) {
-  .inbox-layout {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-    align-items: start;
-  }
-}
-
-.inbox-list,
-.inbox-detail {
+.inbox-list {
   padding: 0.85rem;
   min-height: 18rem;
   animation: inbox-rise 520ms ease both;
@@ -232,5 +189,53 @@
 @keyframes inbox-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.inbox-card {
+  align-items: center;
+}
+
+.inbox-card-body {
+  flex: 1 1 auto;
+}
+
+.inbox-card-chevron {
+  flex-shrink: 0;
+  color: var(--dpu-muted);
+  font-size: 1.2rem;
+}
+
+@media (min-width: 1024px) {
+  .inbox-queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+  }
+}
+
+/* Drawer content is re-parented to <body>; keep selectors free of page ancestors. */
+.inbox-drawer .inbox-meta {
+  margin-bottom: 0;
+}
+
+.inbox-note {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inbox-actions[drawerFooter] {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+@media (max-width: 639.98px) {
+  .inbox-actions[drawerFooter] > .ti-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
+  .inbox-meta > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
   }
 }

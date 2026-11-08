@@ -44,6 +44,8 @@ class Settings(BaseSettings):
 
     # Soft dedupe: skip creating another timestamp for same employee within this window (0 = off)
     CHECK_IN_DEDUPE_SECONDS: int = 300
+    # F1: open sentinel incident dedupe window (same company/identity/eventType/zone)
+    SENTINEL_INCIDENT_DEDUPE_SECONDS: int = 300
 
     # Phase-3 GPU queue: parallel InsightFace workers (1 recommended for single GPU)
     FACE_GPU_WORKERS: int = 1
@@ -183,6 +185,8 @@ class Settings(BaseSettings):
     # Phase-5 Cloud Storage (Local / S3 / MinIO)
     STORAGE_BACKEND: str = "local"
     IMAGE_RETENTION_DAYS: int = 90
+    # Global fallback for incident_* evidence; primary policy is PDPA incidentSnapshotDays.
+    INCIDENT_SNAPSHOT_RETENTION_DAYS: int = 90
     TEMP_RETENTION_HOURS: int = 24
     UPLOAD_MAX_BYTES: int = 8 * 1024 * 1024
     S3_ENDPOINT_URL: str = ""

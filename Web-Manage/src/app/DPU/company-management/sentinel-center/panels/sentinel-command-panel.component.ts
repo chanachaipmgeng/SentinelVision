@@ -20,6 +20,7 @@ export class SentinelCommandPanelComponent implements OnInit {
   events: any[] = [];
   incidents: any[] = [];
   incidentFilterSeverity = '';
+  incidentFilterStatus = '';
   scanSelectedFile: File | null = null;
   lastScanResult: any = null;
   isScanning = false;
@@ -46,7 +47,11 @@ export class SentinelCommandPanelComponent implements OnInit {
 
   loadIncidents(): void {
     this.api
-      .getIncidents(this.companyId, this.incidentFilterSeverity || undefined)
+      .getIncidents(
+        this.companyId,
+        this.incidentFilterSeverity || undefined,
+        this.incidentFilterStatus || undefined
+      )
       .subscribe((rows) => (this.incidents = rows || []));
   }
 
@@ -91,5 +96,31 @@ export class SentinelCommandPanelComponent implements OnInit {
         this.overviewChanged.emit();
       },
     });
+  }
+
+  assignIncident(incidentId: string): void {
+    this.api.assignIncident(this.companyId, incidentId).subscribe({
+      next: () => {
+        this.toast.emit('มอบหมายเหตุการณ์แล้ว');
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+    });
+  }
+
+  closeIncident(incidentId: string): void {
+    this.api.closeIncident(this.companyId, incidentId).subscribe({
+      next: () => {
+        this.toast.emit('ปิดเหตุการณ์แล้ว');
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+    });
+  }
+
+  /** True when the incident is still actionable (not CLOSED). */
+  canActOnIncident(inc: any): boolean {
+    const st = (inc?.status || 'OPEN').toUpperCase();
+    return st !== 'CLOSED';
   }
 }

@@ -142,10 +142,17 @@ class SentinelIncidentLog(Base):
     distance = Column("distance", Float, nullable=True)
     snapshotUrl = Column("snapshot_url", String(255), nullable=True)
     actionTaken = Column("action_taken", String(255), nullable=True)
+    status = Column("status", String(20), nullable=False, default="OPEN", server_default="OPEN")
     acknowledgedBy = Column("acknowledged_by", UUID(as_uuid=True), nullable=True)
     acknowledgedAt = Column("acknowledged_at", DateTime(timezone=True), nullable=True)
+    assignedTo = Column("assigned_to", UUID(as_uuid=True), nullable=True)
+    assignedAt = Column("assigned_at", DateTime(timezone=True), nullable=True)
+    closedBy = Column("closed_by", UUID(as_uuid=True), nullable=True)
+    closedAt = Column("closed_at", DateTime(timezone=True), nullable=True)
+    dedupeKey = Column("dedupe_key", String(180), nullable=True)
     occurredAt = Column("occurred_at", DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("sentinel_incident_company_occurred_idx", "companyId", occurredAt.desc()),
+        Index("sentinel_incident_dedupe_open_idx", "companyId", "dedupe_key", "status", occurredAt.desc()),
     )

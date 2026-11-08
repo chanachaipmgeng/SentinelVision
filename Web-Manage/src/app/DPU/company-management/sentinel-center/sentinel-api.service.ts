@@ -61,13 +61,32 @@ export class SentinelApiService {
     return this.http.delete(`${this.base(companyId)}/events/${eventId}`);
   }
 
-  getIncidents(companyId: string, severity?: string): Observable<any[]> {
-    const q = severity ? `?severity=${severity}` : '';
+  getIncidents(
+    companyId: string,
+    severity?: string,
+    status?: string
+  ): Observable<any[]> {
+    const params: string[] = [];
+    if (severity) params.push(`severity=${encodeURIComponent(severity)}`);
+    if (status) params.push(`status=${encodeURIComponent(status)}`);
+    const q = params.length ? `?${params.join('&')}` : '';
     return this.http.get<any[]>(`${this.base(companyId)}/incidents${q}`);
   }
 
   acknowledgeIncident(companyId: string, incidentId: string): Observable<any> {
     return this.http.post(`${this.base(companyId)}/incidents/${incidentId}/acknowledge`, {});
+  }
+
+  assignIncident(
+    companyId: string,
+    incidentId: string,
+    body: { assignedTo?: string } = {}
+  ): Observable<any> {
+    return this.http.post(`${this.base(companyId)}/incidents/${incidentId}/assign`, body);
+  }
+
+  closeIncident(companyId: string, incidentId: string): Observable<any> {
+    return this.http.post(`${this.base(companyId)}/incidents/${incidentId}/close`, {});
   }
 
   getEdgeSync(companyId: string): Observable<any> {

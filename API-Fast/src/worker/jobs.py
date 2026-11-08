@@ -31,7 +31,7 @@ async def run_retention_tick() -> Dict[str, Any]:
 
     from ..config.database import async_session
     from ..models.company import Company
-    from ..routes.sentinel_routes import expire_sentinel_identities_tick
+    from ..services.sentinel_identity_service import expire_sentinel_identities_tick
     from ..services.import_job_service import fail_stale_running_jobs, purge_finished_import_payloads
     from ..services.pdpa_service import company_retention_tick
     from ..services.storage_service import retention_tick

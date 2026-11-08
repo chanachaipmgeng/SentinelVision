@@ -120,12 +120,19 @@
                     บันทึกทุกเหตุการณ์ Blacklist, VIP, ประตู Access Control และการเช็คอินงานอีเวนต์
                   </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <select class="form-control !py-1 !text-xs !w-auto" [(ngModel)]="incidentFilterSeverity" (change)="loadIncidents()">
                     <option value="">ทุกระดับความสำคัญ</option>
                     <option value="CRITICAL">CRITICAL (ฉุกเฉิน/Blacklist)</option>
                     <option value="WARNING">WARNING (ปฏิเสธสิทธิ์)</option>
                     <option value="INFO">INFO (ผ่านปกติ/VIP)</option>
+                  </select>
+                  <select class="form-control !py-1 !text-xs !w-auto" [(ngModel)]="incidentFilterStatus" (change)="loadIncidents()">
+                    <option value="">ทุกสถานะ</option>
+                    <option value="OPEN">OPEN (เปิดใหม่)</option>
+                    <option value="ACKNOWLEDGED">ACKNOWLEDGED (รับทราบ)</option>
+                    <option value="ASSIGNED">ASSIGNED (มอบหมายแล้ว)</option>
+                    <option value="CLOSED">CLOSED (ปิดแล้ว)</option>
                   </select>
                 </div>
               </div>
@@ -175,17 +182,50 @@
                       </td>
                       <td class="p-3">{{ inc.occurredAt | date:'dd/MM HH:mm:ss' }}</td>
                       <td class="p-3 text-end">
-                        <button
-                          *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
-                          type="button"
-                          class="ti-btn ti-btn-sm ti-btn-primary-full"
-                          (click)="acknowledgeIncident(inc.incidentId)"
-                        >
-                          รับทราบเหตุ
-                        </button>
-                        <span *ngIf="inc.acknowledgedAt" class="text-[0.7rem] text-emerald-700 font-semibold">
-                          รับทราบแล้ว
-                        </span>
+                        <div class="flex flex-col items-end gap-1">
+                          <span
+                            class="text-[0.65rem] font-semibold uppercase tracking-wide"
+                            [ngClass]="
+                              inc.status === 'CLOSED'
+                                ? 'text-slate-500'
+                                : inc.status === 'ASSIGNED'
+                                ? 'text-sky-700'
+                                : inc.status === 'ACKNOWLEDGED'
+                                ? 'text-emerald-700'
+                                : 'text-amber-700'
+                            "
+                          >
+                            {{ inc.status || 'OPEN' }}
+                          </span>
+                          <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)">
+                            <button
+                              *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
+                              type="button"
+                              class="ti-btn ti-btn-sm ti-btn-primary-full"
+                              (click)="acknowledgeIncident(inc.incidentId)"
+                            >
+                              รับทราบ
+                            </button>
+                            <button
+                              *ngIf="inc.status !== 'ASSIGNED'"
+                              type="button"
+                              class="ti-btn ti-btn-sm ti-btn-outline-primary"
+                              (click)="assignIncident(inc.incidentId)"
+                            >
+                              มอบหมาย
+                            </button>
+                            <button
+                              type="button"
+                              class="ti-btn ti-btn-sm ti-btn-outline-secondary"
+                              (click)="closeIncident(inc.incidentId)"
+                            >
+                              ปิดเหตุ
+                            </button>
+                          </div>
+                          <span *ngIf="!canActOnIncident(inc)" class="text-[0.7rem] text-slate-500 font-semibold">
+                            ปิดแล้ว
+                          </span>
+                        </div>
                       </td>
                     </tr>
                     <tr *ngIf="incidents.length === 0">

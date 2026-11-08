@@ -139,9 +139,12 @@ async def test_blacklist_hit_enqueues_incident_and_notification_outbox():
     )
     db = AsyncMock()
     db.add = MagicMock()
-    with patch.object(
-        sentinel_routes,
-        "search_sentinel_identity_pgvector",
+    # record_incident queries for an open dedupe match before insert.
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+    )
+    with patch(
+        "src.services.sentinel_incident_service.search_sentinel_identity_pgvector",
         AsyncMock(return_value=(ident, 0.11)),
     ):
         meta = await sentinel_routes.evaluate_kiosk_sentinel_match(db, COMPANY_ID, ENCODING, 0.4)

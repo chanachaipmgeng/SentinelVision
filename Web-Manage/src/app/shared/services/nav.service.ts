@@ -397,6 +397,14 @@ export class NavService implements OnDestroy {
         type: 'link',
         moduleId: 'GOVERNANCE',
       },
+      {
+        icon: 'cog',
+        path: '/company/settings',
+        title: 'settingsHub.navTitle',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+        permission: 'company.settings',
+      },
     ];
   }
 

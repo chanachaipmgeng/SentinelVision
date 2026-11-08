@@ -1,0 +1,150 @@
+.sv-log-row {
+  cursor: pointer;
+  transition: background var(--dpu-duration) var(--dpu-ease);
+}
+
+.sv-log-row:hover,
+.sv-log-row.is-selected {
+  background: var(--dpu-brand-soft);
+}
+
+.sv-log-row:focus-visible {
+  outline: 2px solid var(--dpu-brand);
+  outline-offset: -2px;
+}
+
+.sv-incident {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sv-incident__snapshot {
+  margin: 0;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--dpu-radius);
+  overflow: hidden;
+  border: 1px solid var(--dpu-border);
+  background: var(--dpu-surface);
+}
+
+.sv-incident__snapshot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sv-incident__nosnap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--dpu-muted);
+  font-size: 0.8rem;
+}
+
+.sv-incident__nosnap i {
+  font-size: 2rem;
+}
+
+.sv-incident__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sv-incident__name {
+  margin: 0 auto 0 0;
+  font-family: var(--dpu-font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--dpu-ink);
+}
+
+.sv-incident__pill {
+  --tone: var(--dpu-muted);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+}
+
+.sv-incident__pill[data-tone='critical'] {
+  --tone: var(--dpu-danger);
+}
+
+.sv-incident__pill[data-tone='warning'],
+.sv-incident__pill[data-tone='status-open'] {
+  --tone: var(--dpu-warning);
+}
+
+.sv-incident__pill[data-tone='info'],
+.sv-incident__pill[data-tone='status-acknowledged'] {
+  --tone: var(--dpu-success);
+}
+
+.sv-incident__pill[data-tone='status-assigned'] {
+  --tone: var(--dpu-brand);
+}
+
+.sv-incident__facts {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.sv-incident__facts > div {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.5rem;
+}
+
+.sv-incident__facts dt {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--dpu-muted);
+}
+
+.sv-incident__facts dd {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--dpu-ink);
+  word-break: break-word;
+}
+
+.sv-incident__link {
+  display: inline-block;
+  margin-inline-start: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dpu-brand);
+}
+
+.sv-incident__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (max-width: 639.98px) {
+  .sv-incident__facts > div {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .sv-incident__actions > .ti-btn {
+    flex: 1 1 0;
+  }
+}

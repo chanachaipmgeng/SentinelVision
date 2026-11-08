@@ -136,7 +136,8 @@ async def expire_sentinel_identities_tick() -> dict:
                     SentinelIdentity.deletedAt.is_(None),
                     SentinelIdentity.status == "ACTIVE",
                     SentinelIdentity.expiresAt.is_not(None),
-                    SentinelIdentity.expiresAt < now,
+                    # Legacy Column[]: mypy treats ``< datetime`` as bool, not SQL clause.
+                    SentinelIdentity.expiresAt < now,  # type: ignore[arg-type]
                 )
             )
         ).scalars().all()

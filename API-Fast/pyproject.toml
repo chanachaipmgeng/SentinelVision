@@ -29,6 +29,7 @@ ignore = [
 "tests/test_face_ws_auth_gating.py" = ["E402"]
 "tests/test_company_module_config.py" = ["E402"]
 "tests/test_kiosk_blacklist_exposure.py" = ["E402"]
+"tests/test_sentinel_search_gate.py" = ["E402"]
 # DB-backed test modules skip at import time (`pytest.skip(allow_module_level=True)`) before importing src.
 "tests/test_authz_matrix.py" = ["E402"]
 "tests/test_punch_shift_export.py" = ["E402"]
@@ -38,6 +39,7 @@ ignore = [
 "tests/test_outbox_claiming.py" = ["E402"]
 "tests/test_tenant_isolation.py" = ["E402"]
 "tests/test_alembic_schema.py" = ["E402"]
+"tests/test_sentinel_muster.py" = ["E402"]
 "tests/test_app_startup.py" = ["E402"]
 # Re-exports.
 "src/models/__init__.py" = ["F401"]
@@ -88,6 +90,8 @@ module = [
     "src.routes.member_routes",
     "src.routes.notification_routes",
     "src.routes.sentinel_routes",
+    # F1: SQLAlchemy legacy Column[] on incident lifecycle / scan decision writes.
+    "src.services.sentinel_incident_service",
     "src.security.deps",
     "src.security.middleware",
     "src.security.oidc",

@@ -22,6 +22,11 @@ ROOTS = {
     "temp_images": Path("temp_images"),
 }
 
+# Evidence retention kinds (D4). Punch photos and incident snapshots must not share policy.
+EVIDENCE_KIND_PUNCH_PHOTO = "punch_photo"
+EVIDENCE_KIND_INCIDENT_SNAPSHOT = "incident_snapshot"
+INCIDENT_SNAPSHOT_PREFIX = "incident_"
+
 
 def ensure_dirs() -> None:
     """Create the image roots and make sure the (non-root) API user can write to them.
@@ -314,7 +319,13 @@ def delete_stored_image(folder: str, filename: str) -> bool:
     return removed
 
 
-def purge_older_than(folder: str, max_age_seconds: int) -> int:
+def purge_older_than(
+    folder: str,
+    max_age_seconds: int,
+    *,
+    exclude_prefixes: tuple[str, ...] = (),
+    include_prefixes: tuple[str, ...] | None = None,
+) -> int:
     root = ROOTS[folder]
     if not root.exists():
         return 0
@@ -322,12 +333,42 @@ def purge_older_than(folder: str, max_age_seconds: int) -> int:
     removed = 0
     for path in root.iterdir():
         try:
-            if path.is_file() and path.stat().st_mtime < cutoff:
-                path.unlink()
-                removed += 1
+            if not path.is_file() or path.stat().st_mtime >= cutoff:
+                continue
+            name = path.name
+            if exclude_prefixes and name.startswith(exclude_prefixes):
+                continue
+            if include_prefixes is not None and not name.startswith(include_prefixes):
+                continue
+            path.unlink()
+            removed += 1
         except OSError:
             continue
     return removed
+
+
+def store_evidence_image(
+    kind: str,
+    filename: str,
+    source_path: str | Path,
+    *,
+    move: bool = False,
+    content_type: str = "image/jpeg",
+) -> str:
+    """Store evidence under a retention kind. Incident snapshots keep a distinct prefix
+    so global punch-photo retention never deletes them (D4 ``incidentSnapshotDays`` owns them).
+    """
+    safe_name = Path(filename).name
+    if kind == EVIDENCE_KIND_INCIDENT_SNAPSHOT:
+        if not safe_name.startswith(INCIDENT_SNAPSHOT_PREFIX):
+            safe_name = f"{INCIDENT_SNAPSHOT_PREFIX}{safe_name}"
+        return store_image_file(
+            "uploaded_images", safe_name, source_path, move=move, content_type=content_type
+        )
+    # Default / punch_photo
+    return store_image_file(
+        "uploaded_images", safe_name, source_path, move=move, content_type=content_type
+    )
 
 
 def retention_tick() -> dict:
@@ -335,13 +376,36 @@ def retention_tick() -> dict:
     if backend not in {"local", "s3"}:
         raise RuntimeError(f"Unknown STORAGE_BACKEND {settings.STORAGE_BACKEND}")
     temp = purge_older_than("temp_images", int(settings.TEMP_RETENTION_HOURS) * 3600)
-    punches = purge_older_than("uploaded_images", int(settings.IMAGE_RETENTION_DAYS) * 86400)
+    # Punch photos only — never share policy with incident_snapshot evidence.
+    punches = purge_older_than(
+        "uploaded_images",
+        int(settings.IMAGE_RETENTION_DAYS) * 86400,
+        exclude_prefixes=(INCIDENT_SNAPSHOT_PREFIX,),
+    )
+    # Global fallback for orphaned incident_* files (primary path is PDPA company_retention_tick).
+    incident_days = int(
+        getattr(settings, "INCIDENT_SNAPSHOT_RETENTION_DAYS", None)
+        or getattr(settings, "IMAGE_RETENTION_DAYS", 90)
+        or 90
+    )
+    incidents = 0
+    if incident_days > 0:
+        incidents = purge_older_than(
+            "uploaded_images",
+            incident_days * 86400,
+            include_prefixes=(INCIDENT_SNAPSHOT_PREFIX,),
+        )
     return {
         "backend": backend,
         "s3Configured": is_s3_enabled(),
         "s3Bucket": settings.S3_BUCKET if is_s3_enabled() else None,
         "tempRemoved": temp,
         "uploadsRemoved": punches,
+        "incidentSnapshotsRemoved": incidents,
+        "evidenceKinds": {
+            EVIDENCE_KIND_PUNCH_PHOTO: "uploaded_images (non-incident_*)",
+            EVIDENCE_KIND_INCIDENT_SNAPSHOT: f"uploaded_images ({INCIDENT_SNAPSHOT_PREFIX}*)",
+        },
     }
 
 

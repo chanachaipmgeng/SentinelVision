@@ -34,6 +34,33 @@ UPLOAD_DIR = Path("./uploaded_images")
 # sentinel_incident_log + notification_outbox in evaluate_kiosk_sentinel_match.
 KIOSK_ACCESS_DENIED_MESSAGE = "ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่"
 
+# F3: second pgvector (sentinel identity) only for Scan Hub / sentinel stations.
+# Canonical module names plus station-mode aliases used by the kiosk.
+_SENTINEL_SEARCH_MODES = frozenset(
+    {
+        "WATCHLIST",
+        "WATCHLIST_MONITOR",
+        "ACCESS_CONTROL",
+        "VISITOR",
+        "VISITOR_CHECKIN",
+        "EVENTS",
+        "EVENT_CHECKIN",
+        "COMMAND",
+    }
+)
+
+
+def should_run_sentinel_search(station_mode: Optional[str]) -> bool:
+    """True when the kiosk face path should call ``evaluate_kiosk_sentinel_match``.
+
+    Missing / blank / ``ATTENDANCE`` / ``UNIFIED_HYBRID`` → skip (no second search).
+    ``/sentinel/.../scan`` and zone triggers always run sentinel elsewhere.
+    """
+    mode = str(station_mode or "").strip().upper()
+    if not mode:
+        return False
+    return mode in _SENTINEL_SEARCH_MODES
+
 
 def kiosk_access_denied() -> HTTPException:
     """Generic 403 for kiosk-facing responses; carries no identity or list-type fields."""
@@ -402,13 +429,15 @@ async def _resolve_match_response(
     *,
     liveness_passed: bool,
     companyId: Optional[UUID] = None,
+    stationMode: Optional[str] = None,
 ) -> dict:
     threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
     match = await _search_face_pgvector(
         db, target_encoding, threshold=threshold, companyId=companyId
     )
     sentinel_meta: Optional[dict] = None
-    if companyId is not None:
+    # F3 search gate: pure ATTENDANCE / timestamp-face skips the second pgvector hit.
+    if companyId is not None and should_run_sentinel_search(stationMode):
         try:
             from ..routes.sentinel_routes import evaluate_kiosk_sentinel_match
 
@@ -555,6 +584,7 @@ async def identify_face(
     db: AsyncSession,
     *,
     pre_cropped: bool = False,
+    station_mode: Optional[str] = None,
 ):
     """Fast 1:N identify within company from a single frame (no liveness).
 
@@ -595,6 +625,7 @@ async def identify_face(
             target_encoding,
             liveness_passed=False,
             companyId=companyId,
+            stationMode=station_mode,
         )
     except HTTPException:
         raise
@@ -687,6 +718,7 @@ async def _finalize_check_in(
     target_encoding: Optional[List[float]] = None,
     match_payload: Optional[dict] = None,
     punch_type: Optional[str] = None,
+    station_mode: Optional[str] = None,
 ) -> dict:
     if match_payload is None:
         if target_encoding is None:
@@ -696,6 +728,7 @@ async def _finalize_check_in(
             target_encoding,
             liveness_passed=liveness_passed,
             companyId=companyId,
+            stationMode=station_mode,
         )
 
     member_id = UUID(match_payload["memberId"])
@@ -921,6 +954,7 @@ async def check_in_face(
     db: AsyncSession,
     note: Optional[str] = None,
     punch_type: Optional[str] = None,
+    station_mode: Optional[str] = None,
 ):
     """
     One-shot kiosk check-in: multi-frame liveness + match + save photo + timestamp.
@@ -950,6 +984,7 @@ async def check_in_face(
                 mode="secure",
                 default_note="Face kiosk auto check-in",
                 punch_type=punch_type,
+                station_mode=station_mode,
             )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
@@ -968,6 +1003,7 @@ async def check_in_face(
             mode="secure",
             default_note="Face kiosk auto check-in",
             punch_type=punch_type,
+            station_mode=station_mode,
         )
     except HTTPException:
         raise
@@ -989,6 +1025,7 @@ async def check_in_face_walkby(
     db: AsyncSession,
     note: Optional[str] = None,
     punch_type: Optional[str] = None,
+    station_mode: Optional[str] = None,
 ):
     """
     Walk-by check-in: 1–2 face crops, no motion liveness (faster multi-person pass).
@@ -1020,6 +1057,7 @@ async def check_in_face_walkby(
                 mode="walkby",
                 default_note="Face kiosk walk-by check-in",
                 punch_type=punch_type,
+                station_mode=station_mode,
             )
         target_encoding = await run_on_face_gpu(
             lambda ps=list(temp_image_paths): get_walkby_encoding(ps),
@@ -1038,6 +1076,7 @@ async def check_in_face_walkby(
             mode="walkby",
             default_note="Face kiosk walk-by check-in",
             punch_type=punch_type,
+            station_mode=station_mode,
         )
     except HTTPException:
         raise

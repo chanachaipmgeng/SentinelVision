@@ -12,7 +12,6 @@ from sqlalchemy.orm import selectinload
 
 from ..config.database import get_db
 from ..config.settings import settings
-from ..controllers.face_controller import clear_member_face_encodings
 from ..controllers import hr_controller
 from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding

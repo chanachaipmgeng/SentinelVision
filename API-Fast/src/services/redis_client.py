@@ -6,7 +6,7 @@ in-process memory (fine for single-replica / pytest).
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from ..config.settings import settings
 

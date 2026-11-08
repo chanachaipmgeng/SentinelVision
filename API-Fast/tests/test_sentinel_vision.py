@@ -110,6 +110,9 @@ def test_sentinel_serializers():
     s_inc = _serialize_incident(inc)
     assert s_inc["eventType"] == "BLACKLIST_ALERT"
     assert s_inc["confidencePercent"] == 96.4
+    assert s_inc["status"] == "OPEN"
+    assert s_inc.get("assignedTo") is None
+    assert s_inc.get("closedAt") is None
 
 
 

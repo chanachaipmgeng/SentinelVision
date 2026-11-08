@@ -20,10 +20,18 @@ export class SentinelCommandPanelComponent implements OnInit {
   events: any[] = [];
   incidents: any[] = [];
   incidentFilterSeverity = '';
+  incidentFilterStatus = '';
   scanSelectedFile: File | null = null;
   lastScanResult: any = null;
   isScanning = false;
   scanForm = defaultScanForm();
+
+  siemForm = {
+    siemWebhookUrl: '',
+    siemWebhookSecret: '',
+    hasSiemWebhookSecret: false,
+  };
+  siemSaving = false;
 
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -34,6 +42,53 @@ export class SentinelCommandPanelComponent implements OnInit {
     this.loadZones();
     this.loadEvents();
     this.loadIncidents();
+    this.loadSiemSettings();
+  }
+
+  loadSiemSettings(): void {
+    this.api.getSiemSettings(this.companyId).subscribe({
+      next: (s) => {
+        this.siemForm = {
+          siemWebhookUrl: s?.siemWebhookUrl || '',
+          siemWebhookSecret: '',
+          hasSiemWebhookSecret: !!s?.hasSiemWebhookSecret,
+        };
+      },
+    });
+  }
+
+  saveSiemSettings(): void {
+    this.siemSaving = true;
+    const body: Record<string, string> = {
+      siemWebhookUrl: this.siemForm.siemWebhookUrl || '',
+    };
+    if ((this.siemForm.siemWebhookSecret || '').trim()) {
+      body['siemWebhookSecret'] = this.siemForm.siemWebhookSecret.trim();
+    }
+    this.api.putSiemSettings(this.companyId, body).subscribe({
+      next: (s) => {
+        this.siemSaving = false;
+        this.siemForm.siemWebhookSecret = '';
+        this.siemForm.hasSiemWebhookSecret = !!s?.hasSiemWebhookSecret;
+        this.siemForm.siemWebhookUrl = s?.siemWebhookUrl || this.siemForm.siemWebhookUrl;
+        this.toast.emit('บันทึก SIEM export แล้ว');
+      },
+      error: () => {
+        this.siemSaving = false;
+        this.toast.emit('บันทึก SIEM ไม่สำเร็จ');
+      },
+    });
+  }
+
+  testSiemSettings(): void {
+    this.api.testSiemSettings(this.companyId).subscribe({
+      next: (res) => {
+        this.toast.emit(
+          res?.queued ? 'ส่ง SIEM test ping เข้า outbox แล้ว' : res?.reason || 'ยังไม่ได้ตั้งค่า webhook'
+        );
+      },
+      error: () => this.toast.emit('ทดสอบ SIEM ไม่สำเร็จ'),
+    });
   }
 
   loadZones(): void {
@@ -46,7 +101,11 @@ export class SentinelCommandPanelComponent implements OnInit {
 
   loadIncidents(): void {
     this.api
-      .getIncidents(this.companyId, this.incidentFilterSeverity || undefined)
+      .getIncidents(
+        this.companyId,
+        this.incidentFilterSeverity || undefined,
+        this.incidentFilterStatus || undefined
+      )
       .subscribe((rows) => (this.incidents = rows || []));
   }
 
@@ -91,5 +150,31 @@ export class SentinelCommandPanelComponent implements OnInit {
         this.overviewChanged.emit();
       },
     });
+  }
+
+  assignIncident(incidentId: string): void {
+    this.api.assignIncident(this.companyId, incidentId).subscribe({
+      next: () => {
+        this.toast.emit('มอบหมายเหตุการณ์แล้ว');
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+    });
+  }
+
+  closeIncident(incidentId: string): void {
+    this.api.closeIncident(this.companyId, incidentId).subscribe({
+      next: () => {
+        this.toast.emit('ปิดเหตุการณ์แล้ว');
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+    });
+  }
+
+  /** True when the incident is still actionable (not CLOSED). */
+  canActOnIncident(inc: any): boolean {
+    const st = (inc?.status || 'OPEN').toUpperCase();
+    return st !== 'CLOSED';
   }
 }

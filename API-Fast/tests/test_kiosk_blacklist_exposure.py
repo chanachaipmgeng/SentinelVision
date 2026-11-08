@@ -89,7 +89,13 @@ async def test_blacklist_hit_without_employee_match_returns_generic_denial():
         patch.object(sentinel_routes, "evaluate_kiosk_sentinel_match", AsyncMock(return_value=_blacklist_meta())),
     ):
         with pytest.raises(HTTPException) as exc:
-            await _resolve_match_response(db, ENCODING, liveness_passed=False, companyId=COMPANY_ID)
+            await _resolve_match_response(
+                db,
+                ENCODING,
+                liveness_passed=False,
+                companyId=COMPANY_ID,
+                stationMode="WATCHLIST",
+            )
     _assert_generic_denial(exc.value)
 
 
@@ -106,7 +112,13 @@ async def test_blacklist_hit_overrides_employee_match_and_leaks_nothing():
         patch.object(sentinel_routes, "evaluate_kiosk_sentinel_match", AsyncMock(return_value=_blacklist_meta())),
     ):
         with pytest.raises(HTTPException) as exc:
-            await _resolve_match_response(db, ENCODING, liveness_passed=True, companyId=COMPANY_ID)
+            await _resolve_match_response(
+                db,
+                ENCODING,
+                liveness_passed=True,
+                companyId=COMPANY_ID,
+                stationMode="WATCHLIST",
+            )
     _assert_generic_denial(exc.value)
     assert str(member_id) not in exc.value.detail
 
@@ -119,7 +131,13 @@ async def test_vip_hit_still_returns_sentinel_match_payload():
         patch("src.controllers.face_controller._search_face_pgvector", AsyncMock(return_value=None)),
         patch.object(sentinel_routes, "evaluate_kiosk_sentinel_match", AsyncMock(return_value=meta)),
     ):
-        out = await _resolve_match_response(db, ENCODING, liveness_passed=False, companyId=COMPANY_ID)
+        out = await _resolve_match_response(
+            db,
+            ENCODING,
+            liveness_passed=False,
+            companyId=COMPANY_ID,
+            stationMode="ACCESS_CONTROL",
+        )
     assert out["matched"] is True
     assert out["sentinelMatch"]["identityType"] == "VIP"
 
@@ -139,9 +157,12 @@ async def test_blacklist_hit_enqueues_incident_and_notification_outbox():
     )
     db = AsyncMock()
     db.add = MagicMock()
-    with patch.object(
-        sentinel_routes,
-        "search_sentinel_identity_pgvector",
+    # record_incident queries for an open dedupe match before insert.
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+    )
+    with patch(
+        "src.services.sentinel_incident_service.search_sentinel_identity_pgvector",
         AsyncMock(return_value=(ident, 0.11)),
     ):
         meta = await sentinel_routes.evaluate_kiosk_sentinel_match(db, COMPANY_ID, ENCODING, 0.4)

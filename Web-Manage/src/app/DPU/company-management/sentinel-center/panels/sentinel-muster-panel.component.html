@@ -51,12 +51,23 @@
                     รายชื่อบุคคลที่อยู่ในพื้นที่อาคารวันนี้ (Live Occupancy &amp; Emergency Muster Roll)
                   </h6>
                   <p class="text-xs text-dpu-muted mb-0">
-                    ใช้ตรวจสอบยอดพนักงานและผู้มาติดต่อในกรณีเกิดเหตุฉุกเฉินหรืออพยพหนีไฟ
+                    รวม PRESENT จาก attendance_daily, คนที่เช็คอินค้าง, และผู้มาติดต่อวันนี้
+                    <span *ngIf="musterWorkDate">· {{ musterWorkDate }}</span>
                   </p>
                 </div>
-                <span class="badge bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold">
-                  รวมในพื้นที่วันนี้ {{ (overview?.musterRoll || []).length }} คน
-                </span>
+                <div class="flex items-center gap-2">
+                  <span class="badge bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-bold">
+                    รวม {{ musterTotal }} คน
+                  </span>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-light"
+                    [disabled]="musterLoading"
+                    (click)="refreshMuster()"
+                  >
+                    <i class="ri-refresh-line"></i>
+                  </button>
+                </div>
               </div>
 
               <div
@@ -72,12 +83,13 @@
                       <th class="text-start p-3">ประเภทบุคคล</th>
                       <th class="text-start p-3">รหัสอ้างอิง</th>
                       <th class="text-start p-3">จุดสแกนล่าสุด</th>
+                      <th class="text-start p-3">แหล่ง</th>
                       <th class="text-end p-3">เวลาที่พบล่าสุด</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      *ngFor="let person of overview?.musterRoll || []"
+                      *ngFor="let person of musterItems"
                       class="border-b border-defaultborder text-xs"
                     >
                       <th class="text-start p-3 font-semibold">{{ person.fullName }}</th>
@@ -95,15 +107,37 @@
                       </td>
                       <td class="p-3">{{ person.badgeCode }}</td>
                       <td class="p-3">{{ person.zoneOrLocation }}</td>
+                      <td class="p-3 text-[0.7rem] text-dpu-muted">{{ person.source || '-' }}</td>
                       <td class="p-3 text-end">{{ person.lastSeenAt | date:'dd/MM HH:mm:ss' }}</td>
                     </tr>
-                    <tr *ngIf="!(overview?.musterRoll?.length)">
-                      <td colspan="5" class="text-center text-dpu-muted py-6">
-                        ยังไม่มีประวัติการสแกนเข้าอาคารในวันนี้
+                    <tr *ngIf="!musterItems.length">
+                      <td colspan="6" class="text-center text-dpu-muted py-6">
+                        {{ musterLoading ? 'กำลังโหลด...' : 'ยังไม่มีรายชื่อในพื้นที่วันนี้' }}
                       </td>
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <div class="flex items-center justify-end gap-2 mt-3" *ngIf="musterTotal > musterLimit">
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-light"
+                  [disabled]="musterOffset <= 0 || musterLoading"
+                  (click)="prevPage()"
+                >
+                  ก่อนหน้า
+                </button>
+                <span class="text-xs text-dpu-muted">
+                  {{ musterOffset + 1 }}–{{ musterOffset + musterItems.length }} / {{ musterTotal }}
+                </span>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-light"
+                  [disabled]="musterOffset + musterLimit >= musterTotal || musterLoading"
+                  (click)="nextPage()"
+                >
+                  ถัดไป
+                </button>
               </div>
             </div>
           </div>

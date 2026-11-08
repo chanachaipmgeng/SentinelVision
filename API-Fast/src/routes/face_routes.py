@@ -110,6 +110,7 @@ async def identify_face_route(
     file: UploadFile = File(...),
     companyId: UUID = Form(...),
     preCropped: str = Form("false"),
+    stationMode: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
     _rl=Depends(rate_limit_identify),
@@ -118,10 +119,17 @@ async def identify_face_route(
 
     Set form field ``preCropped=true`` when the client already sent a tight face
     crop from an Edge camera / Mini PC (skips server-side face detection).
+    Optional ``stationMode`` gates the sentinel identity search (F3).
     """
     await assert_request_company_access(request, db, companyId)
     pre_cropped = str(preCropped or "").strip().lower() in ("1", "true", "yes", "on")
-    return await identify_face(file, companyId, db, pre_cropped=pre_cropped)
+    return await identify_face(
+        file,
+        companyId,
+        db,
+        pre_cropped=pre_cropped,
+        station_mode=stationMode,
+    )
 
 
 @router.post("/members/check-in")
@@ -133,13 +141,21 @@ async def check_in_face_route(
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
     punchType: Optional[str] = Form(None),
+    stationMode: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Secure mode: multi-frame liveness + match + timestamp."""
     await assert_request_company_access(request, db, companyId)
     return await check_in_face(
-        files, companyId, latitude, longitude, db, note=note, punch_type=punchType
+        files,
+        companyId,
+        latitude,
+        longitude,
+        db,
+        note=note,
+        punch_type=punchType,
+        station_mode=stationMode,
     )
 
 
@@ -152,13 +168,21 @@ async def check_in_face_walkby_route(
     longitude: float = Form(...),
     note: Optional[str] = Form(None),
     punchType: Optional[str] = Form(None),
+    stationMode: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     _auth=_face_auth,
 ):
     """Walk-by mode: 1–2 frames, no motion liveness (multi-person pass-through)."""
     await assert_request_company_access(request, db, companyId)
     return await check_in_face_walkby(
-        files, companyId, latitude, longitude, db, note=note, punch_type=punchType
+        files,
+        companyId,
+        latitude,
+        longitude,
+        db,
+        note=note,
+        punch_type=punchType,
+        station_mode=stationMode,
     )
 
 

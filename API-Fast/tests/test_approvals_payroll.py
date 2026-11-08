@@ -1,7 +1,6 @@
 """C4/C5: JWT-only approvedBy, thin approver gate, streaming payroll export, period lock."""
 from __future__ import annotations
 
-import csv
 import io
 import os
 import uuid

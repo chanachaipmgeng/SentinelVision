@@ -5,6 +5,7 @@ import { Menu, NavService } from '../../services/nav.service';
 import { routeAnimations } from '../../services/animations/route.animations';
 import { UserService } from '../../../DPU/services/user.service';
 import { TokenService } from '../../services/token.service';
+import { ThemeService } from '../../services/theme.service';
 
 const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 
@@ -26,8 +27,10 @@ export class ContentLayoutComponent implements OnDestroy {
     private ref: ChangeDetectorRef,
     private userService: UserService,
     private tokenService: TokenService,
-    private router: Router
+    private router: Router,
+    private themeService: ThemeService,
   ) {
+    this.themeService.setShellActive(true);
     this.navServices.items.subscribe((menuItems: any) => {
       this.menuItems = menuItems;
     });
@@ -45,6 +48,7 @@ export class ContentLayoutComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
     this.setKioskMode(false);
+    this.themeService.setShellActive(false);
   }
 
   private syncKioskMode(url: string): void {
@@ -63,6 +67,7 @@ export class ContentLayoutComponent implements OnDestroy {
     } else {
       this.renderer.removeClass(html, KIOSK_MODE_CLASS);
     }
+    this.themeService.setKioskActive(on);
   }
   clearToggle() {
     const html = this.elementRef.nativeElement.ownerDocument.documentElement;

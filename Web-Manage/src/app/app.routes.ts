@@ -35,4 +35,5 @@ export const App_Route: Route[] = [
     loadComponent: () =>
       import('./authentication/change-password/change-password.component').then((m) => m.ChangePasswordComponent),
   },
+  { path: '**', redirectTo: 'error/404' },
 ];

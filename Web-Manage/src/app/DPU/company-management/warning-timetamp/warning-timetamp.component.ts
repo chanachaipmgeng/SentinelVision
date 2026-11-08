@@ -5,6 +5,7 @@ import { SharedModule } from '../../../shared/shared.module';
 import { LocationMapComponent } from '../../../shared/components/location-map/location-map.component';
 import { TimestampService } from '../../services/timestamp.service';
 import { TokenService } from '../../../shared/services/token.service';
+import { NavService } from '../../../shared/services/nav.service';
 import { TimestampModel } from '../../models/timestamp.model';
 import swal from 'sweetalert';
 
@@ -23,6 +24,7 @@ export class WarningTimetampComponent implements OnInit {
   selected?: TimestampModel;
   loading = false;
   actionBusy = false;
+  loadError = '';
   private _searchTerm = '';
 
   get searchTerm(): string {
@@ -56,18 +58,31 @@ export class WarningTimetampComponent implements OnInit {
 
   constructor(
     private timestampService: TimestampService,
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private navServices: NavService
   ) {
     this.companyId = this.tokenService.getSelectCompany()?.companyId || '';
   }
 
   ngOnInit() {
+    this.collapseSidebarOnNarrowViewport();
     this.loadPending();
+  }
+
+  /** Mobile approval: keep the shell sidebar closed so CTAs stay usable. */
+  private collapseSidebarOnNarrowViewport(): void {
+    if (typeof window === 'undefined' || window.innerWidth > 992) {
+      return;
+    }
+    this.navServices.collapseSidebar = true;
+    document.documentElement?.setAttribute('data-toggled', 'close');
+    document.querySelector('#responsive-overlay')?.classList.remove('active');
   }
 
   loadPending() {
     if (!this.companyId) return;
     this.loading = true;
+    this.loadError = '';
     const keepId = this.selected?.timestampId;
     this.timestampService
       .getListsSearch(this.companyId, '', '', '', undefined, 'PENDING')
@@ -81,7 +96,7 @@ export class WarningTimetampComponent implements OnInit {
         },
         error: () => {
           this.loading = false;
-          swal('Error', 'โหลดคิวอนุมัติไม่สำเร็จ', 'error');
+          this.loadError = 'โหลดคิวอนุมัติไม่สำเร็จ';
         },
       });
   }

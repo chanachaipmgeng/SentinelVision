@@ -218,8 +218,10 @@ export class SidebarComponent {
   }
 
   private applyPermissionFilter(items: Menu[]): Menu[] {
-    return this.navServices.filterMenuByPermissions(items, (code) =>
-      this.permissionService.has(code)
+    return this.navServices.filterMenuByPermissions(
+      items,
+      (code) => this.permissionService.has(code),
+      this.permissionService.roleCodesForNav(),
     );
   }
 

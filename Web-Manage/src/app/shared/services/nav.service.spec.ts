@@ -82,4 +82,28 @@ describe('NavService', () => {
     expect(moduleIds.has('VISITOR')).toBeTrue();
     expect(moduleIds.has('EVENTS')).toBeTrue();
   });
+
+  it('soft-hides self-service for HR_ADMIN / company admin roles', () => {
+    const allowAll = () => true;
+    const asEmployee = service.filterMenuByPermissions(
+      service.getCompanyMenu(),
+      allowAll,
+      []
+    );
+    const empPaths = asEmployee
+      .flatMap((m) => [m.path, ...(m.children || []).map((c) => c.path)])
+      .filter(Boolean) as string[];
+    expect(empPaths).toContain('/company/self-service');
+
+    const asAdmin = service.filterMenuByPermissions(
+      service.getCompanyMenu(),
+      allowAll,
+      ['HR_ADMIN']
+    );
+    const adminPaths = asAdmin
+      .flatMap((m) => [m.path, ...(m.children || []).map((c) => c.path)])
+      .filter(Boolean) as string[];
+    expect(adminPaths).not.toContain('/company/self-service');
+    expect(adminPaths).toContain('/company/approval-inbox');
+  });
 });

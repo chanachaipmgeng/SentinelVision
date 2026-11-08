@@ -32,6 +32,11 @@ export interface Menu {
   moduleId?: PlatformModule | 'COMMAND';
   /** D1 RBAC: hide unless the server-granted permission is present. */
   permission?: string;
+  /**
+   * Soft-hide from sidebar when the caller has any of these RBAC role codes
+   * (route remains reachable by direct URL). Example: self-service for HR_ADMIN.
+   */
+  hideForRoles?: string[];
 }
 
 @Injectable({
@@ -216,6 +221,8 @@ export class NavService implements OnDestroy {
             title: 'Self-service',
             type: 'link',
             permission: 'attendance.read',
+            // Employee portal — soft-hide for company/HR admins (route still open).
+            hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY'],
           },
           {
             path: '/company/company-location',
@@ -429,15 +436,26 @@ export class NavService implements OnDestroy {
 
   /**
    * Hide menu entries the caller lacks permission for (server-driven snapshot).
+   * Also soft-hides items whose `hideForRoles` intersects the caller's roles.
    * Headings without a following visible item are dropped.
    */
   filterMenuByPermissions(
     items: Menu[],
     hasPermission: (code: string) => boolean,
+    roleCodes: readonly string[] = [],
   ): Menu[] {
+    const roles = new Set(roleCodes.map((r) => String(r).toUpperCase()));
     const mapItem = (item: Menu): Menu | null => {
       if (item.permission && !hasPermission(item.permission)) {
         return null;
+      }
+      if (item.hideForRoles?.length) {
+        const blocked = item.hideForRoles.some((r) =>
+          roles.has(String(r).toUpperCase())
+        );
+        if (blocked) {
+          return null;
+        }
       }
       if (item.children?.length) {
         const children = item.children

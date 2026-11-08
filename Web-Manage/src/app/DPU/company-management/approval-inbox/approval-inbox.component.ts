@@ -19,7 +19,7 @@ interface ApprovalInboxViewFilters {
 
 const KIND_ICONS: Record<string, string> = {
   LEAVE: 'ri-calendar-event-line',
-  TIMESTAMP: 'ri-map-pin-warning-line',
+  TIMESTAMP: 'ri-map-pin-range-line',
   REGULARIZATION: 'ri-time-line',
   OT: 'ri-timer-flash-line',
 };

@@ -24,7 +24,7 @@
           {{ 'Updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }}
         </span>
         <button type="button" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh" (click)="toggleLive()">
-          <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-broadcast-off-line'"></i>
+          <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-pause-circle-line'"></i>
           <span>{{ (liveOn ? 'Stop live' : 'Go live') | translate }}</span>
         </button>
         <a routerLink="/company/sentinel-center" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">

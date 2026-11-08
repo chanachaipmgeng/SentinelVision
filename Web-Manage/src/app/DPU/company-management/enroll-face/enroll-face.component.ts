@@ -1684,10 +1684,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // HTTP fallback — scoped to selected company
+    // HTTP fallback — scoped to selected company; stationMode gates sentinel search (F3).
     const formData = new FormData();
     formData.append('file', this.dataURLtoFile(dataUrl, `live_${trackId}.jpg`));
     formData.append('companyId', this.companyId);
+    formData.append('stationMode', this.stationMode);
     this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
       next: (response: any) => {
         const t = this.tracks.find((x) => x.id === trackId);

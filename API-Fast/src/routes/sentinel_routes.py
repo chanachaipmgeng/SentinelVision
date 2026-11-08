@@ -1,14 +1,11 @@
 """SentinelVision Unified Routes: Watchlist/Blacklist/VIP, Smart Access Control, Visitor Pass, Smart Events, Muster Roll & Edge Sync."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta, timezone
-import json
 import logging
 from pathlib import Path
 import shutil
 from typing import List, Optional
-import urllib.request
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
@@ -38,7 +35,9 @@ from ..services.face_match_service import (
     search_face_pgvector,
     search_sentinel_identity_pgvector,
 )
-from ..services.notification_service import NotificationOutbox, compute_webhook_signature
+from ..services.notification_service import NotificationOutbox
+from ..services.outbox_crypto import seal_relay_secret
+from ..services.sentinel_relay_service import dispatch_relay_webhook
 from ..services.storage_service import store_image_file
 from ..utils.face_gpu_queue import run_on_face_gpu
 
@@ -167,29 +166,8 @@ async def _dispatch_relay_webhook_async(
     secret: Optional[str],
     payload: dict,
 ) -> bool:
-    """Non-blocking IoT Door / Turnstile relay trigger executed in thread executor."""
-    if not webhook_url or not webhook_url.startswith(("http://", "https://")):
-        return False
-
-    def _send_sync() -> bool:
-        body_bytes = json.dumps(payload).encode("utf-8")
-        ts_str = str(int(datetime.now(timezone.utc).timestamp()))
-        headers = {
-            "Content-Type": "application/json",
-            "X-Sentinel-Timestamp": ts_str,
-        }
-        if secret:
-            headers["X-DPU-Signature-256"] = compute_webhook_signature(secret, ts_str, body_bytes)
-        req = urllib.request.Request(webhook_url, data=body_bytes, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            return 200 <= resp.status < 300
-
-    loop = asyncio.get_running_loop()
-    try:
-        return await loop.run_in_executor(None, _send_sync)
-    except Exception:
-        logger.warning("IoT relay webhook failed for %s", webhook_url)
-        return False
+    """Thin wrapper → ``sentinel_relay_service.dispatch_relay_webhook`` (httpx + circuit)."""
+    return await dispatch_relay_webhook(webhook_url, secret, payload)
 
 
 def _is_within_schedule(start_hhmm: str, end_hhmm: str, now_local: datetime) -> bool:
@@ -672,7 +650,7 @@ async def create_access_zone(
         scheduleEnd=str(body.get("scheduleEnd") or "23:59").strip(),
         require2FA=bool(body.get("require2FA", False)),
         relayWebhookUrl=str(body.get("relayWebhookUrl") or "").strip() or None,
-        relaySecret=str(body.get("relaySecret") or "").strip() or None,
+        relaySecret=seal_relay_secret(str(body.get("relaySecret") or "").strip() or None),
         isActive=bool(body.get("isActive", True)),
     )
     db.add(zone)
@@ -715,7 +693,7 @@ async def update_access_zone(
     if "relayWebhookUrl" in body:
         zone.relayWebhookUrl = str(body.get("relayWebhookUrl") or "").strip() or None
     if "relaySecret" in body and body.get("relaySecret") is not None:
-        zone.relaySecret = str(body.get("relaySecret") or "").strip() or None
+        zone.relaySecret = seal_relay_secret(str(body.get("relaySecret") or "").strip() or None)
     if "isActive" in body:
         zone.isActive = bool(body["isActive"])
 

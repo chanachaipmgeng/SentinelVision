@@ -1,0 +1,104 @@
+<app-page-header
+  [title]="'settingsHub.title'"
+  [activeTitle]="'settingsHub.breadcrumb'"
+  [title1]="active?.labelKey || 'settingsHub.title'"
+></app-page-header>
+
+<div class="dpu-settings-hub">
+  <app-empty-state *ngIf="!permissionsReady" [loading]="true" message="settingsHub.loading"></app-empty-state>
+
+  <app-empty-state
+    *ngIf="permissionsReady && !sections.length"
+    icon="ri-lock-line"
+    message="settingsHub.noAccess"
+  ></app-empty-state>
+
+  <div *ngIf="permissionsReady && sections.length" class="dpu-settings-shell">
+    <nav class="dpu-settings-rail modern-card glass" [attr.aria-label]="'settingsHub.railAria' | translate">
+      <div class="dpu-settings-rail__header">
+        <span class="dpu-settings-rail__tile"><i class="ri-settings-3-line"></i></span>
+        <div class="min-w-0">
+          <p class="dpu-settings-rail__title">{{ 'settingsHub.title' | translate }}</p>
+          <p class="dpu-settings-rail__hint">{{ 'settingsHub.railHint' | translate }}</p>
+        </div>
+      </div>
+      <div class="dpu-settings-rail__list" role="list">
+        <a
+          *ngFor="let s of sections; trackBy: trackSection"
+          role="listitem"
+          class="dpu-settings-rail__link"
+          [routerLink]="['/company/settings', s.id]"
+          routerLinkActive="is-active"
+          [attr.aria-current]="active?.id === s.id ? 'page' : null"
+        >
+          <i class="dpu-settings-rail__icon" [ngClass]="s.icon" aria-hidden="true"></i>
+          <span class="dpu-settings-rail__label">{{ s.labelKey | translate }}</span>
+        </a>
+      </div>
+    </nav>
+
+    <main class="dpu-settings-body" *ngIf="active">
+      <app-page-toolbar [title]="active.labelKey">
+        <ng-container chips>
+          <app-stat-chip tone="ok" *ngIf="statusMsg">{{ statusMsg }}</app-stat-chip>
+        </ng-container>
+        <ng-container controls>
+          <a
+            *ngIf="active.deepLink"
+            [routerLink]="active.deepLink"
+            class="ti-btn ti-btn-outline-light modern-btn"
+          >
+            {{ active.deepLinkKey! | translate }} <i class="ri-arrow-right-up-line"></i>
+          </a>
+        </ng-container>
+      </app-page-toolbar>
+      <p class="dpu-settings-body__hint">{{ active.hintKey | translate }}</p>
+
+      @switch (active.id) {
+        @case ('notifications') {
+          <app-notification-settings-panel></app-notification-settings-panel>
+        }
+        @case ('security') {
+          <div class="box modern-card glass">
+            <div class="box-body">
+              <app-hr-security-tab (status)="flash($event)"></app-hr-security-tab>
+            </div>
+          </div>
+          <a routerLink="/company/profile-security" class="dpu-settings-card">
+            <span class="dpu-settings-list__icon"><i class="ri-user-settings-line"></i></span>
+            <span class="dpu-settings-list__text">
+              <strong>{{ 'settingsHub.security.personalTitle' | translate }}</strong>
+              <em>{{ 'settingsHub.security.personalHint' | translate }}</em>
+            </span>
+            <i class="ri-arrow-right-s-line"></i>
+          </a>
+        }
+        @case ('retention') {
+          <div class="box modern-card glass">
+            <div class="box-body">
+              <app-hr-pdpa-tab (status)="flash($event)"></app-hr-pdpa-tab>
+            </div>
+          </div>
+        }
+        @case ('scan-actions') {
+          <app-scan-actions-summary-panel></app-scan-actions-summary-panel>
+        }
+        @case ('devices') {
+          <app-devices-summary-panel></app-devices-summary-panel>
+        }
+        @case ('shifts') {
+          <div class="dpu-settings-cards">
+            <a *ngFor="let card of shiftCards" [routerLink]="card.path" class="dpu-settings-card">
+              <span class="dpu-settings-list__icon"><i [ngClass]="card.icon"></i></span>
+              <span class="dpu-settings-list__text">
+                <strong>{{ card.labelKey | translate }}</strong>
+                <em>{{ card.hintKey | translate }}</em>
+              </span>
+              <i class="ri-arrow-right-s-line"></i>
+            </a>
+          </div>
+        }
+      }
+    </main>
+  </div>
+</div>

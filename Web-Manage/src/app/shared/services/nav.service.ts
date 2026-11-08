@@ -32,6 +32,11 @@ export interface Menu {
   moduleId?: PlatformModule | 'COMMAND';
   /** D1 RBAC: hide unless the server-granted permission is present. */
   permission?: string;
+  /**
+   * Soft-hide from sidebar when the caller has any of these RBAC role codes
+   * (route remains reachable by direct URL). Example: self-service for HR_ADMIN.
+   */
+  hideForRoles?: string[];
 }
 
 @Injectable({
@@ -102,32 +107,32 @@ export class NavService implements OnDestroy {
 
   getCommonMenu() {
     return [
-      { headTitle: 'ผู้ดูแลระบบ', permission: 'system.admin' },
+      { headTitle: 'System admin', permission: 'system.admin' },
       {
         icon: 'user',
         path: '/admin/member-manage',
-        title: 'จัดการสมาชิก',
+        title: 'Manage members',
         type: 'link',
         permission: 'system.admin',
       },
       {
         icon: 'buildings',
         path: '/admin/manage-companys',
-        title: 'จัดการบริษัท',
+        title: 'Manage companies',
         type: 'link',
         permission: 'system.admin',
       },
       {
         icon: 'user-check',
         path: '/admin/admin-manage',
-        title: 'จัดการสิทธิ์ผู้ดูแลระบบ',
+        title: 'Manage admin permissions',
         type: 'link',
         permission: 'system.admin',
       },
       {
         icon: 'settings',
         path: '/admin/system-setting',
-        title: 'ตั้งค่าระบบ / TTS',
+        title: 'System settings / TTS',
         type: 'link',
         permission: 'system.admin',
       },
@@ -144,7 +149,7 @@ export class NavService implements OnDestroy {
       {
         icon: 'home',
         path: '/company/dashboard',
-        title: 'แดชบอร์ดภาพรวม',
+        title: 'Overview dashboard',
         type: 'link',
         moduleId: 'COMMAND',
         permission: 'company.read',
@@ -161,25 +166,25 @@ export class NavService implements OnDestroy {
         permission: 'company.read',
       },
 
-      { headTitle: 'CORE — องค์กรและบุคลากร', moduleId: 'CORE' },
+      { headTitle: 'CORE — Organization', moduleId: 'CORE' },
       {
-        title: 'องค์กรและบุคลากร',
+        title: 'Organization & people',
         icon: 'buildings',
         type: 'sub',
         active: false,
         moduleId: 'CORE',
         permission: 'employees.read',
         children: [
-          { path: '/company/company-info', title: 'ข้อมูลบริษัท', type: 'link', permission: 'company.read' },
-          { path: '/company/company-department', title: 'จัดการแผนก', type: 'link', permission: 'departments.read' },
-          { path: '/company/company-position', title: 'จัดการตำแหน่ง', type: 'link', permission: 'positions.read' },
-          { path: '/company/company-emp', title: 'ทะเบียนพนักงาน & ใบหน้า', type: 'link', permission: 'employees.read' },
+          { path: '/company/company-info', title: 'Company info', type: 'link', permission: 'company.read' },
+          { path: '/company/company-department', title: 'Manage departments', type: 'link', permission: 'departments.read' },
+          { path: '/company/company-position', title: 'Manage positions', type: 'link', permission: 'positions.read' },
+          { path: '/company/company-emp', title: 'Employee registry & faces', type: 'link', permission: 'employees.read' },
         ],
       },
 
-      { headTitle: 'ATTENDANCE — ลงเวลาทำงาน', moduleId: 'ATTENDANCE' },
+      { headTitle: 'ATTENDANCE — Time clock', moduleId: 'ATTENDANCE' },
       {
-        title: 'โมดูลลงเวลาทำงาน',
+        title: 'Attendance module',
         icon: 'time',
         type: 'sub',
         active: false,
@@ -188,53 +193,55 @@ export class NavService implements OnDestroy {
         children: [
           {
             path: '/company/scan/attendance',
-            title: 'จุดสแกนลงเวลาสด',
+            title: 'Live attendance scan',
             type: 'link',
             permission: 'attendance.read',
           },
-          { path: '/company/timestamp-log', title: 'ประวัติการลงเวลา', type: 'link', permission: 'attendance.read' },
+          { path: '/company/timestamp-log', title: 'Attendance history', type: 'link', permission: 'attendance.read' },
           {
             path: '/company/warning-timestamp-log',
-            title: 'อนุมัติการลงเวลา (Warning)',
+            title: 'Approve out-of-area punches',
             type: 'link',
             permission: 'attendance.approve',
           },
           {
             path: '/company/approval-inbox',
-            title: 'กล่องอนุมัติ (Approval Inbox)',
+            title: 'Approval inbox',
             type: 'link',
             permission: 'attendance.approve',
           },
           {
             path: '/company/reports',
-            title: 'รายงานการลงเวลา',
+            title: 'Attendance reports',
             type: 'link',
             permission: 'attendance.read',
           },
           {
             path: '/company/self-service',
-            title: 'บริการตนเอง (Self-Service)',
+            title: 'Self-service',
             type: 'link',
             permission: 'attendance.read',
+            // Employee portal — soft-hide for company/HR admins (route still open).
+            hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY'],
           },
           {
             path: '/company/company-location',
-            title: 'สถานที่ลงเวลา (GPS)',
+            title: 'Punch locations (GPS)',
             type: 'link',
             permission: 'company.settings',
           },
           {
             path: '/company/hr-schedule',
-            title: 'ตั้งค่ากะงาน / วันลา / อุปกรณ์ Kiosk',
+            title: 'Shifts / leave / kiosk devices',
             type: 'link',
             permission: 'hr.shifts',
           },
         ],
       },
 
-      { headTitle: 'ACCESS_CONTROL — ควบคุมประตู', moduleId: 'ACCESS_CONTROL', permission: 'sentinel.manage' },
+      { headTitle: 'ACCESS_CONTROL — Doors', moduleId: 'ACCESS_CONTROL', permission: 'sentinel.manage' },
       {
-        title: 'โมดูลควบคุมประตู',
+        title: 'Access control module',
         icon: 'lock-alt',
         type: 'sub',
         active: false,
@@ -243,30 +250,30 @@ export class NavService implements OnDestroy {
         children: [
           {
             path: '/company/scan/access-control',
-            title: 'จุดสแกนหน้าประตูสด',
+            title: 'Live door scan',
             type: 'link',
           },
           {
             path: '/company/access-control/zones',
-            title: 'จัดการโซนประตู & สั่งเปิดประตู',
+            title: 'Door zones & unlock',
             type: 'link',
           },
           {
             path: '/company/access-control/logs',
-            title: 'ประวัติการผ่านประตู',
+            title: 'Access logs',
             type: 'link',
           },
           {
             path: '/company/access-control/settings',
-            title: 'ตั้งค่า Access Control & IoT Relay',
+            title: 'Access Control & IoT Relay settings',
             type: 'link',
           },
         ],
       },
 
-      { headTitle: 'WATCHLIST — เฝ้าระวัง & VIP', moduleId: 'WATCHLIST', permission: 'sentinel.manage' },
+      { headTitle: 'WATCHLIST — Watch & VIP', moduleId: 'WATCHLIST', permission: 'sentinel.manage' },
       {
-        title: 'โมดูลเฝ้าระวัง & VIP',
+        title: 'Watchlist & VIP module',
         icon: 'shield-quarter',
         type: 'sub',
         active: false,
@@ -275,30 +282,30 @@ export class NavService implements OnDestroy {
         children: [
           {
             path: '/company/scan/watchlist',
-            title: 'กล้องเฝ้าระวังสด',
+            title: 'Live watchlist camera',
             type: 'link',
           },
           {
             path: '/company/watchlist/identities',
-            title: 'บัญชีเฝ้าระวัง Blacklist / POI / VIP',
+            title: 'Watchlist Blacklist / POI / VIP',
             type: 'link',
           },
           {
             path: '/company/watchlist/incidents',
-            title: 'รายการแจ้งเตือนเหตุการณ์',
+            title: 'Incident alerts',
             type: 'link',
           },
           {
             path: '/company/watchlist/settings',
-            title: 'ตั้งค่าการแจ้งเตือนความปลอดภัย',
+            title: 'Security alert settings',
             type: 'link',
           },
         ],
       },
 
-      { headTitle: 'VISITOR — ผู้มาติดต่อ & อาคาร', moduleId: 'VISITOR', permission: 'sentinel.manage' },
+      { headTitle: 'VISITOR — Visitors & building', moduleId: 'VISITOR', permission: 'sentinel.manage' },
       {
-        title: 'โมดูลผู้มาติดต่อ & อาคาร',
+        title: 'Visitor & building module',
         icon: 'user-check',
         type: 'sub',
         active: false,
@@ -307,30 +314,30 @@ export class NavService implements OnDestroy {
         children: [
           {
             path: '/company/scan/visitor',
-            title: 'จุดสแกนผู้มาติดต่อสด',
+            title: 'Live visitor scan',
             type: 'link',
           },
           {
             path: '/company/visitors/passes',
-            title: 'ออกบัตรผู้มาติดต่อ (Visitor Pass)',
+            title: 'Visitor pass',
             type: 'link',
           },
           {
             path: '/company/visitors/muster-roll',
-            title: 'เช็คยอดคนในอาคาร (Muster Roll)',
+            title: 'Muster roll',
             type: 'link',
           },
           {
             path: '/company/visitors/settings',
-            title: 'ตั้งค่า Visitor & PDPA',
+            title: 'Visitor & PDPA settings',
             type: 'link',
           },
         ],
       },
 
-      { headTitle: 'EVENTS — งานอีเวนต์ & สัมมนา', moduleId: 'EVENTS', permission: 'sentinel.manage' },
+      { headTitle: 'EVENTS — Events & seminars', moduleId: 'EVENTS', permission: 'sentinel.manage' },
       {
-        title: 'โมดูลงานอีเวนต์ & สัมมนา',
+        title: 'Events & seminars module',
         icon: 'calendar',
         type: 'sub',
         active: false,
@@ -339,32 +346,32 @@ export class NavService implements OnDestroy {
         children: [
           {
             path: '/company/scan/event',
-            title: 'จุดสแกนหน้างานอีเวนต์สด',
+            title: 'Live event scan',
             type: 'link',
           },
           {
             path: '/company/events/campaigns',
-            title: 'จัดการแคมเปญงานอีเวนต์ & ผู้ร่วมงาน',
+            title: 'Event campaigns & attendees',
             type: 'link',
           },
           {
             path: '/company/events/checkins',
-            title: 'สถิติผู้เข้างานสด',
+            title: 'Live event check-in stats',
             type: 'link',
           },
           {
             path: '/company/events/settings',
-            title: 'ตั้งค่างานอีเวนต์',
+            title: 'Event settings',
             type: 'link',
           },
         ],
       },
 
-      { headTitle: 'GOVERNANCE — ธรรมาภิบาล', moduleId: 'GOVERNANCE', permission: 'audit.read' },
+      { headTitle: 'GOVERNANCE — Governance', moduleId: 'GOVERNANCE', permission: 'audit.read' },
       {
         icon: 'file-list',
         path: '/company/audit-log',
-        title: 'ประวัติการใช้งาน (Audit Log)',
+        title: 'Audit log',
         type: 'link',
         moduleId: 'GOVERNANCE',
         permission: 'audit.read',
@@ -372,21 +379,21 @@ export class NavService implements OnDestroy {
       {
         icon: 'tablet',
         path: '/company/devices',
-        title: 'จัดการอุปกรณ์ Kiosk',
+        title: 'Manage kiosk devices',
         type: 'link',
         moduleId: 'GOVERNANCE',
       },
       {
         icon: 'notification',
         path: '/company/notification-center',
-        title: 'ศูนย์แจ้งเตือน (Notification Center)',
+        title: 'Notification Center',
         type: 'link',
         moduleId: 'GOVERNANCE',
       },
       {
         icon: 'shield-user',
         path: '/company/profile-security',
-        title: 'โปรไฟล์และความปลอดภัย',
+        title: 'Profile & Security',
         type: 'link',
         moduleId: 'GOVERNANCE',
       },
@@ -429,15 +436,26 @@ export class NavService implements OnDestroy {
 
   /**
    * Hide menu entries the caller lacks permission for (server-driven snapshot).
+   * Also soft-hides items whose `hideForRoles` intersects the caller's roles.
    * Headings without a following visible item are dropped.
    */
   filterMenuByPermissions(
     items: Menu[],
     hasPermission: (code: string) => boolean,
+    roleCodes: readonly string[] = [],
   ): Menu[] {
+    const roles = new Set(roleCodes.map((r) => String(r).toUpperCase()));
     const mapItem = (item: Menu): Menu | null => {
       if (item.permission && !hasPermission(item.permission)) {
         return null;
+      }
+      if (item.hideForRoles?.length) {
+        const blocked = item.hideForRoles.some((r) =>
+          roles.has(String(r).toUpperCase())
+        );
+        if (blocked) {
+          return null;
+        }
       }
       if (item.children?.length) {
         const children = item.children

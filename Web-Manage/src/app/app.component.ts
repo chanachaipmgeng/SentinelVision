@@ -20,7 +20,7 @@ import { routeAnimations } from './shared/animations/route-animations';
   animations: [routeAnimations]
 })
 export class AppComponent {
-  title = 'ynex';
+  title = 'SentinelVision';
   public isSpinner = true;
 
   constructor(private contexts: ChildrenOutletContexts) {}
@@ -33,7 +33,7 @@ export class AppComponent {
     this.applyDpuThemeDefaults();
   }
 
-  /** Lock product palette to teal so Ynex switcher/localStorage cannot restore purple. */
+  /** Lock product palette to teal via DOM attrs/CSS vars only (no ynex-* localStorage writes). */
   private applyDpuThemeDefaults(): void {
     const html = document.documentElement;
     const primary = '15, 118, 110';
@@ -43,10 +43,6 @@ export class AppComponent {
     html.setAttribute('data-menu-styles', 'dark');
     html.setAttribute('data-header-styles', 'light');
     html.setAttribute('data-theme-mode', 'light');
-    localStorage.setItem('ynex-primary-mode', primary);
-    localStorage.setItem('ynex-menu-mode', 'dark');
-    localStorage.setItem('ynex-header-mode', 'light');
-    localStorage.setItem('ynex-theme-mode', 'light');
     localStorage.removeItem('ynexlight-primary-color');
     localStorage.removeItem('ynexlight-primary-color1');
   }

@@ -17,7 +17,7 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
   template: `
     <div class="dpu-pair">
       <div class="dpu-pair__card">
-        <img src="./assets/images/brand-logos/logo.png" alt="DPU Time Attendance" class="dpu-pair__logo" />
+        <img src="./assets/images/brand-logos/logo.png" alt="SentinelVision" class="dpu-pair__logo" />
         <h1 class="dpu-pair__title">จับคู่ตู้ Kiosk</h1>
         <p class="dpu-pair__subtitle">
           กรอกรหัสจับคู่ 8 หลักที่ผู้ดูแลระบบสร้างจากเมนู HR &rarr; ความปลอดภัย &rarr; ตู้ Kiosk

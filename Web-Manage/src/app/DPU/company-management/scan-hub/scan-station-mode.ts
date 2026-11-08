@@ -157,18 +157,18 @@ export function shouldEnableDoorRelay(
 export function stationModeTitle(mode: StationMode): string {
   switch (mode) {
     case 'ACCESS_CONTROL':
-      return 'จุดสแกนหน้าประตู (Access Control)';
+      return 'station.access';
     case 'WATCHLIST_MONITOR':
-      return 'กล้องเฝ้าระวัง & VIP';
+      return 'station.watchlist';
     case 'VISITOR_CHECKIN':
-      return 'จุดสแกนผู้มาติดต่อ';
+      return 'station.visitor';
     case 'EVENT_CHECKIN':
-      return 'จุดสแกนงานอีเวนต์';
+      return 'station.event';
     case 'UNIFIED_HYBRID':
-      return 'ลงเวลา + เปิดประตู (Hybrid)';
+      return 'station.hybrid';
     case 'ATTENDANCE':
     default:
-      return 'สแกนใบหน้าลงเวลา (Attendance)';
+      return 'station.attendance';
   }
 }
 

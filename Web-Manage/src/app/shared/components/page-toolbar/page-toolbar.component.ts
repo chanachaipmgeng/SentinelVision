@@ -1,16 +1,17 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-page-toolbar',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   template: `
     <div class="box dpu-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div class="box-header dpu-toolbar__header">
         <div class="dpu-toolbar__inner">
           <div class="dpu-toolbar__title">
-            <div class="box-title !mb-0">{{ title }}</div>
+            <div class="box-title !mb-0">{{ title | translate }}</div>
             <ng-content select="[chips]"></ng-content>
           </div>
           <div class="dpu-toolbar__controls">

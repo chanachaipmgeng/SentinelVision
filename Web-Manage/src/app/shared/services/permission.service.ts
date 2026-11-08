@@ -114,6 +114,31 @@ export class PermissionService {
     return role === '99' || role === 'ADMIN_SYSTEM';
   }
 
+  /**
+   * Company / HR admin for the current snapshot (or legacy member.role).
+   * Used for soft-hiding employee-only nav (self-service) without blocking the route.
+   */
+  isCompanyAdmin(): boolean {
+    const roles = this.roles.map((r) => String(r.role || '').toUpperCase());
+    if (roles.includes('HR_ADMIN') || roles.includes('ADMIN_COMPANY')) {
+      return true;
+    }
+    const legacy = String(this.tokenService.getUser()?.member?.role ?? '');
+    return legacy === '1' || legacy === 'ADMIN_COMPANY';
+  }
+
+  /** Role codes for nav soft-hide (`Menu.hideForRoles`). */
+  roleCodesForNav(): string[] {
+    const codes = this.roles.map((r) => String(r.role || '')).filter(Boolean);
+    if (this.isCompanyAdmin() && !codes.some((c) => /HR_ADMIN|ADMIN_COMPANY/i.test(c))) {
+      codes.push('HR_ADMIN');
+    }
+    if (this.isSystemAdmin() && !codes.some((c) => /SYSTEM_ADMIN/i.test(c))) {
+      codes.push('SYSTEM_ADMIN');
+    }
+    return codes;
+  }
+
   /** Map a nav / route area to the permission that gates it. */
   static permissionForPath(path: string | undefined): string | null {
     if (!path) {

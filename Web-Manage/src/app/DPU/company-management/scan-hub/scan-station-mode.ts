@@ -62,6 +62,36 @@ export function parseStationModeParam(param: string | null | undefined): Station
   return ALIASES[raw.toLowerCase()] || 'ATTENDANCE';
 }
 
+/** Resolved `:stationMode` + query context for modular `/company/scan/*` kiosks. */
+export interface StationRouteContext {
+  stationMode: StationMode;
+  zoneId: string | null;
+  eventId: string | null;
+  /** True when the route path carried a `:stationMode` segment (not timestamp-face). */
+  routeHadMode: boolean;
+  captureMessage: string;
+}
+
+/**
+ * Pure route → station context mapping used by enroll-face on every SPA nav
+ * between `/company/scan/:stationMode` (and legacy timestamp-face with no param).
+ */
+export function resolveStationRouteContext(
+  stationModeParam: string | null | undefined,
+  zoneId: string | null | undefined,
+  eventId: string | null | undefined,
+): StationRouteContext {
+  const routeHadMode = !!String(stationModeParam || '').trim();
+  const stationMode = parseStationModeParam(stationModeParam);
+  return {
+    stationMode,
+    zoneId: zoneId || null,
+    eventId: eventId || null,
+    routeHadMode,
+    captureMessage: stationModeCaptureHint(stationMode),
+  };
+}
+
 export function stationModeToSlug(mode: StationMode): StationModeSlug {
   return MODE_TO_SLUG[mode] || 'attendance';
 }

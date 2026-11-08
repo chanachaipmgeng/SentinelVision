@@ -12,9 +12,21 @@ export type SentinelTab =
   | 'command'
   | 'watchlist'
   | 'access'
+  | 'access-logs'
+  | 'access-settings'
   | 'visitors'
   | 'events'
   | 'muster';
+
+/** Access Control `:section` values under `/company/access-control/:section`. */
+export type AccessControlSection = 'zones' | 'logs' | 'settings';
+
+export function normalizeAccessSection(
+  section: string | null | undefined,
+): AccessControlSection {
+  if (section === 'logs' || section === 'settings') return section;
+  return 'zones';
+}
 
 /** Map `/company/{module}/:section` → active sentinel tab. */
 export function tabFromModuleSection(
@@ -23,8 +35,12 @@ export function tabFromModuleSection(
 ): SentinelTab | null {
   if (!workspace) return null;
   switch (workspace) {
-    case 'ACCESS_CONTROL':
+    case 'ACCESS_CONTROL': {
+      const accessSection = normalizeAccessSection(section);
+      if (accessSection === 'logs') return 'access-logs';
+      if (accessSection === 'settings') return 'access-settings';
       return 'access';
+    }
     case 'WATCHLIST':
       return 'watchlist';
     case 'VISITOR':
@@ -37,10 +53,14 @@ export function tabFromModuleSection(
 }
 
 export function labelForWorkspace(workspace: string, section: string | null): string {
+  if (workspace === 'ACCESS_CONTROL') {
+    const accessSection = normalizeAccessSection(section);
+    if (accessSection === 'logs') return 'Access Control / ประวัติการผ่านประตู';
+    if (accessSection === 'settings') return 'Access Control / ตั้งค่า';
+    return 'Access Control / โซนประตู';
+  }
   const sectionLabel = section ? ` / ${section}` : '';
   switch (workspace) {
-    case 'ACCESS_CONTROL':
-      return `Access Control${sectionLabel}`;
     case 'WATCHLIST':
       return `Watchlist${sectionLabel}`;
     case 'VISITOR':

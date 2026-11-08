@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import { defaultScanForm, firstFileFromInput } from '../sentinel.helpers';
@@ -8,7 +9,7 @@ import { defaultScanForm, firstFileFromInput } from '../sentinel.helpers';
 @Component({
   selector: 'app-sentinel-command-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './sentinel-command-panel.component.html',
 })
 export class SentinelCommandPanelComponent implements OnInit {
@@ -21,6 +22,7 @@ export class SentinelCommandPanelComponent implements OnInit {
   incidents: any[] = [];
   incidentFilterSeverity = '';
   incidentFilterStatus = '';
+  incidentFilterZoneId = '';
   scanSelectedFile: File | null = null;
   lastScanResult: any = null;
   isScanning = false;
@@ -104,7 +106,8 @@ export class SentinelCommandPanelComponent implements OnInit {
       .getIncidents(
         this.companyId,
         this.incidentFilterSeverity || undefined,
-        this.incidentFilterStatus || undefined
+        this.incidentFilterStatus || undefined,
+        this.incidentFilterZoneId || undefined
       )
       .subscribe((rows) => (this.incidents = rows || []));
   }

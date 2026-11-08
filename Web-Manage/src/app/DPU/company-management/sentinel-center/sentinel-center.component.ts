@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { combineLatest } from 'rxjs';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { SentinelApiService } from './sentinel-api.service';
@@ -11,6 +13,7 @@ import {
   labelForWorkspace,
   tabFromModuleSection,
 } from './sentinel-routing';
+import { SentinelAccessLogsPanelComponent } from './panels/sentinel-access-logs-panel.component';
 import { SentinelAccessPanelComponent } from './panels/sentinel-access-panel.component';
 import { SentinelCommandPanelComponent } from './panels/sentinel-command-panel.component';
 import { SentinelEventsPanelComponent } from './panels/sentinel-events-panel.component';
@@ -36,6 +39,7 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
     SentinelCommandPanelComponent,
     SentinelWatchlistPanelComponent,
     SentinelAccessPanelComponent,
+    SentinelAccessLogsPanelComponent,
     SentinelVisitorsPanelComponent,
     SentinelEventsPanelComponent,
     SentinelMusterPanelComponent,
@@ -168,6 +172,20 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         </div>
         <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'access'">
           <app-sentinel-access-panel
+            section="zones"
+            (toast)="showToast($event)"
+            (overviewChanged)="reloadOverview()"
+          ></app-sentinel-access-panel>
+        </div>
+        <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'access-logs'">
+          <app-sentinel-access-logs-panel
+            (toast)="showToast($event)"
+            (overviewChanged)="reloadOverview()"
+          ></app-sentinel-access-logs-panel>
+        </div>
+        <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'access-settings'">
+          <app-sentinel-access-panel
+            section="settings"
             (toast)="showToast($event)"
             (overviewChanged)="reloadOverview()"
           ></app-sentinel-access-panel>
@@ -200,6 +218,8 @@ export class SentinelCenterComponent implements OnInit {
   toastMessage = '';
   overview: any = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     private api: SentinelApiService,
     private tokenService: TokenService,
@@ -211,20 +231,25 @@ export class SentinelCenterComponent implements OnInit {
     const company = this.tokenService.getSelectCompany();
     this.companyId = company?.companyId || '';
 
-    const workspace = this.route.snapshot.data['moduleWorkspace'] as string | undefined;
-    const section = this.route.snapshot.paramMap.get('section');
-    const mapped = tabFromModuleSection(workspace, section);
-    if (mapped) {
-      this.moduleScoped = true;
-      this.activeTab = mapped;
-      this.moduleWorkspaceLabel = labelForWorkspace(workspace!, section);
-    } else {
-      const tab = this.route.snapshot.queryParamMap.get('tab');
-      if (tab && LEGACY_TAB_REDIRECTS[tab]) {
-        this.router.navigateByUrl(LEGACY_TAB_REDIRECTS[tab], { replaceUrl: true });
-        return;
-      }
-    }
+    // Subscribe so /access-control/zones ↔ logs ↔ settings flips without full remount.
+    combineLatest([this.route.data, this.route.paramMap, this.route.queryParamMap])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([data, params, query]) => {
+        const workspace = data['moduleWorkspace'] as string | undefined;
+        const section = params.get('section');
+        const mapped = tabFromModuleSection(workspace, section);
+        if (mapped) {
+          this.moduleScoped = true;
+          this.activeTab = mapped;
+          this.moduleWorkspaceLabel = labelForWorkspace(workspace!, section);
+          return;
+        }
+        this.moduleScoped = false;
+        const tab = query.get('tab');
+        if (tab && LEGACY_TAB_REDIRECTS[tab]) {
+          this.router.navigateByUrl(LEGACY_TAB_REDIRECTS[tab], { replaceUrl: true });
+        }
+      });
 
     if (this.companyId) {
       this.reloadOverview();

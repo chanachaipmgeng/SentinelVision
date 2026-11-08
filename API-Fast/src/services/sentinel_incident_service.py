@@ -278,6 +278,7 @@ async def list_incidents(
     event_type: Optional[str] = None,
     severity: Optional[str] = None,
     status_filter: Optional[str] = None,
+    zone_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[dict]:
@@ -290,6 +291,13 @@ async def list_incidents(
         st = status_filter.strip().upper()
         if st in VALID_INCIDENT_STATUSES:
             stmt = stmt.where(SentinelIncidentLog.status == st)
+    if zone_id and str(zone_id).strip():
+        try:
+            zid = UUID(str(zone_id).strip())
+            stmt = stmt.where(SentinelIncidentLog.zoneId == zid)
+        except (ValueError, TypeError):
+            # Invalid UUID → empty result rather than 500
+            return []
     stmt = stmt.order_by(SentinelIncidentLog.occurredAt.desc()).limit(limit).offset(offset)
     rows = (await db.execute(stmt)).scalars().all()
     return [serialize_incident(r) for r in rows]

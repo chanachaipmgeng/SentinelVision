@@ -87,11 +87,13 @@ export class SentinelApiService {
   getIncidents(
     companyId: string,
     severity?: string,
-    status?: string
+    status?: string,
+    zoneId?: string
   ): Observable<any[]> {
     const params: string[] = [];
     if (severity) params.push(`severity=${encodeURIComponent(severity)}`);
     if (status) params.push(`status=${encodeURIComponent(status)}`);
+    if (zoneId) params.push(`zoneId=${encodeURIComponent(zoneId)}`);
     const q = params.length ? `?${params.join('&')}` : '';
     return this.http.get<any[]>(`${this.base(companyId)}/incidents${q}`);
   }

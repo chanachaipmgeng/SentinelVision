@@ -83,7 +83,8 @@ class SentinelAccessZone(Base):
     scheduleEnd = Column("schedule_end", String(10), nullable=False, default="23:59")
     require2FA = Column("require_2fa", Boolean, nullable=False, default=False)
     relayWebhookUrl = Column("relay_webhook_url", String(255), nullable=True)
-    relaySecret = Column("relay_secret", String(128), nullable=True)
+    # Widened for Fernet-sealed values (`fernet:` + token); see Alembic 0019.
+    relaySecret = Column("relay_secret", String(512), nullable=True)
     isActive = Column("is_active", Boolean, nullable=False, default=True)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())

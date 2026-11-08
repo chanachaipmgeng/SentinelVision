@@ -19,8 +19,28 @@ from ..config.settings import settings
 
 logger = logging.getLogger("dpu.outbox_crypto")
 
-SECRET_FIELDS = ("lineToken", "webhookSecret", "lineChannelAccessToken")
+SECRET_FIELDS = ("lineToken", "webhookSecret", "lineChannelAccessToken", "relaySecret")
 _PREFIX = "fernet:"
+
+
+def seal_relay_secret(value: Optional[str]) -> Optional[str]:
+    """Encrypt a zone ``relaySecret`` for DB storage; empty → None."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return encrypt_secret(text)
+
+
+def unseal_relay_secret(value: Optional[str]) -> Optional[str]:
+    """Decrypt a stored ``relaySecret`` for dispatch; plaintext passthrough."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return decrypt_secret(text)
 
 
 def _fernet() -> Optional[Fernet]:

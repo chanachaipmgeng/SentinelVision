@@ -23,6 +23,7 @@ from ..models.sentinel import (
 )
 from ..security.deps import current_member_var
 from ..services.company_module_service import get_company_module_config
+from ..services.outbox_crypto import seal_relay_secret
 from ..services.sentinel_identity_service import (
     VALID_IDENTITY_TYPES,
     VALID_SEVERITIES,
@@ -430,7 +431,7 @@ async def create_zone(db: AsyncSession, company_id: UUID, body: dict) -> dict:
         scheduleEnd=str(body.get("scheduleEnd") or "23:59").strip(),
         require2FA=bool(body.get("require2FA", False)),
         relayWebhookUrl=str(body.get("relayWebhookUrl") or "").strip() or None,
-        relaySecret=str(body.get("relaySecret") or "").strip() or None,
+        relaySecret=seal_relay_secret(str(body.get("relaySecret") or "").strip() or None),
         isActive=bool(body.get("isActive", True)),
     )
     db.add(zone)
@@ -465,7 +466,7 @@ async def update_zone(db: AsyncSession, company_id: UUID, zone_id: UUID, body: d
     if "relayWebhookUrl" in body:
         zone.relayWebhookUrl = str(body.get("relayWebhookUrl") or "").strip() or None
     if "relaySecret" in body and body.get("relaySecret") is not None:
-        zone.relaySecret = str(body.get("relaySecret") or "").strip() or None
+        zone.relaySecret = seal_relay_secret(str(body.get("relaySecret") or "").strip() or None)
     if "isActive" in body:
         zone.isActive = bool(body["isActive"])
 

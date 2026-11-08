@@ -1,12 +1,9 @@
 """SentinelVision incident lifecycle, dedupe, scan decision engine, kiosk match."""
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta, timezone
-import json
 import logging
 from typing import Callable, List, Optional
-import urllib.request
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -20,12 +17,13 @@ from ..services.face_match_service import (
     search_face_pgvector,
     search_sentinel_identity_pgvector,
 )
-from ..services.notification_service import NotificationOutbox, compute_webhook_signature
+from ..services.notification_service import NotificationOutbox
 from ..services.sentinel_identity_service import (
     bangkok_tz,
     is_within_schedule,
     serialize_zone,
 )
+from ..services.sentinel_relay_service import dispatch_relay_webhook
 from ..services.storage_service import (
     EVIDENCE_KIND_INCIDENT_SNAPSHOT,
     store_evidence_image,
@@ -297,32 +295,8 @@ async def dispatch_relay_webhook_async(
     secret: Optional[str],
     payload: dict,
 ) -> bool:
-    """Non-blocking IoT Door / Turnstile relay trigger executed in thread executor.
-
-    F2 will replace this with async httpx + circuit breaker; keep behaviour identical for F1.
-    """
-    if not webhook_url or not webhook_url.startswith(("http://", "https://")):
-        return False
-
-    def _send_sync() -> bool:
-        body_bytes = json.dumps(payload).encode("utf-8")
-        ts_str = str(int(datetime.now(timezone.utc).timestamp()))
-        headers = {
-            "Content-Type": "application/json",
-            "X-Sentinel-Timestamp": ts_str,
-        }
-        if secret:
-            headers["X-DPU-Signature-256"] = compute_webhook_signature(secret, ts_str, body_bytes)
-        req = urllib.request.Request(webhook_url, data=body_bytes, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            return 200 <= resp.status < 300
-
-    loop = asyncio.get_running_loop()
-    try:
-        return await loop.run_in_executor(None, _send_sync)
-    except Exception:
-        logger.warning("IoT relay webhook failed for %s", webhook_url)
-        return False
+    """Thin wrapper → ``sentinel_relay_service.dispatch_relay_webhook`` (httpx + circuit)."""
+    return await dispatch_relay_webhook(webhook_url, secret, payload)
 
 
 async def resolve_scan_zone(

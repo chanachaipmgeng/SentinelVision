@@ -321,6 +321,7 @@ async def _handle_identify(
     company_id: UUID,
     send_lock: asyncio.Lock,
     identify_cache: _IdentifyCache,
+    station_mode: Optional[str] = None,
 ) -> None:
     paths: List[str] = []
     try:
@@ -369,6 +370,7 @@ async def _handle_identify(
                     encoding,
                     liveness_passed=False,
                     companyId=company_id,
+                    stationMode=station_mode,
                 )
                 queue = face_gpu_queue_stats()
         await _send(
@@ -526,6 +528,7 @@ async def _handle_checkin(
                     mode="walkby-ws",
                     default_note="Face kiosk websocket walk-by",
                     punch_type=punch_type,
+                    station_mode=mode,
                 )
                 emp = result.get("employee") or {}
                 subject = (
@@ -584,6 +587,7 @@ async def _handle_checkin(
                     mode="walkby-ws",
                     default_note="Face kiosk websocket walk-by",
                     punch_type=punch_type,
+                    station_mode=mode,
                 )
                 emp = result.get("employee") or {}
                 subject = (
@@ -1099,6 +1103,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 continue
 
             if msg_type == "identify":
+                identify_mode = (
+                    str(data.get("stationMode") or "").strip().upper()
+                    if data.get("stationMode") is not None
+                    else session_station_mode
+                )
                 asyncio.create_task(
                     _run_bounded(
                         task_sem,
@@ -1110,6 +1119,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                             company_id=company_id,
                             send_lock=send_lock,
                             identify_cache=identify_cache,
+                            station_mode=identify_mode,
                         ),
                     )
                 )

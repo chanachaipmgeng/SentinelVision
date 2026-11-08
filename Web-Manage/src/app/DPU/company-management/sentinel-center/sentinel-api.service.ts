@@ -15,6 +15,29 @@ export class SentinelApiService {
     return this.http.get(`${this.base(companyId)}/overview`);
   }
 
+  getMuster(
+    companyId: string,
+    opts?: { limit?: number; offset?: number }
+  ): Observable<any> {
+    const limit = opts?.limit ?? 100;
+    const offset = opts?.offset ?? 0;
+    return this.http.get(
+      `${this.base(companyId)}/muster?limit=${limit}&offset=${offset}`
+    );
+  }
+
+  getSiemSettings(companyId: string): Observable<any> {
+    return this.http.get(`${this.base(companyId)}/siem-settings`);
+  }
+
+  putSiemSettings(companyId: string, body: unknown): Observable<any> {
+    return this.http.put(`${this.base(companyId)}/siem-settings`, body);
+  }
+
+  testSiemSettings(companyId: string): Observable<any> {
+    return this.http.post(`${this.base(companyId)}/siem-settings/test`, {});
+  }
+
   getIdentities(companyId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.base(companyId)}/identities`);
   }

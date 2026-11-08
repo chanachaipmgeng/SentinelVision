@@ -512,7 +512,8 @@ async def drain_outbox(limit: int = 20) -> int:
                     await asyncio.to_thread(_send_email, delivery_payload)
                 elif row.channel == "line":
                     await asyncio.to_thread(_send_line, delivery_payload)
-                elif row.channel == "webhook":
+                elif row.channel in ("webhook", "siem"):
+                    # F4: SIEM export reuses HMAC-signed webhook delivery.
                     await asyncio.to_thread(
                         _send_webhook, delivery_payload, delivery_id=str(row.id)
                     )

@@ -14,12 +14,10 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ..config.database import get_db
 from ..config.settings import settings
 from ..models.company_employee import CompanyEmployee
-from ..models.employee_timestamp import EmployeeTimestamp
 from ..models.face_encoding import FaceEncoding
 from ..models.member import Member
 from ..models.sentinel import (
@@ -39,6 +37,13 @@ from ..services.face_match_service import (
     search_sentinel_identity_pgvector,
 )
 from ..services.notification_service import NotificationOutbox, compute_webhook_signature
+from ..services.sentinel_muster_service import build_muster_roll
+from ..services.siem_export_service import (
+    enqueue_siem_test,
+    get_siem_settings,
+    queue_siem_incident_export,
+    save_siem_settings,
+)
 from ..services.storage_service import store_image_file
 from ..utils.face_gpu_queue import run_on_face_gpu
 
@@ -206,6 +211,17 @@ def _is_within_schedule(start_hhmm: str, end_hhmm: str, now_local: datetime) -> 
         return True
 
 
+async def _add_incident_with_siem(
+    db: AsyncSession,
+    company_id: UUID,
+    inc: SentinelIncidentLog,
+) -> SentinelIncidentLog:
+    """Register incident and optionally enqueue SIEM outbox row (caller commits)."""
+    db.add(inc)
+    await queue_siem_incident_export(db, company_id, inc)
+    return inc
+
+
 @router.get("/company/{companyId}/module-config")
 async def get_company_module_config_route(
     companyId: UUID,
@@ -236,11 +252,6 @@ async def get_sentinel_overview(
 ):
     """Unified Command Center KPIs, Watchlist/Visitor counts, Active Zones, Recent Incidents & Live Muster Roll."""
     await assert_request_company_access(request, db, companyId)
-
-    tz = _bangkok_tz()
-    now_local = datetime.now(tz)
-    day_start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_start_naive = day_start_local.astimezone(timezone.utc).replace(tzinfo=None)
 
     identities = (
         await db.execute(
@@ -305,81 +316,8 @@ async def get_sentinel_overview(
         )
     ).scalar() or 0
 
-    # Live Building Occupancy / Emergency Muster Roll (Employees & Visitors checked in today)
-    today_punches = (
-        await db.execute(
-            select(EmployeeTimestamp)
-            .options(
-                selectinload(EmployeeTimestamp.company_employee).selectinload(
-                    CompanyEmployee.member
-                )
-            )
-            .where(
-                EmployeeTimestamp.companyId == companyId,
-                EmployeeTimestamp.timestamp >= day_start_naive,
-            )
-            .order_by(EmployeeTimestamp.timestamp.desc())
-            .limit(200)
-        )
-    ).scalars().all()
-
-    seen_emp: set[str] = set()
-    muster_roll: List[dict] = []
-    for ts in today_punches:
-        emp = ts.company_employee
-        if not emp:
-            continue
-        emp_id_str = str(emp.company_employeeId)
-        if emp_id_str in seen_emp:
-            continue
-        seen_emp.add(emp_id_str)
-        m = emp.member
-        full_name = (
-            f"{m.firstName or ''} {m.lastName or ''}".strip() if m else emp.employeeId or "Employee"
-        )
-        muster_roll.append(
-            {
-                "subjectId": emp_id_str,
-                "fullName": full_name,
-                "badgeCode": emp.employeeId or "-",
-                "category": "EMPLOYEE",
-                "zoneOrLocation": ts.locationName or "Main Kiosk",
-                "lastSeenAt": ts.timestamp,
-            }
-        )
-
-    # Also include Visitors / VIPs who had ACCESS_GRANTED or VISITOR_CHECKIN today
-    visitor_logs_today = (
-        await db.execute(
-            select(SentinelIncidentLog)
-            .where(
-                SentinelIncidentLog.companyId == companyId,
-                SentinelIncidentLog.occurredAt >= day_start_local,
-                SentinelIncidentLog.eventType.in_(
-                    ["ACCESS_GRANTED", "VISITOR_CHECKIN", "VIP_ARRIVAL", "EVENT_CHECKIN"]
-                ),
-            )
-            .order_by(SentinelIncidentLog.occurredAt.desc())
-            .limit(100)
-        )
-    ).scalars().all()
-
-    seen_ident: set[str] = set()
-    for vlog in visitor_logs_today:
-        key = str(vlog.identityId or vlog.memberId or vlog.incidentId)
-        if key in seen_ident:
-            continue
-        seen_ident.add(key)
-        muster_roll.append(
-            {
-                "subjectId": key,
-                "fullName": vlog.subjectName or "Guest",
-                "badgeCode": vlog.identityType or "VISITOR",
-                "category": vlog.identityType or "VISITOR",
-                "zoneOrLocation": vlog.zoneName or "Access Gate",
-                "lastSeenAt": vlog.occurredAt,
-            }
-        )
+    # F4: muster from C1 attendance_daily PRESENT + open presence + visitor incidents
+    muster = await build_muster_roll(db, companyId, limit=100, offset=0)
 
     return {
         "summary": {
@@ -390,11 +328,63 @@ async def get_sentinel_overview(
             "activeZonesCount": int(zones_count),
             "liveEventsCount": int(live_events_count),
             "unacknowledgedAlerts": int(unack_alerts),
-            "buildingOccupancyCount": len(muster_roll),
+            "buildingOccupancyCount": int(muster.get("total") or 0),
         },
-        "musterRoll": muster_roll[:100],
+        "musterRoll": muster.get("items") or [],
+        "musterMeta": {
+            "total": muster.get("total"),
+            "limit": muster.get("limit"),
+            "offset": muster.get("offset"),
+            "workDate": muster.get("workDate"),
+        },
         "recentIncidents": [_serialize_incident(inc) for inc in recent_incidents],
     }
+
+
+@router.get("/company/{companyId}/muster")
+async def get_sentinel_muster(
+    companyId: UUID,
+    request: Request,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Paginated emergency muster roll (PRESENT daily / open presence / visitors)."""
+    await assert_request_company_access(request, db, companyId)
+    return await build_muster_roll(db, companyId, limit=limit, offset=offset)
+
+
+@router.get("/company/{companyId}/siem-settings")
+async def get_company_siem_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await get_siem_settings(db, companyId)
+
+
+@router.put("/company/{companyId}/siem-settings")
+async def put_company_siem_settings(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await save_siem_settings(db, companyId, body or {})
+
+
+@router.post("/company/{companyId}/siem-settings/test")
+async def test_company_siem_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    # Ensure settings row is readable in this request's tenancy context.
+    _ = await get_siem_settings(db, companyId)
+    return await enqueue_siem_test(companyId)
 
 
 @router.get("/company/{companyId}/identities")
@@ -793,7 +783,7 @@ async def trigger_zone_door_relay(
             + (" [Relay OK]" if relay_ok else " [Simulated Relay]")
         ),
     )
-    db.add(inc)
+    await _add_incident_with_siem(db, companyId, inc)
     await db.commit()
     await db.refresh(inc)
     return {
@@ -1037,7 +1027,7 @@ async def evaluate_unified_scan_decision(
             snapshotUrl=snapshot_url,
             actionTaken="Face not registered in company database",
         )
-        db.add(inc)
+        await _add_incident_with_siem(db, company_id, inc)
         await db.commit()
         await db.refresh(inc)
         return {
@@ -1069,7 +1059,7 @@ async def evaluate_unified_scan_decision(
                 snapshotUrl=snapshot_url,
                 actionTaken=f"Silent Security Alert Dispatched ({matched_ident.alertNote or 'Watchlist match'})",
             )
-            db.add(inc)
+            await _add_incident_with_siem(db, company_id, inc)
             if silent_alarm:
                 db.add(
                     NotificationOutbox(
@@ -1128,7 +1118,7 @@ async def evaluate_unified_scan_decision(
                 snapshotUrl=snapshot_url,
                 actionTaken=f"Checked in • Seat: {matched_ident.seatNumber or 'General'}",
             )
-            db.add(inc)
+            await _add_incident_with_siem(db, company_id, inc)
             await db.commit()
             await db.refresh(inc)
             return {
@@ -1191,7 +1181,7 @@ async def evaluate_unified_scan_decision(
                 else deny_reason
             ),
         )
-        db.add(inc)
+        await _add_incident_with_siem(db, company_id, inc)
         await db.commit()
         await db.refresh(inc)
         return {
@@ -1258,7 +1248,7 @@ async def evaluate_unified_scan_decision(
             else deny_reason
         ),
     )
-    db.add(inc)
+    await _add_incident_with_siem(db, company_id, inc)
     await db.commit()
     await db.refresh(inc)
     return {
@@ -1520,7 +1510,7 @@ async def evaluate_kiosk_sentinel_match(
         snapshotUrl=ident.pictureUrl,
         actionTaken=action_taken,
     )
-    db.add(inc)
+    await _add_incident_with_siem(db, company_id, inc)
     if itype in ("BLACKLIST", "POI"):
         # Staff-only channel: carries the full who/where/when/snapshot that the kiosk
         # response deliberately omits (see face_controller.kiosk_access_denied).

@@ -2,6 +2,52 @@
   padding-bottom: 2rem;
 }
 
+.ess-error-banner {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ess-audience-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  padding: 2.5rem 1.5rem;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.ess-audience-icon {
+  font-size: 2.5rem;
+  color: var(--dpu-brand, #0f766e);
+  opacity: 0.85;
+}
+
+.ess-audience-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ess-audience-copy {
+  margin: 0;
+  max-width: 26rem;
+  color: var(--dpu-muted, #64748b);
+  line-height: 1.55;
+}
+
+.ess-audience-hint {
+  max-width: 26rem;
+}
+
 @media (max-width: 640px) {
   .ess-page .ti-btn {
     flex: 1 1 auto;

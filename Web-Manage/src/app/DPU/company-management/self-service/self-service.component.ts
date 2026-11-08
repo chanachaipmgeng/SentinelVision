@@ -6,6 +6,7 @@ import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
+import { PermissionService } from '../../../shared/services/permission.service';
 import { TimestampService } from '../../services/timestamp.service';
 import swal from 'sweetalert';
 
@@ -24,6 +25,11 @@ export class SelfServiceComponent implements OnInit {
   memberId = '';
   companyEmployeeId = '';
   loading = false;
+  /** True when signed-in identity is company/HR admin (employee portal audience). */
+  isCompanyAdminViewer = false;
+  /** No CompanyEmployee row for this member in the selected company. */
+  missingEmployeeRecord = false;
+  loadError = '';
   activeTab: Tab = 'attendance';
   attendance: any[] = [];
   leaves: any[] = [];
@@ -39,24 +45,62 @@ export class SelfServiceComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private token: TokenService,
-    private timestamps: TimestampService
+    private timestamps: TimestampService,
+    private permissions: PermissionService
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
     this.memberId = this.token.getUser()?.member?.memberId || '';
   }
 
+  /** Show the employee-oriented empty panel instead of admin-looking blank tables. */
+  get showEmployeeAudienceEmpty(): boolean {
+    if (this.loading) return false;
+    return this.isCompanyAdminViewer || this.missingEmployeeRecord;
+  }
+
   ngOnInit(): void {
-    if (!this.companyId || !this.memberId) return;
+    this.isCompanyAdminViewer = this.permissions.isCompanyAdmin();
+    if (!this.companyId || !this.memberId) {
+      this.missingEmployeeRecord = true;
+      return;
+    }
     this.loading = true;
+    this.loadError = '';
+    this.permissions.load(this.companyId).subscribe({
+      next: () => {
+        this.isCompanyAdminViewer = this.permissions.isCompanyAdmin();
+        // Company admin: stop after role check — page is employee-audience only.
+        if (this.isCompanyAdminViewer) {
+          this.loading = false;
+        }
+      },
+      error: () => {
+        if (this.isCompanyAdminViewer) {
+          this.loading = false;
+        }
+      },
+    });
+    // Employees (and non-admin deep links) resolve their CompanyEmployee row.
     this.http.get<any>(`/employees/company/${this.companyId}/member/${this.memberId}`).subscribe({
       next: (emp) => {
         this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
+        this.missingEmployeeRecord = !this.companyEmployeeId;
+        if (this.isCompanyAdminViewer) {
+          this.loading = false;
+          return;
+        }
         this.loading = false;
-        this.reload();
+        if (this.companyEmployeeId) {
+          this.reload();
+        }
       },
       error: () => {
+        this.missingEmployeeRecord = true;
+        this.companyEmployeeId = '';
         this.loading = false;
-        swal('แจ้งเตือน', 'ไม่พบบัญชีพนักงานของคุณในบริษัทนี้', 'info');
+        if (!this.isCompanyAdminViewer) {
+          this.loadError = 'ไม่พบบัญชีพนักงานของคุณในบริษัทนี้';
+        }
       },
     });
   }

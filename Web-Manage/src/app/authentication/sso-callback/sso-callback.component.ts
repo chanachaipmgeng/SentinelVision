@@ -62,12 +62,7 @@ export class SsoCallbackComponent implements OnInit {
   }
 
   private completeLogin(result: any): void {
-    this.tokenService.saveToken(result.access_token || result.accessToken || '');
-    const refresh = result.refresh_token || result.refreshToken;
-    if (refresh) {
-      this.tokenService.saveRefreshToken(refresh);
-    }
-    this.tokenService.saveUser(result);
+    this.authService.applyMemberSession(result);
     if (result.mustChangePassword || result.must_change_password) {
       this.router.navigate(['/auth/change-password']);
       return;

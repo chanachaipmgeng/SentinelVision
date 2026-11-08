@@ -1,4 +1,4 @@
-from sqlalchemy import func
+from sqlalchemy import func, or_, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -6,10 +6,22 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 from ..schemas.company_employee_schema import CompanyEmployeePost, CompanyEmployeeUpdate
+from ..schemas.page_schema import page_envelope
 from ..models.company_employee import CompanyEmployee
 from ..models.member import Member, RoleType, StatusType
 from ..models.company import Company
+from ..models.department import Department
+from ..models.position import Position
 from fastapi import HTTPException, status
+
+_EMP_SORT_COLUMNS = {
+    "employeeId": CompanyEmployee.employeeId,
+    "startDate": CompanyEmployee.startDate,
+    "firstName": Member.firstName,
+    "lastName": Member.lastName,
+    "email": Member.email,
+    "username": Member.username,
+}
 
 def _member_dict(member: Member) -> dict:
     return {
@@ -27,48 +39,107 @@ def _member_dict(member: Member) -> dict:
         "attachmentUrls": member.attachmentUrls,
     }
 
+def _employee_payload(employee: CompanyEmployee) -> dict:
+    return {
+        "member": _member_dict(employee.member),
+        "companyId": employee.companyId,
+        "employeeId": employee.employeeId or "",
+        "position": {
+            "positionId": employee.position.positionId,
+            "thName": employee.position.thName,
+            "engName": employee.position.engName,
+        }
+        if employee.position
+        else None,
+        "department": {
+            "departmentId": employee.department.departmentId,
+            "thName": employee.department.thName,
+            "engName": employee.department.engName,
+        }
+        if employee.department
+        else None,
+        "company_employeeId": employee.company_employeeId,
+        "salary": employee.salary if employee.salary is not None else 0,
+        "startDate": employee.startDate,
+        "companyRoleType": employee.companyRoleType,
+        "empType": employee.empType,
+        "bossId": employee.bossId or "",
+    }
+
+
 # ดึงข้อมูล CompanyEmployee ทั้งหมดตาม companyId
-async def get_all_companyEmployees(companyId: str, db: AsyncSession, limit: int | None = None, offset: int = 0):
-    stmt = (
-        select(CompanyEmployee)
-        .where(CompanyEmployee.companyId == companyId, CompanyEmployee.deletedAt.is_(None))
-        .options(
-            selectinload(CompanyEmployee.member),
-            selectinload(CompanyEmployee.position),
-            selectinload(CompanyEmployee.department)
+async def get_all_companyEmployees(
+    companyId: str,
+    db: AsyncSession,
+    limit: int | None = None,
+    offset: int = 0,
+    *,
+    q: str | None = None,
+    sort_by: str | None = None,
+    sort_dir: str = "asc",
+    paged: bool = False,
+):
+    filters = [CompanyEmployee.companyId == companyId, CompanyEmployee.deletedAt.is_(None)]
+    needs_member_join = bool((q or "").strip()) or (sort_by in ("firstName", "lastName", "email", "username"))
+
+    base = select(CompanyEmployee).where(*filters)
+    if needs_member_join:
+        base = base.join(Member, CompanyEmployee.memberId == Member.memberId)
+
+    needle = (q or "").strip()
+    if needle:
+        like = f"%{needle}%"
+        base = (
+            base.outerjoin(Department, CompanyEmployee.departmentId == Department.departmentId)
+            .outerjoin(Position, CompanyEmployee.positionId == Position.positionId)
+            .where(
+                or_(
+                    Member.firstName.ilike(like),
+                    Member.lastName.ilike(like),
+                    Member.email.ilike(like),
+                    Member.username.ilike(like),
+                    CompanyEmployee.employeeId.ilike(like),
+                    Department.thName.ilike(like),
+                    Department.engName.ilike(like),
+                    Position.thName.ilike(like),
+                    Position.engName.ilike(like),
+                )
+            )
         )
+
+    count_stmt = select(func.count()).select_from(base.order_by(None).subquery())
+    total = int((await db.execute(count_stmt)).scalar_one() or 0)
+
+    sort_col = _EMP_SORT_COLUMNS.get(sort_by or "")
+    if sort_col is not None:
+        order = desc(sort_col) if (sort_dir or "").lower() == "desc" else asc(sort_col)
+        base = base.order_by(order)
+    else:
+        base = base.order_by(asc(CompanyEmployee.employeeId))
+
+    safe_offset = max(0, int(offset or 0))
+    if paged:
+        safe_limit = min(max(1, int(limit or 25)), 500)
+        stmt = base.offset(safe_offset).limit(safe_limit)
+    elif limit:
+        safe_limit = min(max(1, int(limit)), 500)
+        stmt = base.offset(safe_offset).limit(safe_limit)
+    else:
+        safe_limit = total
+        stmt = base
+
+    stmt = stmt.options(
+        selectinload(CompanyEmployee.member),
+        selectinload(CompanyEmployee.position),
+        selectinload(CompanyEmployee.department),
     )
-    if limit:
-        stmt = stmt.offset(max(0, offset)).limit(min(int(limit), 500))
     result = await db.execute(stmt)
-    employees = result.scalars().all()
+    employees = result.unique().scalars().all()
+    items = [_employee_payload(employee) for employee in employees]
 
-    # จัดรูปแบบ response
-    response = []
-    for employee in employees:
-        response.append({
-            "member": _member_dict(employee.member),
-            "companyId": employee.companyId,
-            "employeeId": employee.employeeId or "",
-            "position": {
-                "positionId": employee.position.positionId,
-                "thName": employee.position.thName,
-                "engName": employee.position.engName
-            } if employee.position else None,
-            "department": {
-                "departmentId": employee.department.departmentId,
-                "thName": employee.department.thName,
-                "engName": employee.department.engName
-            } if employee.department else None,
-            "company_employeeId": employee.company_employeeId,
-            "salary": employee.salary if employee.salary is not None else 0,
-            "startDate": employee.startDate,
-            "companyRoleType": employee.companyRoleType,
-            "empType": employee.empType,
-            "bossId": employee.bossId or "",
-        })
-
-    return response
+    if paged:
+        return page_envelope(items, total=total, limit=safe_limit, offset=safe_offset)
+    return items
 
 # ดึงข้อมูล CompanyEmployee ตาม memberid และ companyId
 async def get_company_member_by_id(memberId: str, companyId: str, db: AsyncSession):

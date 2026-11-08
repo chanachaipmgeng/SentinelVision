@@ -1,11 +1,18 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { EmployeeModel } from '../models/employee.model';
 import { CompanyModel } from '../models/company.model';
+import {
+  DataTableQueryInput,
+  PageEnvelope,
+  buildDataTableQuery,
+  normalizePageEnvelope,
+  toDataTableParams,
+} from '../../shared/utils/data-table-query';
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +36,23 @@ export class EmployeeService {
       .get<EmployeeModel[]>(this.apiBaseUrl + "/" + companyId)
       .pipe(
         map((e) => e.map((e) => new EmployeeModel(e, this.translateService)))
+      );
+  }
+
+  /** Server-side page (Phase E2): always sends paged=1. */
+  getPage(companyId: string, input: DataTableQueryInput = {}): Observable<PageEnvelope<EmployeeModel>> {
+    const query = buildDataTableQuery(input);
+    const params = new HttpParams({ fromObject: toDataTableParams(query) });
+    return this.http
+      .get<PageEnvelope<EmployeeModel> | EmployeeModel[]>(`${this.apiBaseUrl}/${companyId}`, { params })
+      .pipe(
+        map((payload) => {
+          const page = normalizePageEnvelope(payload);
+          return {
+            ...page,
+            items: page.items.map((row) => new EmployeeModel(row, this.translateService)),
+          };
+        }),
       );
   }
 

@@ -29,6 +29,7 @@ TYP_ACCESS = "access"
 TYP_REFRESH = "refresh"
 TYP_KIOSK = "kiosk"
 TYP_KIOSK_REFRESH = "kiosk_refresh"
+TYP_PASSWORD_RESET = "password_reset"
 MEMBER_TYPES = (TYP_ACCESS, TYP_REFRESH)
 KIOSK_TYPES = (TYP_KIOSK, TYP_KIOSK_REFRESH)
 
@@ -108,6 +109,24 @@ def create_token_pair(member_id: str, username: str, *, family: Optional[str] = 
     return (
         create_access_token(member_id, username, family=fam),
         create_refresh_token(member_id, username, family=fam),
+    )
+
+
+def password_reset_ttl() -> timedelta:
+    return timedelta(minutes=max(5, int(settings.AUTH_PASSWORD_RESET_EXPIRE_MINUTES)))
+
+
+def create_password_reset_token(member_id: str, username: str, email: str) -> str:
+    """Short-lived, single-purpose JWT for the reset-password form (not a session)."""
+    return _encode(
+        {
+            "memberId": str(member_id),
+            "username": username,
+            "email": (email or "").strip().lower(),
+            "typ": TYP_PASSWORD_RESET,
+        },
+        expires=password_reset_ttl(),
+        family=new_family_id(),
     )
 
 

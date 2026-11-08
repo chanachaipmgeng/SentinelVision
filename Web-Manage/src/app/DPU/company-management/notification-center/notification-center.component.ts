@@ -30,6 +30,8 @@ export class NotificationCenterComponent implements OnInit {
   activeTab: Tab = 'inbox';
   loading = false;
   inbox: any[] = [];
+  inboxFiltered: any[] = [];
+  searchTerm = '';
   deadLetter: any[] = [];
   prefs: any = {
     channelEmail: true,
@@ -62,6 +64,7 @@ export class NotificationCenterComponent implements OnInit {
       this.http.get<any[]>(`/notifications/company/${this.companyId}/inbox`).subscribe({
         next: (rows) => {
           this.inbox = rows || [];
+          this.applyInboxFilter();
           this.loading = false;
         },
         error: () => (this.loading = false),
@@ -92,6 +95,18 @@ export class NotificationCenterComponent implements OnInit {
         error: () => (this.loading = false),
       });
     }
+  }
+
+  applyInboxFilter(): void {
+    const q = (this.searchTerm || '').trim().toLowerCase();
+    this.inboxFiltered = !q
+      ? [...this.inbox]
+      : this.inbox.filter((n) =>
+          [n.title, n.body, n.event, n.channel, n.status]
+            .join(' ')
+            .toLowerCase()
+            .includes(q)
+        );
   }
 
   markRead(n: any): void {

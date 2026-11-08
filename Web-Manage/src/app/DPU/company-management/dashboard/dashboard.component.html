@@ -24,7 +24,7 @@
           <i class="ri-shield-flash-line"></i><span>Sentinel Center</span>
         </a>
         <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-checkbox-circle-line"></i><span>อนุมัติ</span>
+          <i class="ri-checkbox-circle-line"></i><span>{{ 'Approve' | translate }}</span>
         </a>
         <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
           <i class="ri-camera-line"></i><span>Kiosk</span>
@@ -32,7 +32,7 @@
         <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh"
           (click)="loadStats(false)" [disabled]="isLoading || isRefreshing">
           <i class="ri-refresh-line" [class.animate-spin]="isRefreshing"></i>
-          <span>รีเฟรช</span>
+          <span>{{ 'Refresh' | translate }}</span>
         </button>
       </ng-container>
     </app-page-toolbar>
@@ -53,7 +53,7 @@
           <div class="font-semibold text-danger">โหลดไม่สำเร็จ</div>
           <div class="text-sm text-dpu-muted">{{ error }}</div>
         </div>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats(true)">ลองใหม่</button>
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="loadStats(true)">{{ 'Try again' | translate }}</button>
       </div>
     </div>
   </div>
@@ -87,7 +87,7 @@
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
       <div class="box dpu-stat-card modern-card glass">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">รออนุมัติ</p>
+          <p class="mb-0 text-dpu-muted">{{ 'Pending approval' | translate }}</p>
           <div class="text-2xl font-semibold" [class.text-warning]="pendingApproval > 0">{{ pendingApproval }}</div>
           <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link">ไปคิวอนุมัติ</a>
         </div>

@@ -1,0 +1,152 @@
+<div class="grid grid-cols-12 gap-6">
+            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
+              <h6 class="font-bold text-base mb-1">
+                ขึ้นทะเบียนบัญชีเฝ้าระวัง (Blacklist / POI) หรือบุคคลสำคัญ (VIP)
+              </h6>
+              <p class="text-xs text-dpu-muted mb-4">
+                เมื่อกล้อง Kiosk ตรวจพบใบหน้าในกลุ่มนี้ ระบบจะแจ้งเตือนไปยังเจ้าหน้าที่ทันที
+              </p>
+
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">หมวดหมู่บัญชี</label>
+                  <select class="form-control" [(ngModel)]="watchlistForm.identityType">
+                    <option value="BLACKLIST">🔴 BLACKLIST (บุคคลต้องห้าม)</option>
+                    <option value="POI">🟡 POI (บุคคลเฝ้าระวังพิเศษ)</option>
+                    <option value="VIP">🟣 VIP (แขกผู้บริหาร/ต้อนรับพิเศษ)</option>
+                  </select>
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">ระดับความสำคัญ</label>
+                  <select class="form-control" [(ngModel)]="watchlistForm.severity">
+                    <option value="CRITICAL">CRITICAL (สูงสุด/แจ้งเตือนด่วน)</option>
+                    <option value="HIGH">HIGH (สูง)</option>
+                    <option value="MEDIUM">MEDIUM (ปานกลาง)</option>
+                    <option value="LOW">LOW (ทั่วไป)</option>
+                  </select>
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">ชื่อ - นามสกุล / ชื่อเรียก</label>
+                  <input
+                    class="form-control"
+                    [(ngModel)]="watchlistForm.fullName"
+                    placeholder="ระบุชื่อ-นามสกุล หรือรหัสอ้างอิง"
+                  />
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">เลขบัตร / พาสปอร์ต (ถ้ามี)</label>
+                  <input class="form-control" [(ngModel)]="watchlistForm.documentRef" placeholder="เช่น ID / Passport" />
+                </div>
+                <div class="col-span-12 sm:col-span-6">
+                  <label class="form-label text-xs font-semibold">หน่วยงาน / บริษัท</label>
+                  <input class="form-control" [(ngModel)]="watchlistForm.organization" placeholder="ระบุสังกัด (ถ้ามี)" />
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">ข้อความแจ้งเตือน รปภ. / ฝ่ายต้อนรับ</label>
+                  <textarea
+                    rows="2"
+                    class="form-control"
+                    [(ngModel)]="watchlistForm.alertNote"
+                    placeholder="เช่น ห้ามเข้าพื้นที่อาคาร B เด็ดขาด หรือ แจ้งเลขาผู้บริหารทันทีที่มาถึง"
+                  ></textarea>
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">รูปถ่ายใบหน้า (สกัด Embedding 512-d อัตโนมัติ)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="form-control"
+                    (change)="onIdentityPhotoSelected($event)"
+                  />
+                </div>
+                <div class="col-span-12">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-primary-full w-full font-semibold"
+                    (click)="createIdentityRecord(watchlistForm)"
+                  >
+                    + บันทึกรายชื่อเข้าสู่ระบบเฝ้าระวัง
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-8">
+              <h6 class="font-bold text-base mb-3">
+                ทะเบียนรายชื่อ Watchlist / Blacklist &amp; VIP ({{ watchlistItems.length }})
+              </h6>
+              <div
+                tabindex="0"
+                role="region"
+                aria-label="ตารางรายชื่อ Watchlist และ VIP"
+                class="sv-table-wrapper"
+              >
+                <table class="table whitespace-nowrap">
+                  <thead>
+                    <tr class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">ชื่อ-นามสกุล</th>
+                      <th class="text-start p-3">ประเภท</th>
+                      <th class="text-start p-3">ระดับ</th>
+                      <th class="text-start p-3">คำสั่งแจ้งเตือน</th>
+                      <th class="text-start p-3">ข้อมูลใบหน้า 512-d</th>
+                      <th class="text-end p-3">จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of watchlistItems" class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">
+                        <div class="font-semibold">{{ item.fullName }}</div>
+                        <div class="text-[0.7rem] text-dpu-muted">{{ item.organization || item.documentRef || '-' }}</div>
+                      </th>
+                      <td class="p-3">
+                        <span
+                          class="badge px-2.5 py-0.5 rounded"
+                          [ngClass]="item.identityType === 'VIP' ? 'sv-pill-vip' : 'sv-pill-critical'"
+                        >
+                          {{ item.identityType }}
+                        </span>
+                      </td>
+                      <td class="p-3 font-semibold">{{ item.severity }}</td>
+                      <td class="p-3 max-w-xs truncate" [title]="item.alertNote || ''">
+                        {{ item.alertNote || '-' }}
+                      </td>
+                      <td class="p-3">
+                        <span
+                          *ngIf="item.hasFaceEnrolled"
+                          class="badge bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded"
+                        >
+                          พร้อมสแกน 1:N
+                        </span>
+                        <label
+                          *ngIf="!item.hasFaceEnrolled"
+                          class="badge bg-amber-100 text-amber-800 px-2 py-0.5 rounded cursor-pointer"
+                        >
+                          + อัปโหลดใบหน้า
+                          <input
+                            type="file"
+                            accept="image/*"
+                            class="hidden"
+                            (change)="enrollExistingIdentityFace(item.identityId, $event)"
+                          />
+                        </label>
+                      </td>
+                      <td class="p-3 text-end">
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-danger"
+                          (click)="deleteIdentity(item.identityId)"
+                        >
+                          ลบ
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="watchlistItems.length === 0">
+                      <td colspan="6" class="text-center text-dpu-muted py-6">
+                        ยังไม่มีรายชื่อในบัญชี Watchlist / Blacklist / VIP
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>

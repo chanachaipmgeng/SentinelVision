@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import and_, asc, desc, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
 from ..controllers.company_controller import (
@@ -13,6 +15,7 @@ from ..controllers.company_controller import (
 )
 from ..models.member import Member
 from ..schemas.company_schema import CompanyUpdate, CompanyResponse, CompanyBase
+from ..schemas.page_schema import page_envelope
 from ..security.deps import (
     assert_request_company_access,
     require_permission,
@@ -20,6 +23,13 @@ from ..security.deps import (
 )
 from ..services.audit_service import AuditLog
 from ..services import tenant_quota_service as tenant_svc
+
+_AUDIT_SORT_COLUMNS = {
+    "occurredAt": AuditLog.occurredAt,
+    "action": AuditLog.action,
+    "path": AuditLog.path,
+    "statusCode": AuditLog.statusCode,
+}
 
 router = APIRouter()
 
@@ -95,31 +105,114 @@ async def list_audit_logs(
     companyId: str,
     request: Request,
     limit: int = 100,
+    offset: int = 0,
+    q: str | None = Query(None),
+    actor: Optional[str] = Query(None),
+    action: Optional[str] = Query(None),
+    resource: Optional[str] = Query(None),
+    entityType: Optional[str] = Query(None),
+    dateFrom: Optional[str] = Query(None),
+    dateTo: Optional[str] = Query(None),
+    sort_by: str | None = Query(None),
+    sort_dir: str = Query("desc"),
+    paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("audit.read")),
 ):
+    """Searchable audit log with optional server-side pagination/sort."""
     await assert_request_company_access(request, db, companyId)
-    rows = (
-        await db.execute(
-            select(AuditLog)
-            .where(AuditLog.companyId == companyId)
-            .order_by(AuditLog.occurredAt.desc())
-            .limit(min(max(limit, 1), 500))
+
+    safe_limit = min(max(int(limit or 100), 1), 500)
+    safe_offset = max(0, int(offset or 0))
+    clauses = [AuditLog.companyId == companyId]
+
+    actor_q = (actor or "").strip()
+    if actor_q:
+        try:
+            clauses.append(AuditLog.actorMemberId == UUID(actor_q))
+        except ValueError:
+            clauses.append(AuditLog.actorRole.ilike(f"%{actor_q}%"))
+
+    action_q = (action or "").strip()
+    if action_q:
+        clauses.append(AuditLog.action.ilike(f"%{action_q}%"))
+
+    resource_q = (resource or entityType or "").strip()
+    if resource_q:
+        clauses.append(
+            or_(
+                AuditLog.entityType.ilike(f"%{resource_q}%"),
+                AuditLog.entityId.ilike(f"%{resource_q}%"),
+                AuditLog.path.ilike(f"%{resource_q}%"),
+            )
         )
+
+    free = (q or "").strip()
+    if free:
+        like = f"%{free}%"
+        clauses.append(
+            or_(
+                AuditLog.action.ilike(like),
+                AuditLog.path.ilike(like),
+                AuditLog.entityType.ilike(like),
+                AuditLog.entityId.ilike(like),
+                AuditLog.actorRole.ilike(like),
+                AuditLog.statusCode.ilike(like),
+                AuditLog.ip.ilike(like),
+            )
+        )
+
+    def _parse_dt(raw: Optional[str], *, end: bool = False) -> Optional[datetime]:
+        if not raw:
+            return None
+        text = raw.strip()
+        try:
+            if len(text) == 10:
+                text = f"{text}T23:59:59.999Z" if end else f"{text}T00:00:00Z"
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+
+    df = _parse_dt(dateFrom, end=False)
+    dt = _parse_dt(dateTo, end=True)
+    if df is not None:
+        clauses.append(AuditLog.occurredAt >= df)
+    if dt is not None:
+        clauses.append(AuditLog.occurredAt <= dt)
+
+    query = select(AuditLog).where(and_(*clauses))
+    total = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(query.order_by(None).subquery())
+            )
+        ).scalar_one()
+        or 0
+    )
+    sort_col = _AUDIT_SORT_COLUMNS.get(sort_by or "", AuditLog.occurredAt)
+    order = asc(sort_col) if (sort_dir or "").lower() == "asc" else desc(sort_col)
+    rows = (
+        await db.execute(query.order_by(order).offset(safe_offset).limit(safe_limit))
     ).scalars().all()
-    return [
+    items = [
         {
             "id": str(r.id),
             "occurredAt": r.occurredAt.isoformat() if r.occurredAt else None,
             "actorMemberId": str(r.actorMemberId) if r.actorMemberId else None,
             "actorRole": r.actorRole,
             "action": r.action,
+            "entityType": r.entityType,
+            "entityId": r.entityId,
             "path": r.path,
             "statusCode": r.statusCode,
             "ip": r.ip,
         }
         for r in rows
     ]
+    if paged:
+        return page_envelope(items, total=total, limit=safe_limit, offset=safe_offset)
+    return items
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,109 @@
+<app-page-header [title]="'ประวัติการใช้งาน'" [activeTitle]="'ธรรมาภิบาล'" [title1]="'Audit Log'"></app-page-header>
+
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="Audit Log">
+      <ng-container controls>
+        <app-pill-search
+          [value]="filters.q"
+          (valueChange)="setSearch($event)"
+          placeholder="ค้นหา action / path / IP..."
+          ariaLabel="ค้นหา audit log"
+        ></app-pill-search>
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="reload()">
+          <i class="ri-refresh-line"></i>
+        </button>
+        <button
+          type="button"
+          class="ti-btn ti-btn-primary-full modern-btn"
+          (click)="exportCsv()"
+          [disabled]="!rows.length"
+        >
+          ส่งออก CSV
+        </button>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
+
+  <div class="col-span-12">
+    <div class="box modern-card glass mb-4">
+      <div class="box-body grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div>
+          <label class="form-label">Actor</label>
+          <input
+            class="form-control"
+            [(ngModel)]="filters.actor"
+            placeholder="memberId / role"
+            (keyup.enter)="reload()"
+          />
+        </div>
+        <div>
+          <label class="form-label">Action</label>
+          <input
+            class="form-control"
+            [(ngModel)]="filters.action"
+            placeholder="LOGIN_OK"
+            (keyup.enter)="reload()"
+          />
+        </div>
+        <div>
+          <label class="form-label">Resource</label>
+          <input
+            class="form-control"
+            [(ngModel)]="filters.resource"
+            placeholder="entity / path"
+            (keyup.enter)="reload()"
+          />
+        </div>
+        <div>
+          <label class="form-label">จากวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateFrom" (change)="reload()" />
+        </div>
+        <div>
+          <label class="form-label">ถึงวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateTo" (change)="reload()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12">
+    <app-data-table
+      [columns]="columns"
+      [rows]="rows"
+      [total]="total"
+      [loading]="loading"
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      [sortBy]="sortBy"
+      [sortDir]="sortDir"
+      [search]="filters.q"
+      [showSearch]="false"
+      trackByKey="id"
+      emptyTitle="ยังไม่มีบันทึก audit"
+      emptyHint="เมื่อมีการแก้ไขข้อมูล ระบบจะบันทึกประวัติที่นี่"
+      (pageIndexChange)="onPage($event)"
+      (sortChange)="onSort($event)"
+    ></app-data-table>
+  </div>
+
+  <div class="col-span-12">
+    <div class="box modern-card glass">
+      <div class="box-body">
+        <h3 class="text-base font-semibold mb-3">แจ้งเตือน</h3>
+        <label class="form-label">อีเมล</label>
+        <input class="form-control mb-2" [(ngModel)]="email" />
+        <label class="form-label">LINE token</label>
+        <input class="form-control mb-3" [(ngModel)]="lineToken" />
+        <div class="flex gap-2">
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="saveNotify()">
+            บันทึก
+          </button>
+          <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="testNotify()">
+            ทดสอบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

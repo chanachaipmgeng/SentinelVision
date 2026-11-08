@@ -1,16 +1,18 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { finalize, map, shareReplay } from 'rxjs/operators';
-import { ProfileModel, UserModel } from '../user-auth.model';
-import { KioskSession } from './token.service';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { finalize, map, shareReplay, tap } from 'rxjs/operators';
+import { UserModel } from '../user-auth.model';
+import { KioskSession, TokenService } from './token.service';
 
 export interface RefreshedTokens {
   accessToken: string;
   refreshToken: string;
+  csrfToken?: string;
 }
 
 const SSO_TXN_KEY = 'dpu-sso-txn';
+const CSRF_HEADER = 'X-CSRF-Token';
 
 @Injectable({
   providedIn: 'root',
@@ -19,7 +21,20 @@ export class AuthService {
   apiBaseUrl = "/auth";
   constructor(
     private http: HttpClient,
+    private tokenService: TokenService,
   ) {
+  }
+
+  private withCreds(extra?: Record<string, string>) {
+    const headers: Record<string, string> = { ...(extra || {}) };
+    const csrf = this.tokenService.getCsrfToken();
+    if (csrf) {
+      headers[CSRF_HEADER] = csrf;
+    }
+    return {
+      withCredentials: true,
+      headers: new HttpHeaders(headers),
+    };
   }
 
   login(username: string, password: string, totpCode?: string) {
@@ -30,20 +45,42 @@ export class AuthService {
     if (totpCode && totpCode.trim()) {
       body.totpCode = totpCode.trim();
     }
-    return this.http.post<UserModel>(this.apiBaseUrl + '/login', body);
+    return this.http.post<UserModel>(this.apiBaseUrl + '/login', body, { withCredentials: true }).pipe(
+      tap((res: any) => this.applyMemberSession(res)),
+    );
+  }
+
+  /** Cookie-based refresh for member SPA sessions (requires CSRF double-submit). */
+  refreshFromCookie(): Observable<RefreshedTokens> {
+    return this.http
+      .post<any>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds())
+      .pipe(
+        map((res: any) => this.normalizeTokens(res)),
+        tap((tokens) => {
+          this.tokenService.saveToken(tokens.accessToken);
+          if (tokens.csrfToken) {
+            this.tokenService.saveCsrfToken(tokens.csrfToken);
+          }
+        }),
+      );
   }
 
   refreshToken(token: string) {
-    return this.http.post<any>(this.apiBaseUrl + "/refresh-token", {
-      "refreshToken": token
-    });
+    // Legacy body refresh (kiosk / API clients). Prefer refreshFromCookie for members.
+    return this.http.post<any>(
+      this.apiBaseUrl + '/refresh-token',
+      { refreshToken: token },
+      { withCredentials: true }
+    );
   }
 
-  /** Server-side logout: revokes the access token (header) and the refresh token (body). */
+  /** Server-side logout: revokes bearer + refresh cookie/family and clears auth cookies. */
   logout(refreshToken: string | null) {
-    return this.http.post<any>(this.apiBaseUrl + '/logout', {
-      refreshToken: refreshToken || undefined,
-    });
+    const body: any = {};
+    if (refreshToken) {
+      body.refreshToken = refreshToken;
+    }
+    return this.http.post<any>(this.apiBaseUrl + '/logout', body, this.withCreds());
   }
 
   /** Exchange a one-time pairing code for a device-scoped kiosk session. */
@@ -63,16 +100,32 @@ export class AuthService {
    * + kiosk WebSocket `token_expiring`) must share one request or the second would be flagged
    * as reuse and revoke the whole session.
    */
-  refreshSession(refreshToken: string, kiosk: boolean): Observable<RefreshedTokens> {
+  refreshSession(refreshToken: string | null, kiosk: boolean): Observable<RefreshedTokens> {
     if (this.inflightRefresh) {
       return this.inflightRefresh;
     }
-    const call = kiosk ? this.kioskRefresh(refreshToken) : this.refreshToken(refreshToken);
+    let call: Observable<any>;
+    if (kiosk) {
+      if (!refreshToken) {
+        return throwError(() => new Error('Kiosk refresh token required'));
+      }
+      call = this.kioskRefresh(refreshToken);
+    } else if (refreshToken) {
+      call = this.refreshToken(refreshToken);
+    } else {
+      call = this.http.post<any>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds());
+    }
     this.inflightRefresh = call.pipe(
-      map((res: any) => ({
-        accessToken: res?.deviceToken || res?.accessToken || res?.access_token || '',
-        refreshToken: res?.deviceRefreshToken || res?.refreshToken || res?.refresh_token || '',
-      })),
+      map((res: any) => this.normalizeTokens(res)),
+      tap((tokens) => {
+        this.tokenService.saveToken(tokens.accessToken);
+        if (tokens.refreshToken) {
+          this.tokenService.saveRefreshToken(tokens.refreshToken);
+        }
+        if (tokens.csrfToken) {
+          this.tokenService.saveCsrfToken(tokens.csrfToken);
+        }
+      }),
       finalize(() => {
         this.inflightRefresh = undefined;
       }),
@@ -81,8 +134,20 @@ export class AuthService {
     return this.inflightRefresh;
   }
 
-  register(body: UserModel) {
-    return this.http.post<any>(this.apiBaseUrl + "/register", new ProfileModel());
+  sendResetPassword(email: string) {
+    return this.http.post<{ ok: boolean; resetToken?: string }>(
+      this.apiBaseUrl + '/send-reset-password',
+      { email },
+      { withCredentials: true }
+    );
+  }
+
+  resetPassword(token: string, newPassword: string) {
+    return this.http.post<{ ok: boolean }>(
+      this.apiBaseUrl + '/reset-password',
+      { token, newPassword },
+      { withCredentials: true }
+    );
   }
 
   // ---- Enterprise SSO (OIDC Authorization Code + PKCE) -------------------------------------
@@ -101,11 +166,13 @@ export class AuthService {
   }
 
   ssoCallback(code: string, state: string, txn: string) {
-    return this.http.post<UserModel & { returnTo?: string }>(this.apiBaseUrl + '/sso/oidc/callback', {
-      code,
-      state,
-      txn,
-    });
+    return this.http
+      .post<UserModel & { returnTo?: string }>(
+        this.apiBaseUrl + '/sso/oidc/callback',
+        { code, state, txn },
+        { withCredentials: true }
+      )
+      .pipe(tap((res: any) => this.applyMemberSession(res)));
   }
 
   saveSsoTransaction(start: SsoStart): void {
@@ -122,6 +189,27 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  applyMemberSession(res: any): void {
+    if (!res) return;
+    const access = res.accessToken || res.access_token || '';
+    if (access) {
+      this.tokenService.saveToken(access);
+    }
+    if (res.csrfToken) {
+      this.tokenService.saveCsrfToken(res.csrfToken);
+    }
+    // Refresh stays in httpOnly cookie — never write it to storage.
+    this.tokenService.saveUser(res);
+  }
+
+  private normalizeTokens(res: any): RefreshedTokens {
+    return {
+      accessToken: res?.deviceToken || res?.accessToken || res?.access_token || '',
+      refreshToken: res?.deviceRefreshToken || res?.refreshToken || res?.refresh_token || '',
+      csrfToken: res?.csrfToken || undefined,
+    };
   }
 
 }

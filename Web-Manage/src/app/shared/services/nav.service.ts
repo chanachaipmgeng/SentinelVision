@@ -200,6 +200,24 @@ export class NavService implements OnDestroy {
             permission: 'attendance.approve',
           },
           {
+            path: '/company/approval-inbox',
+            title: 'กล่องอนุมัติ (Approval Inbox)',
+            type: 'link',
+            permission: 'attendance.approve',
+          },
+          {
+            path: '/company/reports',
+            title: 'รายงานการลงเวลา',
+            type: 'link',
+            permission: 'attendance.read',
+          },
+          {
+            path: '/company/self-service',
+            title: 'บริการตนเอง (Self-Service)',
+            type: 'link',
+            permission: 'attendance.read',
+          },
+          {
             path: '/company/company-location',
             title: 'สถานที่ลงเวลา (GPS)',
             type: 'link',
@@ -362,6 +380,13 @@ export class NavService implements OnDestroy {
         icon: 'notification',
         path: '/company/notification-center',
         title: 'ศูนย์แจ้งเตือน (Notification Center)',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+      },
+      {
+        icon: 'shield-user',
+        path: '/company/profile-security',
+        title: 'โปรไฟล์และความปลอดภัย',
         type: 'link',
         moduleId: 'GOVERNANCE',
       },

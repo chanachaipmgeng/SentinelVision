@@ -127,9 +127,19 @@ export class PermissionService {
       if (path.includes('position')) return 'positions.read';
       return 'employees.read';
     }
-    if (path.includes('timestamp') || path.includes('warning-timestamp') || path.includes('scan/attendance')) {
-      if (path.includes('warning')) return 'attendance.approve';
+    if (
+      path.includes('timestamp') ||
+      path.includes('warning-timestamp') ||
+      path.includes('scan/attendance') ||
+      path.includes('approval-inbox') ||
+      path.includes('reports') ||
+      path.includes('self-service')
+    ) {
+      if (path.includes('warning') || path.includes('approval-inbox')) return 'attendance.approve';
       return 'attendance.read';
+    }
+    if (path.includes('profile-security') || path.includes('devices') || path.includes('notification-center')) {
+      return null;
     }
     if (path.includes('hr-schedule')) {
       return 'hr.shifts';

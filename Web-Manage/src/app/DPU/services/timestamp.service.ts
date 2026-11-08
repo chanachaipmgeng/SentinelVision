@@ -1,10 +1,17 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { TimestampModel } from '../models/timestamp.model';
+import {
+  DataTableQueryInput,
+  PageEnvelope,
+  buildDataTableQuery,
+  normalizePageEnvelope,
+  toDataTableParams,
+} from '../../shared/utils/data-table-query';
 
 @Injectable({
   providedIn: 'root'
@@ -43,6 +50,43 @@ export class TimestampService {
       .get<TimestampModel[]>(url)
       .pipe(
         map((e) => e.map((e) => new TimestampModel(e, this.translateService)))
+      );
+  }
+
+  /** Server-side search page (Phase E2). */
+  searchPage(
+    companyId: string,
+    input: DataTableQueryInput & {
+      company_employeeId?: string;
+      startDate?: string;
+      endDate?: string;
+      timestampType?: string;
+      approvalStatus?: string;
+    } = {},
+  ): Observable<PageEnvelope<TimestampModel>> {
+    const query = buildDataTableQuery(input);
+    const params = new HttpParams({
+      fromObject: toDataTableParams(query, {
+        company_employeeId: input.company_employeeId,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        timestampType: input.timestampType,
+        approvalStatus: input.approvalStatus,
+      }),
+    });
+    return this.http
+      .get<PageEnvelope<TimestampModel> | TimestampModel[]>(
+        `/timestamp/search/company/${companyId}`,
+        { params },
+      )
+      .pipe(
+        map((payload) => {
+          const page = normalizePageEnvelope(payload);
+          return {
+            ...page,
+            items: page.items.map((row) => new TimestampModel(row, this.translateService)),
+          };
+        }),
       );
   }
 

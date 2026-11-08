@@ -1,0 +1,158 @@
+<div class="grid grid-cols-12 gap-6">
+            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
+              <h6 class="font-bold text-base mb-1">สร้างโซนควบคุมประตู / จุดสแกน (Access Zone)</h6>
+              <p class="text-xs text-dpu-muted mb-4">
+                กำหนดสิทธิ์การเข้าพื้นที่ ช่วงเวลาอนุญาต ระบบ 2FA และ Webhook สั่งเปิดกลอนประตูอัจฉริยะ
+              </p>
+
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 sm:col-span-8">
+                  <label class="form-label text-xs font-semibold">ชื่อประตู / โซนพื้นที่</label>
+                  <input
+                    class="form-control"
+                    [(ngModel)]="zoneForm.name"
+                    placeholder="เช่น ประตูห้อง Server ชั้น 4 / ประตูทางเข้าหลัก"
+                  />
+                </div>
+                <div class="col-span-12 sm:col-span-4">
+                  <label class="form-label text-xs font-semibold">รหัสประตู</label>
+                  <input class="form-control" [(ngModel)]="zoneForm.code" placeholder="GATE-01" />
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">โหมดการทำงานหลัก</label>
+                  <select class="form-control" [(ngModel)]="zoneForm.stationMode">
+                    <option value="ACCESS_CONTROL">ACCESS_CONTROL (สแกนเปิดประตู)</option>
+                    <option value="ATTENDANCE">ATTENDANCE (ลงเวลา + เปิดประตู)</option>
+                    <option value="WATCHLIST_MONITOR">WATCHLIST_MONITOR (กล้องเฝ้าระวัง)</option>
+                    <option value="EVENT_CHECKIN">EVENT_CHECKIN (จุดต้อนรับงานอีเวนต์)</option>
+                  </select>
+                </div>
+                <div class="col-span-6">
+                  <label class="form-label text-xs font-semibold">เวลาเริ่มอนุญาต</label>
+                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleStart" />
+                </div>
+                <div class="col-span-6">
+                  <label class="form-label text-xs font-semibold">เวลาสิ้นสุดอนุญาต</label>
+                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleEnd" />
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">กลุ่มผู้มีสิทธิ์ผ่านประตู</label>
+                  <div class="flex flex-wrap gap-3 text-xs mt-1">
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" [(ngModel)]="zoneForm.allowEmployee" />
+                      <span>พนักงาน (EMPLOYEE)</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" [(ngModel)]="zoneForm.allowVip" />
+                      <span>แขก VIP</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" [(ngModel)]="zoneForm.allowVisitor" />
+                      <span>ผู้มาติดต่อ (VISITOR)</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="col-span-12">
+                  <label class="form-label text-xs font-semibold">IoT Door Relay Webhook URL (ถ้ามี)</label>
+                  <input
+                    class="form-control"
+                    [(ngModel)]="zoneForm.relayWebhookUrl"
+                    placeholder="https://iot-gateway.local/api/doors/gate-01/unlock"
+                  />
+                </div>
+                <div class="col-span-12">
+                  <label class="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="zoneForm.require2FA" />
+                    <span class="font-semibold text-teal-900">
+                      บังคับยืนยันตัวตน 2 ชั้น (Face + PIN/TOTP) สำหรับโซนความมั่นคงสูง
+                    </span>
+                  </label>
+                </div>
+                <div class="col-span-12">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-primary-full w-full font-semibold"
+                    (click)="createAccessZone()"
+                  >
+                    + บันทึกโซนควบคุมการเข้า-ออก
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-span-12 lg:col-span-8">
+              <h6 class="font-bold text-base mb-3">
+                รายการโซนประตูและจุดควบคุมทั้งหมด ({{ zones.length }})
+              </h6>
+              <div
+                tabindex="0"
+                role="region"
+                aria-label="ตารางโซนประตู Access Control"
+                class="sv-table-wrapper"
+              >
+                <table class="table whitespace-nowrap">
+                  <thead>
+                    <tr class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">ชื่อโซน / ประตู</th>
+                      <th class="text-start p-3">โหมด</th>
+                      <th class="text-start p-3">กลุ่มที่อนุญาต</th>
+                      <th class="text-start p-3">เวลาเปิดสิทธิ์</th>
+                      <th class="text-start p-3">ความปลอดภัย</th>
+                      <th class="text-end p-3">สั่งการด่วน</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let z of zones" class="border-b border-defaultborder text-xs">
+                      <th class="text-start p-3">
+                        <div class="font-semibold">{{ z.name }}</div>
+                        <div class="text-[0.7rem] text-dpu-muted">Code: {{ z.code }}</div>
+                      </th>
+                      <td class="p-3">
+                        <span class="badge bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
+                          {{ z.stationMode }}
+                        </span>
+                      </td>
+                      <td class="p-3">
+                        <span
+                          *ngFor="let t of z.allowedIdentityTypes"
+                          class="badge bg-teal-50 text-teal-800 border border-teal-200 me-1 px-1.5 py-0.5 rounded"
+                        >
+                          {{ t }}
+                        </span>
+                      </td>
+                      <td class="p-3">{{ z.scheduleStart }} - {{ z.scheduleEnd }}</td>
+                      <td class="p-3">
+                        <span *ngIf="z.require2FA" class="badge bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                          Face + 2FA
+                        </span>
+                        <span *ngIf="!z.require2FA" class="badge bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                          Face Single-Step
+                        </span>
+                      </td>
+                      <td class="p-3 text-end space-x-1">
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-primary-full"
+                          (click)="remoteUnlockZone(z.zoneId)"
+                        >
+                          <i class="ri-lock-unlock-line me-1"></i> สั่งปลดล็อกประตู
+                        </button>
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm ti-btn-danger"
+                          (click)="deleteZone(z.zoneId)"
+                        >
+                          ลบ
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="zones.length === 0">
+                      <td colspan="6" class="text-center text-dpu-muted py-6">
+                        ยังไม่มีโซนควบคุมประตู (สร้างโซนด้านซ้ายเพื่อเริ่มใช้งาน Access Control)
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>

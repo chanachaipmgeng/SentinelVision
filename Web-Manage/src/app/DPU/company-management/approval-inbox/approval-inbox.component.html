@@ -1,13 +1,13 @@
 <app-page-header
-  [title]="'กล่องอนุมัติ'"
-  [activeTitle]="'จัดการบริษัท'"
+  [title]="'Approval inbox'"
+  [activeTitle]="'Manage companies'"
   [title1]="'Approval Inbox'">
 </app-page-header>
 
 <div class="inbox-page">
   <header class="inbox-toolbar modern-card glass">
     <div class="inbox-toolbar-title">
-      <h1 class="inbox-heading">กล่องอนุมัติ</h1>
+      <h1 class="inbox-heading">{{ 'Approval inbox' | translate }}</h1>
       <span class="inbox-chip">รออนุมัติ {{ pendingCount }}</span>
       <span class="inbox-chip inbox-chip--soft" *ngIf="searchTerm">พบ {{ filtered.length }}</span>
     </div>
@@ -73,10 +73,10 @@
         <dl class="inbox-meta">
           <div *ngIf="selected.workDate"><dt>วันที่</dt><dd>{{ selected.workDate }}</dd></div>
           <div *ngIf="selected.timestamp"><dt>เวลา</dt><dd>{{ selected.timestamp | date: 'medium' }}</dd></div>
-          <div *ngIf="selected.locationName"><dt>สถานที่</dt><dd>{{ selected.locationName }}</dd></div>
+          <div *ngIf="selected.locationName"><dt>{{ 'Location' | translate }}</dt><dd>{{ selected.locationName }}</dd></div>
           <div *ngIf="selected.otMinutes != null"><dt>OT (นาที)</dt><dd>{{ selected.otMinutes }}</dd></div>
           <div *ngIf="selected.reason || selected.note">
-            <dt>หมายเหตุ</dt>
+            <dt>{{ 'Note' | translate }}</dt>
             <dd>{{ selected.reason || selected.note }}</dd>
           </div>
         </dl>

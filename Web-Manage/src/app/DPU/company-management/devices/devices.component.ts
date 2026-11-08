@@ -10,6 +10,8 @@ import { SimplePagerComponent } from '../../../shared/components/simple-pager/si
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { VALID_STATION_MODES } from '../../services/company-module-config.service';
+import { KeyboardTableDirective } from '../../../shared/directives/keyboard-table.directive';
+import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
 import swal from 'sweetalert';
 
 export interface KioskDeviceRow {
@@ -46,6 +48,8 @@ export interface KioskDeviceRow {
     StatChipComponent,
     SimplePagerComponent,
     EmptyStateComponent,
+    KeyboardTableDirective,
+    LocaleDatePipe,
   ],
   templateUrl: './devices.component.html',
   styleUrls: ['../../../shared/styles/dpu-list-page.css'],

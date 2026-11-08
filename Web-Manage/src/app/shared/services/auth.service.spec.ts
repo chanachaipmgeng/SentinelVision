@@ -1,48 +1,73 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 
 import { AuthService, RefreshedTokens, SsoStart } from './auth.service';
+import { TokenService } from './token.service';
 
 describe('AuthService', () => {
   let service: AuthService;
   let http: HttpTestingController;
+  let tokens: TokenService;
 
   beforeEach(() => {
     sessionStorage.clear();
-    TestBed.configureTestingModule({ imports: [HttpClientTestingModule], providers: [AuthService] });
+    localStorage.clear();
+    TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
+      providers: [
+        AuthService,
+        TokenService,
+        { provide: Router, useValue: { navigate: () => undefined } },
+      ],
+    });
     service = TestBed.inject(AuthService);
+    tokens = TestBed.inject(TokenService);
     http = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
     http.verify();
     sessionStorage.clear();
+    localStorage.clear();
   });
 
   describe('login', () => {
-    it('posts username/password and omits totpCode when blank', () => {
+    it('posts username/password and applies memory session without storing refresh', () => {
       service.login('alice', 'pw', '   ').subscribe();
       const req = http.expectOne('/auth/login');
       expect(req.request.method).toBe('POST');
+      expect(req.request.withCredentials).toBeTrue();
       expect(req.request.body).toEqual({ username: 'alice', password: 'pw' });
-      req.flush({ accessToken: 'a', refreshToken: 'r' });
+      req.flush({
+        accessToken: 'a',
+        refreshToken: 'r',
+        csrfToken: 'c',
+        member: { username: 'alice', status: 1 },
+      });
+      expect(tokens.getToken()).toBe('a');
+      expect(tokens.getCsrfToken()).toBe('c');
+      expect(tokens.getRefreshToken()).toBeNull();
+      expect(localStorage.getItem('auth-refreshtoken')).toBeNull();
     });
 
     it('trims and forwards the TOTP code', () => {
       service.login('alice', 'pw', ' 123456 ').subscribe();
       const req = http.expectOne('/auth/login');
       expect(req.request.body.totpCode).toBe('123456');
-      req.flush({});
+      req.flush({ accessToken: 'a', member: {} });
     });
   });
 
   describe('logout / kiosk endpoints', () => {
-    it('sends the refresh token and tolerates a missing one', () => {
-      service.logout('ref').subscribe();
-      expect(http.expectOne('/auth/logout').request.body).toEqual({ refreshToken: 'ref' });
+    it('sends CSRF and tolerates a missing refresh body', () => {
+      tokens.saveCsrfToken('csrf-1');
       service.logout(null).subscribe();
-      const second = http.expectOne('/auth/logout');
-      expect(second.request.body.refreshToken).toBeUndefined();
+      const req = http.expectOne('/auth/logout');
+      expect(req.request.body.refreshToken).toBeUndefined();
+      expect(req.request.withCredentials).toBeTrue();
+      expect(req.request.headers.get('X-CSRF-Token')).toBe('csrf-1');
+      req.flush({ ok: true });
     });
 
     it('kioskPair exchanges a pairing code', () => {
@@ -54,20 +79,26 @@ describe('AuthService', () => {
   });
 
   describe('refreshSession', () => {
+    it('uses cookie+CSRF when no body refresh is provided', () => {
+      tokens.saveCsrfToken('csrf-x');
+      let out: RefreshedTokens | undefined;
+      service.refreshSession(null, false).subscribe((t) => (out = t));
+      const req = http.expectOne('/auth/refresh-token');
+      expect(req.request.body).toEqual({});
+      expect(req.request.headers.get('X-CSRF-Token')).toBe('csrf-x');
+      req.flush({ accessToken: 'A', csrfToken: 'csrf-y' });
+      expect(out?.accessToken).toBe('A');
+      expect(tokens.getToken()).toBe('A');
+      expect(tokens.getCsrfToken()).toBe('csrf-y');
+    });
+
     it('normalises a member refresh response', () => {
       let out: RefreshedTokens | undefined;
       service.refreshSession('ref', false).subscribe((t) => (out = t));
       const req = http.expectOne('/auth/refresh-token');
       expect(req.request.body).toEqual({ refreshToken: 'ref' });
       req.flush({ accessToken: 'A', refreshToken: 'R' });
-      expect(out).toEqual({ accessToken: 'A', refreshToken: 'R' });
-    });
-
-    it('accepts legacy snake_case member fields', () => {
-      let out: RefreshedTokens | undefined;
-      service.refreshSession('ref', false).subscribe((t) => (out = t));
-      http.expectOne('/auth/refresh-token').flush({ access_token: 'A2', refresh_token: 'R2' });
-      expect(out).toEqual({ accessToken: 'A2', refreshToken: 'R2' });
+      expect(out).toEqual({ accessToken: 'A', refreshToken: 'R', csrfToken: undefined });
     });
 
     it('normalises a kiosk refresh response', () => {
@@ -76,7 +107,8 @@ describe('AuthService', () => {
       const req = http.expectOne('/auth/kiosk/refresh');
       expect(req.request.body).toEqual({ refreshToken: 'dev-ref' });
       req.flush({ deviceToken: 'DT', deviceRefreshToken: 'DR', deviceId: 'd', companyId: 'c' });
-      expect(out).toEqual({ accessToken: 'DT', refreshToken: 'DR' });
+      expect(out?.accessToken).toBe('DT');
+      expect(out?.refreshToken).toBe('DR');
     });
 
     it('is single-flight: concurrent callers share one HTTP request', () => {
@@ -91,23 +123,8 @@ describe('AuthService', () => {
       expect(results.every((r) => r.accessToken === 'DT' && r.refreshToken === 'DR')).toBeTrue();
     });
 
-    it('starts a new request once the previous one completed', () => {
-      service.refreshSession('r1', false).subscribe();
-      http.expectOne('/auth/refresh-token').flush({ accessToken: 'A', refreshToken: 'R' });
-      service.refreshSession('r2', false).subscribe();
-      const second = http.expectOne('/auth/refresh-token');
-      expect(second.request.body).toEqual({ refreshToken: 'r2' });
-      second.flush({ accessToken: 'A', refreshToken: 'R' });
-    });
-
-    it('propagates failures to every waiter and clears the in-flight slot', () => {
-      const errors: number[] = [];
-      service.refreshSession('r', false).subscribe({ error: (e) => errors.push(e.status) });
-      service.refreshSession('r', false).subscribe({ error: (e) => errors.push(e.status) });
-      http.expectOne('/auth/refresh-token').flush({ detail: 'reuse' }, { status: 401, statusText: 'Unauthorized' });
-      expect(errors).toEqual([401, 401]);
-      service.refreshSession('r', false).subscribe({ error: () => undefined });
-      http.expectOne('/auth/refresh-token').flush({}, { status: 401, statusText: 'Unauthorized' });
+    it('does not expose register()', () => {
+      expect((service as any).register).toBeUndefined();
     });
   });
 

@@ -1,0 +1,133 @@
+<div class="grid grid-cols-12 gap-4">
+              <div class="col-span-12 lg:col-span-6 p-4 rounded-lg border border-defaultborder space-y-4">
+                <h6 class="font-semibold">ลงทะเบียนตู้ Kiosk ประจำจุดสแกน (จับคู่ด้วยรหัสครั้งเดียว)</h6>
+                <p class="text-xs text-gray-500">
+                  สร้างอุปกรณ์แล้วนำรหัสจับคู่ 8 หลักไปกรอกบนแท็บเล็ตที่หน้า <span class="font-mono">/kiosk/pair</span>
+                  อุปกรณ์จะได้รับ Token เฉพาะเครื่องอายุสั้น (ต่ออายุอัตโนมัติ) ที่จำกัดสิทธิ์เฉพาะการสแกนใบหน้าลงเวลา
+                  ไม่สามารถเข้าถึงเมนูจัดการพนักงานหรือตั้งค่าบริษัทได้ และไม่มี Token ปรากฏใน URL
+                </p>
+                <div class="flex gap-2">
+                  <input
+                    class="form-control"
+                    [(ngModel)]="newKioskName"
+                    placeholder="ชื่อจุดติดตั้ง เช่น ตู้ Kiosk อาคาร 1 ชั้น 1"
+                  />
+                  <button type="button" class="ti-btn ti-btn-primary-full whitespace-nowrap" (click)="createKioskDevice()">
+                    + สร้างอุปกรณ์และรหัสจับคู่
+                  </button>
+                </div>
+
+                <div *ngIf="issuedKiosk" class="p-3 rounded bg-success/10 border border-success/30 text-xs space-y-2">
+                  <div class="font-semibold text-success">
+                    รหัสจับคู่สำหรับ "{{ issuedKiosk.name }}" (แสดงครั้งเดียว ใช้ได้ {{ issuedKiosk.pairingCodeTtlMinutes || 10 }} นาที):
+                  </div>
+                  <div class="font-mono text-2xl tracking-[0.35em] text-center bg-white dark:bg-bodybg p-3 rounded border select-all">
+                    {{ issuedKiosk.pairingCode }}
+                  </div>
+                  <div class="text-gray-500">
+                    บนแท็บเล็ต: เปิด <span class="font-mono">{{ pairPageUrl }}</span> แล้วกรอกรหัสนี้ หากหมดอายุให้กด "ออกรหัสใหม่" ที่แถวอุปกรณ์
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table whitespace-nowrap min-w-full">
+                    <thead>
+                      <tr class="border-b border-defaultborder">
+                        <th class="text-start">ชื่ออุปกรณ์ Kiosk</th>
+                        <th class="text-start">เชื่อมต่อล่าสุด</th>
+                        <th class="text-start">สถานะ</th>
+                        <th class="text-end">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let kd of kioskDevices" class="border-b border-defaultborder">
+                        <td class="font-medium">{{ kd.name }}</td>
+                        <td>{{ kd.lastSeenAt ? (kd.lastSeenAt | date: 'dd/MM/yyyy HH:mm') : 'ยังไม่เชื่อมต่อ' }}</td>
+                        <td>
+                          <span *ngIf="!kd.isActive" class="badge bg-danger/10 text-danger">เพิกถอนแล้ว</span>
+                          <span *ngIf="kd.isActive && kd.isPaired" class="badge bg-success/10 text-success">จับคู่แล้ว</span>
+                          <span *ngIf="kd.isActive && !kd.isPaired && kd.pairingPending" class="badge bg-warning/10 text-warning">
+                            รอจับคู่ (หมดอายุ {{ kd.pairingExpiresAt | date: 'HH:mm' }})
+                          </span>
+                          <span *ngIf="kd.isActive && !kd.isPaired && !kd.pairingPending" class="badge bg-gray-200/60 text-gray-600">
+                            ยังไม่จับคู่ / รหัสหมดอายุ
+                          </span>
+                        </td>
+                        <td class="text-end space-x-1">
+                          <button
+                            *ngIf="kd.isActive"
+                            type="button"
+                            class="ti-btn ti-btn-sm ti-btn-outline-primary"
+                            (click)="reissueKioskPairingCode(kd.deviceId)"
+                            title="ยกเลิก Token เดิมของอุปกรณ์นี้และออกรหัสจับคู่ใหม่"
+                          >
+                            ออกรหัสใหม่
+                          </button>
+                          <button
+                            *ngIf="kd.isActive"
+                            type="button"
+                            class="ti-btn ti-btn-sm ti-btn-danger"
+                            (click)="revokeKioskDevice(kd.deviceId)"
+                          >
+                            เพิกถอนสิทธิ์
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="kioskDevices.length === 0">
+                        <td colspan="4" class="text-center text-gray-500 py-3">ยังไม่มีอุปกรณ์ Kiosk ที่ลงทะเบียน</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="col-span-12 lg:col-span-6 p-4 rounded-lg border border-defaultborder space-y-4">
+                <h6 class="font-semibold">การยืนยันตัวตน 2 ชั้น (TOTP 2FA Authenticator)</h6>
+                <p class="text-xs text-gray-500">
+                  เพิ่มความปลอดภัยให้บัญชีผู้ดูแลระบบด้วยรหัส 6 หลักตามมาตรฐาน RFC 6238 (Google Authenticator / Microsoft Authenticator)
+                </p>
+
+                <div class="p-3 rounded border border-defaultborder flex items-center justify-between">
+                  <div>
+                    <div class="text-sm font-medium">สถานะ 2FA ของบัญชีคุณ ({{ mfaStatus?.username || '-' }})</div>
+                    <div class="text-xs text-gray-500">
+                      {{ mfaStatus?.totpEnabled ? 'เปิดใช้งาน 2FA แล้ว' : 'ยังไม่ได้เปิดใช้งาน 2FA' }}
+                    </div>
+                  </div>
+                  <span
+                    class="badge px-3 py-1"
+                    [ngClass]="mfaStatus?.totpEnabled ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'"
+                  >
+                    {{ mfaStatus?.totpEnabled ? 'ENABLED' : 'DISABLED' }}
+                  </span>
+                </div>
+
+                <div *ngIf="!mfaStatus?.totpEnabled" class="space-y-3">
+                  <button type="button" class="ti-btn ti-btn-primary-full" (click)="setupMfa()">
+                    1. สร้างรหัส Secret สำหรับแอป Authenticator
+                  </button>
+
+                  <div *ngIf="mfaSetupData" class="p-3 rounded bg-primary/5 border border-primary/20 space-y-2 text-xs">
+                    <div><strong>Secret Key (กรอกในแอป Authenticator):</strong> <code class="font-mono text-sm">{{ mfaSetupData.secret }}</code></div>
+                    <div class="break-all text-gray-500">URI: {{ mfaSetupData.otpauthUri }}</div>
+                    <div class="flex gap-2 pt-2">
+                      <input
+                        class="form-control"
+                        maxlength="6"
+                        [(ngModel)]="mfaVerifyCode"
+                        placeholder="กรอกรหัส 6 หลักจากแอปเพื่อเปิดใช้งาน"
+                      />
+                      <button type="button" class="ti-btn ti-btn-success whitespace-nowrap" (click)="enableMfa()">
+                        2. ยืนยันและเปิดใช้ 2FA
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div *ngIf="mfaStatus?.totpEnabled">
+                  <button type="button" class="ti-btn ti-btn-danger" (click)="disableMfa()">
+                    ปิดการใช้งาน 2FA สำหรับบัญชีนี้
+                  </button>
+                </div>
+              </div>
+            </div>

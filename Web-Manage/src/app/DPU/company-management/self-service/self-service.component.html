@@ -1,0 +1,96 @@
+<app-page-header [title]="'บริการตนเอง'" [activeTitle]="'พนักงาน'" [title1]="'Self-Service'"></app-page-header>
+
+<div class="dpu-list-page ess-page">
+  <app-page-toolbar title="Employee Self-Service"></app-page-toolbar>
+  <p class="text-sm text-dpu-muted mb-3">ดูการลงเวลาของฉัน · ขอลา · ขอแก้เวลา</p>
+
+  <div class="flex flex-wrap gap-2 mb-4">
+    <button type="button" class="ti-btn" [ngClass]="activeTab === 'attendance' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('attendance')">การลงเวลา</button>
+    <button type="button" class="ti-btn" [ngClass]="activeTab === 'leave' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('leave')">วันลา</button>
+    <button type="button" class="ti-btn" [ngClass]="activeTab === 'regularization' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('regularization')">แก้เวลา</button>
+  </div>
+
+  <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
+
+  <div *ngIf="!loading && activeTab === 'attendance'" class="box modern-card glass">
+    <div class="box-body p-0 overflow-x-auto">
+      <table class="table dpu-list-table w-full">
+        <thead>
+          <tr><th>เวลา</th><th>ประเภท</th><th>สถานะ</th><th>หมายเหตุ</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of attendance">
+            <td>{{ row.timestamp || row.createdAt }}</td>
+            <td>{{ row.timestampTypeText || row.timestampType }}</td>
+            <td>{{ row.approvalStatusText || row.approvalStatus || '—' }}</td>
+            <td>{{ row.note || '—' }}</td>
+          </tr>
+          <tr *ngIf="!attendance.length"><td colspan="4" class="text-center text-muted py-6">ยังไม่มีรายการ</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'leave'" class="grid grid-cols-12 gap-4">
+    <div class="col-span-12 lg:col-span-5">
+      <div class="box modern-card glass">
+        <div class="box-header"><div class="box-title">ขอลา</div></div>
+        <div class="box-body space-y-3">
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="form-label">เริ่ม</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.startDate" /></div>
+            <div><label class="form-label">สิ้นสุด</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.endDate" /></div>
+          </div>
+          <div>
+            <label class="form-label">ประเภท</label>
+            <select class="form-control" [(ngModel)]="leaveDraft.leaveType">
+              <option value="ANNUAL">ลาพักร้อน</option>
+              <option value="SICK">ลาป่วย</option>
+              <option value="PERSONAL">ลากิจ</option>
+            </select>
+          </div>
+          <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="leaveDraft.reason"></textarea></div>
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitLeave()">ส่งคำขอ</button>
+          <div class="text-xs text-dpu-muted" *ngIf="leaveBalances.length">
+            ยอดคงเหลือ:
+            <span *ngFor="let b of leaveBalances; let last = last">{{ b.leaveType }} {{ b.remainingDays }}{{ last ? '' : ' · ' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-span-12 lg:col-span-7">
+      <div class="box modern-card glass">
+        <div class="box-header"><div class="box-title">ประวัติคำขอลา</div></div>
+        <div class="box-body p-0 overflow-x-auto">
+          <table class="table dpu-list-table w-full">
+            <thead><tr><th>ช่วง</th><th>ประเภท</th><th>สถานะ</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let lr of leaves">
+                <td>{{ lr.startDate }} → {{ lr.endDate }}</td>
+                <td>{{ lr.leaveType }}</td>
+                <td>{{ lr.status || lr.approvalStatus }}</td>
+              </tr>
+              <tr *ngIf="!leaves.length"><td colspan="3" class="text-center text-muted py-6">ยังไม่มีคำขอ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'regularization'" class="box modern-card glass max-w-xl">
+    <div class="box-header"><div class="box-title">ขอแก้เวลา</div></div>
+    <div class="box-body space-y-3">
+      <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="regenDraft.workDate" /></div>
+      <div><label class="form-label">เวลาที่ขอ</label><input type="datetime-local" class="form-control" [(ngModel)]="regenDraft.requestedTimestamp" /></div>
+      <div>
+        <label class="form-label">ประเภท</label>
+        <select class="form-control" [(ngModel)]="regenDraft.requestedType">
+          <option [ngValue]="1">เข้างาน</option>
+          <option [ngValue]="2">ออกงาน</option>
+        </select>
+      </div>
+      <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="regenDraft.reason"></textarea></div>
+      <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="submitRegularization()">ส่งคำขอ</button>
+    </div>
+  </div>
+</div>

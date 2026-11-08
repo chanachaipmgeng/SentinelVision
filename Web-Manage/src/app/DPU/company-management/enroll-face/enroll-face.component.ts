@@ -16,24 +16,44 @@ import {
   playWarningBeep,
   unlockBeepAudio,
 } from '../../../shared/utils/beep';
-import { speakText, unlockSpeech } from '../../../shared/utils/tts';
-import {
-  TtsSettings,
-  TtsTemplateKey,
-  buildSpeechText,
-  resolveTtsSettings,
-} from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
 import {
   CompanyModuleConfigService,
   StationMode,
 } from '../../services/company-module-config.service';
 import {
+  captureFaceCrop as captureFaceCropHelper,
+  dataURLtoFile as dataURLtoFileHelper,
+  prepareDetectFrame,
+  sampleDetectThumb as sampleDetectThumbHelper,
+  scaleDetectionBoxes,
+  startUserMedia,
+} from './camera';
+import {
+  boxCenterDist,
+  drawSmoothOverlay,
+  iou,
+  lerpBox,
+  matchScore as matchScoreHelper,
+  nmsBoxes as nmsBoxesHelper,
+  SmoothBox,
+} from './overlay';
+import {
+  resolveTtsSettings,
+  speakCheckIn as speakCheckInHelper,
+  TtsSettings,
+  TtsTemplateKey,
+  unlockSpeech,
+} from './tts';
+import {
   buildKioskCheckinExtras,
   buildKioskSession,
+  buildKioskWsUrl,
   canSendKioskFrame,
   kioskWsSessionAction,
-} from './kiosk-ws-client';
+  WS_CONNECTING,
+  WS_OPEN,
+} from './ws';
 import {
   frameChangeScore,
   KIOSK_STATIC_SCENE_DIFF,
@@ -51,12 +71,16 @@ import {
   stationModeRequiresGps,
   stationModeTitle,
 } from '../scan-hub/scan-station-mode';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
+import { LocaleFormatService } from '../../../shared/services/locale-format.service';
+import {
+  KioskOfflineQueueService,
+  OfflinePunchPayload,
+} from './kiosk-offline-queue.service';
 
-// pace.js (theme progress bar) replaces window.WebSocket with a wrapper that
-// drops static constants — `WebSocket.OPEN` is undefined at runtime. Compare
-// readyState against these literals, never against `WebSocket.*`.
-const WS_CONNECTING = 0;
-const WS_OPEN = 1;
+/** GPU pending depth at/above this enters degraded mode (slower detect + banner). */
+const KIOSK_DEGRADED_QUEUE_PENDING = 8;
 
 export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'BREAK_OUT' | 'BREAK_IN' | 'CHECK_OUT';
 
@@ -112,13 +136,6 @@ export interface KioskAttendance {
 
 type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
 
-interface SmoothBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 interface FaceTrack {
   id: number;
   box: SmoothBox;
@@ -141,13 +158,13 @@ interface FaceTrack {
 @Component({
   selector: 'app-enroll-face',
   standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, RouterModule],
+  imports: [CommonModule, FormsModule, SharedModule, RouterModule, TranslateModule, FocusTrapDirective],
   templateUrl: './enroll-face.component.html',
   styleUrl: './enroll-face.component.scss'
 })
 export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
-  @ViewChild('video') video: ElementRef;
-  @ViewChild('canvas') canvas: ElementRef;
+  @ViewChild('video') video!: ElementRef<HTMLVideoElement>;
+  @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
   @ViewChild('clockDate') clockDateEl?: ElementRef<HTMLElement>;
   @ViewChild('decorHour') decorHourEl?: ElementRef<HTMLElement>;
@@ -187,6 +204,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   consentPolicy: { version?: string; textTh?: string; textEn?: string } | null = null;
   private readonly consentStoragePrefix = 'dpu.pdpa.consent.';
 
+  /** E6 kiosk large-text mode (html.dpu-kiosk-large-text). */
+  largeTextMode = false;
+  /** E8 degraded when GPU queue is backed up. */
+  degradedMode = false;
+  offlineQueuedCount = 0;
+  reconcilingOffline = false;
+
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
   checkingInCount = 0;
@@ -223,7 +247,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private renderRafId: number | null = null;
   private canvasDirty = false;
 
-  // Server-side detection (WS `detect`) — falls back to local face-api
+  // Server-side detection only (WS `detect`) — local face-api was removed (E8).
   private wsDetectInFlight = false;
   private lastWsDetectAt = 0;
   private wsDetectMisses = 0;
@@ -234,11 +258,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private lastDetectThumb: Uint8ClampedArray | null = null;
   private lastDetectionsAt = 0;
 
-  // Local face-api fallback health (devices without WebGL crash tfjs)
-  private localDetectReady = false;
-  private localDetectErrors = 0;
   private readonly memberCooldownUntil = new Map<string, number>();
   private checkInInFlight = 0;
+  private onlineHandler: (() => void) | null = null;
+  private offlineHandler: (() => void) | null = null;
 
   /**
    * 60fps easing toward latest detection.
@@ -292,6 +315,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     private route: ActivatedRoute,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
+    private offlineQueue: KioskOfflineQueueService,
+    private localeFormat: LocaleFormatService,
+    private translate: TranslateService,
   ) {
     const kiosk = this.tokenService.getKioskSession();
     const company = this.tokenService.getSelectCompany();
@@ -301,6 +327,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.isKioskDevice = !!kiosk;
     this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
     this.resolveStationContext();
+    this.largeTextMode = sessionStorage.getItem('dpu.kiosk.largeText') === '1';
   }
 
   /** Resolve `:stationMode` + zoneId/eventId query; timestamp-face stays ATTENDANCE. */
@@ -486,6 +513,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
 
   ngOnInit() {
     document.documentElement.classList.add('dpu-kiosk-mode');
+    this.applyLargeTextClass();
     this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
     this.getCurrentLocation();
     unlockBeepAudio();
@@ -494,7 +522,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.loadModuleStationDefaults();
     this.loadZoneAndEventOptions();
     this.loadConsentPolicy();
-    this.prepareLocalDetector();
+    this.refreshOfflineQueueCount();
+    this.bindOnlineListeners();
     this.startVideo();
     this.getCompanyLocation();
     this.ngZone.runOutsideAngular(() => this.connectKioskWs());
@@ -509,6 +538,141 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         this.loadTtsSettings();
       }, 15000);
     });
+  }
+
+  toggleLargeText(): void {
+    this.largeTextMode = !this.largeTextMode;
+    sessionStorage.setItem('dpu.kiosk.largeText', this.largeTextMode ? '1' : '0');
+    this.applyLargeTextClass();
+  }
+
+  private applyLargeTextClass(): void {
+    document.documentElement.classList.toggle('dpu-kiosk-large-text', this.largeTextMode);
+  }
+
+  private bindOnlineListeners(): void {
+    this.onlineHandler = () => {
+      this.ngZone.run(() => {
+        void this.reconcileOfflineQueue();
+      });
+    };
+    this.offlineHandler = () => {
+      this.ngZone.run(() => this.cdr.detectChanges());
+    };
+    window.addEventListener('online', this.onlineHandler);
+    window.addEventListener('offline', this.offlineHandler);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      void this.reconcileOfflineQueue();
+    }
+  }
+
+  private async refreshOfflineQueueCount(): Promise<void> {
+    try {
+      this.offlineQueuedCount = await this.offlineQueue.count();
+      this.cdr.detectChanges();
+    } catch {
+      this.offlineQueuedCount = 0;
+    }
+  }
+
+  private async enqueueOfflinePunch(payload: {
+    images: string[];
+    latitude: number;
+    longitude: number;
+    punchType: string;
+    note: string;
+    zoneId?: string | null;
+    eventId?: string | null;
+    enableDoorRelay?: boolean;
+    totpOrPin?: string | null;
+  }): Promise<void> {
+    try {
+      await this.offlineQueue.enqueue({
+        companyId: this.companyId,
+        images: payload.images,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        punchType: payload.punchType,
+        stationMode: this.stationMode,
+        zoneId: payload.zoneId,
+        eventId: payload.eventId,
+        enableDoorRelay: payload.enableDoorRelay,
+        totpOrPin: payload.totpOrPin,
+        note: payload.note,
+      });
+      await this.refreshOfflineQueueCount();
+      this.notify(this.translate.instant('Queued while offline'), 'warning');
+    } catch {
+      this.notify('ไม่สามารถบันทึกคิวนอกสายได้', 'error');
+    }
+  }
+
+  /** Flush IndexedDB punches when connectivity returns. */
+  async reconcileOfflineQueue(): Promise<void> {
+    if (this.reconcilingOffline || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      return;
+    }
+    let rows: OfflinePunchPayload[] = [];
+    try {
+      rows = await this.offlineQueue.list();
+    } catch {
+      return;
+    }
+    if (!rows.length) {
+      this.offlineQueuedCount = 0;
+      return;
+    }
+    this.reconcilingOffline = true;
+    this.cdr.detectChanges();
+    for (const row of rows) {
+      try {
+        const formData = new FormData();
+        row.images.forEach((dataUrl, index) => {
+          formData.append('files', this.dataURLtoFile(dataUrl, `offline_${row.id}_${index}.jpg`));
+        });
+        formData.append('companyId', row.companyId);
+        formData.append('latitude', String(row.latitude));
+        formData.append('longitude', String(row.longitude));
+        formData.append('note', row.note || 'Face kiosk offline reconcile');
+        formData.append('punchType', row.punchType);
+        formData.append('stationMode', row.stationMode);
+        if (row.zoneId) {
+          formData.append('zoneId', row.zoneId);
+        }
+        if (row.eventId) {
+          formData.append('eventId', row.eventId);
+        }
+        if (row.enableDoorRelay) {
+          formData.append('enableDoorRelay', 'true');
+        }
+        if (row.totpOrPin) {
+          formData.append('totpOrPin', row.totpOrPin);
+        }
+        await new Promise<void>((resolve, reject) => {
+          this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
+            next: () => resolve(),
+            error: (err) => reject(err),
+          });
+        });
+        await this.offlineQueue.remove(row.id);
+      } catch (err: unknown) {
+        const status = (err as { status?: number })?.status;
+        await this.offlineQueue.markAttempt(row.id, `status=${status ?? 'network'}`);
+        if (this.offlineQueue.isLikelyOffline(err as { status?: number })) {
+          break;
+        }
+      }
+    }
+    this.reconcilingOffline = false;
+    await this.refreshOfflineQueueCount();
+  }
+
+  private updateDegradedMode(): void {
+    const next = this.queuePending >= KIOSK_DEGRADED_QUEUE_PENDING;
+    if (next !== this.degradedMode) {
+      this.degradedMode = next;
+      this.cdr.detectChanges();
+    }
   }
 
   private consentStorageKey(): string {
@@ -547,7 +711,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   consentText(): string {
-    const lang = (sessionStorage.getItem('Lang') || 'th').toLowerCase();
+    const lang = (
+      this.translate.currentLang ||
+      sessionStorage.getItem('Lang') ||
+      'th'
+    ).toLowerCase();
     if (lang.startsWith('en')) {
       return this.consentPolicy?.textEn || this.consentPolicy?.textTh || '';
     }
@@ -615,11 +783,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.startSceneClock();
   }
 
-  /** Server WS detect is the only detector. Local face-api models are not shipped. */
-  private async prepareLocalDetector(): Promise<void> {
-    this.localDetectReady = false;
-  }
-
   /** Decorative + header clock only — never trigger component CD (face/WS work). */
   private startSceneClock(): void {
     this.tickSceneClock();
@@ -640,7 +803,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       timeEl.textContent = `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
     }
     if (dateEl) {
-      dateEl.textContent = now.toLocaleDateString('en-GB', {
+      dateEl.textContent = this.localeFormat.formatDate(now, {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
@@ -675,18 +838,18 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     vars: { name?: string; firstName?: string; employeeId?: string },
   ): void {
     // Use cached settings (loaded on init + refreshed with attendance poll).
-    const text = buildSpeechText(this.ttsSettings, key, vars);
-    if (!text) return;
-    speakText(text, {
-      lang: this.ttsSettings.lang,
-      rate: this.ttsSettings.rate,
-      pitch: this.ttsSettings.pitch,
-      cancelPrevious: true,
-    });
+    speakCheckInHelper(this.ttsSettings, key, vars);
   }
 
   ngOnDestroy() {
     document.documentElement.classList.remove('dpu-kiosk-mode');
+    document.documentElement.classList.remove('dpu-kiosk-large-text');
+    if (this.onlineHandler) {
+      window.removeEventListener('online', this.onlineHandler);
+    }
+    if (this.offlineHandler) {
+      window.removeEventListener('offline', this.offlineHandler);
+    }
     this.destroyWs = true;
     this.imageSub?.unsubscribe();
     if (this.geoWatchId != null && navigator.geolocation) {
@@ -738,18 +901,18 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   startVideo(): void {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-      .then((stream) => {
-        this.videoStream = stream;
-        this.video.nativeElement.srcObject = stream;
-        unlockBeepAudio();
-        unlockSpeech();
-      })
-      .catch((err) => {
-        console.error('Error accessing camera: ', err);
+    startUserMedia({ video: { facingMode: 'user' } }).then((result) => {
+      if (!result.ok) {
+        console.error('Error accessing camera: ', result.error);
         this.captureMessage = 'ไม่สามารถเปิดกล้องได้';
         this.notify('ไม่สามารถเปิดกล้องได้', 'error');
-      });
+        return;
+      }
+      this.videoStream = result.stream;
+      this.video.nativeElement.srcObject = result.stream;
+      unlockBeepAudio();
+      unlockSpeech();
+    });
   }
 
   async detectFace() {
@@ -853,29 +1016,17 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    const vw = videoEl.videoWidth || 640;
-    const vh = videoEl.videoHeight || 480;
-    const targetW = 480;
-    const scale = Math.min(1, targetW / vw);
-    const w = Math.round(vw * scale);
-    const h = Math.round(vh * scale);
-
-    if (!this.detectFrameCanvas) {
-      this.detectFrameCanvas = document.createElement('canvas');
-    }
-    const canvas = this.detectFrameCanvas;
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-    }
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) {
+    const prepared = prepareDetectFrame(videoEl, this.detectFrameCanvas);
+    if (!prepared) {
       return;
     }
-    ctx.drawImage(videoEl, 0, 0, w, h);
+    this.detectFrameCanvas = prepared.canvas;
+    const canvas = prepared.canvas;
 
     // Thumbnail diff before JPEG encode — skip send when the scene is static.
-    const thumb = this.sampleDetectThumb(canvas);
+    const sampled = sampleDetectThumbHelper(canvas, this.detectThumbCanvas);
+    this.detectThumbCanvas = sampled.canvas;
+    const thumb = sampled.pixels;
     const changeScore = frameChangeScore(this.lastDetectThumb, thumb);
     const staticScene =
       this.lastDetectThumb != null && changeScore < KIOSK_STATIC_SCENE_DIFF;
@@ -930,22 +1081,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** 32×24 RGBA sample used for motion gating (cheap vs JPEG). */
-  private sampleDetectThumb(source: HTMLCanvasElement): Uint8ClampedArray {
-    if (!this.detectThumbCanvas) {
-      this.detectThumbCanvas = document.createElement('canvas');
-      this.detectThumbCanvas.width = 32;
-      this.detectThumbCanvas.height = 24;
-    }
-    const thumb = this.detectThumbCanvas;
-    const tctx = thumb.getContext('2d', { willReadFrequently: true });
-    if (!tctx) {
-      return new Uint8ClampedArray(32 * 24 * 4);
-    }
-    tctx.drawImage(source, 0, 0, 32, 24);
-    return new Uint8ClampedArray(tctx.getImageData(0, 0, 32, 24).data);
-  }
-
   /** Server detection result → display-space boxes → shared pipeline. */
   private onServerDetected(msg: any): void {
     this.wsDetectInFlight = false;
@@ -953,9 +1088,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.serverDetectFailures = 0;
     if (msg?.queue?.pending != null) {
       this.queuePending = Number(msg.queue.pending) || 0;
+      this.updateDegradedMode();
     }
 
-    const videoEl = this.video?.nativeElement as HTMLVideoElement | undefined;
+    const videoEl = this.video?.nativeElement;
     if (!videoEl) {
       return;
     }
@@ -963,15 +1099,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const frameH = Number(msg.frameHeight) || 1;
     const displayW = videoEl.width || 640;
     const displayH = videoEl.height || 480;
-    const sx = displayW / frameW;
-    const sy = displayH / frameH;
-
-    const boxes: SmoothBox[] = (Array.isArray(msg.faces) ? msg.faces : []).map((f: any) => ({
-      x: Number(f.x) * sx,
-      y: Number(f.y) * sy,
-      width: Number(f.width) * sx,
-      height: Number(f.height) * sy,
-    }));
+    const boxes = scaleDetectionBoxes(
+      Array.isArray(msg.faces) ? msg.faces : [],
+      frameW,
+      frameH,
+      displayW,
+      displayH,
+    );
     this.processDetections(boxes, Date.now());
   }
 
@@ -979,9 +1113,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.wsDetectInFlight = false;
     this.serverDetectFailures += 1;
     if (this.serverDetectFailures >= 3) {
-      // Give the server a break; local face-api takes over meanwhile.
+      // Pause server detect briefly; do not fall back to local models (removed in E8).
       this.serverDetectPausedUntil = Date.now() + 30000;
       this.serverDetectFailures = 0;
+      this.degradedMode = true;
+      this.cdr.detectChanges();
     }
   }
 
@@ -993,13 +1129,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     const step = () => {
       if (this.tracks.length > 0) {
         for (const track of this.tracks) {
-          const jump = this.boxCenterDist(track.box, track.targetBox);
+          const jump = boxCenterDist(track.box, track.targetBox);
           const sizeDelta =
             Math.abs(track.box.width - track.targetBox.width) +
             Math.abs(track.box.height - track.targetBox.height);
           const posT = jump > this.boxFastCenterPx ? this.boxFastPosLerp : this.boxPosLerp;
           const sizeT = sizeDelta > this.boxFastSizePx ? this.boxFastSizeLerp : this.boxSizeLerp;
-          track.box = this.lerpBox(track.box, track.targetBox, posT, sizeT);
+          track.box = lerpBox(track.box, track.targetBox, posT, sizeT);
         }
         this.drawAllTracks(displaySize);
         this.canvasDirty = true;
@@ -1047,13 +1183,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private kioskWsUrl(): string {
-    const base = environment.baseUrl || `${window.location.protocol}//${window.location.host}`;
-    const url = new URL(base, window.location.origin);
-    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-    url.pathname = '/face/ws/kiosk';
-    url.search = '';
-    url.hash = '';
-    return url.toString();
+    return buildKioskWsUrl(environment.baseUrl || '');
   }
 
   private connectKioskWs() {
@@ -1165,9 +1295,24 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       });
   }
 
-  private onKioskWsMessage(msg: any) {
+  private onKioskWsMessage(msg: {
+    type?: string;
+    queue?: { pending?: number };
+    trackId?: number | string;
+    memberId?: string;
+    member?: { memberId?: string; fullName?: string; firstName?: string };
+    employee?: { fullName?: string };
+    confidencePercent?: number;
+    dedupeSeconds?: number;
+    duplicate?: boolean;
+    intent?: string;
+    status?: number;
+    detail?: string;
+    [key: string]: unknown;
+  }) {
     if (msg?.queue?.pending != null) {
       this.queuePending = Number(msg.queue.pending) || 0;
+      this.updateDegradedMode();
     }
 
     switch (kioskWsSessionAction(msg)) {
@@ -1304,7 +1449,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private updateTracks(detections: SmoothBox[], now: number) {
-    detections = this.nmsBoxes(detections, this.nmsIou);
+    detections = nmsBoxesHelper(detections, this.nmsIou);
     const usedDet = new Set<number>();
     const matchedTrackIds = new Set<number>();
 
@@ -1327,7 +1472,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         if (usedDet.has(i)) {
           continue;
         }
-        const score = this.matchScore(anchor, detections[i]);
+        const score = this.matchScore(anchor, detections[i] as SmoothBox);
         if (score > bestScore) {
           bestScore = score;
           bestIdx = i;
@@ -1385,39 +1530,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.mergeOverlappingTracks();
   }
 
-  /** Drop overlapping detections so one face cannot spawn multiple tracks. */
-  private nmsBoxes(boxes: SmoothBox[], iouThresh: number): SmoothBox[] {
-    if (boxes.length <= 1) {
-      return boxes;
-    }
-    const sorted = [...boxes].sort((a, b) => b.width * b.height - a.width * a.height);
-    const kept: SmoothBox[] = [];
-    for (const box of sorted) {
-      if (kept.every((k) => this.iou(k, box) < iouThresh)) {
-        kept.push(box);
-      }
-    }
-    return kept;
-  }
-
-  /**
-   * Combined IoU + center proximity. Returns 0 when neither criterion matches.
-   * Higher is better; used only for ranking among candidates that pass thresholds.
-   */
   private matchScore(a: SmoothBox, b: SmoothBox): number {
-    const iou = this.iou(a, b);
-    if (iou >= this.iouMatchMin) {
-      return 1 + iou;
-    }
-    const diag = (this.boxDiagonal(a) + this.boxDiagonal(b)) / 2;
-    if (diag <= 1) {
-      return 0;
-    }
-    const norm = this.boxCenterDist(a, b) / diag;
-    if (norm <= this.centerMatchMax) {
-      return 0.5 + (1 - norm / this.centerMatchMax) * 0.5;
-    }
-    return 0;
+    return matchScoreHelper(a, b, {
+      iouMatchMin: this.iouMatchMin,
+      centerMatchMax: this.centerMatchMax,
+    });
   }
 
   /** Collapse ghost tracks that still overlap after a motion miss. */
@@ -1436,7 +1553,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
         const a = this.tracks[i];
         const b = this.tracks[j];
-        if (this.iou(a.targetBox, b.targetBox) < this.trackMergeIou && this.iou(a.box, b.box) < this.trackMergeIou) {
+        if (iou(a.targetBox, b.targetBox) < this.trackMergeIou && iou(a.box, b.box) < this.trackMergeIou) {
           continue;
         }
         // Keep the richer / older track.
@@ -1467,49 +1584,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private iou(a: SmoothBox, b: SmoothBox): number {
-    const x1 = Math.max(a.x, b.x);
-    const y1 = Math.max(a.y, b.y);
-    const x2 = Math.min(a.x + a.width, b.x + b.width);
-    const y2 = Math.min(a.y + a.height, b.y + b.height);
-    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-    const union = a.width * a.height + b.width * b.height - inter;
-    return union > 0 ? inter / union : 0;
-  }
-
-  private boxCenterDist(a: SmoothBox, b: SmoothBox): number {
-    const ax = a.x + a.width / 2;
-    const ay = a.y + a.height / 2;
-    const bx = b.x + b.width / 2;
-    const by = b.y + b.height / 2;
-    return Math.hypot(ax - bx, ay - by);
-  }
-
-  private boxDiagonal(b: SmoothBox): number {
-    return Math.hypot(b.width, b.height);
-  }
-
-  /**
-   * Ease toward the target around the face center so expand/shrink
-   * stays locked on the subject instead of sliding from the top-left.
-   */
-  private lerpBox(prev: SmoothBox, next: SmoothBox, posT: number, sizeT: number): SmoothBox {
-    const pcx = prev.x + prev.width * 0.5;
-    const pcy = prev.y + prev.height * 0.5;
-    const ncx = next.x + next.width * 0.5;
-    const ncy = next.y + next.height * 0.5;
-    const cx = pcx + (ncx - pcx) * posT;
-    const cy = pcy + (ncy - pcy) * posT;
-    const width = prev.width + (next.width - prev.width) * sizeT;
-    const height = prev.height + (next.height - prev.height) * sizeT;
-    return {
-      x: cx - width * 0.5,
-      y: cy - height * 0.5,
-      width,
-      height,
-    };
-  }
-
   private drawAllTracks(displaySize: { width: number; height: number }) {
     const ctx = this.canvas.nativeElement.getContext('2d') as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, displaySize.width, displaySize.height);
@@ -1521,7 +1595,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
           : onCooldown && track.label
             ? `${track.label} ✓`
             : track.label;
-      this.drawSmoothOverlay(
+      drawSmoothOverlay(
         ctx,
         track.box,
         label,
@@ -1530,101 +1604,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         track.phase === 'capturing' || track.phase === 'checking_in',
       );
     }
-  }
-
-  private drawSmoothOverlay(
-    ctx: CanvasRenderingContext2D,
-    box: SmoothBox,
-    label: string | null,
-    confidence: number | null,
-    done: boolean,
-    busy: boolean,
-  ) {
-    const pad = 5;
-    const x = box.x - pad;
-    const y = box.y - pad;
-    const w = box.width + pad * 2;
-    const h = box.height + pad * 2;
-    const radius = 18;
-
-    // Neon blue scan frame — single rounded stroke (no corner brackets / double border).
-    let stroke = '#38bdf8';
-    let glow = 'rgba(56, 189, 248, 0.85)';
-    let labelBg = 'rgba(8, 47, 73, 0.88)';
-    let labelFg = '#e0f2fe';
-    if (done) {
-      stroke = '#67e8f9';
-      glow = 'rgba(103, 232, 249, 0.95)';
-      labelBg = 'rgba(8, 47, 73, 0.92)';
-      labelFg = '#ecfeff';
-    } else if (busy) {
-      stroke = '#7dd3fc';
-      glow = 'rgba(125, 211, 252, 0.9)';
-      labelBg = 'rgba(12, 74, 110, 0.9)';
-      labelFg = '#f0f9ff';
-    } else if (label) {
-      stroke = '#22d3ee';
-      glow = 'rgba(34, 211, 238, 0.95)';
-      labelBg = 'rgba(8, 47, 73, 0.9)';
-      labelFg = '#ecfeff';
-    }
-
-    ctx.save();
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2.75;
-    ctx.shadowColor = glow;
-    ctx.shadowBlur = 16;
-    this.roundRect(ctx, x, y, w, h, radius);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    if (label) {
-      const text = confidence != null && !busy && !done
-        ? `${label}  ${confidence.toFixed(0)}%`
-        : label;
-      ctx.font = '600 14px "Segoe UI", system-ui, sans-serif';
-      const metrics = ctx.measureText(text);
-      const labelPadX = 10;
-      const labelH = 24;
-      const labelW = metrics.width + labelPadX * 2;
-      const labelX = x;
-      const labelY = Math.max(8, y - labelH - 8);
-
-      ctx.shadowColor = glow;
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = labelBg;
-      this.roundRect(ctx, labelX, labelY, labelW, labelH, 10);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1;
-      this.roundRect(ctx, labelX, labelY, labelW, labelH, 10);
-      ctx.stroke();
-      ctx.fillStyle = labelFg;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, labelX + labelPadX, labelY + labelH / 2 + 1);
-    }
-    ctx.restore();
-  }
-
-  private roundRect(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    r: number,
-  ) {
-    const radius = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + w, y, x + w, y + h, radius);
-    ctx.arcTo(x + w, y + h, x, y + h, radius);
-    ctx.arcTo(x, y + h, x, y, radius);
-    ctx.arcTo(x, y, x + w, y, radius);
-    ctx.closePath();
   }
 
   private isMemberOnCooldown(memberId: string, now = Date.now()): boolean {
@@ -1849,26 +1828,33 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     }
 
     this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
-      next: (response: any) => {
+      next: (response) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
+        const body = response as {
+          memberId?: string;
+          member?: { memberId?: string; fullName?: string };
+          employee?: { fullName?: string };
+          dedupeSeconds?: number;
+          duplicate?: boolean;
+        };
         const t = this.tracks.find((x) => x.id === trackId);
-        const memberId = response.memberId || response.member?.memberId || t?.memberId;
+        const memberId = body.memberId || body.member?.memberId || t?.memberId;
         if (memberId) {
-          const dedupeMs = response.dedupeSeconds
-            ? Number(response.dedupeSeconds) * 1000
+          const dedupeMs = body.dedupeSeconds
+            ? Number(body.dedupeSeconds) * 1000
             : this.memberCooldownMs;
           this.setMemberCooldown(memberId, dedupeMs);
         }
 
         if (t) {
-          t.phase = response.duplicate ? 'cooldown' : 'done';
+          t.phase = body.duplicate ? 'cooldown' : 'done';
           t.memberId = memberId || t.memberId;
-          t.label = response.employee?.fullName || response.member?.fullName || t.label;
+          t.label = body.employee?.fullName || body.member?.fullName || t.label;
         }
 
-        this.handleCheckInSuccess(response, frames, t, !!response.duplicate);
+        this.handleCheckInSuccess(body, frames, t, !!body.duplicate);
       },
-      error: (error) => {
+      error: (error: { status?: number; error?: { detail?: string } }) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
         const t = this.tracks.find((x) => x.id === trackId);
         if (t) {
@@ -1878,6 +1864,21 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         }
         if (error?.status === 403) {
           this.applyAccessDenied(t, true);
+        } else if (this.offlineQueue.isLikelyOffline(error)) {
+          void this.enqueueOfflinePunch({
+            images: frames,
+            latitude: lat,
+            longitude: lng,
+            punchType,
+            note: 'Face kiosk walk-by check-in (offline queue)',
+            zoneId: this.zoneId,
+            eventId: this.eventId,
+            enableDoorRelay: this.doorRelayEnabled,
+            totpOrPin: this.zoneRequires2FA ? this.totpOrPin || null : null,
+          });
+          if (t) {
+            t.phase = 'done';
+          }
         } else {
           const detail = error.error?.detail || 'Check-in failed';
           this.notify(`ข้ามใบหน้าหนึ่งรายการ: ${detail}`, 'warning');
@@ -2031,33 +2032,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   /** Crop face from live video using box in display (canvas) coordinates. */
   private captureFaceCrop(box: SmoothBox): string | null {
     const video = this.video.nativeElement as HTMLVideoElement;
-    const vw = video.videoWidth || video.width || 640;
-    const vh = video.videoHeight || video.height || 480;
-    const dw = video.width || 640;
-    const dh = video.height || 480;
-
-    const padX = box.width * this.cropPad;
-    const padY = box.height * this.cropPad;
-    let x = ((box.x - padX) / dw) * vw;
-    let y = ((box.y - padY) / dh) * vh;
-    let w = ((box.width + padX * 2) / dw) * vw;
-    let h = ((box.height + padY * 2) / dh) * vh;
-
-    x = Math.max(0, Math.min(x, vw - 2));
-    y = Math.max(0, Math.min(y, vh - 2));
-    w = Math.max(32, Math.min(w, vw - x));
-    h = Math.max(32, Math.min(h, vh - y));
-
-    const out = Math.max(160, Math.min(320, Math.round(Math.max(w, h))));
-    const canvas = document.createElement('canvas');
-    canvas.width = out;
-    canvas.height = out;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      return null;
-    }
-    ctx.drawImage(video, x, y, w, h, 0, 0, out, out);
-    return canvas.toDataURL('image/jpeg', 0.88);
+    return captureFaceCropHelper(video, box, {
+      cropPad: this.cropPad,
+      displayWidth: video.width || 640,
+      displayHeight: video.height || 480,
+      videoWidth: video.videoWidth || video.width || 640,
+      videoHeight: video.videoHeight || video.height || 480,
+    });
   }
 
   private prependFeed(item: CheckInFeedItem) {
@@ -2137,15 +2118,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   dataURLtoFile(dataurl: string, filename: string): File {
-    const arr: any = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
+    return dataURLtoFileHelper(dataurl, filename);
   }
 
   private sendWsSession(): void {

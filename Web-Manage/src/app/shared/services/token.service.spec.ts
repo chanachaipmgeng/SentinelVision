@@ -31,13 +31,14 @@ describe('TokenService', () => {
   });
 
   describe('member session', () => {
-    it('stores access and refresh tokens in localStorage', () => {
+    it('keeps the access token in memory and never persists refresh', () => {
       service.saveToken('acc');
       service.saveRefreshToken('ref');
       expect(service.getToken()).toBe('acc');
-      expect(service.getRefreshToken()).toBe('ref');
+      expect(service.getRefreshToken()).toBeNull();
+      expect(window.localStorage.getItem('auth-token')).toBeNull();
+      expect(window.localStorage.getItem('auth-refreshtoken')).toBeNull();
       expect(service.isKioskSession()).toBeFalse();
-      expect(window.sessionStorage.length).toBe(0);
     });
 
     it('returns null tokens and an empty user when nothing is stored', () => {
@@ -50,16 +51,18 @@ describe('TokenService', () => {
     it('keeps the cached user object in sync when the access token rotates', () => {
       service.saveUser({ access_token: 'old', token_type: 'bearer', member: { username: 'u' } });
       service.saveToken('new');
-      expect(service.getUser().access_token).toBe('new');
+      expect(service.getToken()).toBe('new');
       expect(service.getUser().member.username).toBe('u');
+      expect(service.getUser().access_token).toBeUndefined();
     });
 
     it('signOut clears everything and navigates to the login page', () => {
       service.saveToken('acc');
-      service.saveRefreshToken('ref');
-      service.saveUser({ access_token: 'acc' });
+      service.saveCsrfToken('csrf');
+      service.saveUser({ member: { username: 'u' } });
       service.signOut();
       expect(service.getToken()).toBeNull();
+      expect(service.getCsrfToken()).toBeNull();
       expect(window.localStorage.length).toBe(0);
       expect(router.navigate).toHaveBeenCalledWith(['/auth/login']);
     });
@@ -68,12 +71,10 @@ describe('TokenService', () => {
   describe('kiosk session', () => {
     it('lives in sessionStorage and wins over any member token', () => {
       service.saveToken('member-acc');
-      service.saveRefreshToken('member-ref');
       service.saveKioskSession(KIOSK);
       expect(service.isKioskSession()).toBeTrue();
       expect(service.getToken()).toBe('dev-access');
       expect(service.getRefreshToken()).toBe('dev-refresh');
-      // a kiosk tablet never also holds an admin session
       expect(window.localStorage.getItem('auth-token')).toBeNull();
       expect(window.localStorage.getItem('auth-refreshtoken')).toBeNull();
       expect(window.localStorage.getItem('auth-user')).toBeNull();

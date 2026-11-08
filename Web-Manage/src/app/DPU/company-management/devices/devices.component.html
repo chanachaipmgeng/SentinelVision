@@ -1,29 +1,30 @@
-<app-page-header [title]="'จัดการอุปกรณ์ Kiosk'" [activeTitle]="'ธรรมาภิบาล'" [title1]="'อุปกรณ์'"></app-page-header>
+<app-page-header [title]="'Kiosk devices'" [activeTitle]="'Governance'" [title1]="'Devices'"></app-page-header>
 
 <div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
-    <app-page-toolbar title="อุปกรณ์ Kiosk">
+    <app-page-toolbar title="Kiosk devices">
       <ng-container chips>
-        <app-stat-chip>ทั้งหมด {{ items.length }}</app-stat-chip>
-        <app-stat-chip tone="ok">ใช้งาน {{ activeCount }}</app-stat-chip>
-        <app-stat-chip tone="soft">จับคู่แล้ว {{ pairedCount }}</app-stat-chip>
+        <app-stat-chip>{{ 'All' | translate }} {{ items.length }}</app-stat-chip>
+        <app-stat-chip tone="ok">{{ 'Enabled' | translate }} {{ activeCount }}</app-stat-chip>
+        <app-stat-chip tone="soft">{{ 'Paired' | translate }} {{ pairedCount }}</app-stat-chip>
       </ng-container>
       <ng-container controls>
-        <app-pill-search [(value)]="searchTerm" placeholder="ค้นหาชื่อ / โหมด / fingerprint..." ariaLabel="ค้นหาอุปกรณ์"></app-pill-search>
+        <app-pill-search [(value)]="searchTerm" placeholder="{{ 'Search devices' | translate }}" ariaLabel="a11y.search"></app-pill-search>
       </ng-container>
     </app-page-toolbar>
+    <p class="text-sm text-dpu-muted mb-1">จับคู่แท็บเล็ตด้วยโค้ดครั้งเดียว · ตั้ง stationMode / zone · revoke ได้ทันที</p>
   </div>
 
   <div class="col-span-12 xl:col-span-4">
     <div class="box dpu-list-panel modern-card glass">
-      <div class="box-header"><div class="box-title">เพิ่มอุปกรณ์</div></div>
+      <div class="box-header"><div class="box-title">{{ 'Add device' | translate }}</div></div>
       <div class="box-body space-y-3">
         <div>
-          <label class="form-label">ชื่ออุปกรณ์</label>
+          <label class="form-label">{{ 'Device name' | translate }}</label>
           <input class="form-control" [(ngModel)]="draft.name" placeholder="Gate A / Lobby" />
         </div>
         <div>
-          <label class="form-label">ตำแหน่ง (ข้อความ)</label>
+          <label class="form-label">{{ 'Location label' | translate }}</label>
           <input class="form-control" [(ngModel)]="draft.locationLabel" placeholder="ชั้น 1 โถงทางเข้า" />
         </div>
         <div>
@@ -41,10 +42,10 @@
           <input class="form-control" [(ngModel)]="draft.appVersion" placeholder="1.0.0" />
         </div>
         <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="create()">
-          <i class="ri-add-line"></i><span>สร้าง + ออกโค้ดจับคู่</span>
+          <i class="ri-add-line"></i><span>{{ 'Create and issue pairing code' | translate }}</span>
         </button>
         <p class="text-[0.75rem] text-dpu-muted" *ngIf="lastPairingCode">
-          โค้ดล่าสุด: <strong>{{ lastPairingCode }}</strong> — ใช้ที่ /kiosk/pair
+          {{ 'Latest code' | translate }}: <strong>{{ lastPairingCode }}</strong> — /kiosk/pair
         </p>
       </div>
     </div>
@@ -53,46 +54,52 @@
   <div class="col-span-12 xl:col-span-8">
     <div class="box dpu-list-panel modern-card glass">
       <div class="box-header">
-        <div class="box-title">รายการอุปกรณ์</div>
-        <span class="dpu-muted-count" *ngIf="filtered.length">{{ filtered.length }} รายการ</span>
+        <div class="box-title">{{ 'Device list' | translate }}</div>
+        <span class="dpu-muted-count" *ngIf="filtered.length">{{ filtered.length }} {{ 'items' | translate }}</span>
       </div>
       <div class="box-body dpu-list-body">
-        <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลดอุปกรณ์..."></app-empty-state>
+        <app-empty-state *ngIf="loading" [loading]="true" message="{{ 'Loading devices...' | translate }}"></app-empty-state>
         <app-empty-state
           *ngIf="!loading && pageItems.length === 0"
           icon="ri-tablet-line"
-          [message]="searchTerm ? 'ไม่พบอุปกรณ์ตามคำค้น' : 'ยังไม่มีอุปกรณ์'"
-          [actionLabel]="searchTerm ? 'ล้างการค้นหา' : ''"
+          [message]="searchTerm ? ('No devices found' | translate) : ('No devices yet' | translate)"
+          [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"
           (action)="clearSearch()">
         </app-empty-state>
         <div class="table-responsive" *ngIf="!loading && pageItems.length">
-          <table class="table whitespace-nowrap min-w-full dpu-list-table mb-0">
+          <table
+            class="table whitespace-nowrap min-w-full dpu-list-table mb-0"
+            appKeyboardTable
+            role="grid"
+            [attr.aria-label]="'Device list' | translate"
+            [attr.aria-describedby]="'devices-table-hint'">
+            <caption id="devices-table-hint" class="sr-only">{{ 'table.keyboardHint' | translate }}</caption>
             <thead>
               <tr>
-                <th>ชื่อ</th>
-                <th>โหมด / โซน</th>
-                <th>Heartbeat</th>
-                <th>สถานะ</th>
-                <th class="text-end">จัดการ</th>
+                <th scope="col">{{ 'Name' | translate }}</th>
+                <th scope="col">{{ 'Mode / zone' | translate }}</th>
+                <th scope="col">{{ 'Heartbeat' | translate }}</th>
+                <th scope="col">{{ 'Status' | translate }}</th>
+                <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
               </tr>
             </thead>
             <tbody>
-              @for (d of pageItems; track d.deviceId) {
-                <tr>
+              @for (d of pageItems; track d.deviceId; let i = $index) {
+                <tr tabindex="0" [attr.data-row-index]="i">
                   <td>
                     <div class="font-semibold">{{ d.name }}</div>
                     <div class="text-[0.75rem] text-dpu-muted">{{ d.locationLabel || '—' }}</div>
                     <div class="text-[0.7rem] text-dpu-muted truncate max-w-[180px]">{{ d.appVersion || '' }} {{ d.fingerprint || '' }}</div>
                   </td>
                   <td>
-                    <select class="form-control form-control-sm mb-1" [(ngModel)]="d.stationMode">
+                    <select class="form-control form-control-sm mb-1" [(ngModel)]="d.stationMode" [attr.aria-label]="'stationMode' | translate">
                       <option [ngValue]="null">—</option>
                       <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
                     </select>
-                    <input class="form-control form-control-sm" [(ngModel)]="d.zoneId" placeholder="zoneId" />
+                    <input class="form-control form-control-sm" [(ngModel)]="d.zoneId" [attr.placeholder]="'zoneId' | translate" [attr.aria-label]="'zoneId' | translate" />
                   </td>
                   <td>
-                    <div class="text-[0.8rem]">{{ d.heartbeatAt || d.lastSeenAt || '—' }}</div>
+                    <div class="text-[0.8rem]">{{ (d.heartbeatAt || d.lastSeenAt) | localeDate:'datetime' }}</div>
                   </td>
                   <td>
                     <span class="badge"
@@ -103,14 +110,14 @@
                   </td>
                   <td class="text-end">
                     <div class="inline-flex gap-2 flex-wrap justify-end">
-                      <button type="button" class="dpu-icon-btn" title="บันทึกการผูก" (click)="saveBinding(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-save-line"></i>
+                      <button type="button" class="dpu-icon-btn" [attr.title]="'Save' | translate" [attr.aria-label]="'Save' | translate" (click)="saveBinding(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-save-line" aria-hidden="true"></i>
                       </button>
-                      <button type="button" class="dpu-icon-btn" title="หมุนเวียน / ออกโค้ดใหม่" (click)="rotate(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-refresh-line"></i>
+                      <button type="button" class="dpu-icon-btn" [attr.title]="'Refresh' | translate" [attr.aria-label]="'Pairing code' | translate" (click)="rotate(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-refresh-line" aria-hidden="true"></i>
                       </button>
-                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="เพิกถอน" (click)="revoke(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-forbid-line"></i>
+                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" [attr.title]="'Revoke' | translate" [attr.aria-label]="'Revoke' | translate" (click)="revoke(d)" [disabled]="!!d.revokedAt">
+                        <i class="ri-forbid-line" aria-hidden="true"></i>
                       </button>
                     </div>
                   </td>

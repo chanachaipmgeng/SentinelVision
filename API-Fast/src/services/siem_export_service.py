@@ -117,12 +117,13 @@ async def queue_siem_incident_export(
     Uses the same session so the export shares the incident transaction.
     """
     row = await db.get(SystemSetting, siem_settings_key(company_id))
-    if not row or not isinstance(row.value, dict):
+    value = getattr(row, "value", None) if row is not None else None
+    if not isinstance(value, dict):
         return False
-    url = str(row.value.get("siemWebhookUrl") or "").strip()
+    url = str(value.get("siemWebhookUrl") or "").strip()
     if not url.startswith(("http://", "https://")):
         return False
-    secret = decrypt_secret(str(row.value.get("siemWebhookSecret") or ""))
+    secret = decrypt_secret(str(value.get("siemWebhookSecret") or ""))
     data = _incident_payload_data(incident)
     subject = data.get("subjectName") or data.get("eventType") or "SentinelVision incident"
     db.add(

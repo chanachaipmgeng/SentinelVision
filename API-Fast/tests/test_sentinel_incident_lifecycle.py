@@ -92,7 +92,7 @@ async def test_record_incident_dedupes_within_window_and_skips_outbox():
 
 
 @pytest.mark.asyncio
-async def test_record_incident_creates_new_and_enqueues_outbox_when_no_open_match():
+async def test_record_incident_creates_new_and_enqueues_outbox_when_no_open_match(monkeypatch):
     db = AsyncMock()
     db.execute = AsyncMock(
         return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
@@ -100,6 +100,7 @@ async def test_record_incident_creates_new_and_enqueues_outbox_when_no_open_matc
     db.add = MagicMock()
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
 
     def factory():
         return NotificationOutbox(
@@ -133,12 +134,14 @@ async def test_record_incident_creates_new_and_enqueues_outbox_when_no_open_matc
 
 
 @pytest.mark.asyncio
-async def test_lifecycle_acknowledge_assign_close():
+async def test_lifecycle_acknowledge_assign_close(monkeypatch):
     inc = _make_incident()
     db = AsyncMock()
     db.get = AsyncMock(return_value=inc)
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
+    # Close path enqueues SIEM; stub so this test stays lifecycle-focused.
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
 
     out = await svc.acknowledge_incident(db, COMPANY_ID, inc.incidentId, ACTOR_ID)
     assert out.status == svc.STATUS_ACKNOWLEDGED
@@ -167,7 +170,7 @@ async def test_lifecycle_acknowledge_assign_close():
 
 
 @pytest.mark.asyncio
-async def test_closed_incident_not_deduped():
+async def test_closed_incident_not_deduped(monkeypatch):
     """A CLOSED row outside open statuses must not satisfy find_open_dedupe_match."""
     closed = _make_incident(status=svc.STATUS_CLOSED)
     # Simulate DB returning None because the query filters status IN open set.
@@ -178,6 +181,7 @@ async def test_closed_incident_not_deduped():
     db.add = MagicMock()
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
 
     key = closed.dedupeKey
     found = await svc.find_open_dedupe_match(db, company_id=COMPANY_ID, dedupe_key=key)

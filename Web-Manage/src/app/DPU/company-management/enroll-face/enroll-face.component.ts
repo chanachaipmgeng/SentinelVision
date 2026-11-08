@@ -25,11 +25,13 @@ import {
 import {
   captureFaceCrop as captureFaceCropHelper,
   dataURLtoFile as dataURLtoFileHelper,
+  describeCameraFailure,
   prepareDetectFrame,
   sampleDetectThumb as sampleDetectThumbHelper,
   scaleDetectionBoxes,
   startUserMedia,
 } from './camera';
+import type { CameraFailureKind } from './camera';
 import {
   boxCenterDist,
   drawSmoothOverlay,
@@ -180,6 +182,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   locationReady = false;
   errorMessage: string | null = null;
   private geoWatchId: number | null = null;
+
+  /** Camera open failed — recovery panel (steps + Retry + admin preview). */
+  cameraFailed = false;
+  cameraFailureKind: CameraFailureKind | null = null;
+  cameraRecoveryTitle = '';
+  cameraRecoverySteps: string[] = [];
+  cameraRetrying = false;
+  /** Admin/demo chrome without a live camera stream. */
+  adminPreviewMode = false;
 
   /** Hybrid punch mode: AUTO (first scan = in, next = out) or explicit CHECK_IN / CHECK_OUT */
   punchMode: KioskPunchMode = 'AUTO';
@@ -553,6 +564,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   get areaLabel(): string {
+    if (!this.gpsRequired) {
+      return 'ไม่ใช้ GPS';
+    }
     if (!this.locationReady) {
       return this.errorMessage ? 'ไม่มี GPS' : 'รอพิกัด…';
     }
@@ -560,6 +574,21 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       return this.locationArea[0].locationName || 'ในพื้นที่';
     }
     return 'นอกพื้นที่';
+  }
+
+  /** Attendance / hybrid still need a geofence fix; other station modes do not. */
+  get gpsRequired(): boolean {
+    return stationModeRequiresGps(this.stationMode);
+  }
+
+  /** Loud GPS banner only when the active mode actually needs a fix. */
+  get showGpsError(): boolean {
+    return this.gpsRequired && !!this.errorMessage;
+  }
+
+  /** HUD / punch chips wait on GPS only for geofenced modes. */
+  get waitingOnGps(): boolean {
+    return this.gpsRequired && !this.locationReady;
   }
 
   /** True when browser returned a real fix (not the 0,0 placeholder). */
@@ -984,18 +1013,66 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   startVideo(): void {
+    if (this.videoStream) {
+      this.videoStream.getTracks().forEach((track) => track.stop());
+      this.videoStream = null;
+    }
+    if (this.video?.nativeElement) {
+      this.video.nativeElement.srcObject = null;
+    }
+    this.cameraRetrying = true;
+    this.cdr.detectChanges();
     startUserMedia({ video: { facingMode: 'user' } }).then((result) => {
-      if (!result.ok) {
-        console.error('Error accessing camera: ', result.error);
-        this.captureMessage = 'ไม่สามารถเปิดกล้องได้';
-        this.notify('ไม่สามารถเปิดกล้องได้', 'error');
-        return;
-      }
-      this.videoStream = result.stream;
-      this.video.nativeElement.srcObject = result.stream;
-      unlockBeepAudio();
-      unlockSpeech();
+      this.ngZone.run(() => {
+        this.cameraRetrying = false;
+        if (!result.ok) {
+          console.error('Error accessing camera: ', result.error);
+          const info = describeCameraFailure(result.error);
+          this.cameraFailed = true;
+          this.adminPreviewMode = false;
+          this.cameraFailureKind = info.kind;
+          this.cameraRecoveryTitle = info.title;
+          this.cameraRecoverySteps = info.steps;
+          this.captureMessage = info.title;
+          this.notify(info.title, 'warning');
+          this.cdr.detectChanges();
+          return;
+        }
+        this.cameraFailed = false;
+        this.adminPreviewMode = false;
+        this.cameraFailureKind = null;
+        this.cameraRecoveryTitle = '';
+        this.cameraRecoverySteps = [];
+        this.videoStream = result.stream;
+        this.video.nativeElement.srcObject = result.stream;
+        unlockBeepAudio();
+        unlockSpeech();
+        this.cdr.detectChanges();
+      });
     });
+  }
+
+  /** Re-request getUserMedia after the operator fixes permission / device. */
+  retryCamera(): void {
+    this.adminPreviewMode = false;
+    this.startVideo();
+  }
+
+  /** Inspect kiosk chrome without a camera (admin / headless / demo). */
+  enterAdminPreview(): void {
+    this.adminPreviewMode = true;
+    this.captureMessage = 'Admin preview — ตรวจ chrome โดยไม่ใช้กล้อง (ไม่มี stream)';
+    this.notify('เข้าสู่ Admin preview (ไม่ใช้กล้อง)', 'info');
+    this.cdr.detectChanges();
+  }
+
+  /** Re-request browser geolocation when GPS is required for this station. */
+  retryGps(): void {
+    if (!this.gpsRequired) {
+      return;
+    }
+    this.errorMessage = null;
+    this.getCurrentLocation();
   }
 
   async detectFace() {
@@ -1233,7 +1310,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private buildStatusMessage(): string {
-    if (!this.hasValidLocation) {
+    if (this.adminPreviewMode) {
+      return 'Admin preview — ไม่มีกล้อง; ตรวจ layout / status pills ได้';
+    }
+    if (this.cameraFailed) {
+      return this.cameraRecoveryTitle || 'ไม่สามารถเปิดกล้องได้ — ดูขั้นตอนด้านล่าง';
+    }
+    if (this.gpsRequired && !this.hasValidLocation) {
       return this.errorMessage
         ? `รอ GPS: ${this.errorMessage}`
         : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่ลงเวลาจนกว่าได้ GPS';
@@ -1720,7 +1803,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private shouldStartCheckIn(track: FaceTrack, now: number): boolean {
-    if (!this.hasValidLocation) {
+    if (this.gpsRequired && !this.hasValidLocation) {
       return false;
     }
     if (track.phase !== 'watching') {
@@ -2234,19 +2317,30 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /** Surface GPS failures loudly only when `stationModeRequiresGps`. */
+  private applyGeoFailure(message: string, detail?: unknown): void {
+    this.locationReady = false;
+    if (this.gpsRequired) {
+      this.errorMessage = message;
+      console.error('Error fetching location:', message, detail);
+    } else {
+      // Access / watchlist / visitor / event — keep scanning; do not spam red GPS chrome.
+      this.errorMessage = null;
+      console.warn(`GPS unavailable (not required for ${this.stationMode}):`, message, detail);
+    }
+    this.cdr.detectChanges();
+  }
+
   getCurrentLocation() {
     if (!navigator.geolocation) {
-      this.locationReady = false;
-      this.errorMessage = 'เบราว์เซอร์นี้ไม่รองรับ Geolocation';
+      this.applyGeoFailure('เบราว์เซอร์นี้ไม่รองรับ Geolocation');
       return;
     }
 
     // Secure context required (HTTPS or localhost). HTTP on LAN often yields no fix → stays 0,0.
     const host = window.location.hostname;
     if (!window.isSecureContext && host !== 'localhost' && host !== '127.0.0.1') {
-      this.locationReady = false;
-      this.errorMessage = 'ต้องเปิด kiosk ผ่าน HTTPS ถึงจะอ่าน GPS ได้ (ตอนนี้ไม่ใช่ secure context)';
-      console.error(this.errorMessage);
+      this.applyGeoFailure('ต้องเปิด kiosk ผ่าน HTTPS ถึงจะอ่าน GPS ได้ (ตอนนี้ไม่ใช่ secure context)');
     }
 
     const options: PositionOptions = {
@@ -2259,22 +2353,21 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       (position) => this.ngZone.run(() => this.applyGeoPosition(position)),
       (error) => {
         this.ngZone.run(() => {
-          this.locationReady = false;
+          let message = 'ขอตำแหน่งไม่สำเร็จ';
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              this.errorMessage = 'ผู้ใช้ปฏิเสธการแชร์ตำแหน่ง — อนุญาต Location ในเบราว์เซอร์';
+              message = 'ผู้ใช้ปฏิเสธการแชร์ตำแหน่ง — อนุญาต Location ในเบราว์เซอร์';
               break;
             case error.POSITION_UNAVAILABLE:
-              this.errorMessage = 'อ่านตำแหน่งไม่ได้ (เครื่องไม่มี GPS / สัญญาณไม่พอ)';
+              message = 'อ่านตำแหน่งไม่ได้ (เครื่องไม่มี GPS / สัญญาณไม่พอ)';
               break;
             case error.TIMEOUT:
-              this.errorMessage = 'ขอตำแหน่งหมดเวลา — ลองรีเฟรชหน้า';
+              message = 'ขอตำแหน่งหมดเวลา — กด Retry GPS หรือรีเฟรชหน้า';
               break;
             default:
-              this.errorMessage = 'ขอตำแหน่งไม่สำเร็จ';
+              message = 'ขอตำแหน่งไม่สำเร็จ';
           }
-          console.error('Error fetching location:', this.errorMessage, error);
-          this.cdr.detectChanges();
+          this.applyGeoFailure(message, error);
         });
       },
       options,

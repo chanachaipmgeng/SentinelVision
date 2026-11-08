@@ -1,0 +1,211 @@
+<div class="space-y-4">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h6 class="font-bold text-base mb-0">
+        <i class="ri-file-list-3-line text-teal-700 me-1"></i>
+        ประวัติการผ่านประตู / Access Control Logs
+      </h6>
+      <p class="text-xs text-dpu-muted mb-0">
+        เหตุการณ์สแกนที่ผูกกับโซนประตู — กรองตามโซนและสถานะเพื่อปิดลูป Create zone → Open scan → ดู log
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <a
+        routerLink="/company/access-control/zones"
+        class="ti-btn ti-btn-light font-semibold text-xs"
+      >
+        <i class="ri-door-lock-line me-1"></i> จัดการโซน
+      </a>
+      <button
+        type="button"
+        class="ti-btn ti-btn-primary-full font-semibold text-xs"
+        (click)="openScanForFilter()"
+      >
+        <i class="ri-qr-scan-2-line me-1"></i> เปิดสแกน
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    <select
+      class="form-control !py-1.5 !text-xs !w-auto min-w-[10rem]"
+      [(ngModel)]="incidentFilterZoneId"
+      (change)="loadIncidents()"
+      aria-label="กรองตามโซนประตู"
+    >
+      <option value="">ทุกโซน</option>
+      <option *ngFor="let z of zones" [value]="z.zoneId">
+        {{ z.name }} ({{ z.code }})
+      </option>
+    </select>
+    <select
+      class="form-control !py-1.5 !text-xs !w-auto"
+      [(ngModel)]="incidentFilterStatus"
+      (change)="loadIncidents()"
+      aria-label="กรองตามสถานะ"
+    >
+      <option value="">ทุกสถานะ</option>
+      <option value="OPEN">OPEN (เปิดใหม่)</option>
+      <option value="ACKNOWLEDGED">ACKNOWLEDGED (รับทราบ)</option>
+      <option value="ASSIGNED">ASSIGNED (มอบหมายแล้ว)</option>
+      <option value="CLOSED">CLOSED (ปิดแล้ว)</option>
+    </select>
+    <select
+      class="form-control !py-1.5 !text-xs !w-auto"
+      [(ngModel)]="incidentFilterSeverity"
+      (change)="loadIncidents()"
+      aria-label="กรองตามความสำคัญ"
+    >
+      <option value="">ทุกระดับ</option>
+      <option value="CRITICAL">CRITICAL</option>
+      <option value="WARNING">WARNING</option>
+      <option value="INFO">INFO</option>
+    </select>
+    <button
+      type="button"
+      class="ti-btn ti-btn-light text-xs"
+      (click)="loadIncidents()"
+      [disabled]="loading"
+    >
+      <i class="ri-refresh-line me-1" [class.animate-spin]="loading"></i> รีเฟรช
+    </button>
+  </div>
+
+  <div
+    tabindex="0"
+    role="region"
+    aria-label="ตารางประวัติการผ่านประตู Access Control"
+    class="sv-table-wrapper"
+  >
+    <table class="table whitespace-nowrap">
+      <thead>
+        <tr class="border-b border-defaultborder text-xs">
+          <th class="text-start p-3">บุคคล / ตัวตน</th>
+          <th class="text-start p-3">ประเภทเหตุการณ์</th>
+          <th class="text-start p-3">จุดสแกน / โซน</th>
+          <th class="text-start p-3">ความแม่นยำ</th>
+          <th class="text-start p-3">เวลา</th>
+          <th class="text-end p-3">สถานะ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let inc of incidents" class="border-b border-defaultborder text-xs">
+          <th class="text-start p-3">
+            <div class="font-semibold text-slate-900">{{ inc.subjectName || 'Unknown' }}</div>
+            <div class="text-[0.7rem] text-dpu-muted">{{ inc.identityType || '-' }}</div>
+          </th>
+          <td class="p-3">
+            <span
+              class="badge px-2 py-0.5 rounded"
+              [ngClass]="
+                inc.severity === 'CRITICAL'
+                  ? 'sv-pill-critical'
+                  : inc.severity === 'WARNING'
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-800'
+              "
+            >
+              {{ inc.eventType }}
+            </span>
+            <div class="text-[0.7rem] text-dpu-muted mt-0.5">{{ inc.actionTaken }}</div>
+          </td>
+          <td class="p-3">
+            <div>{{ inc.zoneName || '-' }}</div>
+            <a
+              *ngIf="inc.zoneId"
+              class="text-[0.7rem] text-teal-700 hover:underline"
+              [routerLink]="['/company/scan/access-control']"
+              [queryParams]="{ zoneId: inc.zoneId }"
+            >
+              เปิดสแกนโซนนี้
+            </a>
+          </td>
+          <td class="p-3">
+            <span *ngIf="inc.confidencePercent != null">{{ inc.confidencePercent }}%</span>
+            <span *ngIf="inc.confidencePercent == null" class="text-dpu-muted">-</span>
+          </td>
+          <td class="p-3">{{ inc.occurredAt | date:'dd/MM HH:mm:ss' }}</td>
+          <td class="p-3 text-end">
+            <div class="flex flex-col items-end gap-1">
+              <span
+                class="text-[0.65rem] font-semibold uppercase tracking-wide"
+                [ngClass]="
+                  inc.status === 'CLOSED'
+                    ? 'text-slate-500'
+                    : inc.status === 'ASSIGNED'
+                    ? 'text-sky-700'
+                    : inc.status === 'ACKNOWLEDGED'
+                    ? 'text-emerald-700'
+                    : 'text-amber-700'
+                "
+              >
+                {{ inc.status || 'OPEN' }}
+              </span>
+              <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)">
+                <button
+                  *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-primary-full"
+                  (click)="acknowledgeIncident(inc.incidentId)"
+                >
+                  รับทราบ
+                </button>
+                <button
+                  *ngIf="inc.status !== 'ASSIGNED'"
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-outline-primary"
+                  (click)="assignIncident(inc.incidentId)"
+                >
+                  มอบหมาย
+                </button>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-outline-secondary"
+                  (click)="closeIncident(inc.incidentId)"
+                >
+                  ปิดเหตุ
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr *ngIf="!loading && incidents.length === 0">
+          <td colspan="6" class="py-8">
+            <div class="flex flex-col items-center justify-center gap-3 text-center px-4">
+              <i class="ri-door-open-line text-3xl text-teal-700/70" aria-hidden="true"></i>
+              <div>
+                <p class="font-semibold text-slate-800 mb-1">ยังไม่มีเหตุการณ์ผ่านประตู</p>
+                <p class="text-xs text-dpu-muted mb-0 max-w-md">
+                  สร้างโซนประตู แล้วเปิดสแกน Access Control (กล้องสดหรืออัปโหลดทดสอบบนศูนย์เฝ้าระวัง)
+                  เพื่อให้เหตุการณ์ปรากฏที่นี่
+                </p>
+              </div>
+              <div class="flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-primary-full font-semibold text-xs"
+                  (click)="goCreateZone()"
+                >
+                  <i class="ri-add-line me-1"></i> สร้างโซนประตู
+                </button>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-light font-semibold text-xs"
+                  (click)="openScanForFilter()"
+                >
+                  <i class="ri-qr-scan-2-line me-1"></i> เปิดสแกน
+                </button>
+                <a
+                  routerLink="/company/sentinel-center"
+                  class="ti-btn ti-btn-light font-semibold text-xs"
+                >
+                  อัปโหลดทดสอบ 1:N
+                </a>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

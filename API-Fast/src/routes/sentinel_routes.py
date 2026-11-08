@@ -338,6 +338,7 @@ async def list_sentinel_incidents(
     eventType: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    zoneId: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -349,6 +350,7 @@ async def list_sentinel_incidents(
         event_type=eventType,
         severity=severity,
         status_filter=status,
+        zone_id=zoneId,
         limit=limit,
         offset=offset,
     )

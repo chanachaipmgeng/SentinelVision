@@ -121,7 +121,7 @@
                     (change)="onScanFileSelected($event)"
                   />
                 </div>
-                <div class="col-span-12">
+                <div class="col-span-12 flex flex-col gap-2">
                   <button
                     type="button"
                     class="ti-btn ti-btn-primary-full w-full font-semibold"
@@ -131,6 +131,16 @@
                     <i class="ri-qr-scan-2-line me-1"></i>
                     {{ isScanning ? 'กำลังประมวลผลด้วย InsightFace GPU...' : 'เริ่มตรวจสอบใบหน้า 1:N ทันที' }}
                   </button>
+                  <a
+                    *ngIf="scanForm.stationMode === 'ACCESS_CONTROL'"
+                    class="ti-btn ti-btn-light w-full font-semibold text-center text-xs"
+                    [routerLink]="['/company/scan/access-control']"
+                    [queryParams]="scanForm.zoneId ? { zoneId: scanForm.zoneId } : {}"
+                  >
+                    <i class="ri-camera-lens-line me-1"></i>
+                    เปิดสแกนสด Access Control
+                    <span *ngIf="scanForm.zoneId"> (zone ที่เลือก)</span>
+                  </a>
                 </div>
               </div>
 
@@ -183,6 +193,10 @@
                   </p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
+                  <select class="form-control !py-1 !text-xs !w-auto" [(ngModel)]="incidentFilterZoneId" (change)="loadIncidents()" aria-label="กรองตามโซน">
+                    <option value="">ทุกโซน</option>
+                    <option *ngFor="let z of zones" [value]="z.zoneId">{{ z.name }}</option>
+                  </select>
                   <select class="form-control !py-1 !text-xs !w-auto" [(ngModel)]="incidentFilterSeverity" (change)="loadIncidents()">
                     <option value="">ทุกระดับความสำคัญ</option>
                     <option value="CRITICAL">CRITICAL (ฉุกเฉิน/Blacklist)</option>
@@ -196,6 +210,12 @@
                     <option value="ASSIGNED">ASSIGNED (มอบหมายแล้ว)</option>
                     <option value="CLOSED">CLOSED (ปิดแล้ว)</option>
                   </select>
+                  <a
+                    routerLink="/company/access-control/logs"
+                    class="text-xs font-semibold text-teal-800 hover:underline"
+                  >
+                    Access logs →
+                  </a>
                 </div>
               </div>
 
@@ -292,7 +312,27 @@
                     </tr>
                     <tr *ngIf="incidents.length === 0">
                       <td colspan="6" class="text-center text-dpu-muted py-6">
-                        ยังไม่มีเหตุการณ์แจ้งเตือนในหมวดนี้
+                        <div class="flex flex-col items-center gap-2">
+                          <span>ยังไม่มีเหตุการณ์แจ้งเตือนในหมวดนี้</span>
+                          <div class="flex flex-wrap justify-center gap-2 text-xs">
+                            <a
+                              routerLink="/company/access-control/zones"
+                              class="font-semibold text-teal-800 hover:underline"
+                            >
+                              สร้างโซนประตู
+                            </a>
+                            <span aria-hidden="true">·</span>
+                            <a
+                              [routerLink]="['/company/scan/access-control']"
+                              [queryParams]="incidentFilterZoneId || scanForm.zoneId ? { zoneId: incidentFilterZoneId || scanForm.zoneId } : {}"
+                              class="font-semibold text-teal-800 hover:underline"
+                            >
+                              เปิดสแกนสด
+                            </a>
+                            <span aria-hidden="true">·</span>
+                            <span>หรืออัปโหลดรูปด้านซ้ายเพื่อทดสอบ 1:N</span>
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   </tbody>

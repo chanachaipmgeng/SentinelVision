@@ -137,3 +137,21 @@ export function firstFileFromInput(event: Event): File | null {
   const input = event.target as HTMLInputElement;
   return input.files && input.files.length > 0 ? input.files[0] : null;
 }
+
+/** Deep-link to live Access Control scan for a zone (reuses scan-station-mode helpers). */
+export function accessZoneScanRoute(zoneId: string | null | undefined): string {
+  const id = (zoneId || '').trim();
+  if (!id) return '/company/scan/access-control';
+  return `/company/scan/access-control?zoneId=${encodeURIComponent(id)}`;
+}
+
+/** Client-side zone filter for incident rows (when API zoneId not used). */
+export function filterIncidentsByZone(
+  incidents: any[] | null | undefined,
+  zoneId: string | null | undefined,
+): any[] {
+  const rows = incidents || [];
+  const id = (zoneId || '').trim();
+  if (!id) return rows;
+  return rows.filter((inc) => String(inc?.zoneId || '') === id);
+}

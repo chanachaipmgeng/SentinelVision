@@ -6,23 +6,40 @@ export const EMP_LIST_VIEW_STORAGE_KEY = 'dpu.companyEmp.listView';
 export const EMP_TABLE_PAGE_SIZE = 10;
 export const EMP_CARDS_PAGE_SIZE = 9;
 
+function includesTerm(value: unknown, q: string): boolean {
+  if (value == null) return false;
+  return String(value).toLowerCase().includes(q);
+}
+
 /** Client-side employee search across common fields. */
 export function filterEmployees(items: EmployeeModel[], term: string): EmployeeModel[] {
   const q = (term || '').toLowerCase().trim();
+  const source = (items || []).filter((x): x is EmployeeModel => !!x);
   if (!q) {
-    return [...(items || [])];
+    return [...source];
   }
-  return (items || []).filter(
-    (x) =>
-      x.company_employeeId?.toLowerCase().indexOf(q) !== -1 ||
-      x.employeeId?.toLowerCase().indexOf(q) !== -1 ||
-      x.getFullname()?.toLowerCase().indexOf(q) !== -1 ||
-      x.getType()?.toLowerCase().indexOf(q) !== -1 ||
-      x.getRole()?.toLowerCase().indexOf(q) !== -1 ||
-      x.position?.getName()?.toLowerCase().indexOf(q) !== -1 ||
-      x.department?.getName()?.toLowerCase().indexOf(q) !== -1 ||
-      x.member?.email?.toLowerCase().indexOf(q) !== -1,
-  );
+  return source.filter((x) => {
+    const fullName =
+      typeof x.getFullname === 'function' ? x.getFullname() : `${x.member?.firstName || ''} ${x.member?.lastName || ''}`;
+    const empType = typeof x.getType === 'function' ? x.getType() : '';
+    const role = typeof x.getRole === 'function' ? x.getRole() : '';
+    const positionName =
+      typeof x.position?.getName === 'function' ? x.position.getName() : x.position?.thName || x.position?.engName;
+    const departmentName =
+      typeof x.department?.getName === 'function'
+        ? x.department.getName()
+        : x.department?.thName || x.department?.engName;
+    return (
+      includesTerm(x.company_employeeId, q) ||
+      includesTerm(x.employeeId, q) ||
+      includesTerm(fullName, q) ||
+      includesTerm(empType, q) ||
+      includesTerm(role, q) ||
+      includesTerm(positionName, q) ||
+      includesTerm(departmentName, q) ||
+      includesTerm(x.member?.email, q)
+    );
+  });
 }
 
 export function pageSizeForView(mode: EmpListViewMode): number {
@@ -54,14 +71,25 @@ export function pageEnd(totalFiltered: number, pageIndex: number, pageSize: numb
   return Math.min((pageIndex + 1) * pageSize, totalFiltered);
 }
 
-export function readStoredListView(storageKey = EMP_LIST_VIEW_STORAGE_KEY): EmpListViewMode {
+/**
+ * Read persisted list/table preference.
+ * Returns null when unset so callers can apply density defaults (e.g. table when ≥20 rows).
+ */
+export function readStoredListView(
+  storageKey = EMP_LIST_VIEW_STORAGE_KEY,
+): EmpListViewMode | null {
   try {
     const v = localStorage.getItem(storageKey);
     if (v === 'table' || v === 'cards') return v;
   } catch {
-    /* ignore */
+    /* storage unavailable */
   }
-  return 'cards';
+  return null;
+}
+
+/** Default view when the user has no stored preference. */
+export function defaultListViewForTotal(total: number): EmpListViewMode {
+  return total >= 20 ? 'table' : 'cards';
 }
 
 export function writeStoredListView(

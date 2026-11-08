@@ -13,18 +13,18 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of filterList; track item.company_employeeId; let i = $index) {
+                @for (item of safeFilterList; track trackEmp(item); let i = $index) {
                   <tr class="emp-row" [style.animation-delay.ms]="i * 40">
                     <td>
                       <div class="emp-person">
                         <span class="avatar avatar-md avatar-rounded emp-avatar">
-                          <img [src]="item.member.getPicture()" alt="">
+                          <img [src]="pictureOf(item)" alt="">
                         </span>
                         <div class="min-w-0">
                           <p class="mb-0 font-semibold text-truncate">
-                            {{ item.member.firstName }} {{ item.member.lastName }}
+                            {{ item.member?.firstName }} {{ item.member?.lastName }}
                           </p>
-                          <p class="mb-0 text-[0.75rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                          <p class="mb-0 text-[0.75rem] text-dpu-muted text-truncate">{{ item.member?.email }}</p>
                         </div>
                       </div>
                     </td>
@@ -58,17 +58,17 @@
 
       @if (listViewMode === 'cards' && totalFiltered > 0) {
         <div class="box-body emp-card-grid">
-          @for (item of filterList; track item.company_employeeId; let i = $index) {
+          @for (item of safeFilterList; track trackEmp(item); let i = $index) {
             <article class="emp-card" [style.animation-delay.ms]="i * 45">
               <div class="emp-card-head emp-card-head--stack">
                 <span class="avatar avatar-xl avatar-rounded emp-avatar">
-                  <img [src]="item.member.getPicture()" alt="">
+                  <img [src]="pictureOf(item)" alt="">
                 </span>
                 <div class="min-w-0 w-full text-center">
                   <p class="mb-0 font-semibold text-[0.95rem] text-truncate">
-                    {{ item.member.firstName }} {{ item.member.lastName }}
+                    {{ item.member?.firstName }} {{ item.member?.lastName }}
                   </p>
-                  <p class="mb-0 text-[0.72rem] text-dpu-muted text-truncate">{{ item.member.email }}</p>
+                  <p class="mb-0 text-[0.72rem] text-dpu-muted text-truncate">{{ item.member?.email }}</p>
                 </div>
               </div>
               <div class="emp-card-meta emp-card-meta--stack">

@@ -1,5 +1,6 @@
 import {
   clampPageIndex,
+  defaultListViewForTotal,
   filterEmployees,
   formatApiError,
   isExcelImportFile,
@@ -37,6 +38,19 @@ describe('company-emp.helpers', () => {
     expect(filterEmployees(list, 'somchai').length).toBe(1);
     expect(filterEmployees(list, 'emp9').length).toBe(1);
     expect(filterEmployees(list, 'zzz').length).toBe(0);
+  });
+
+  it('filterEmployees ignores null rows and nullish fields', () => {
+    const list = [null as any, emp({ firstName: 'Ann' }), emp({ firstName: 'Bob' })];
+    (list[2] as any).getFullname = () => null;
+    (list[2] as any).member = { email: null, firstName: 'Bob', lastName: 'X' };
+    expect(filterEmployees(list, 'ann').length).toBe(1);
+    expect(filterEmployees(list, '').length).toBe(2);
+  });
+
+  it('defaultListViewForTotal prefers table for dense lists', () => {
+    expect(defaultListViewForTotal(19)).toBe('cards');
+    expect(defaultListViewForTotal(20)).toBe('table');
   });
 
   it('paging helpers', () => {

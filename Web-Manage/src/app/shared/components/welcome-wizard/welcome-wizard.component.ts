@@ -1,5 +1,15 @@
-import { Component, EventEmitter, HostListener, OnInit, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  EventEmitter,
+  HostListener,
+  Inject,
+  OnDestroy,
+  OnInit,
+  Output,
+} from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { TokenService } from '../../services/token.service';
 import { PermissionService } from '../../services/permission.service';
@@ -14,7 +24,7 @@ export const WELCOME_SEEN_PREFIX = 'sv_welcome_seen:';
   templateUrl: './welcome-wizard.component.html',
   styleUrl: './welcome-wizard.component.css',
 })
-export class WelcomeWizardComponent implements OnInit {
+export class WelcomeWizardComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Fired when the user picks "open checklist" on the final step. */
   @Output() openChecklist = new EventEmitter<void>();
 
@@ -31,7 +41,21 @@ export class WelcomeWizardComponent implements OnInit {
     { icon: 'ri-calendar-event-line', title: 'shell.welcome.mod.events.title', hint: 'shell.welcome.mod.events.hint' },
   ];
 
-  constructor(private tokenService: TokenService, private permissions: PermissionService) {}
+  constructor(
+    private tokenService: TokenService,
+    private permissions: PermissionService,
+    private host: ElementRef<HTMLElement>,
+    @Inject(DOCUMENT) private document: Document,
+  ) {}
+
+  /** The content layout paints page content above in-flow fixed overlays, so the modal lives on <body>. */
+  ngAfterViewInit(): void {
+    this.document.body.appendChild(this.host.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.host.nativeElement.remove();
+  }
 
   private get storageKey(): string | null {
     const memberId = this.tokenService.getUser()?.member?.memberId;

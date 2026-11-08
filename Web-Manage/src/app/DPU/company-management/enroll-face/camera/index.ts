@@ -3,6 +3,7 @@ export {
   DETECT_THUMB_H,
   DETECT_FRAME_TARGET_W,
   startUserMedia,
+  describeCameraFailure,
   ensureCanvas,
   prepareDetectFrame,
   sampleDetectThumb,
@@ -10,4 +11,4 @@ export {
   scaleDetectionBoxes,
   dataURLtoFile,
 } from './kiosk-camera';
-export type { UserMediaResult, FaceCropOpts } from './kiosk-camera';
+export type { UserMediaResult, FaceCropOpts, CameraFailureKind, CameraRecoveryInfo } from './kiosk-camera';

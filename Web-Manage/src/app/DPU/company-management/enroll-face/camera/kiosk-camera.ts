@@ -8,11 +8,140 @@ export type UserMediaResult =
   | { ok: true; stream: MediaStream }
   | { ok: false; error: unknown };
 
+/** Why getUserMedia failed — drives recovery copy on the kiosk. */
+export type CameraFailureKind =
+  | 'permission'
+  | 'not_found'
+  | 'in_use'
+  | 'insecure'
+  | 'unsupported'
+  | 'unknown';
+
+export type CameraRecoveryInfo = {
+  kind: CameraFailureKind;
+  /** Short Thai title shown in the recovery panel / status. */
+  title: string;
+  /** Numbered operator steps (Thai, with familiar EN UI terms). */
+  steps: string[];
+};
+
+function cameraErrorName(error: unknown): string {
+  if (error && typeof error === 'object' && 'name' in error) {
+    return String((error as { name?: unknown }).name || '');
+  }
+  return '';
+}
+
+/**
+ * Map a getUserMedia failure into actionable recovery copy.
+ * Pure — safe to unit-test without a real camera.
+ */
+export function describeCameraFailure(error: unknown): CameraRecoveryInfo {
+  const name = cameraErrorName(error);
+  const message =
+    error && typeof error === 'object' && 'message' in error
+      ? String((error as { message?: unknown }).message || '')
+      : typeof error === 'string'
+        ? error
+        : '';
+
+  if (
+    name === 'NotAllowedError' ||
+    name === 'PermissionDeniedError' ||
+    /permission|denied|notallowed/i.test(`${name} ${message}`)
+  ) {
+    return {
+      kind: 'permission',
+      title: 'ไม่สามารถเปิดกล้องได้ — ถูกปฏิเสธสิทธิ์ (Permission denied)',
+      steps: [
+        'คลิกไอคอนกล้อง / แม่กุญแจในแถบที่อยู่ของเบราว์เซอร์ (address bar)',
+        'ตั้ง Camera เป็น Allow / อนุญาต แล้วกด Retry ด้านล่าง',
+        'ถ้าเคยกด Block: เปิด Site settings → Camera → Allow แล้วรีเฟรชหน้า',
+        'บนแท็บเล็ต/มือถือ: ตรวจ Settings ของระบบว่าแอปเบราว์เซอร์ใช้กล้องได้',
+      ],
+    };
+  }
+
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || /notfound|no device/i.test(message)) {
+    return {
+      kind: 'not_found',
+      title: 'ไม่พบกล้อง (No camera device)',
+      steps: [
+        'ตรวจว่ากล้องเสียบอยู่ / ไม่ถูกปิดด้วยฮาร์ดแวร์สวิตช์',
+        'ปิดแอปอื่นที่อาจจองกล้อง แล้วกด Retry',
+        'ในเบราว์เซอร์: Site settings → Camera ต้องไม่ถูกบล็อก',
+        'เครื่อง headless / VM ที่ไม่มีกล้อง: ใช้ Admin preview เพื่อตรวจ chrome',
+      ],
+    };
+  }
+
+  if (name === 'NotReadableError' || name === 'TrackStartError' || /in use|busy|readable/i.test(message)) {
+    return {
+      kind: 'in_use',
+      title: 'กล้องถูกใช้อยู่ (Camera in use)',
+      steps: [
+        'ปิดโปรแกรมประชุม / แอปกล้องอื่นที่เปิดค้าง',
+        'ถอดและเสียบกล้องใหม่ถ้าเป็น USB cam',
+        'กด Retry เพื่อขอ media อีกครั้ง',
+      ],
+    };
+  }
+
+  if (
+    name === 'NotSupportedError' ||
+    typeof navigator === 'undefined' ||
+    !navigator.mediaDevices ||
+    typeof navigator.mediaDevices.getUserMedia !== 'function'
+  ) {
+    return {
+      kind: 'unsupported',
+      title: 'เบราว์เซอร์นี้ไม่รองรับกล้อง (getUserMedia)',
+      steps: [
+        'ใช้ Chrome / Edge / Safari รุ่นล่าสุดบนอุปกรณ์ kiosk',
+        'ตรวจว่าไม่ได้เปิดโหมดที่ปิด media devices',
+        'ใช้ Admin preview เพื่อตรวจ UI chrome ชั่วคราว',
+      ],
+    };
+  }
+
+  const host =
+    typeof window !== 'undefined' && window.location ? window.location.hostname : '';
+  const insecure =
+    typeof window !== 'undefined' &&
+    !window.isSecureContext &&
+    host !== 'localhost' &&
+    host !== '127.0.0.1';
+  if (name === 'SecurityError' || insecure) {
+    return {
+      kind: 'insecure',
+      title: 'ต้องเปิดผ่าน HTTPS ถึงใช้กล้องได้ (Secure context)',
+      steps: [
+        'เปิด kiosk ด้วย https:// หรือ http://localhost',
+        'อย่าใช้ IP แบบ HTTP บน LAN (เบราว์เซอร์จะบล็อก getUserMedia)',
+        'หลังเปลี่ยน URL แล้วกด Retry',
+      ],
+    };
+  }
+
+  return {
+    kind: 'unknown',
+    title: 'ไม่สามารถเปิดกล้องได้',
+    steps: [
+      'อนุญาต Camera ในเบราว์เซอร์ แล้วกด Retry',
+      'ตรวจว่ามีกล้องและไม่ถูกแอปอื่นจอง',
+      'ถ้ายังไม่ได้: ใช้ Admin preview เพื่อตรวจ chrome โดยไม่ใช้กล้อง',
+    ],
+  };
+}
+
 /** Start the facing-user camera stream (caller owns stop()). */
 export async function startUserMedia(
   constraints: MediaStreamConstraints = { video: { facingMode: 'user' } },
 ): Promise<UserMediaResult> {
   try {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return { ok: false, error: { name: 'NotSupportedError', message: 'getUserMedia unavailable' } };
+    }
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     return { ok: true, stream };
   } catch (error) {

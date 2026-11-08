@@ -742,13 +742,161 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
   margin-top: 0.65rem;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
   color: #fecaca;
   font-size: 0.85rem;
   padding: 0.45rem 0.7rem;
   border-radius: 0.65rem;
   background: rgba(127, 29, 29, 0.35);
   border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.dpu-kiosk__geo-error-body {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.dpu-kiosk__geo-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(254, 202, 202, 0.45);
+  background: rgba(15, 23, 42, 0.35);
+  color: #fef2f2;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dpu-kiosk__geo-retry:hover {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+/* Camera recovery / admin preview — keep DPU teal language, no full redesign */
+.dpu-kiosk__cam-recovery,
+.dpu-kiosk__cam-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background:
+    linear-gradient(160deg, rgba(15, 118, 110, 0.55), rgba(15, 23, 42, 0.88)),
+    rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.dpu-kiosk__cam-recovery-card,
+.dpu-kiosk__cam-preview-card {
+  width: min(100%, 28rem);
+  max-height: 100%;
+  overflow: auto;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  background: rgba(15, 23, 42, 0.82);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  color: #f8fafc;
+}
+
+.dpu-kiosk__cam-recovery-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: 0.55rem;
+  border-radius: 0.75rem;
+  background: rgba(45, 212, 191, 0.16);
+  color: #5eead4;
+  font-size: 1.35rem;
+}
+
+.dpu-kiosk__cam-recovery-title,
+.dpu-kiosk__cam-preview-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #ecfdf5;
+}
+
+.dpu-kiosk__cam-recovery-lead,
+.dpu-kiosk__cam-preview-text {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.dpu-kiosk__cam-recovery-steps {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.dpu-kiosk__cam-recovery-steps li + li {
+  margin-top: 0.35rem;
+}
+
+.dpu-kiosk__cam-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.dpu-kiosk__cam-recovery-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(94, 234, 212, 0.35);
+  background: rgba(15, 118, 110, 0.22);
+  color: #ecfdf5;
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dpu-kiosk__cam-recovery-btn:hover:not(:disabled) {
+  background: rgba(15, 118, 110, 0.38);
+}
+
+.dpu-kiosk__cam-recovery-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.dpu-kiosk__cam-recovery-btn--primary {
+  background: #0f766e;
+  border-color: rgba(94, 234, 212, 0.55);
+  color: #ecfdf5;
+}
+
+.dpu-kiosk__cam-recovery-btn--primary:hover:not(:disabled) {
+  background: #0d9488;
+}
+
+.dpu-kiosk__cam-preview-card {
+  text-align: center;
+}
+
+.dpu-kiosk__cam-preview-card > i {
+  display: inline-flex;
+  margin-bottom: 0.45rem;
+  font-size: 1.6rem;
+  color: #5eead4;
 }
 
 .dpu-kiosk__feed-panel {

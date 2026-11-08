@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
+import { Subscription, combineLatest } from 'rxjs';
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { AuthedImageService } from '../../../shared/services/authed-image.service';
@@ -60,12 +61,13 @@ import {
   nextCaptureInterval,
 } from './kiosk-tracker.service';
 import {
+  StationRouteContext,
   isAccessChrome,
   isAttendanceChrome,
   isEventChrome,
   isVisitorChrome,
   isWatchlistChrome,
-  parseStationModeParam,
+  resolveStationRouteContext,
   shouldEnableDoorRelay,
   stationModeCaptureHint,
   stationModeRequiresGps,
@@ -262,6 +264,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   private checkInInFlight = 0;
   private onlineHandler: (() => void) | null = null;
   private offlineHandler: (() => void) | null = null;
+  /** SPA nav between `/company/scan/:stationMode` reuses this component — must not rely on snapshot alone. */
+  private routeCtxSub?: Subscription;
+  /** True when the active route carried `:stationMode` (false on legacy timestamp-face). */
+  private routeHadStationMode = false;
 
   /**
    * 60fps easing toward latest detection.
@@ -326,18 +332,90 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.companyName = company.companyName || kiosk?.deviceName || 'บริษัท';
     this.isKioskDevice = !!kiosk;
     this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
-    this.resolveStationContext();
+    // Initial paint before paramMap subscription; live updates go through onStationRouteParams.
+    this.applyResolvedStationContext(
+      resolveStationRouteContext(
+        this.route.snapshot.paramMap.get('stationMode'),
+        this.route.snapshot.queryParamMap.get('zoneId'),
+        this.route.snapshot.queryParamMap.get('eventId'),
+      ),
+    );
     this.largeTextMode = sessionStorage.getItem('dpu.kiosk.largeText') === '1';
   }
 
-  /** Resolve `:stationMode` + zoneId/eventId query; timestamp-face stays ATTENDANCE. */
-  private resolveStationContext(): void {
-    const param = this.route.snapshot.paramMap.get('stationMode');
-    this.stationMode = parseStationModeParam(param);
-    const qp = this.route.snapshot.queryParamMap;
-    this.zoneId = qp.get('zoneId') || null;
-    this.eventId = qp.get('eventId') || null;
-    this.captureMessage = stationModeCaptureHint(this.stationMode);
+  /** Apply pure route context onto component fields. */
+  private applyResolvedStationContext(ctx: StationRouteContext): void {
+    this.routeHadStationMode = ctx.routeHadMode;
+    this.stationMode = ctx.stationMode;
+    this.zoneId = ctx.zoneId;
+    this.eventId = ctx.eventId;
+    this.captureMessage = ctx.captureMessage;
+  }
+
+  /**
+   * React to SPA navigation that reuses this component (same route config,
+   * different `:stationMode` / query). Snapshot-only resolve stuck chrome on the
+   * first visit — e.g. access-control → watchlist still showed Access Control.
+   */
+  private onStationRouteParams(params: ParamMap, query: ParamMap): void {
+    const prevMode = this.stationMode;
+    const prevZone = this.zoneId;
+    const prevEvent = this.eventId;
+    this.applyResolvedStationContext(
+      resolveStationRouteContext(
+        params.get('stationMode'),
+        query.get('zoneId'),
+        query.get('eventId'),
+      ),
+    );
+    const modeChanged = prevMode !== this.stationMode;
+    const idsChanged = prevZone !== this.zoneId || prevEvent !== this.eventId;
+    if (!modeChanged && !idsChanged) {
+      return;
+    }
+    if (modeChanged) {
+      this.resetStationSessionForModeChange();
+      this.loadZoneAndEventOptions();
+      if (this.showAttendancePanel) {
+        this.loadAttendance();
+      }
+    }
+    this.sendWsSession();
+    this.cdr.detectChanges();
+  }
+
+  /** Clear mode-specific chrome/session bits when switching scan station modes. */
+  private resetStationSessionForModeChange(): void {
+    this.doorStatus = 'idle';
+    this.welcomeBanner = null;
+    this.seatNumber = null;
+    this.vipArrivalName = null;
+    this.totpOrPin = '';
+    this.feed = [];
+    this.latestResult = null;
+    this.attendance = null;
+    this.punchMode = 'AUTO';
+    this.memberCooldownUntil.clear();
+    if (!(this.showAccessChrome || this.showVisitorChrome)) {
+      this.zones = [];
+    }
+    if (!this.showEventChrome) {
+      this.events = [];
+    }
+    for (const track of this.tracks) {
+      if (track.captureTimer) {
+        clearInterval(track.captureTimer);
+        track.captureTimer = null;
+      }
+      track.phase = 'watching';
+      track.label = null;
+      track.memberId = null;
+      track.confidence = null;
+      track.captureFrames = [];
+      track.statusText = null;
+      track.identifyInFlight = false;
+      track.firstSeenAt = Date.now();
+    }
   }
 
   get kioskTitle(): string {
@@ -515,6 +593,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     document.documentElement.classList.add('dpu-kiosk-mode');
     this.applyLargeTextClass();
     this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
+    // Keep chrome/mode in sync when Angular reuses this component across scan routes.
+    this.routeCtxSub = combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(
+      ([params, query]) => this.onStationRouteParams(params, query),
+    );
     this.getCurrentLocation();
     unlockBeepAudio();
     unlockSpeech();
@@ -732,8 +814,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         this.enableDoorRelayOnAttendance = !!cfg.scanActionRules?.enableDoorRelayOnAttendance;
         // `/company/timestamp-face` has no :stationMode — keep ATTENDANCE chrome, but honor
         // UNIFIED_HYBRID / door-relay defaults from module-config when set as company default.
-        const routeHadMode = !!this.route.snapshot.paramMap.get('stationMode');
-        if (!routeHadMode && cfg.defaultStationMode === 'UNIFIED_HYBRID') {
+        // Use the live routeHadStationMode flag (paramMap-driven), not snapshot alone.
+        if (!this.routeHadStationMode && cfg.defaultStationMode === 'UNIFIED_HYBRID') {
           this.stationMode = 'UNIFIED_HYBRID';
           this.captureMessage = stationModeCaptureHint(this.stationMode);
         }
@@ -851,6 +933,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       window.removeEventListener('offline', this.offlineHandler);
     }
     this.destroyWs = true;
+    this.routeCtxSub?.unsubscribe();
     this.imageSub?.unsubscribe();
     if (this.geoWatchId != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(this.geoWatchId);

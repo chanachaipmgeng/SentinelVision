@@ -2,9 +2,14 @@ import {
   buildScanRoute,
   isAccessChrome,
   isAttendanceChrome,
+  isEventChrome,
+  isVisitorChrome,
+  isWatchlistChrome,
   parseStationModeParam,
+  resolveStationRouteContext,
   shouldEnableDoorRelay,
   stationModeRequiresGps,
+  stationModeTitle,
   stationModeToSlug,
 } from './scan-station-mode';
 
@@ -29,6 +34,54 @@ describe('scan-station-mode', () => {
       expect(parseStationModeParam('')).toBe('ATTENDANCE');
       expect(parseStationModeParam(null)).toBe('ATTENDANCE');
       expect(parseStationModeParam('nope')).toBe('ATTENDANCE');
+    });
+  });
+
+  describe('resolveStationRouteContext (SPA scan mode reactivity)', () => {
+    it('resolves access-control with zone query', () => {
+      const ctx = resolveStationRouteContext('access-control', 'zone-1', null);
+      expect(ctx.stationMode).toBe('ACCESS_CONTROL');
+      expect(ctx.zoneId).toBe('zone-1');
+      expect(ctx.eventId).toBeNull();
+      expect(ctx.routeHadMode).toBeTrue();
+      expect(isAccessChrome(ctx.stationMode)).toBeTrue();
+      expect(isWatchlistChrome(ctx.stationMode)).toBeFalse();
+      expect(stationModeTitle(ctx.stationMode)).toContain('Access Control');
+    });
+
+    it('updates mode when navigating access → watchlist → visitor → event', () => {
+      // Regression for UI blocker #1: snapshot-only resolve left Access Control chrome stuck.
+      const sequence = ['access-control', 'watchlist', 'visitor', 'event'] as const;
+      const modes = sequence.map((slug) => resolveStationRouteContext(slug, null, null).stationMode);
+      expect(modes).toEqual([
+        'ACCESS_CONTROL',
+        'WATCHLIST_MONITOR',
+        'VISITOR_CHECKIN',
+        'EVENT_CHECKIN',
+      ]);
+      expect(isAccessChrome(modes[0])).toBeTrue();
+      expect(isWatchlistChrome(modes[1])).toBeTrue();
+      expect(isVisitorChrome(modes[2])).toBeTrue();
+      expect(isEventChrome(modes[3])).toBeTrue();
+      // Each step must flip chrome — not remain ACCESS_CONTROL after leaving access.
+      expect(isAccessChrome(modes[1])).toBeFalse();
+      expect(isAccessChrome(modes[2])).toBeFalse();
+      expect(isAccessChrome(modes[3])).toBeFalse();
+    });
+
+    it('treats timestamp-face (no :stationMode) as attendance without routeHadMode', () => {
+      const ctx = resolveStationRouteContext(null, null, null);
+      expect(ctx.stationMode).toBe('ATTENDANCE');
+      expect(ctx.routeHadMode).toBeFalse();
+      expect(isAttendanceChrome(ctx.stationMode)).toBeTrue();
+    });
+
+    it('clears zone/event when query drops them on mode change', () => {
+      const access = resolveStationRouteContext('access-control', 'z1', null);
+      const watchlist = resolveStationRouteContext('watchlist', null, null);
+      expect(access.zoneId).toBe('z1');
+      expect(watchlist.zoneId).toBeNull();
+      expect(watchlist.stationMode).not.toBe(access.stationMode);
     });
   });
 

@@ -1,4 +1,66 @@
 <div class="grid grid-cols-12 gap-6">
+            <!-- F4 SIEM export -->
+            <div class="col-span-12 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
+              <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                  <h6 class="font-bold text-base mb-0">
+                    <i class="ri-shield-keyhole-line text-teal-700 me-1"></i>
+                    SIEM export
+                  </h6>
+                  <p class="text-xs text-dpu-muted mb-0">
+                    ส่งเหตุการณ์ incident ไปยัง webhook ของ SIEM (HMAC-SHA256 ผ่าน notification outbox)
+                  </p>
+                </div>
+                <span
+                  *ngIf="siemForm.hasSiemWebhookSecret"
+                  class="badge bg-emerald-100 text-emerald-800 px-2 py-0.5 text-xs"
+                >
+                  Secret ตั้งค่าแล้ว
+                </span>
+              </div>
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-12 md:col-span-6">
+                  <label class="form-label text-xs font-semibold">SIEM Webhook URL</label>
+                  <input
+                    type="url"
+                    class="form-control"
+                    [(ngModel)]="siemForm.siemWebhookUrl"
+                    placeholder="https://siem.example.com/hooks/dpu"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-6">
+                  <label class="form-label text-xs font-semibold">
+                    SIEM Webhook Secret
+                    <span class="text-dpu-muted font-normal">(เว้นว่างหากไม่ต้องการเปลี่ยน)</span>
+                  </label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    [(ngModel)]="siemForm.siemWebhookSecret"
+                    autocomplete="new-password"
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div class="col-span-12 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-primary-full font-semibold"
+                    [disabled]="siemSaving"
+                    (click)="saveSiemSettings()"
+                  >
+                    บันทึก SIEM
+                  </button>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-light font-semibold"
+                    (click)="testSiemSettings()"
+                  >
+                    ทดสอบ ping
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <!-- Unified 1:N Biometric Scan Verifier -->
             <div class="col-span-12 xl:col-span-5 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
               <div class="flex items-center justify-between mb-3">

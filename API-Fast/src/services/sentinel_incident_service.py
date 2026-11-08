@@ -24,6 +24,7 @@ from ..services.sentinel_identity_service import (
     serialize_zone,
 )
 from ..services.sentinel_relay_service import dispatch_relay_webhook
+from ..services.siem_export_service import queue_siem_incident_export
 from ..services.storage_service import (
     EVIDENCE_KIND_INCIDENT_SNAPSHOT,
     store_evidence_image,
@@ -186,6 +187,7 @@ async def record_incident(
         ob = outbox_factory()
         if ob is not None:
             db.add(ob)
+    await queue_siem_incident_export(db, company_id, inc)
     if commit:
         await db.commit()
         await db.refresh(inc)
@@ -261,6 +263,9 @@ async def close_incident(
     inc.closedBy = actor_id
     inc.closedAt = now
     inc.status = STATUS_CLOSED
+    await queue_siem_incident_export(
+        db, company_id, inc, event="sentinel.incident.closed"
+    )
     await db.commit()
     await db.refresh(inc)
     return inc

@@ -10,10 +10,8 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ..models.company_employee import CompanyEmployee
-from ..models.employee_timestamp import EmployeeTimestamp
 from ..models.face_encoding import FaceEncoding
 from ..models.sentinel import (
     SentinelAccessZone,
@@ -24,6 +22,7 @@ from ..models.sentinel import (
 from ..security.deps import current_member_var
 from ..services.company_module_service import get_company_module_config
 from ..services.outbox_crypto import seal_relay_secret
+from ..services.sentinel_muster_service import build_muster_roll
 from ..services.sentinel_identity_service import (
     VALID_IDENTITY_TYPES,
     VALID_SEVERITIES,
@@ -46,11 +45,6 @@ from ..utils.face_gpu_queue import run_on_face_gpu
 
 
 async def get_overview(db: AsyncSession, company_id: UUID) -> dict:
-    tz = bangkok_tz()
-    now_local = datetime.now(tz)
-    day_start_local = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_start_naive = day_start_local.astimezone(timezone.utc).replace(tzinfo=None)
-
     identities = (
         await db.execute(
             select(SentinelIdentity).where(
@@ -114,79 +108,8 @@ async def get_overview(db: AsyncSession, company_id: UUID) -> dict:
         )
     ).scalar() or 0
 
-    today_punches = (
-        await db.execute(
-            select(EmployeeTimestamp)
-            .options(
-                selectinload(EmployeeTimestamp.company_employee).selectinload(
-                    CompanyEmployee.member
-                )
-            )
-            .where(
-                EmployeeTimestamp.companyId == company_id,
-                EmployeeTimestamp.timestamp >= day_start_naive,
-            )
-            .order_by(EmployeeTimestamp.timestamp.desc())
-            .limit(200)
-        )
-    ).scalars().all()
-
-    seen_emp: set[str] = set()
-    muster_roll: List[dict] = []
-    for ts in today_punches:
-        emp = ts.company_employee
-        if not emp:
-            continue
-        emp_id_str = str(emp.company_employeeId)
-        if emp_id_str in seen_emp:
-            continue
-        seen_emp.add(emp_id_str)
-        m = emp.member
-        full_name = (
-            f"{m.firstName or ''} {m.lastName or ''}".strip() if m else emp.employeeId or "Employee"
-        )
-        muster_roll.append(
-            {
-                "subjectId": emp_id_str,
-                "fullName": full_name,
-                "badgeCode": emp.employeeId or "-",
-                "category": "EMPLOYEE",
-                "zoneOrLocation": ts.locationName or "Main Kiosk",
-                "lastSeenAt": ts.timestamp,
-            }
-        )
-
-    visitor_logs_today = (
-        await db.execute(
-            select(SentinelIncidentLog)
-            .where(
-                SentinelIncidentLog.companyId == company_id,
-                SentinelIncidentLog.occurredAt >= day_start_local,
-                SentinelIncidentLog.eventType.in_(
-                    ["ACCESS_GRANTED", "VISITOR_CHECKIN", "VIP_ARRIVAL", "EVENT_CHECKIN"]
-                ),
-            )
-            .order_by(SentinelIncidentLog.occurredAt.desc())
-            .limit(100)
-        )
-    ).scalars().all()
-
-    seen_ident: set[str] = set()
-    for vlog in visitor_logs_today:
-        key = str(vlog.identityId or vlog.memberId or vlog.incidentId)
-        if key in seen_ident:
-            continue
-        seen_ident.add(key)
-        muster_roll.append(
-            {
-                "subjectId": key,
-                "fullName": vlog.subjectName or "Guest",
-                "badgeCode": vlog.identityType or "VISITOR",
-                "category": vlog.identityType or "VISITOR",
-                "zoneOrLocation": vlog.zoneName or "Access Gate",
-                "lastSeenAt": vlog.occurredAt,
-            }
-        )
+    # F4: muster from C1 attendance_daily PRESENT + open presence + visitor incidents
+    muster = await build_muster_roll(db, company_id, limit=100, offset=0)
 
     return {
         "summary": {
@@ -197,9 +120,15 @@ async def get_overview(db: AsyncSession, company_id: UUID) -> dict:
             "activeZonesCount": int(zones_count),
             "liveEventsCount": int(live_events_count),
             "unacknowledgedAlerts": int(unack_alerts),
-            "buildingOccupancyCount": len(muster_roll),
+            "buildingOccupancyCount": int(muster.get("total") or 0),
         },
-        "musterRoll": muster_roll[:100],
+        "musterRoll": muster.get("items") or [],
+        "musterMeta": {
+            "total": muster.get("total"),
+            "limit": muster.get("limit"),
+            "offset": muster.get("offset"),
+            "workDate": muster.get("workDate"),
+        },
         "recentIncidents": [serialize_incident(inc) for inc in recent_incidents],
     }
 

@@ -38,6 +38,7 @@ ignore = [
 "tests/test_outbox_claiming.py" = ["E402"]
 "tests/test_tenant_isolation.py" = ["E402"]
 "tests/test_alembic_schema.py" = ["E402"]
+"tests/test_sentinel_muster.py" = ["E402"]
 "tests/test_app_startup.py" = ["E402"]
 # Re-exports.
 "src/models/__init__.py" = ["F401"]

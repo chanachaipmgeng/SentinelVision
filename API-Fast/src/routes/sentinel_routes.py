@@ -45,6 +45,13 @@ from ..services.sentinel_incident_service import (
     resolve_scan_zone,
     serialize_incident as _serialize_incident,
 )
+from ..services.sentinel_muster_service import build_muster_roll
+from ..services.siem_export_service import (
+    enqueue_siem_test,
+    get_siem_settings,
+    queue_siem_incident_export,
+    save_siem_settings,
+)
 
 router = APIRouter()
 
@@ -70,6 +77,8 @@ __all__ = [
     "VALID_IDENTITY_TYPES",
     "VALID_SEVERITIES",
     "VALID_STATION_MODES",
+    "queue_siem_incident_export",
+    "build_muster_roll",
 ]
 
 
@@ -102,6 +111,51 @@ async def get_sentinel_overview(
 ):
     await assert_request_company_access(request, db, companyId)
     return await ctrl.get_overview(db, companyId)
+
+
+@router.get("/company/{companyId}/muster")
+async def get_sentinel_muster(
+    companyId: UUID,
+    request: Request,
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Paginated emergency muster roll (PRESENT daily / open presence / visitors)."""
+    await assert_request_company_access(request, db, companyId)
+    return await build_muster_roll(db, companyId, limit=limit, offset=offset)
+
+
+@router.get("/company/{companyId}/siem-settings")
+async def get_company_siem_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await get_siem_settings(db, companyId)
+
+
+@router.put("/company/{companyId}/siem-settings")
+async def put_company_siem_settings(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await save_siem_settings(db, companyId, body or {})
+
+
+@router.post("/company/{companyId}/siem-settings/test")
+async def test_company_siem_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    _ = await get_siem_settings(db, companyId)
+    return await enqueue_siem_test(companyId)
 
 
 @router.get("/company/{companyId}/identities")

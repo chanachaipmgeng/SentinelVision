@@ -29,24 +29,28 @@
 
           <div [class.hidden]="faceEnrollMode !== 'camera'">
             <div class="flex flex-wrap justify-center gap-2 mb-3">
-              <div *ngFor="let step of faceAngleSteps; let i = index"
-                class="flex flex-col items-center gap-1 min-w-[3.25rem]">
-                <div class="w-12 h-12 rounded-lg overflow-hidden border-2 flex items-center justify-center text-xs font-semibold"
-                  [ngClass]="{
-                    'border-success bg-success/10': step.captured,
-                    'border-primary bg-primary/10': !step.captured && i === currentAngleIndex,
-                    'border-defaultborder': !step.captured && i !== currentAngleIndex
-                  }">
-                  <img *ngIf="step.preview" [src]="step.preview" alt="" class="w-full h-full object-cover">
-                  <span *ngIf="!step.preview">{{ i + 1 }}</span>
+              @for (step of faceAngleSteps; track step.label; let i = $index) {
+                <div class="flex flex-col items-center gap-1 min-w-[3.25rem]">
+                  <div class="w-12 h-12 rounded-lg overflow-hidden border-2 flex items-center justify-center text-xs font-semibold"
+                    [ngClass]="{
+                      'border-success bg-success/10': step.captured,
+                      'border-primary bg-primary/10': !step.captured && i === currentAngleIndex,
+                      'border-defaultborder': !step.captured && i !== currentAngleIndex
+                    }">
+                    @if (step.preview) {
+                      <img [src]="step.preview" alt="" class="w-full h-full object-cover">
+                    } @else {
+                      <span>{{ i + 1 }}</span>
+                    }
+                  </div>
+                  <span class="text-[11px]"
+                    [ngClass]="{
+                      'text-success': step.captured,
+                      'text-primary': !step.captured && i === currentAngleIndex,
+                      'text-defaulttextcolor': !step.captured && i !== currentAngleIndex
+                    }">{{ step.label }}</span>
                 </div>
-                <span class="text-[11px]"
-                  [ngClass]="{
-                    'text-success': step.captured,
-                    'text-primary': !step.captured && i === currentAngleIndex,
-                    'text-defaulttextcolor': !step.captured && i !== currentAngleIndex
-                  }">{{ step.label }}</span>
-              </div>
+              }
             </div>
             <div class="relative w-full overflow-hidden rounded">
               <video #video width="640" height="480" playsinline autoplay muted
@@ -72,21 +76,25 @@
                 (change)="onFaceUploadSelected($event)">
               <p class="mb-0 text-center text-xs text-textmuted">รองรับ JPG / PNG / WEBP · เลือกได้หลายรูป</p>
             </div>
-            <div *ngIf="uploadFaceItems.length" class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-4">
-              <div *ngFor="let item of uploadFaceItems; let i = index" class="relative group">
-                <img [src]="item.preview" alt="" class="w-full aspect-square object-cover rounded-md border border-defaultborder">
-                <button type="button"
-                  class="absolute top-1 right-1 ti-btn ti-btn-sm ti-btn-danger !p-1 opacity-90"
-                  [disabled]="isUploadingFace"
-                  (click)="removeUploadFaceItem(i)" title="ลบรูปนี้">
-                  <i class="ri-close-line"></i>
-                </button>
+            @if (uploadFaceItems.length) {
+              <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-4">
+                @for (item of uploadFaceItems; track item.preview; let i = $index) {
+                  <div class="relative group">
+                    <img [src]="item.preview" alt="" class="w-full aspect-square object-cover rounded-md border border-defaultborder">
+                    <button type="button"
+                      class="absolute top-1 right-1 ti-btn ti-btn-sm ti-btn-danger !p-1 opacity-90"
+                      [disabled]="isUploadingFace"
+                      (click)="removeUploadFaceItem(i)" title="ลบรูปนี้">
+                      <i class="ri-close-line"></i>
+                    </button>
+                  </div>
+                }
               </div>
-            </div>
-            <div *ngIf="!uploadFaceItems.length"
-              class="mt-4 rounded-md border border-dashed border-defaultborder p-8 text-center text-sm text-textmuted">
-              ยังไม่ได้เลือกรูป
-            </div>
+            } @else {
+              <div class="mt-4 rounded-md border border-dashed border-defaultborder p-8 text-center text-sm text-textmuted">
+                ยังไม่ได้เลือกรูป
+              </div>
+            }
             <p class="mt-3 mb-0 text-center text-sm text-defaulttextcolor">{{ faceStatus }}</p>
           </div>
         </div>
@@ -97,14 +105,17 @@
           ยกเลิก
         </button>
         <button type="button" class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="isUploadingFace || !selectModel.member.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !isFaceDetected) : !uploadFaceItems.length)"
+          [disabled]="isUploadingFace || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !isFaceDetected) : !uploadFaceItems.length)"
           (click)="captureImage()">
-          <ng-container *ngIf="isUploadingFace">{{ uploadProgressLabel || 'กำลังบันทึก...' }}</ng-container>
-          <ng-container *ngIf="!isUploadingFace && faceEnrollMode === 'upload'">
+          @if (isUploadingFace) {
+            {{ uploadProgressLabel || 'กำลังบันทึก...' }}
+          } @else if (faceEnrollMode === 'upload') {
             บันทึก {{ uploadFaceItems.length || '' }} รูป
-          </ng-container>
-          <ng-container *ngIf="!isUploadingFace && faceEnrollMode === 'camera' && allAnglesCaptured">บันทึก 5 มุม</ng-container>
-          <ng-container *ngIf="!isUploadingFace && faceEnrollMode === 'camera' && !allAnglesCaptured">ถ่ายมุมนี้</ng-container>
+          } @else if (allAnglesCaptured) {
+            บันทึก 5 มุม
+          } @else {
+            ถ่ายมุมนี้
+          }
         </button>
       </div>
     </div>

@@ -33,6 +33,7 @@ import { EmpImportService } from './company-emp-import/emp-import.service';
 import { EmpListComponent } from './company-emp-list/emp-list.component';
 import {
   EmpListViewMode,
+  defaultListViewForTotal,
   formatApiError,
   pageEnd as calcPageEnd,
   pageSizeForView,
@@ -94,6 +95,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
   serverTotal = 0;
   listLoading = false;
   listViewMode: EmpListViewMode = 'cards';
+  /** False until user picks a view or we apply a stored/default preference. */
+  private listViewPreferenceLocked = false;
   selectedMemberId: string | null = null;
   selectedMemberName = '';
   companyId = '';
@@ -145,8 +148,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     private importService: EmpImportService,
   ) {
     this.uploadConfig();
-    this.companyId = this.tokenService.getSelectCompany().companyId;
-    this.listViewMode = readStoredListView();
+    this.companyId = this.tokenService.getSelectCompany()?.companyId || '';
+    const storedView = readStoredListView();
+    if (storedView) {
+      this.listViewMode = storedView;
+      this.listViewPreferenceLocked = true;
+    } else {
+      this.listViewMode = 'cards';
+    }
     this.pageSize = pageSizeForView(this.listViewMode);
     this.importService.state$.subscribe((s) => {
       this.isImporting = s.isImporting;
@@ -179,13 +188,26 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     this.getPosition();
   }
 
-  setListViewMode(mode: EmpListViewMode): void {
-    if (this.listViewMode === mode) return;
+  setListViewMode(mode: EmpListViewMode, opts: { persist?: boolean; reload?: boolean } = {}): void {
+    const persist = opts.persist !== false;
+    const reload = opts.reload !== false;
+    if (this.listViewMode === mode && this.pageSize === pageSizeForView(mode)) {
+      if (persist) {
+        this.listViewPreferenceLocked = true;
+        writeStoredListView(mode);
+      }
+      return;
+    }
     this.listViewMode = mode;
     this.pageSize = pageSizeForView(mode);
     this.pageIndex = 0;
-    writeStoredListView(mode);
-    this.reloadEmployees();
+    if (persist) {
+      this.listViewPreferenceLocked = true;
+      writeStoredListView(mode);
+    }
+    if (reload) {
+      this.reloadEmployees();
+    }
   }
 
   getDepartment(): void {
@@ -215,8 +237,21 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       .subscribe({
         next: (page) => {
           this.serverTotal = page.total;
+          if (!this.listViewPreferenceLocked) {
+            const denser = defaultListViewForTotal(page.total);
+            if (denser !== this.listViewMode) {
+              this.listViewMode = denser;
+              this.pageSize = pageSizeForView(denser);
+              this.pageIndex = 0;
+              // Re-fetch once with the denser page size; lock so we don't loop.
+              this.listViewPreferenceLocked = true;
+              this.reloadEmployees();
+              return;
+            }
+            this.listViewPreferenceLocked = true;
+          }
           this.pageIndex = clampPageIndex(this.pageIndex, page.total, this.pageSize);
-          this.itemsList = page.items || [];
+          this.itemsList = (page.items || []).filter((row): row is EmployeeModel => !!row);
           this.filterList = this.itemsList;
           this.listLoading = false;
           this.cdr.detectChanges();

@@ -28,6 +28,16 @@ export class EmpDetailModalComponent {
 
   @Output() save = new EventEmitter<void>();
 
+  compareDepartment = (a: DepartmentModel | null, b: DepartmentModel | null): boolean =>
+    !!a?.departmentId && !!b?.departmentId && a.departmentId === b.departmentId;
+
+  comparePosition = (a: PositionModel | null, b: PositionModel | null): boolean =>
+    !!a?.positionId && !!b?.positionId && a.positionId === b.positionId;
+
+  bossOptions(): EmployeeModel[] {
+    return (this.itemsList || []).filter((row) => !!row?.member?.memberId);
+  }
+
   clickClose(): void {
     this.childModal?.nativeElement?.click();
   }

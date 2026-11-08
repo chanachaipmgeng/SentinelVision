@@ -1,6 +1,32 @@
-import { dataURLtoFile, scaleDetectionBoxes } from './kiosk-camera';
+import { dataURLtoFile, describeCameraFailure, scaleDetectionBoxes } from './kiosk-camera';
 
 describe('kiosk-camera helpers', () => {
+  describe('describeCameraFailure', () => {
+    it('maps permission denial to recovery steps', () => {
+      const info = describeCameraFailure({ name: 'NotAllowedError', message: 'Permission denied' });
+      expect(info.kind).toBe('permission');
+      expect(info.steps.length).toBeGreaterThanOrEqual(3);
+      expect(info.title).toContain('Permission');
+    });
+
+    it('maps missing device', () => {
+      const info = describeCameraFailure({ name: 'NotFoundError' });
+      expect(info.kind).toBe('not_found');
+      expect(info.steps.some((s) => /Admin preview/i.test(s))).toBeTrue();
+    });
+
+    it('maps camera-in-use', () => {
+      expect(describeCameraFailure({ name: 'NotReadableError' }).kind).toBe('in_use');
+    });
+
+    it('falls back for unknown errors (or insecure when not HTTPS)', () => {
+      const info = describeCameraFailure({ name: 'AbortError' });
+      // Headless/HTTP runners may classify as insecure via isSecureContext.
+      expect(['unknown', 'insecure']).toContain(info.kind);
+      expect(info.steps.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('scaleDetectionBoxes', () => {
     it('maps frame coords into display space', () => {
       const boxes = scaleDetectionBoxes(

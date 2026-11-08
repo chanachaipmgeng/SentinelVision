@@ -239,11 +239,19 @@
     </span>
     <span
       class="dpu-kiosk__chip"
-      *ngIf="showPunchChips"
+      *ngIf="showPunchChips && gpsRequired"
       [class.is-ok]="inArea"
       [class.is-warn]="!inArea">
       <i class="ri-map-pin-line"></i>
       {{ areaLabel }}
+    </span>
+    <span class="dpu-kiosk__chip is-warn" *ngIf="cameraFailed && !adminPreviewMode">
+      <i class="ri-camera-off-line"></i>
+      ไม่มีกล้อง
+    </span>
+    <span class="dpu-kiosk__chip is-on" *ngIf="adminPreviewMode">
+      <i class="ri-eye-line"></i>
+      Admin preview
     </span>
     <span class="dpu-kiosk__chip">
       <i class="ri-user-smile-line"></i>
@@ -285,10 +293,65 @@
         </video>
         <canvas #canvas width="640" height="480" class="dpu-camera-overlay__canvas"></canvas>
 
-        <div class="dpu-kiosk__hud">
-          <p class="dpu-kiosk__hud-msg" *ngIf="!wsConnected || (showPunchChips && !locationReady); else readyHud">
+        <div
+          *ngIf="cameraFailed && !adminPreviewMode"
+          class="dpu-kiosk__cam-recovery"
+          role="alert"
+          aria-live="assertive">
+          <div class="dpu-kiosk__cam-recovery-card">
+            <div class="dpu-kiosk__cam-recovery-icon" aria-hidden="true">
+              <i class="ri-camera-off-line"></i>
+            </div>
+            <h2 class="dpu-kiosk__cam-recovery-title">{{ cameraRecoveryTitle }}</h2>
+            <p class="dpu-kiosk__cam-recovery-lead">
+              ทำตามขั้นตอนด้านล่าง แล้วกด Retry เพื่อขอกล้องใหม่
+            </p>
+            <ol class="dpu-kiosk__cam-recovery-steps">
+              <li *ngFor="let step of cameraRecoverySteps">{{ step }}</li>
+            </ol>
+            <div class="dpu-kiosk__cam-recovery-actions">
+              <button
+                type="button"
+                class="dpu-kiosk__cam-recovery-btn dpu-kiosk__cam-recovery-btn--primary"
+                (click)="retryCamera()"
+                [disabled]="cameraRetrying">
+                <i class="ri-refresh-line" aria-hidden="true"></i>
+                {{ cameraRetrying ? 'กำลังขอกล้อง…' : 'Retry / ลองใหม่' }}
+              </button>
+              <button
+                type="button"
+                class="dpu-kiosk__cam-recovery-btn"
+                (click)="enterAdminPreview()"
+                [disabled]="cameraRetrying">
+                <i class="ri-eye-line" aria-hidden="true"></i>
+                Admin preview (ไม่ใช้กล้อง)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="adminPreviewMode" class="dpu-kiosk__cam-preview" role="status">
+          <div class="dpu-kiosk__cam-preview-card">
+            <i class="ri-layout-masonry-line" aria-hidden="true"></i>
+            <p class="dpu-kiosk__cam-preview-title">Admin preview</p>
+            <p class="dpu-kiosk__cam-preview-text">
+              แสดง chrome / status pills โดยไม่เปิดกล้อง — ใช้ตรวจ layout บนเครื่อง headless หรือตอนถูกปฏิเสธ permission
+            </p>
+            <button
+              type="button"
+              class="dpu-kiosk__cam-recovery-btn dpu-kiosk__cam-recovery-btn--primary"
+              (click)="retryCamera()"
+              [disabled]="cameraRetrying">
+              <i class="ri-camera-line" aria-hidden="true"></i>
+              {{ cameraRetrying ? 'กำลังขอกล้อง…' : 'เปิดกล้องอีกครั้ง' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="dpu-kiosk__hud" *ngIf="!cameraFailed || adminPreviewMode">
+          <p class="dpu-kiosk__hud-msg" *ngIf="!wsConnected || waitingOnGps; else readyHud">
             <span *ngIf="!wsConnected">กำลังเชื่อม stream…</span>
-            <span *ngIf="wsConnected && showPunchChips && !locationReady">{{ errorMessage || 'รอพิกัด GPS…' }}</span>
+            <span *ngIf="wsConnected && waitingOnGps">{{ errorMessage || 'รอพิกัด GPS…' }}</span>
           </p>
           <ng-template #readyHud>
             <p class="dpu-kiosk__hud-msg">{{ captureMessage }}</p>
@@ -296,9 +359,16 @@
         </div>
       </div>
 
-      <p *ngIf="errorMessage" class="dpu-kiosk__geo-error">
-        <i class="ri-error-warning-line"></i> {{ errorMessage }}
-      </p>
+      <div *ngIf="showGpsError" class="dpu-kiosk__geo-error" role="alert">
+        <div class="dpu-kiosk__geo-error-body">
+          <i class="ri-error-warning-line" aria-hidden="true"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+        <button type="button" class="dpu-kiosk__geo-retry" (click)="retryGps()">
+          <i class="ri-refresh-line" aria-hidden="true"></i>
+          Retry GPS
+        </button>
+      </div>
 
       <!-- Compact latest: mobile/tablet only (desktop uses side panel) -->
       <div *ngIf="latestResult" id="dpu-kiosk-latest" class="dpu-kiosk__latest dpu-kiosk__latest--compact"

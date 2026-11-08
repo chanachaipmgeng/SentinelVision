@@ -90,6 +90,8 @@ module = [
     "src.routes.member_routes",
     "src.routes.notification_routes",
     "src.routes.sentinel_routes",
+    # F1: SQLAlchemy legacy Column[] on incident lifecycle / scan decision writes.
+    "src.services.sentinel_incident_service",
     "src.security.deps",
     "src.security.middleware",
     "src.security.oidc",

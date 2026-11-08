@@ -53,7 +53,9 @@ async def save_siem_settings(
 ) -> dict[str, Any]:
     key = siem_settings_key(company_id)
     row = await db.get(SystemSetting, key)
-    existing = row.value if (row and isinstance(row.value, dict)) else {}
+    existing: dict[str, Any] = (
+        dict(row.value) if (row and isinstance(row.value, dict)) else {}
+    )
     raw_secret = (body or {}).get("siemWebhookSecret")
     secret = (
         str(raw_secret).strip()
@@ -61,12 +63,12 @@ async def save_siem_settings(
         else str(existing.get("siemWebhookSecret") or "")
     )
     sealed = encrypt_secret(secret) if secret else ""
-    value = {
+    value: dict[str, str] = {
         "siemWebhookUrl": str((body or {}).get("siemWebhookUrl") or "").strip(),
         "siemWebhookSecret": sealed,
     }
     if row:
-        row.value = value
+        row.value = value  # type: ignore[assignment]
     else:
         db.add(SystemSetting(key=key, value=value))
     await db.commit()

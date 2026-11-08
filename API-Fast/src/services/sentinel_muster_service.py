@@ -51,7 +51,7 @@ def _emp_name(emp: CompanyEmployee) -> str:
         name = f"{m.firstName or ''} {m.lastName or ''}".strip()
         if name:
             return name
-    return emp.employeeId or "Employee"
+    return str(emp.employeeId or "Employee")
 
 
 async def build_muster_roll(
@@ -106,7 +106,7 @@ async def build_muster_roll(
         by_id[emp_id] = _person(
             subject_id=emp_id,
             full_name=_emp_name(emp),
-            badge_code=emp.employeeId or "-",
+            badge_code=str(emp.employeeId or "-"),
             category="EMPLOYEE",
             zone_or_location="Attendance (PRESENT)",
             last_seen_at=daily.lastOut or daily.firstIn or daily.updatedAt or daily.createdAt,
@@ -155,9 +155,9 @@ async def build_muster_roll(
         person = _person(
             subject_id=emp_id,
             full_name=_emp_name(emp),
-            badge_code=emp.employeeId or "-",
+            badge_code=str(emp.employeeId or "-"),
             category="EMPLOYEE",
-            zone_or_location=ts.locationName or "Main Kiosk",
+            zone_or_location=str(ts.locationName or "Main Kiosk"),
             last_seen_at=ts.timestamp,
             source="open_presence" if not existing else "attendance_daily+open_presence",
         )
@@ -190,10 +190,10 @@ async def build_muster_roll(
         seen_ident.add(key)
         by_id[key] = _person(
             subject_id=key,
-            full_name=vlog.subjectName or "Guest",
-            badge_code=vlog.identityType or "VISITOR",
-            category=vlog.identityType or "VISITOR",
-            zone_or_location=vlog.zoneName or "Access Gate",
+            full_name=str(vlog.subjectName or "Guest"),
+            badge_code=str(vlog.identityType or "VISITOR"),
+            category=str(vlog.identityType or "VISITOR"),
+            zone_or_location=str(vlog.zoneName or "Access Gate"),
             last_seen_at=vlog.occurredAt,
             source="visitor_incident",
         )

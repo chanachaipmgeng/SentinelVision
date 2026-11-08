@@ -284,8 +284,13 @@ async def enroll_identity_face(
         with temp_path.open("wb") as buf:
             shutil.copyfileobj(file.file, buf)
 
+        path_str = str(temp_path)
+
+        def _encode_enroll(p: str = path_str):
+            return generate_face_encoding(p)
+
         encoding = await run_on_face_gpu(
-            lambda p=str(temp_path): generate_face_encoding(p),
+            _encode_enroll,
             kind="other",
             company_id=company_id,
         )
@@ -570,8 +575,13 @@ async def unified_scan(
         with temp_path.open("wb") as buf:
             shutil.copyfileobj(file.file, buf)
 
+        path_str = str(temp_path)
+
+        def _encode_scan(p: str = path_str):
+            return generate_face_encoding(p)
+
         encoding = await run_on_face_gpu(
-            lambda p=str(temp_path): generate_face_encoding(p),
+            _encode_scan,
             kind="checkin",
             company_id=company_id,
         )

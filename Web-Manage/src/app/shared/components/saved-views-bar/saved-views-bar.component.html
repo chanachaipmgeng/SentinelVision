@@ -1,0 +1,81 @@
+<div class="dpu-svb" role="toolbar" [attr.aria-label]="'listKit.savedViews.label' | translate">
+  <span class="dpu-svb__label">
+    <i class="ri-bookmark-3-line" aria-hidden="true"></i>
+    {{ 'listKit.savedViews.label' | translate }}
+  </span>
+
+  <span class="dpu-svb__hint" *ngIf="!views.length && editing !== 'new'">
+    {{ 'listKit.savedViews.empty' | translate }}
+  </span>
+
+  <div
+    *ngFor="let view of views; trackBy: trackById"
+    class="dpu-svb__chip"
+    [class.is-active]="isActive(view)"
+    [class.is-default]="view.isDefault">
+    <ng-container *ngIf="editing !== view.id; else renameForm">
+      <button
+        type="button"
+        class="dpu-svb__apply"
+        [attr.aria-pressed]="isActive(view)"
+        [attr.title]="'listKit.savedViews.apply' | translate"
+        (click)="applyView(view)">
+        <i *ngIf="view.isDefault" class="ri-star-fill dpu-svb__star"
+           [attr.aria-label]="'listKit.savedViews.default' | translate"></i>
+        <span class="dpu-svb__name">{{ view.name }}</span>
+      </button>
+      <button
+        type="button"
+        class="dpu-svb__more"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="menuFor === view.id"
+        [attr.aria-label]="'listKit.savedViews.options' | translate"
+        (click)="toggleMenu(view, $event)">
+        <i class="ri-more-2-fill" aria-hidden="true"></i>
+      </button>
+      <div class="dpu-svb__menu" role="menu" *ngIf="menuFor === view.id">
+        <button type="button" role="menuitem" (click)="startRename(view)">
+          <i class="ri-edit-line" aria-hidden="true"></i>{{ 'listKit.savedViews.rename' | translate }}
+        </button>
+        <button type="button" role="menuitem" (click)="toggleDefault(view)">
+          <i [ngClass]="view.isDefault ? 'ri-star-line' : 'ri-star-fill'" aria-hidden="true"></i>
+          {{ (view.isDefault ? 'listKit.savedViews.unsetDefault' : 'listKit.savedViews.setDefault') | translate }}
+        </button>
+        <button type="button" role="menuitem" class="is-danger" (click)="remove(view)">
+          <i class="ri-delete-bin-line" aria-hidden="true"></i>{{ 'listKit.common.delete' | translate }}
+        </button>
+      </div>
+    </ng-container>
+  </div>
+
+  <ng-container *ngIf="editing === 'new'; else addBtn">
+    <ng-container *ngTemplateOutlet="renameForm"></ng-container>
+  </ng-container>
+
+  <ng-template #addBtn>
+    <button type="button" class="dpu-svb__add" (click)="startCreate()">
+      <i class="ri-add-line" aria-hidden="true"></i>
+      {{ 'listKit.savedViews.saveCurrent' | translate }}
+    </button>
+  </ng-template>
+
+  <ng-template #renameForm>
+    <form class="dpu-svb__form" (ngSubmit)="submitName()">
+      <input
+        #nameInput
+        type="text"
+        name="viewName"
+        class="dpu-svb__input"
+        [(ngModel)]="draftName"
+        [maxlength]="nameMax"
+        [placeholder]="'listKit.savedViews.namePlaceholder' | translate"
+        [attr.aria-label]="'listKit.savedViews.nameLabel' | translate" />
+      <button type="submit" class="dpu-svb__icon-btn is-primary" [attr.aria-label]="'listKit.common.save' | translate">
+        <i class="ri-check-line" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="dpu-svb__icon-btn" (click)="cancelEdit()" [attr.aria-label]="'listKit.common.cancel' | translate">
+        <i class="ri-close-line" aria-hidden="true"></i>
+      </button>
+    </form>
+  </ng-template>
+</div>

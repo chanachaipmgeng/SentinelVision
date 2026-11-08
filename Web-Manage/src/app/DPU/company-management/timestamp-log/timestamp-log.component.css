@@ -87,70 +87,6 @@
   padding: 0.85rem 1rem !important;
 }
 
-.ts-filter-grid {
-  display: grid;
-  grid-template-columns: minmax(12rem, 1.4fr) minmax(10rem, 1fr) minmax(10rem, 1fr) minmax(8rem, 0.8fr) auto;
-  gap: 0.55rem;
-  align-items: center;
-  overflow: visible;
-}
-
-.ts-search {
-  position: relative;
-  min-width: 0;
-}
-
-.ts-search-icon {
-  position: absolute;
-  left: 0.8rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--dpu-muted, #64748b);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.ts-search-input,
-.ts-filter-control {
-  width: 100% !important;
-  height: 2.4rem !important;
-  border-radius: 0.85rem !important;
-  border: 1px solid var(--dpu-border, #e2e8f0) !important;
-  background: #fff !important;
-}
-
-.ts-search-input {
-  padding: 0.45rem 2.2rem 0.45rem 2.25rem !important;
-}
-
-.ts-search-input:focus,
-.ts-filter-control:focus {
-  border-color: var(--dpu-brand, #0f766e) !important;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14) !important;
-  outline: none;
-}
-
-.ts-search-clear {
-  position: absolute;
-  right: 0.35rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--dpu-muted, #64748b);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.ts-search-clear:hover {
-  background: rgba(100, 116, 139, 0.12);
-}
-
 .ts-filter-select.ng-select {
   min-width: 0;
   position: relative;
@@ -167,7 +103,7 @@
   border-color: var(--dpu-border, #e2e8f0) !important;
 }
 
-/* Dropdown appended to body — keep above page cards */
+/* Dropdown appended to body เนโฌโ€ keep above page cards */
 .ng-dropdown-panel {
   z-index: 1200 !important;
 }
@@ -213,8 +149,7 @@
   font-weight: 600;
 }
 
-.ts-list-panel,
-.ts-detail-panel {
+.ts-list-panel {
   min-height: 28rem;
 }
 
@@ -222,16 +157,6 @@
   padding: 0.65rem 0.75rem 0.75rem !important;
   max-height: min(64vh, 40rem);
   overflow: auto;
-}
-
-.ts-detail-body {
-  padding: 1rem 1.1rem 1.15rem !important;
-}
-
-.ts-detail-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .ts-empty {
@@ -254,11 +179,6 @@
   font-size: 2.4rem;
   color: var(--dpu-brand, #0f766e);
   opacity: 0.7;
-}
-
-.ts-empty-spinner {
-  width: 1.75rem;
-  height: 1.75rem;
 }
 
 /* ---- Queue ---- */
@@ -662,44 +582,73 @@
   height: 100%;
 }
 
-@media (max-width: 1199.98px) {
-  .ts-filter-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .ts-search,
-  .ts-search-btn {
-    grid-column: 1 / -1;
-  }
-
-  .ts-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .ts-hero-photos {
-    max-width: 22rem;
-  }
-
-  .ts-list-body {
-    max-height: 22rem;
+/* ---- Queue grid (detail lives in the side drawer) ---- */
+@media (min-width: 1024px) {
+  .ts-queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
   }
 }
 
-@media (max-width: 639.98px) {
-  .ts-filter-grid {
-    grid-template-columns: 1fr;
-  }
+/* ---- Drawer detail (drawer is re-parented to <body>; no .ts-page ancestor) ---- */
+.ts-drawer .ts-hero {
+  grid-template-columns: 1fr;
+}
 
+.ts-drawer .ts-hero-photos {
+  max-width: 24rem;
+}
+
+.ts-drawer .ts-map-frame {
+  height: 260px;
+}
+
+.ts-metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ts-metric {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.ts-metric--late {
+  color: var(--dpu-warning);
+  background: color-mix(in srgb, var(--dpu-warning) 14%, transparent);
+}
+
+.ts-metric--ot {
+  color: var(--dpu-brand);
+  background: var(--dpu-brand-soft);
+}
+
+.ts-actions[drawerFooter] {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+@media (max-width: 639.98px) {
   .ts-facts > div {
     grid-template-columns: 1fr;
     gap: 0.15rem;
   }
 
-  .ts-map-frame {
+  .ts-drawer .ts-map-frame {
     height: 220px;
   }
 
   .ts-tool-btn span {
     display: none;
+  }
+
+  .ts-actions[drawerFooter] > .ts-action-btn {
+    flex: 1 1 0;
+    justify-content: center;
   }
 }

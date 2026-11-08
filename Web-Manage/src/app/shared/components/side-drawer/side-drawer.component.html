@@ -1,0 +1,37 @@
+<ng-container *ngIf="open">
+  <div class="dpu-drawer__backdrop" (click)="onBackdrop()" aria-hidden="true"></div>
+  <aside
+    #panel
+    class="dpu-drawer"
+    [class.dpu-drawer--lg]="size === 'lg'"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="titleId"
+    tabindex="-1"
+    (keydown)="onPanelKeydown($event)">
+    <header class="dpu-drawer__header">
+      <div class="dpu-drawer__heading">
+        <h2 class="dpu-drawer__title" [id]="titleId">{{ title | translate }}</h2>
+        <p class="dpu-drawer__subtitle" *ngIf="subtitle">{{ subtitle | translate }}</p>
+      </div>
+      <div class="dpu-drawer__header-actions">
+        <ng-content select="[drawerHeaderActions]"></ng-content>
+        <button
+          type="button"
+          class="dpu-drawer__close"
+          (click)="close()"
+          [attr.aria-label]="'listKit.drawer.close' | translate">
+          <i class="ri-close-line" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="dpu-drawer__body">
+      <ng-content></ng-content>
+    </div>
+
+    <footer class="dpu-drawer__footer" *ngIf="showFooter">
+      <ng-content select="[drawerFooter]"></ng-content>
+    </footer>
+  </aside>
+</ng-container>

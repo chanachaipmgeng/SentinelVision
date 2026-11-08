@@ -3,7 +3,7 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from uuid import UUID
 
 from ..config.database import get_db

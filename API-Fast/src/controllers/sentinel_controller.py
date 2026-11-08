@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import shutil
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status

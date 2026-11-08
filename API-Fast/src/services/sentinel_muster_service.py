@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select

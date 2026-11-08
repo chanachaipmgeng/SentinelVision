@@ -12,9 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
-from ..models.company_employee import CompanyEmployee, CompanyRoleType
+from ..models.company_employee import CompanyEmployee
 from ..models.hr_schedule import KioskDevice
-from ..models.member import Member, RoleType
+from ..models.member import Member
 from ..services import rbac_service
 from .jwt import decode_token, hash_kiosk_token
 

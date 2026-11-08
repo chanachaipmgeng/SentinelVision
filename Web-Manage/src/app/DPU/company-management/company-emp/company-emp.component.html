@@ -1,4 +1,4 @@
-<app-page-header [title]="'พนักงาน'" [activeTitle]="'จัดการบริษัท'" [title1]="'พนักงาน'"></app-page-header>
+<app-page-header [title]="'Employees'" [activeTitle]="'Manage companies'" [title1]="'Employees'"></app-page-header>
 
 <div class="emp-page grid grid-cols-12 gap-x-6 gap-y-4">
   <div class="col-span-12">
@@ -7,26 +7,26 @@
         <div class="emp-toolbar-inner">
           <div class="emp-toolbar-title">
             <div class="box-title !mb-0">{{ 'Employee' | translate }}</div>
-            <span class="emp-stat-chip">ทั้งหมด {{ serverTotal }}</span>
-            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
-            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="listLoading">กำลังโหลด…</span>
+            <span class="emp-stat-chip">{{ 'All' | translate }} {{ serverTotal }}</span>
+            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="searchTerm">{{ 'Found' | translate }} {{ totalFiltered }}</span>
+            <span class="emp-stat-chip emp-stat-chip--soft" *ngIf="listLoading">{{ 'Loading...' | translate }}</span>
           </div>
 
           <div class="emp-toolbar-controls">
             <div class="emp-search">
               <i class="ri-search-line emp-search-icon" aria-hidden="true"></i>
               <input [(ngModel)]="searchTerm" class="form-control emp-search-input" type="search"
-                placeholder="{{ 'ค้นหาข้อมูลพนักงาน' | translate }}" aria-label="ค้นหาพนักงาน">
+                placeholder="{{ 'Search employees' | translate }}" [attr.aria-label]="'Search employees' | translate">
             </div>
 
             <div class="emp-toolbar-btns">
-              <div class="emp-view-toggle" role="group" aria-label="สลับมุมมอง">
-                <button type="button" class="emp-view-btn" title="มุมมองตาราง"
+              <div class="emp-view-toggle" role="group" [attr.aria-label]="'Toggle view' | translate">
+                <button type="button" class="emp-view-btn" [attr.title]="'Table view' | translate"
                   [class.active]="listViewMode === 'table'"
                   (click)="setListViewMode('table')">
                   <i class="ri-table-line"></i>
                 </button>
-                <button type="button" class="emp-view-btn" title="มุมมองการ์ด"
+                <button type="button" class="emp-view-btn" [attr.title]="'Card view' | translate"
                   [class.active]="listViewMode === 'cards'"
                   (click)="setListViewMode('cards')">
                   <i class="ri-layout-grid-line"></i>
@@ -35,13 +35,13 @@
               <button type="button" class="ti-btn ti-btn-success-full modern-btn emp-tool-btn"
                 [disabled]="isImporting" (click)="downloadImportTemplate()">
                 <i class="ri-file-excel-2-line"></i>
-                <span class="emp-tool-label">เทมเพลต</span>
+                <span class="emp-tool-label">{{ 'Template' | translate }}</span>
               </button>
               <button type="button" class="ti-btn ti-btn-info-full modern-btn emp-tool-btn"
                 [disabled]="isImporting" (click)="triggerImportFile()">
                 <i *ngIf="!isImporting" class="ri-upload-2-line"></i>
                 <span *ngIf="isImporting" class="ti-spinner animation-spin !w-4 !h-4" role="status"></span>
-                <span class="emp-tool-label">{{ isImporting ? 'กำลังนำเข้า...' : 'นำเข้า' }}</span>
+                <span class="emp-tool-label">{{ (isImporting ? 'Importing...' : 'Import') | translate }}</span>
               </button>
               <input #importFileInput type="file" class="hidden"
                 accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -53,7 +53,7 @@
                 class="hs-dropdown-toggle ti-btn ti-btn-primary-full modern-btn emp-tool-btn emp-tool-btn--primary"
                 (click)="new()" data-hs-overlay="#modal-detail">
                 <i class="ri-add-line"></i>
-                <span class="emp-tool-label">{{ 'เพิ่ม' | translate }}</span>
+                <span class="emp-tool-label">{{ 'Create' | translate }}</span>
               </a>
             </div>
           </div>
@@ -104,7 +104,7 @@
     <div class="ti-modal-content">
       <div class="ti-modal-header">
         <div>
-          <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">จัดการใบหน้าที่ลงทะเบียน</h6>
+          <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">{{ 'Manage enrolled faces' | translate }}</h6>
           <p class="mb-0 text-xs text-dpu-muted" *ngIf="selectedMemberName">{{ selectedMemberName }}</p>
         </div>
         <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
@@ -121,7 +121,7 @@
       </div>
       <div class="ti-modal-footer">
         <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">
-          ปิด
+          {{ 'Close' | translate }}
         </button>
       </div>
     </div>

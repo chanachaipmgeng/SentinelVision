@@ -8,8 +8,8 @@
   <header class="inbox-toolbar modern-card glass">
     <div class="inbox-toolbar-title">
       <h1 class="inbox-heading">{{ 'Approval inbox' | translate }}</h1>
-      <span class="inbox-chip">รออนุมัติ {{ pendingCount }}</span>
-      <span class="inbox-chip inbox-chip--soft" *ngIf="searchTerm">พบ {{ filtered.length }}</span>
+      <span class="inbox-chip">{{ 'Pending approval' | translate }} {{ pendingCount }}</span>
+      <span class="inbox-chip inbox-chip--soft" *ngIf="searchTerm">{{ 'Found' | translate }} {{ filtered.length }}</span>
     </div>
     <div class="inbox-toolbar-actions">
       <label class="inbox-search">
@@ -17,30 +17,30 @@
         <input
           type="search"
           [(ngModel)]="searchTerm"
-          placeholder="ค้นหาชื่อ รหัส ประเภท..."
-          aria-label="ค้นหากล่องอนุมัติ" />
+          placeholder="{{'Search name ID type...' | translate}}"
+          [attr.aria-label]="'Search approval inbox' | translate" />
         <button *ngIf="searchTerm" type="button" class="inbox-search-clear" (click)="clearSearch()">
           <i class="ri-close-line"></i>
         </button>
       </label>
       <button type="button" class="ti-btn ti-btn-primary-full modern-btn" [disabled]="loading" (click)="reload()">
         <i class="ri-refresh-line" [class.inbox-spin]="loading"></i>
-        รีเฟรช
+        {{ 'Refresh' | translate }}
       </button>
-      <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn">คิวนอกพื้นที่</a>
+      <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn">{{ 'Out-of-area queue' | translate }}</a>
     </div>
   </header>
 
   <div class="inbox-layout">
-    <section class="inbox-list modern-card glass" aria-label="รายการรออนุมัติ">
+    <section class="inbox-list modern-card glass" [attr.aria-label]="'Pending approvals' | translate">
       <div *ngIf="loading" class="inbox-empty">
         <span class="ti-spinner animation-spin" role="status"></span>
-        <p>กำลังโหลด...</p>
+        <p>{{ 'Loading...' | translate }}</p>
       </div>
       <div *ngIf="!loading && !filtered.length" class="inbox-empty">
         <i class="ri-checkbox-circle-line"></i>
-        <p *ngIf="!searchTerm">ไม่มีรายการรออนุมัติ</p>
-        <p *ngIf="searchTerm">ไม่พบ “{{ searchTerm }}”</p>
+        <p *ngIf="!searchTerm">{{ 'No pending approvals' | translate }}</p>
+        <p *ngIf="searchTerm">{{ 'No results for' | translate }} “{{ searchTerm }}”</p>
       </div>
       <ul *ngIf="!loading && filtered.length" class="inbox-queue">
         <li *ngFor="let item of filtered; let i = index">
@@ -63,7 +63,7 @@
       </ul>
     </section>
 
-    <section class="inbox-detail modern-card glass" aria-label="รายละเอียด">
+    <section class="inbox-detail modern-card glass" [attr.aria-label]="'Detail' | translate">
       <ng-container *ngIf="selected; else noSel">
         <div class="inbox-detail-head">
           <span class="inbox-kind">{{ kindLabel(selected) }}</span>
@@ -71,10 +71,10 @@
           <p>{{ selected.employeeId || '—' }}</p>
         </div>
         <dl class="inbox-meta">
-          <div *ngIf="selected.workDate"><dt>วันที่</dt><dd>{{ selected.workDate }}</dd></div>
-          <div *ngIf="selected.timestamp"><dt>เวลา</dt><dd>{{ selected.timestamp | date: 'medium' }}</dd></div>
+          <div *ngIf="selected.workDate"><dt>{{ 'Date' | translate }}</dt><dd>{{ selected.workDate }}</dd></div>
+          <div *ngIf="selected.timestamp"><dt>{{ 'Time' | translate }}</dt><dd>{{ selected.timestamp | date: 'medium' }}</dd></div>
           <div *ngIf="selected.locationName"><dt>{{ 'Location' | translate }}</dt><dd>{{ selected.locationName }}</dd></div>
-          <div *ngIf="selected.otMinutes != null"><dt>OT (นาที)</dt><dd>{{ selected.otMinutes }}</dd></div>
+          <div *ngIf="selected.otMinutes != null"><dt>{{ 'OT minutes' | translate }}</dt><dd>{{ selected.otMinutes }}</dd></div>
           <div *ngIf="selected.reason || selected.note">
             <dt>{{ 'Note' | translate }}</dt>
             <dd>{{ selected.reason || selected.note }}</dd>
@@ -86,21 +86,21 @@
             class="ti-btn ti-btn-success-full modern-btn"
             [disabled]="actionBusy"
             (click)="approve(selected)">
-            อนุมัติ
+            {{ 'Approve' | translate }}
           </button>
           <button
             type="button"
             class="ti-btn ti-btn-danger-full modern-btn"
             [disabled]="actionBusy"
             (click)="reject(selected)">
-            ไม่อนุมัติ
+            {{ 'Reject' | translate }}
           </button>
         </div>
       </ng-container>
       <ng-template #noSel>
         <div class="inbox-empty">
           <i class="ri-inbox-line"></i>
-          <p>เลือกรายการเพื่ออนุมัติ</p>
+          <p>{{ 'Select an item to approve' | translate }}</p>
         </div>
       </ng-template>
     </section>

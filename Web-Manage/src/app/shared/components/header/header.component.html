@@ -5,13 +5,13 @@
       <div class="header-content-left">
         <div class="header-element">
           <div class="horizontal-logo">
-            <a routerLink="/admin/home" class="header-logo" aria-label="DPU Home">
-              <img src="./assets/images/brand-logos/desktop-logo.png" alt="logo" class="desktop-logo">
-              <img src="./assets/images/brand-logos/toggle-logo.png" alt="logo" class="toggle-logo">
-              <img src="./assets/images/brand-logos/desktop-dark.png" alt="logo" class="desktop-dark">
-              <img src="./assets/images/brand-logos/toggle-dark.png" alt="logo" class="toggle-dark">
-              <img src="./assets/images/brand-logos/desktop-white.png" alt="logo" class="desktop-white">
-              <img src="./assets/images/brand-logos/toggle-white.png" alt="logo" class="toggle-white">
+            <a routerLink="/admin/home" class="header-logo" aria-label="SentinelVision Home">
+              <img src="./assets/images/brand-logos/desktop-logo.png" alt="SentinelVision" class="desktop-logo">
+              <img src="./assets/images/brand-logos/toggle-logo.png" alt="SentinelVision" class="toggle-logo">
+              <img src="./assets/images/brand-logos/desktop-dark.png" alt="SentinelVision" class="desktop-dark">
+              <img src="./assets/images/brand-logos/toggle-dark.png" alt="SentinelVision" class="toggle-dark">
+              <img src="./assets/images/brand-logos/desktop-white.png" alt="SentinelVision" class="desktop-white">
+              <img src="./assets/images/brand-logos/toggle-white.png" alt="SentinelVision" class="toggle-white">
             </a>
           </div>
         </div>
@@ -99,13 +99,13 @@
               <li>
                 <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
                   routerLink="/company/profile-security">
-                  <i class="ti ti-user-shield text-[1.125rem] me-2 opacity-[0.7]"></i>Profile & Security
+                  <i class="ti ti-user-shield text-[1.125rem] me-2 opacity-[0.7]"></i>{{ 'Profile & Security' | translate }}
                 </a>
               </li>
               <li>
                 <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
                   (click)="logOut()">
-                  <i class="ti ti-logout text-[1.125rem] me-2 opacity-[0.7]"></i>Log Out
+                  <i class="ti ti-logout text-[1.125rem] me-2 opacity-[0.7]"></i>{{ 'Logout' | translate }}
                 </a>
               </li>
             </ul>

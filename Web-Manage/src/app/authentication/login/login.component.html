@@ -35,9 +35,9 @@
 
   <div class="dpu-auth__panel glass modern-card dpu-login__panel">
     <div class="dpu-auth__brand">
-      <img src="./assets/images/brand-logos/logo.png" alt="DPU Time Attendance">
-      <h1 class="dpu-auth__title">Time Attendance</h1>
-      <p class="dpu-auth__subtitle">เข้าสู่ระบบจัดการหลังบ้าน</p>
+      <img src="./assets/images/brand-logos/logo.png" alt="SentinelVision">
+      <h1 class="dpu-auth__title">SentinelVision</h1>
+      <p class="dpu-auth__subtitle">{{ 'Sign in to admin console' | translate }}</p>
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="login()">
@@ -53,7 +53,7 @@
 
       <div class="grid grid-cols-12 gap-y-4">
         <div class="col-span-12">
-          <label for="signin-username" class="form-label">ชื่อผู้ใช้</label>
+          <label for="signin-username" class="form-label">{{ 'Username' | translate }}</label>
           <input
             type="text"
             class="form-control form-control-lg w-full transition-all focus:ring-2 focus:ring-primary/50"
@@ -63,7 +63,7 @@
             autocomplete="username">
         </div>
         <div class="col-span-12">
-          <label for="signin-password" class="form-label">รหัสผ่าน</label>
+          <label for="signin-password" class="form-label">{{ 'Password' | translate }}</label>
           <div class="input-group focus-within:ring-2 focus-within:ring-primary/50 transition-all rounded-s-md rounded-e-md">
             <input
               class="form-control form-control-lg !border-e-0 !rounded-s-md"
@@ -100,7 +100,7 @@
             class="ti-btn ti-btn-primary dpu-auth__submit modern-btn w-full !text-lg !py-3"
             [disabled]="!loginForm.valid || showLoader"
             [class.loader--text]="showLoader">
-            เข้าสู่ระบบ
+            {{ 'Sign in' | translate }}
           </button>
         </div>
         @if (ssoEnabled) {

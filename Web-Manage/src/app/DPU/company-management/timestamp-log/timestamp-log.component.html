@@ -1,7 +1,7 @@
 <app-page-header
-  [title]="'ข้อมูลการลงเวลา'"
+  [title]="'Attendance data'"
   [activeTitle]="'Manage companies'"
-  [title1]="'ข้อมูลการลงเวลา'">
+  [title1]="'Attendance history'">
 </app-page-header>
 
 <div class="ts-page grid grid-cols-12 gap-x-6 gap-y-4">
@@ -11,13 +11,13 @@
       <div class="box-header ts-toolbar-header">
         <div class="ts-toolbar-inner">
           <div class="ts-toolbar-title">
-            <div class="box-title !mb-0">ประวัติการลงเวลา</div>
-            <span class="ts-stat-chip">ทั้งหมด {{ totalAll }}</span>
-            <span class="ts-stat-chip ts-stat-chip--success">ในพื้นที่ {{ completeCount }}</span>
-            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="checkOutCount > 0">ออกงาน {{ checkOutCount }}</span>
-            <span class="ts-stat-chip ts-stat-chip--danger" *ngIf="lateCount > 0">สาย {{ lateCount }}</span>
-            <span class="ts-stat-chip ts-stat-chip--danger">Absent {{ absentCount }}</span>
-            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</span>
+            <div class="box-title !mb-0">{{ 'Attendance history' | translate }}</div>
+            <span class="ts-stat-chip">{{ 'All' | translate }} {{ totalAll }}</span>
+            <span class="ts-stat-chip ts-stat-chip--success">{{ 'In area' | translate }} {{ completeCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="checkOutCount > 0">{{ 'Check-out' | translate }} {{ checkOutCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--danger" *ngIf="lateCount > 0">{{ 'Late' | translate }} {{ lateCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--danger">{{ 'Absent' | translate }} {{ absentCount }}</span>
+            <span class="ts-stat-chip ts-stat-chip--soft" *ngIf="searchTerm">{{ 'Found' | translate }} {{ totalFiltered }}</span>
           </div>
 
           <div class="ts-toolbar-actions">
@@ -54,7 +54,7 @@
             </a>
             <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-primary-full modern-btn ts-tool-btn">
               <i class="ri-camera-line"></i>
-              <span>ลงเวลาพนักงาน</span>
+              <span>{{ 'Employee punch' | translate }}</span>
             </a>
             <button type="button" class="ti-btn ti-btn-light modern-btn ts-tool-btn" (click)="resetFilters()">
               <i class="ri-filter-off-line"></i>
@@ -77,9 +77,9 @@
               class="form-control ts-search-input"
               type="search"
               [(ngModel)]="searchTerm"
-              placeholder="ค้นหาชื่อ รหัส แผนก สถานที่ สถานะ..."
-              aria-label="ค้นหาประวัติลงเวลา">
-            <button *ngIf="searchTerm" type="button" class="ts-search-clear" (click)="clearSearch()" title="ล้างคำค้น">
+              placeholder="{{'Search name ID dept location status...' | translate}}"
+              [attr.aria-label]="'Search attendance history' | translate">
+            <button *ngIf="searchTerm" type="button" class="ts-search-clear" (click)="clearSearch()" [attr.title]="'Clear query' | translate">
               <i class="ri-close-line"></i>
             </button>
           </div>
@@ -88,7 +88,7 @@
             class="form-control ts-filter-control"
             id="ts-daterange"
             [(ngModel)]="dateRange"
-            placeholder="ช่วงวันที่"
+            placeholder="{{'Date range' | translate}}"
             mwlFlatpickr
             [altInput]="true"
             [convertModelValue]="true"
@@ -96,11 +96,11 @@
 
           <ng-select
             class="ts-filter-select"
-            placeholder="พนักงานทั้งหมด"
+            placeholder="{{'All employees' | translate}}"
             [(ngModel)]="empSelect"
             [clearable]="true"
             [appendTo]="'body'"
-            notFoundText="ไม่พบพนักงาน">
+            [notFoundText]="'No employees found' | translate">
             <ng-option value="">{{ 'All' | translate }}</ng-option>
             @for (item of empList; track item.company_employeeId) {
               <ng-option [value]="item.company_employeeId">{{ item.getFullname() }}</ng-option>
@@ -109,17 +109,17 @@
 
           <ng-select
             class="ts-filter-select"
-            placeholder="สถานะทั้งหมด"
+            placeholder="{{'All statuses' | translate}}"
             [(ngModel)]="statusSelect"
             [clearable]="true"
             [appendTo]="'body'">
             <ng-option value="">{{ 'All' | translate }}</ng-option>
-            <ng-option value="1">เข้างาน (Check-In)</ng-option>
-            <ng-option value="4">พักนอก (Break-Out)</ng-option>
-            <ng-option value="5">พักเข้า (Break-In)</ng-option>
-            <ng-option value="2">ออกงาน (Check-Out)</ng-option>
-            <ng-option value="0">Warning (นอกพื้นที่)</ng-option>
-            <ng-option value="3">Absent</ng-option>
+            <ng-option value="1">{{ 'Check-in' | translate }}</ng-option>
+            <ng-option value="4">{{ 'Break-out' | translate }}</ng-option>
+            <ng-option value="5">{{ 'Break-in' | translate }}</ng-option>
+            <ng-option value="2">{{ 'Check-out' | translate }}</ng-option>
+            <ng-option value="0">{{ 'Warning (out of area)' | translate }}</ng-option>
+            <ng-option value="3">{{ 'Absent' | translate }}</ng-option>
           </ng-select>
 
           <button
@@ -139,24 +139,24 @@
   <div class="col-span-12 xl:col-span-5">
     <div class="box ts-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <div class="box-header ts-panel-header">
-        <div class="box-title !mb-0">รายการลงเวลา</div>
+        <div class="box-title !mb-0">{{ 'Attendance list' | translate }}</div>
         <span class="ts-muted-count" *ngIf="totalFiltered">
-          แสดง {{ pageFrom }}–{{ pageTo }} จาก {{ totalFiltered }}
+          {{ 'Showing' | translate }} {{ pageFrom }}–{{ pageTo }} {{ 'of' | translate }} {{ totalFiltered }}
         </span>
       </div>
 
       <div class="box-body ts-list-body">
         <div *ngIf="loading" class="ts-empty">
           <span class="ti-spinner animation-spin ts-empty-spinner" role="status"></span>
-          <p>กำลังโหลดประวัติลงเวลา...</p>
+          <p>{{ 'Loading attendance history...' | translate }}</p>
         </div>
 
         <div *ngIf="!loading && pageItems.length === 0" class="ts-empty">
           <i class="ri-time-line ts-empty-icon"></i>
-          <p *ngIf="!searchTerm">ไม่พบข้อมูลในช่วงที่เลือก</p>
-          <p *ngIf="searchTerm">ไม่พบผลลัพธ์สำหรับ “{{ searchTerm }}”</p>
+          <p *ngIf="!searchTerm">{{ 'No data in selected range' | translate }}</p>
+          <p *ngIf="searchTerm">{{ 'No results for' | translate }} “{{ searchTerm }}”</p>
           <button *ngIf="searchTerm" type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearSearch()">
-            ล้างการค้นหา
+            {{ 'Clear search' | translate }}
           </button>
         </div>
 
@@ -194,7 +194,7 @@
         <button type="button" class="ts-page-btn" [disabled]="pageIndex === 0" (click)="prevPage()">
           <i class="ri-arrow-left-s-line"></i>
         </button>
-        <span class="ts-page-label">หน้า {{ pageIndex + 1 }} / {{ totalPages }}</span>
+        <span class="ts-page-label">{{ 'Page' | translate }} {{ pageIndex + 1 }} / {{ totalPages }}</span>
         <button type="button" class="ts-page-btn" [disabled]="pageIndex >= totalPages - 1" (click)="nextPage()">
           <i class="ri-arrow-right-s-line"></i>
         </button>
@@ -209,7 +209,7 @@
       class="box ts-detail-panel modern-card glass ts-detail-placeholder animate-in fade-in duration-500">
       <div class="ts-empty">
         <i class="ri-map-pin-user-line ts-empty-icon"></i>
-        <p>เลือกรายการเพื่อดูรูปใบหน้า รายละเอียด และแผนที่</p>
+        <p>{{ 'Select a row to view face, details, and map' | translate }}</p>
       </div>
     </div>
 

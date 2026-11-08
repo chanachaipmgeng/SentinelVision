@@ -4,16 +4,16 @@
   <div class="main-sidebar-header">
     <a class="header-logo"
       [routerLink]="isInstallerRoute ? '/company/dashboard' : '/admin/home'"
-      aria-label="DPU Home">
+      aria-label="SentinelVision Home">
       <!-- desktop-dark = Ynex visible slot on dark menu; asset is the real brand mark -->
       <img
         class="desktop-dark dpu-sidebar-logo"
         src="./assets/images/brand-logos/logo.png"
-        alt="DPU Attendance">
+        alt="SentinelVision">
       <img
         class="toggle-white dpu-sidebar-logo"
         src="./assets/images/brand-logos/logo.png"
-        alt="DPU Attendance">
+        alt="SentinelVision">
     </a>
   </div>
   <div>
@@ -40,7 +40,7 @@
                 </div>
               </div>
               <a routerLink="/company/company-info" class="dpu-company-card__link">
-                ข้อมูลบริษัท <i class="ri-arrow-right-line"></i>
+                {{ 'Company info' | translate }} <i class="ri-arrow-right-line"></i>
               </a>
             </div>
           </div>
@@ -161,7 +161,7 @@
                             routerLinkActive="active"
                             [routerLink]="!childrenSubItem.type ?  null : [childrenSubItem.path]"
                             [routerLinkActiveOptions]="{exact : true}">
-                            {{childrenSubItem.title! | translate}} {{localdata['ynex-dir']}}
+                            {{childrenSubItem.title! | translate}}
                           </a>
                           <!-- empty -->
                           @if(childrenSubItem.type === 'empty'){

@@ -1,21 +1,22 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   template: `
     <div class="dpu-empty">
       <span *ngIf="loading" class="ti-spinner animation-spin dpu-empty__spinner" role="status"></span>
       <i *ngIf="!loading" class="dpu-empty__icon" [ngClass]="icon"></i>
-      <p>{{ message }}</p>
+      <p>{{ message | translate }}</p>
       <button
         *ngIf="actionLabel"
         type="button"
         class="ti-btn ti-btn-light modern-btn"
         (click)="action.emit()">
-        {{ actionLabel }}
+        {{ actionLabel | translate }}
       </button>
     </div>
   `,

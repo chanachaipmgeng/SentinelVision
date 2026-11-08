@@ -1,4 +1,7 @@
-import { Component, ElementRef, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { ThemeService } from '../../services/theme.service';
+import { ShellUiService } from '../../services/shell-ui.service';
 import { HttpClient } from '@angular/common/http';
 import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
@@ -20,7 +23,8 @@ interface Item {
   styleUrls: ['./header.component.scss']
 })
 
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
+  private notificationsSub?: Subscription;
   userModel : UserProfileModel = new UserProfileModel(this.tokenService.getUser().member,this.translate)
   adminRole = false
   cartItemCount: number = 0;
@@ -33,7 +37,9 @@ export class HeaderComponent implements OnInit {
     private authService: AuthService,
     private permissionService: PermissionService,
     private translate: TranslateService,
-    private http: HttpClient) {
+    private http: HttpClient,
+    public themeService: ThemeService,
+    public shellUi: ShellUiService) {
 
     const lang =
       sessionStorage.getItem("Lang") != null
@@ -115,9 +121,33 @@ export class HeaderComponent implements OnInit {
   ngOnInit() {
     this.adminRole = this.tokenService.getUser().member.role == 99 ? true : false
     this.loadPendingBadge();
+    this.notificationsSub = this.shellUi.notificationsChanged$.subscribe(() => this.loadPendingBadge());
     this.navServices.items.subscribe((menuItems) => {
       this.items = menuItems;
     });
+  }
+
+  ngOnDestroy(): void {
+    this.notificationsSub?.unsubscribe();
+  }
+
+  get isMac(): boolean {
+    return /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
+  }
+
+  openPalette(): void {
+    this.shellUi.openPalette();
+  }
+
+  openShortcuts(): void {
+    this.shellUi.openShortcuts();
+  }
+
+  toggleNotifications(): void {
+    this.shellUi.toggleNotifications();
+    if (this.shellUi.notificationsOpen()) {
+      this.loadPendingBadge();
+    }
   }
 
   Search(searchText: string) {

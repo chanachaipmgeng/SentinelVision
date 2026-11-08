@@ -1,0 +1,58 @@
+<ng-container *ngIf="ui.notificationsOpen()">
+  <div class="sv-drawer-backdrop" (click)="close()"></div>
+  <aside class="sv-drawer" role="dialog" aria-modal="true" [attr.aria-label]="'shell.notifications.title' | translate">
+    <header class="sv-drawer__head">
+      <div>
+        <h2 class="sv-drawer__title">{{ 'shell.notifications.title' | translate }}</h2>
+        <p class="sv-drawer__sub" *ngIf="companyId">
+          {{ 'shell.notifications.unread' | translate: { count: unreadCount } }}
+          <ng-container *ngIf="pendingOutbox"> · {{ 'shell.notifications.pendingOutbox' | translate: { count: pendingOutbox } }}</ng-container>
+        </p>
+      </div>
+      <div class="sv-drawer__actions">
+        <button type="button" class="sv-text-btn" *ngIf="unreadCount" (click)="markAllRead()">
+          {{ 'shell.notifications.markAllRead' | translate }}
+        </button>
+        <button type="button" class="sv-icon-btn" (click)="close()" [attr.aria-label]="'shell.common.close' | translate">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="sv-drawer__body">
+      <p *ngIf="!companyId" class="sv-drawer__empty">{{ 'shell.notifications.noCompany' | translate }}</p>
+      <p *ngIf="companyId && loading" class="sv-drawer__empty">{{ 'shell.common.loading' | translate }}</p>
+      <p *ngIf="companyId && !loading && error" class="sv-drawer__empty">{{ 'shell.notifications.loadError' | translate }}</p>
+      <div *ngIf="companyId && !loading && !error && !items.length" class="sv-drawer__empty">
+        <i class="ri-notification-off-line sv-drawer__empty-icon" aria-hidden="true"></i>
+        <p>{{ 'shell.notifications.empty' | translate }}</p>
+      </div>
+
+      <ul class="sv-drawer__list" *ngIf="items.length && !loading">
+        <li *ngFor="let n of items" class="sv-notif" [class.is-unread]="!n.readAt">
+          <button type="button" class="sv-notif__main" (click)="open(n)">
+            <span class="sv-notif__dot" aria-hidden="true"></span>
+            <span class="sv-notif__text">
+              <span class="sv-notif__title">{{ n.title || n.event }}</span>
+              <span class="sv-notif__body" *ngIf="n.body">{{ n.body }}</span>
+              <span class="sv-notif__time" *ngIf="n.createdAt">{{ n.createdAt | date: 'd MMM HH:mm' }}</span>
+            </span>
+          </button>
+          <button type="button" class="sv-icon-btn sv-notif__read" *ngIf="!n.readAt" (click)="markRead(n, $event)"
+            [attr.aria-label]="'shell.notifications.markRead' | translate" [title]="'shell.notifications.markRead' | translate">
+            <i class="ri-check-line"></i>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <footer class="sv-drawer__foot">
+      <a routerLink="/company/approval-inbox" class="sv-drawer__link" (click)="close()">
+        <i class="ri-inbox-archive-line"></i>{{ 'shell.notifications.openApprovals' | translate }}
+      </a>
+      <a routerLink="/company/notification-center" class="sv-drawer__link" (click)="close()">
+        <i class="ri-notification-3-line"></i>{{ 'shell.notifications.openCenter' | translate }}
+      </a>
+    </footer>
+  </aside>
+</ng-container>

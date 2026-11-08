@@ -6,6 +6,7 @@
   <div class="content">
     <div class="main-content" (click)="togglesidemenuBody()"
       [@routeAnimations]="o.isActivated && o.activatedRoute.routeConfig?.path">
+      <app-offline-banner></app-offline-banner>
       <router-outlet #o="outlet"></router-outlet>
     </div>
   </div>
@@ -14,3 +15,5 @@
 
 </div>
 <div id="responsive-overlay" (click)="clearToggle()"></div>
+<app-command-palette></app-command-palette>
+<app-notification-drawer></app-notification-drawer>

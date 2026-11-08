@@ -1,0 +1,64 @@
+<div class="sv-palette-backdrop" *ngIf="ui.paletteOpen()" (click)="close()">
+  <div class="sv-palette" role="dialog" aria-modal="true" [attr.aria-label]="'shell.palette.title' | translate"
+    (click)="$event.stopPropagation()">
+    <div class="sv-palette__search">
+      <i class="ri-search-line" aria-hidden="true"></i>
+      <input #searchInput type="text" class="sv-palette__input" [(ngModel)]="query" (ngModelChange)="onQueryChange()"
+        [placeholder]="'shell.palette.placeholder' | translate" role="combobox" aria-autocomplete="list"
+        aria-controls="sv-palette-list" [attr.aria-activedescendant]="results.length ? 'sv-palette-item-' + activeIndex : null"
+        autocomplete="off" spellcheck="false" />
+      <kbd class="sv-kbd">Esc</kbd>
+    </div>
+
+    <ul id="sv-palette-list" class="sv-palette__list" role="listbox">
+      <li *ngIf="loading" class="sv-palette__empty">{{ 'shell.palette.loading' | translate }}</li>
+      <li *ngIf="!loading && !results.length" class="sv-palette__empty">{{ 'shell.palette.empty' | translate }}</li>
+      <li *ngFor="let r of results; let i = index" [id]="'sv-palette-item-' + i" role="option"
+        class="sv-palette__item" [class.is-active]="i === activeIndex" [attr.aria-selected]="i === activeIndex"
+        (mouseenter)="activeIndex = i" (click)="go(r)">
+        <span class="sv-palette__icon"><i [class]="'bx bx-' + (r.icon || 'right-arrow-alt')" aria-hidden="true"></i></span>
+        <span class="sv-palette__text">
+          <span class="sv-palette__label">{{ r.label }}</span>
+          <span class="sv-palette__meta">{{ r.section }}<ng-container *ngIf="r.section"> · </ng-container>{{ r.path }}</span>
+        </span>
+        <i class="ri-corner-down-left-line sv-palette__enter" *ngIf="i === activeIndex" aria-hidden="true"></i>
+      </li>
+    </ul>
+
+    <div class="sv-palette__footer">
+      <span><kbd class="sv-kbd">↑</kbd><kbd class="sv-kbd">↓</kbd> {{ 'shell.palette.navigate' | translate }}</span>
+      <span><kbd class="sv-kbd">Enter</kbd> {{ 'shell.palette.open' | translate }}</span>
+      <span><kbd class="sv-kbd">?</kbd> {{ 'shell.shortcuts.title' | translate }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="sv-palette-backdrop" *ngIf="ui.shortcutsOpen()" (click)="close()">
+  <div class="sv-palette sv-shortcuts" role="dialog" aria-modal="true" [attr.aria-label]="'shell.shortcuts.title' | translate"
+    (click)="$event.stopPropagation()">
+    <div class="sv-shortcuts__head">
+      <h2 class="sv-shortcuts__title">{{ 'shell.shortcuts.title' | translate }}</h2>
+      <button type="button" class="sv-icon-btn" (click)="close()" [attr.aria-label]="'shell.common.close' | translate">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+    <dl class="sv-shortcuts__list">
+      <div class="sv-shortcuts__row">
+        <dt><kbd class="sv-kbd">{{ isMac ? '⌘' : 'Ctrl' }}</kbd><kbd class="sv-kbd">K</kbd> / <kbd class="sv-kbd">/</kbd></dt>
+        <dd>{{ 'shell.shortcuts.openPalette' | translate }}</dd>
+      </div>
+      <div class="sv-shortcuts__row" *ngFor="let h of chordHints">
+        <dt><kbd class="sv-kbd" *ngFor="let k of h.keys.split(' ')">{{ k }}</kbd></dt>
+        <dd>{{ h.label | translate }}</dd>
+      </div>
+      <div class="sv-shortcuts__row">
+        <dt><kbd class="sv-kbd">?</kbd></dt>
+        <dd>{{ 'shell.shortcuts.help' | translate }}</dd>
+      </div>
+      <div class="sv-shortcuts__row">
+        <dt><kbd class="sv-kbd">Esc</kbd></dt>
+        <dd>{{ 'shell.shortcuts.close' | translate }}</dd>
+      </div>
+    </dl>
+  </div>
+</div>

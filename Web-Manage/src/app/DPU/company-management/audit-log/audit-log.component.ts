@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import {
   DataTableColumn,
   DataTableComponent,
@@ -19,6 +20,7 @@ import {
   normalizePageEnvelope,
   toDataTableParams,
 } from '../../../shared/utils/data-table-query';
+import { NotificationSettingsPanelComponent } from '../settings/panels/notification-settings-panel/notification-settings-panel.component';
 
 interface AuditRow {
   id: string;
@@ -39,11 +41,13 @@ interface AuditRow {
   imports: [
     CommonModule,
     FormsModule,
+    RouterModule,
     SharedModule,
     PageToolbarComponent,
     PillSearchComponent,
     EmptyStateComponent,
     DataTableComponent,
+    NotificationSettingsPanelComponent,
   ],
   templateUrl: './audit-log.component.html',
   styleUrls: ['../../../shared/styles/dpu-list-page.css'],
@@ -57,8 +61,6 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   pageSize = 25;
   sortBy: string | null = 'occurredAt';
   sortDir: SortDir | null = 'desc';
-  email = '';
-  lineToken = '';
   companyId = '';
   filters = {
     q: '',
@@ -87,10 +89,6 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!this.companyId) return;
     this.reload();
-    this.http.get<any>(`/notifications/company/${this.companyId}/settings`).subscribe((s) => {
-      this.email = s?.email || '';
-      this.lineToken = s?.lineToken || '';
-    });
   }
 
   ngOnDestroy(): void {
@@ -150,20 +148,6 @@ export class AuditLogComponent implements OnInit, OnDestroy {
           this.total = 0;
         },
       });
-  }
-
-  saveNotify(): void {
-    this.http
-      .put(`/notifications/company/${this.companyId}/settings`, {
-        email: this.email,
-        lineToken: this.lineToken,
-        events: ['import.finished', 'approval.pending'],
-      })
-      .subscribe();
-  }
-
-  testNotify(): void {
-    this.http.post(`/notifications/company/${this.companyId}/test`, {}).subscribe();
   }
 
   exportCsv(): void {

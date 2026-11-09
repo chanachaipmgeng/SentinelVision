@@ -1,0 +1,130 @@
+<div class="dpu-list-page emap-page">
+  <app-page-toolbar [title]="'emap.title'">
+    <ng-container controls>
+      <div class="emap-toolbar-actions">
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="showCreate = !showCreate">
+          {{ 'emap.addFloor' | translate }}
+        </button>
+        <button
+          type="button"
+          class="ti-btn ti-btn-primary modern-btn"
+          [disabled]="!hasDirty || saving"
+          (click)="savePins()">
+          {{ 'emap.savePins' | translate }}
+        </button>
+      </div>
+    </ng-container>
+  </app-page-toolbar>
+  <p class="text-sm text-dpu-muted mb-1">{{ 'emap.subtitle' | translate }}</p>
+
+  <p *ngIf="errorMessage" class="emap-error">{{ errorMessage | translate }}</p>
+
+  <div *ngIf="showCreate" class="modern-card glass emap-create">
+    <h3>{{ 'emap.createFloor' | translate }}</h3>
+    <div class="emap-create__grid">
+      <label>
+        <span>{{ 'emap.fields.name' | translate }}</span>
+        <input type="text" [(ngModel)]="draft.name" name="floorName" />
+      </label>
+      <label>
+        <span>{{ 'emap.fields.building' | translate }}</span>
+        <input type="text" [(ngModel)]="draft.buildingLabel" name="buildingLabel" />
+      </label>
+      <label>
+        <span>{{ 'emap.fields.floor' | translate }}</span>
+        <input type="text" [(ngModel)]="draft.floorLabel" name="floorLabel" />
+      </label>
+    </div>
+    <div class="emap-create__actions">
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="showCreate = false">
+        {{ 'emap.cancel' | translate }}
+      </button>
+      <button
+        type="button"
+        class="ti-btn ti-btn-primary modern-btn"
+        [disabled]="!draft.name.trim() || saving"
+        (click)="createFloor()">
+        {{ 'emap.create' | translate }}
+      </button>
+    </div>
+  </div>
+
+  <app-empty-state
+    *ngIf="noFloors"
+    [loading]="loading"
+    icon="ri-map-2-line"
+    message="emap.emptyFloors"
+    actionLabel="emap.addFloor"
+    (action)="showCreate = true">
+  </app-empty-state>
+
+  <ng-container *ngIf="!noFloors">
+    <div class="emap-layout">
+      <aside class="modern-card glass emap-side">
+        <label class="emap-floor-picker">
+          <span>{{ 'emap.floorPicker' | translate }}</span>
+          <select [(ngModel)]="selectedFloorId" name="floorPicker" (ngModelChange)="onFloorChange()">
+            <option *ngFor="let f of floors" [value]="f.siteFloorId">
+              {{ f.name }}
+              <ng-container *ngIf="f.floorLabel"> — {{ f.floorLabel }}</ng-container>
+            </option>
+          </select>
+        </label>
+
+        <div class="emap-upload">
+          <label class="ti-btn ti-btn-light modern-btn emap-upload__btn">
+            {{ 'emap.uploadPlan' | translate }}
+            <input type="file" accept="image/png,image/jpeg" hidden (change)="onPlanSelected($event)" />
+          </label>
+          <p class="emap-hint" *ngIf="needsPlan">{{ 'emap.needPlan' | translate }}</p>
+        </div>
+
+        <section class="emap-section">
+          <h4>{{ 'emap.onFloor' | translate }}</h4>
+          <ul class="emap-pin-list" *ngIf="pins.length; else noPins">
+            <li *ngFor="let pin of pins" class="emap-pin-row">
+              <span class="emap-kind" [attr.data-kind]="pin.kind">{{ kindLabel(pin.kind) | translate }}</span>
+              <span class="emap-pin-name">{{ pin.name }}</span>
+              <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearPin(pin)">
+                {{ 'emap.removePin' | translate }}
+              </button>
+            </li>
+          </ul>
+          <ng-template #noPins>
+            <p class="emap-hint">{{ 'emap.noPins' | translate }}</p>
+          </ng-template>
+        </section>
+
+        <section class="emap-section">
+          <h4>{{ 'emap.unassigned' | translate }}</h4>
+          <ul class="emap-pin-list" *ngIf="unassigned.length; else noUnassigned">
+            <li *ngFor="let pin of unassigned" class="emap-pin-row">
+              <span class="emap-kind" [attr.data-kind]="pin.kind">{{ kindLabel(pin.kind) | translate }}</span>
+              <span class="emap-pin-name">{{ pin.name }}</span>
+              <button
+                type="button"
+                class="ti-btn ti-btn-light modern-btn"
+                [disabled]="needsPlan"
+                (click)="placeUnassigned(pin)">
+                {{ 'emap.placePin' | translate }}
+              </button>
+            </li>
+          </ul>
+          <ng-template #noUnassigned>
+            <p class="emap-hint">{{ 'emap.noUnassigned' | translate }}</p>
+          </ng-template>
+        </section>
+      </aside>
+
+      <div class="modern-card glass emap-canvas-wrap">
+        <app-empty-state
+          *ngIf="needsPlan && !loading"
+          icon="ri-image-line"
+          message="emap.needPlan">
+        </app-empty-state>
+        <div #mapHost class="emap-canvas" [hidden]="needsPlan || loading"></div>
+        <app-empty-state *ngIf="loading" [loading]="true" message="emap.loading"></app-empty-state>
+      </div>
+    </div>
+  </ng-container>
+</div>

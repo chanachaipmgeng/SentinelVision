@@ -1,0 +1,185 @@
+.emap-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emap-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.emap-error {
+  margin: 0;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.emap-create {
+  padding: 1rem 1.15rem;
+}
+
+.emap-create h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.emap-create__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.emap-create__grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.emap-create__grid input,
+.emap-floor-picker select {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.65rem;
+  background: #fff;
+}
+
+.emap-create__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.emap-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 32rem;
+}
+
+.emap-side {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emap-floor-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.emap-upload__btn {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.emap-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--dpu-muted, #64748b);
+}
+
+.emap-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.emap-pin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.emap-pin-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.emap-pin-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-kind {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0f766e;
+}
+
+.emap-kind[data-kind='zone'] {
+  color: #b45309;
+}
+
+.emap-kind[data-kind='kiosk'] {
+  color: #1d4ed8;
+}
+
+.emap-canvas-wrap {
+  position: relative;
+  min-height: 32rem;
+  overflow: hidden;
+}
+
+.emap-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 32rem;
+  background: #e2e8f0;
+}
+
+.emap-pin {
+  background: transparent;
+  border: 0;
+}
+
+.emap-pin span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  max-width: 7rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.4rem;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.28);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #0f766e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emap-pin--zone span {
+  background: #b45309;
+}
+
+.emap-pin--kiosk span {
+  background: #1d4ed8;
+}
+
+@media (max-width: 960px) {
+  .emap-layout {
+    grid-template-columns: 1fr;
+  }
+}

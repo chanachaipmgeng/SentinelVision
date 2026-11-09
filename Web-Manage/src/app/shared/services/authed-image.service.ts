@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Subject } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 
 /**
  * Loads protected `/images/<file>` through HttpClient (Bearer header via the interceptor) and
@@ -48,6 +48,23 @@ export class AuthedImageService implements OnDestroy {
       });
     }
     return placeholder;
+  }
+
+  /** Async blob URL for Leaflet / canvas consumers that need a resolved src. */
+  async blobUrl(file: string | null | undefined): Promise<string | null> {
+    if (!file) {
+      return null;
+    }
+    const hit = this.cache.get(file);
+    if (hit) {
+      return hit;
+    }
+    const path = `/images/${file}`.replace(/([^:]\/)\/+/g, '$1');
+    const blob = await firstValueFrom(this.http.get(path, { responseType: 'blob' }));
+    const url = URL.createObjectURL(blob);
+    this.store(file, url);
+    this.loaded$.next(file);
+    return url;
   }
 
   private store(file: string, url: string): void {

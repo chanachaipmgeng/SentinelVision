@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
@@ -71,6 +71,14 @@ class SentinelAccessZone(Base):
     name = Column(String(120), nullable=False)
     code = Column(String(60), nullable=False, default="MAIN-GATE")
     locationId = Column("location_id", UUID(as_uuid=True), nullable=True)
+    siteFloorId = Column(
+        "site_floor_id",
+        UUID(as_uuid=True),
+        ForeignKey("site_floor.siteFloorId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    mapPosX = Column("map_pos_x", Float, nullable=True)
+    mapPosY = Column("map_pos_y", Float, nullable=True)
     stationMode = Column("station_mode", String(30), nullable=False, default="ACCESS_CONTROL")
     allowedDepartments = Column("allowed_departments", JSONB, nullable=False, default=list)
     allowedIdentityTypes = Column(
@@ -90,7 +98,15 @@ class SentinelAccessZone(Base):
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (Index("sentinel_access_zone_company_idx", "companyId", "is_active"),)
+    __table_args__ = (
+        Index("sentinel_access_zone_company_idx", "companyId", "is_active"),
+        Index(
+            "sentinel_access_zone_floor_idx",
+            "companyId",
+            "site_floor_id",
+            postgresql_where=text("site_floor_id IS NOT NULL"),
+        ),
+    )
 
 
 class SentinelEvent(Base):

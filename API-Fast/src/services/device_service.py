@@ -35,6 +35,9 @@ def serialize_device(r: KioskDevice) -> dict:
         "config": r.config or {},
         "stationMode": r.stationMode,
         "zoneId": str(r.zoneId) if r.zoneId else None,
+        "siteFloorId": str(r.siteFloorId) if r.siteFloorId else None,
+        "mapPosX": r.mapPosX,
+        "mapPosY": r.mapPosY,
         "lastSeenAt": r.lastSeenAt,
         "pairedAt": r.pairedAt,
         "isPaired": r.tokenHash is not None and r.revokedAt is None,
@@ -117,6 +120,8 @@ async def create_device(db: AsyncSession, company_id: UUID, body: dict) -> dict:
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Device name is required")
 
+    map_x = body.get("mapPosX")
+    map_y = body.get("mapPosY")
     device = KioskDevice(
         deviceId=uuid4(),
         companyId=company_id,
@@ -128,6 +133,9 @@ async def create_device(db: AsyncSession, company_id: UUID, body: dict) -> dict:
         config=_clean_config(body.get("config")),
         stationMode=_clean_station_mode(body.get("stationMode")),
         zoneId=_clean_uuid(body.get("zoneId"), field="zoneId"),
+        siteFloorId=_clean_uuid(body.get("siteFloorId"), field="siteFloorId"),
+        mapPosX=None if map_x in (None, "") else float(map_x),
+        mapPosY=None if map_y in (None, "") else float(map_y),
     )
     code = _issue_pairing_code(device)
     db.add(device)
@@ -168,6 +176,12 @@ async def update_device(db: AsyncSession, company_id: UUID, device_id: UUID, bod
         device.stationMode = _clean_station_mode(body.get("stationMode"))
     if "zoneId" in body:
         device.zoneId = _clean_uuid(body.get("zoneId"), field="zoneId")
+    if "siteFloorId" in body:
+        device.siteFloorId = _clean_uuid(body.get("siteFloorId"), field="siteFloorId")
+    if "mapPosX" in body:
+        device.mapPosX = None if body.get("mapPosX") in (None, "") else float(body["mapPosX"])
+    if "mapPosY" in body:
+        device.mapPosY = None if body.get("mapPosY") in (None, "") else float(body["mapPosY"])
 
     await db.commit()
     await db.refresh(device)

@@ -394,6 +394,12 @@ export class NavService implements OnDestroy {
             type: 'link',
             permission: 'cameras.read',
           },
+          {
+            path: '/company/e-map',
+            title: 'emap.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
         ],
       },
 

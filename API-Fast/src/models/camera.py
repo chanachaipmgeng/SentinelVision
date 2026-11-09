@@ -39,6 +39,11 @@ class Camera(Base):
     lastPingLatencyMs = Column("last_ping_latency_ms", Float, nullable=True)
     previewImageUrl = Column("preview_image_url", String(255), nullable=True)
     isActive = Column("is_active", Boolean, nullable=False, default=True, server_default="true")
+    # Phase 4A: CCTV → InsightFace worker (opt-in per camera)
+    analysisEnabled = Column(
+        "analysis_enabled", Boolean, nullable=False, default=False, server_default="false"
+    )
+    lastAnalyzedAt = Column("last_analyzed_at", DateTime(timezone=True), nullable=True)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)

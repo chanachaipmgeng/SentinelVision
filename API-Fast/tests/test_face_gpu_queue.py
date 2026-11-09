@@ -125,6 +125,42 @@ async def test_stale_detect_dropped():
 
 
 @pytest.mark.asyncio
+async def test_cctv_lane_below_checkin():
+    """Phase 4A: ``cctv`` kind is lower priority than kiosk ``checkin``."""
+    release = threading.Event()
+    markers: dict[str, float] = {}
+    t0 = time.monotonic()
+
+    def hold():
+        release.wait(timeout=2.0)
+
+    def mark(name: str):
+        def work():
+            markers[name] = time.monotonic() - t0
+            time.sleep(0.01)
+            return name
+
+        return work
+
+    hold_task = asyncio.create_task(
+        q.run_on_face_gpu(hold, kind="other", company_id="hold")
+    )
+    await asyncio.sleep(0.02)
+
+    cctv_task = asyncio.create_task(
+        q.run_on_face_gpu(mark("cctv"), kind="cctv", company_id="a")
+    )
+    check_task = asyncio.create_task(
+        q.run_on_face_gpu(mark("checkin"), kind="checkin", company_id="a")
+    )
+    await asyncio.sleep(0.02)
+    release.set()
+    await hold_task
+    await asyncio.gather(cctv_task, check_task)
+    assert markers["checkin"] < markers["cctv"]
+
+
+@pytest.mark.asyncio
 async def test_stats_include_devices_and_breakdown():
     await q.run_on_face_gpu(lambda: None, kind="detect", company_id="c1")
     stats = q.face_gpu_queue_stats()

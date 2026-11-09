@@ -25,7 +25,9 @@ export interface CameraRow {
   status?: string;
   lastPingAt?: string | null;
   lastPingLatencyMs?: number | null;
+  lastAnalyzedAt?: string | null;
   isActive?: boolean;
+  analysisEnabled?: boolean;
   whepPath?: string;
   hlsPath?: string;
   mtxPath?: string;
@@ -70,6 +72,7 @@ export class CamerasComponent implements OnInit {
     streamPassword: '',
     stationMode: '',
     recordMode: 'event',
+    analysisEnabled: false,
   };
 
   get searchTerm(): string {
@@ -138,6 +141,7 @@ export class CamerasComponent implements OnInit {
       streamPassword: '',
       stationMode: '',
       recordMode: 'event',
+      analysisEnabled: false,
     };
   }
 
@@ -155,6 +159,7 @@ export class CamerasComponent implements OnInit {
       description: this.draft.description || null,
       recordMode: this.draft.recordMode,
       stationMode: this.draft.stationMode || null,
+      analysisEnabled: !!this.draft.analysisEnabled,
     };
     if (this.draft.streamUsername) {
       body['streamUsername'] = this.draft.streamUsername;
@@ -197,6 +202,19 @@ export class CamerasComponent implements OnInit {
           this.snapshotPreview = `data:${res.contentType};base64,${res.imageBase64}`;
         },
         error: (err) => swal('Error', err?.error?.detail || 'Snapshot failed', 'error'),
+      });
+  }
+
+  toggleAnalysis(cam: CameraRow): void {
+    const next = !cam.analysisEnabled;
+    this.http
+      .patch<CameraRow>(this.api(`/${cam.cameraId}`), { analysisEnabled: next })
+      .subscribe({
+        next: (row) => {
+          cam.analysisEnabled = !!row.analysisEnabled;
+        },
+        error: (err) =>
+          swal('Error', err?.error?.detail || 'Failed to update analysis', 'error'),
       });
   }
 

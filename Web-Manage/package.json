@@ -11,6 +11,7 @@
     "sass": "sass ./src/assets/scss:./src/assets/css/",
     "sass-min": "sass ./src/assets/scss:./src/assets/css/ --style compressed",
     "test:ci": "ng test --configuration ci",
+    "test:e2e:smoke": "playwright test e2e/smoke.spec.ts",
     "lint": "eslint \"src/**/*.ts\" \"src/**/*.html\"",
     "build:prod": "ng build --configuration production"
   },
@@ -69,6 +70,7 @@
     "@angular-eslint/template-parser": "^17.5.3",
     "@angular/cli": "^17.1.1",
     "@angular/compiler-cli": "^17.0.0",
+    "@playwright/test": "^1.65.0",
     "@types/jasmine": "~5.1.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",

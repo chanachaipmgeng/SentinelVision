@@ -1,0 +1,63 @@
+# Optional Loki + Promtail overlay. Stack with the observability overlay so Grafana
+# already exists; the Loki datasource is provisioned under
+# docker/observability/grafana/provisioning/datasources/loki.yml.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml \
+#     -f docker-compose.loki.yml up -d
+#
+# Grafana Explore → Loki. Query example: {container="dpu-api"} |= "error"
+# Promtail reads Docker json-file logs via the host docker.sock (dpu-* only).
+# Nothing here is required for the product to run.
+services:
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: dpu-loki
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./docker/observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3100/ready >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: dpu-promtail
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - ./docker/observability/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      loki:
+        condition: service_started
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Wire Grafana to wait for Loki when this overlay is stacked with observability.
+  grafana:
+    depends_on:
+      loki:
+        condition: service_started
+
+volumes:
+  loki_data:

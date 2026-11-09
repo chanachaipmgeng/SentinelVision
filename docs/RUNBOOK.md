@@ -138,8 +138,9 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 ## Observability & alerts
 - `GET /metrics` (api) and `http://worker:9108/metrics` (worker) expose Prometheus text via `prometheus_client`. Key series: `dpu_http_requests_total{method,route,status}`, `dpu_http_request_duration_seconds`, `dpu_face_gpu_queue_pending{kind}` / `_capacity` / `_wait_seconds` / `dpu_face_gpu_processing_seconds`, `dpu_face_match_duration_seconds{source}`, `dpu_ws_kiosk_connections`, `dpu_outbox_pending` / `dpu_outbox_oldest_pending_age_seconds` / `dpu_outbox_deliveries_total{channel,result}`, `dpu_import_jobs_*`, `dpu_job_runs_total{job_name,result}` / `dpu_job_last_success_timestamp_seconds`, `dpu_db_pool_*`, `dpu_ready_status{component}`. `/metrics` is unauthenticated inside the stack (Prometheus scrapes `api:8000` / `worker:9108` directly on the compose network); at the gateway nginx only answers `/metrics` to `INTERNAL_ALLOW_CIDRS` (B4).
 - Dashboards as code: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d` starts Prometheus (`:9090`, scrape config `docker/observability/prometheus/prometheus.yml`, rules `alerts.yml`), Grafana (`:3000`, requires `GRAFANA_ADMIN_PASSWORD`, dashboard "DPU Attendance — API, Face queue, Kiosk, Outbox" provisioned from `docker/observability/grafana/`) and an OTel Collector (debug exporter; swap in Tempo/Jaeger in `docker/observability/otel-collector.yml`).
+- **Loki log Explore (6E):** add `-f docker-compose.loki.yml` with the observability overlay. Promtail scrapes Docker `json-file` logs for `dpu-*` containers via the host `docker.sock` and pushes to Loki (`:3100`, override with `LOKI_PORT`). Grafana already provisions a **Loki** datasource (`docker/observability/grafana/provisioning/datasources/loki.yml`). In Explore try `{container="dpu-api"} |= "error"` or `{service="worker"}`. Retention default 7d (filesystem volume `loki_data`) — not a SIEM. No extra secrets beyond the existing `GRAFANA_ADMIN_PASSWORD`.
 - Tracing: off by default. Set `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://otel-collector:4318`) to enable FastAPI + SQLAlchemy + httpx spans; `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_PROTOCOL` (`http/protobuf` default, `grpc` needs `opentelemetry-exporter-otlp-proto-grpc`), `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG` tune it. Unset the endpoint to return to a no-op (the SDK is not even imported). Note: `opentelemetry-instrumentation-sqlalchemy` skips SQLAlchemy ≥ 2.1 with a warning; HTTP spans still work.
-- Logs are JSON (`LOG_JSON=true`): `time`, `level`, `logger`, `service` (`api` / `worker`), `message`, `requestId`, `traceId` / `spanId` (OTel ids when tracing is on, else the W3C `traceparent` echoed in the response), `companyId` (bound by `AuthzMiddleware`), `job` (worker). `extra={...}` fields are emitted under `extra` with `password|secret|token|authorization|apiKey|embedding|cookie|signature` keys redacted. Correlate a user report with `X-Request-Id` from the response headers.
+- Logs are JSON (`LOG_JSON=true`): `time`, `level`, `logger`, `service` (`api` / `worker`), `message`, `requestId`, `traceId` / `spanId` (OTel ids when tracing is on, else the W3C `traceparent` echoed in the response), `companyId` (bound by `AuthzMiddleware`), `job` (worker). `extra={...}` fields are emitted under `extra` with `password|secret|token|authorization|apiKey|embedding|cookie|signature` keys redacted. Correlate a user report with `X-Request-Id` from the response headers. With Loki up, the same `requestId` / `service` fields are promoted as labels where Promtail can parse them.
 - Alerts to configure (rules shipped in `docker/observability/prometheus/alerts.yml`, wire Alertmanager to your on-call tool):
   | Alert | Expression (summary) | Why |
   |---|---|---|
@@ -166,6 +167,17 @@ Since Phase B1 the API **never** creates or alters tables itself (`create_all` a
 Readiness gate: at startup the API compares `alembic_version` with the code's head revision. While they differ, `GET /ready` returns `503 {"code": "schema_out_of_date", "schema": {"status": "behind"|"unmanaged", ...}}` and the log shows the exact remediation command; the probe recovers on its own once `alembic upgrade head` finished (no restart). `REQUIRE_SCHEMA_HEAD=false` downgrades this to a log warning. `MIGRATE_ON_STARTUP=true` makes the `api` process run `alembic upgrade head` itself before serving — acceptable for a single-node Docker Compose install, **not** for the dual-GPU overlay or any multi-replica deployment (two processes would race), and it cannot stamp a legacy database for you.
 
 Never run `alembic stamp` on a database you are not sure about: stamping records that a revision was applied without applying it. When in doubt take a backup (`scripts/backup.sh`), restore it to a scratch database and try the upgrade there first.
+
+## Playwright smoke (6E)
+Against a running gateway (default `HTTP_PORT=8880`):
+
+```bash
+cd Web-Manage
+npx playwright install chromium
+DPU_BASE_URL=http://localhost:8880 npm run test:e2e:smoke
+```
+
+Checks `GET /health` and that `/auth/login` shows the username/password form. For a real sign-in, set `DPU_E2E_USER` and `DPU_E2E_PASSWORD` in the shell only — never commit them or put them in compose/docs. Not wired as a CI gate (needs the stack); npm script only until promoted.
 
 ## CI gates and lint baselines (Phase B3)
 `.github/workflows/ci.yml` (GitHub) and `.gitlab-ci.yml` (GitLab mirror, same commands) run on every push to `main`, `integration/**`, `phase-*/**` and on pull requests. Every job is blocking — there is no `|| true`, `continue-on-error` or `allow_failure`.

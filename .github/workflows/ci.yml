@@ -237,6 +237,7 @@ jobs:
           check $base -f docker-compose.gpu.yml
           check $base -f docker-compose.prod.yml
           check $base -f docker-compose.observability.yml
+          check $base -f docker-compose.observability.yml -f docker-compose.loki.yml
           check $base -f docker-compose.backup.yml
           check $base -f docker-compose.tls.yml
           check $base -f docker-compose.face-core-remote.yml
@@ -248,8 +249,10 @@ jobs:
           check $base -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.tls.yml
           check $base -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.backup.yml
           check $base -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.observability.yml
+          check $base -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.observability.yml -f docker-compose.loki.yml
           check $base -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.tls.yml -f docker-compose.backup.yml -f docker-compose.observability.yml
           check $base -f docker-compose.cpu.yml -f docker-compose.prod.yml -f docker-compose.api-readonly.yml
           check $base -f docker-compose.cpu.yml -f docker-compose.observability.yml
+          check $base -f docker-compose.cpu.yml -f docker-compose.observability.yml -f docker-compose.loki.yml
           check $base -f docker-compose.prod.yml -f docker-compose.face-core.yml
           check $base -f docker-compose.gpu.yml -f docker-compose.loadtest.yml --profile loadtest

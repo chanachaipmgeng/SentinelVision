@@ -52,7 +52,8 @@
 - [x] **UX/UI Modernization & SentinelVision Command Console (`/company/sentinel-center`):** 4-pillar sidebar navigation, container-query responsive sticky tables (`.sv-table-wrapper`), CSS layout containment (`.sv-contain-region`), and 6-tab `SentinelCenterComponent`
 
 ## Open — Phase B follow-ups
-- [ ] **Playwright E2E smoke (Web-Manage):** add `@playwright/test`, replace the placeholder `e2e/smoke.spec.ts` with login → admin home → kiosk page reaching `session_ok` against a mocked backend (skip when `DPU_BASE_URL` is unset), and run it as a non-blocking CI job before promoting it to a gate
+- [x] **Playwright E2E smoke (Web-Manage):** `@playwright/test` + `npm run test:e2e:smoke` — `/health` + login form against `:8880`; optional live login via `DPU_E2E_USER` / `DPU_E2E_PASSWORD`. Still open: kiosk `session_ok` path + promote to a CI gate
+
 - [ ] **Lint debt (Web-Manage):** re-enable the rules baselined in `.eslintrc.json` one at a time (`@typescript-eslint/no-explicit-any` 248, `no-non-null-asserted-optional-chain` 71, `no-unused-vars` 67, `@angular-eslint/use-lifecycle-interface` 10, `ban-types` 7, `no-empty-lifecycle-method` 2, `no-unsafe-declaration-merging` 2, template `eqeqeq`)
 - [ ] **Lint debt (API-Fast):** shrink the baselines in `API-Fast/pyproject.toml` — ruff `B904` (40 `raise ... from err` sites), `B017` (3 blind `pytest.raises(Exception)`), and the 31 modules under `[[tool.mypy.overrides]] ignore_errors = true` (160 pre-existing mypy errors); remove a module from the list as soon as `mypy src/<module>.py` is clean
 - [ ] **Angular 17 → 19+ upgrade (Web-Manage):** Angular 17 is EOL; its CVEs are allow-listed in `.trivyignore.yaml` until 2027-03-31, after which the `security` CI job starts failing. Upgrade (also drops `legacy-peer-deps` in `.npmrc`, needed only because `ng-apexcharts` wants `@angular/common@19`)

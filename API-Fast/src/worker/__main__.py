@@ -20,7 +20,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--jobs",
         default=settings.WORKER_JOBS,
-        help="comma list of jobs to run (outbox,retention,imports,attendance_summary); default from WORKER_JOBS",
+        help="comma list of jobs to run (outbox,retention,imports,attendance_summary,cctv); default from WORKER_JOBS",
     )
     parser.add_argument("--worker-id", default=None, help="override WORKER_ID (shown in import_job.lockedBy)")
     parser.add_argument(
@@ -39,6 +39,12 @@ async def _amain(args: argparse.Namespace) -> int:
     job_names = parse_job_list(args.jobs)
     ensure_dirs()
     await wait_for_database(attempts=args.db_wait_attempts)
+
+    # CCTV analysis needs the local InsightFace queue (low-priority ``cctv`` lane).
+    if "cctv" in job_names:
+        from ..services.cctv_analysis_service import ensure_face_gpu_for_cctv
+
+        await ensure_face_gpu_for_cctv()
 
     if args.once:
         results = await run_jobs_once(job_names, worker_id=args.worker_id)

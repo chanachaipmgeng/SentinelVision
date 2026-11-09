@@ -208,6 +208,106 @@ def test_build_dedupe_key_uses_member_when_no_identity():
 
 
 @pytest.mark.asyncio
+async def test_record_incident_sets_sla_due_for_high_severity(monkeypatch):
+    db = AsyncMock()
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+    )
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        svc,
+        "get_incident_sla_settings",
+        AsyncMock(return_value={"incidentSlaMinutesHigh": 15}),
+    )
+
+    inc, created = await svc.record_incident(
+        db,
+        company_id=COMPANY_ID,
+        event_type="BLACKLIST_ALERT",
+        severity="CRITICAL",
+        identity_id=IDENTITY_ID,
+        zone_id=ZONE_ID,
+        subject_name="Target",
+        identity_type="BLACKLIST",
+    )
+    assert created is True
+    assert inc.slaDueAt is not None
+    delta = (inc.slaDueAt - inc.occurredAt).total_seconds()
+    assert 14 * 60 <= delta <= 16 * 60
+
+
+@pytest.mark.asyncio
+async def test_record_incident_skips_sla_for_info(monkeypatch):
+    db = AsyncMock()
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+    )
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
+
+    inc, created = await svc.record_incident(
+        db,
+        company_id=COMPANY_ID,
+        event_type="ACCESS_GRANTED",
+        severity="INFO",
+        member_id=ACTOR_ID,
+        zone_id=ZONE_ID,
+        subject_name="Emp",
+        identity_type="EMPLOYEE",
+    )
+    assert created is True
+    assert inc.slaDueAt is None
+
+
+@pytest.mark.asyncio
+async def test_bulk_acknowledge_and_close(monkeypatch):
+    open_a = _make_incident()
+    open_b = _make_incident()
+    closed = _make_incident(status=svc.STATUS_CLOSED)
+    by_id = {
+        open_a.incidentId: open_a,
+        open_b.incidentId: open_b,
+        closed.incidentId: closed,
+    }
+
+    db = AsyncMock()
+
+    async def _get(_model, iid):
+        return by_id.get(iid)
+
+    db.get = AsyncMock(side_effect=_get)
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
+
+    ack = await svc.acknowledge_incidents_bulk(
+        db,
+        COMPANY_ID,
+        [str(open_a.incidentId), str(closed.incidentId), "not-a-uuid"],
+        ACTOR_ID,
+    )
+    assert ack["acknowledgedCount"] == 1
+    assert ack["skippedCount"] == 1
+    assert open_a.status == svc.STATUS_ACKNOWLEDGED
+
+    closed_res = await svc.close_incidents_bulk(
+        db,
+        COMPANY_ID,
+        [str(open_a.incidentId), str(open_b.incidentId)],
+        ACTOR_ID,
+    )
+    assert closed_res["closedCount"] == 2
+    assert open_a.status == svc.STATUS_CLOSED
+    assert open_b.status == svc.STATUS_CLOSED
+
+
+
+@pytest.mark.asyncio
 async def test_evaluate_kiosk_uses_dedupe_on_repeat_hit():
     ident = MagicMock()
     ident.identityId = IDENTITY_ID

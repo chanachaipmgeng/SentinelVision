@@ -10,6 +10,18 @@
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="ti-btn ti-btn-light font-semibold text-xs"
+        [class.is-active-sound]="soundEnabled"
+        (click)="toggleSound()"
+        [attr.aria-pressed]="soundEnabled"
+        [attr.aria-label]="'listKit.accessLogs.soundToggle' | translate"
+        [title]="'listKit.accessLogs.soundToggle' | translate"
+      >
+        <i class="me-1" [ngClass]="soundEnabled ? 'ri-volume-up-line' : 'ri-volume-mute-line'" aria-hidden="true"></i>
+        {{ soundEnabled ? ('listKit.accessLogs.soundOn' | translate) : ('listKit.accessLogs.soundOff' | translate) }}
+      </button>
       <a
         routerLink="/company/access-control/zones"
         class="ti-btn ti-btn-light font-semibold text-xs"
@@ -71,6 +83,33 @@
     </button>
   </div>
 
+  <div class="sv-bulk-bar" *ngIf="selectedCount > 0">
+    <span class="sv-bulk-bar__count">
+      {{ 'listKit.accessLogs.selectedCount' | translate: { count: selectedCount } }}
+    </span>
+    <button
+      type="button"
+      class="ti-btn ti-btn-sm ti-btn-primary-full"
+      [disabled]="bulkBusy"
+      (click)="bulkAcknowledge()"
+    >
+      <i class="ri-eye-line me-1" aria-hidden="true"></i>
+      {{ 'listKit.accessLogs.bulkAcknowledge' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-sm ti-btn-outline-secondary"
+      [disabled]="bulkBusy"
+      (click)="bulkClose()"
+    >
+      <i class="ri-checkbox-circle-line me-1" aria-hidden="true"></i>
+      {{ 'listKit.accessLogs.bulkClose' | translate }}
+    </button>
+    <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="clearSelection()">
+      {{ 'listKit.accessLogs.clearSelection' | translate }}
+    </button>
+  </div>
+
   <app-saved-views-bar
     class="dpu-filter-toolbar__views"
     pageKey="access-logs"
@@ -87,6 +126,15 @@
     <table class="table whitespace-nowrap">
       <thead>
         <tr class="border-b border-defaultborder text-xs">
+          <th class="text-start p-3 w-10">
+            <input
+              type="checkbox"
+              class="sv-check"
+              [checked]="allVisibleSelected"
+              (change)="toggleSelectAll($event)"
+              [attr.aria-label]="'listKit.accessLogs.selectAll' | translate"
+            />
+          </th>
           <th class="text-start p-3">บุคคล / ตัวตน</th>
           <th class="text-start p-3">ประเภทเหตุการณ์</th>
           <th class="text-start p-3">จุดสแกน / โซน</th>
@@ -100,11 +148,21 @@
           *ngFor="let inc of incidents"
           class="border-b border-defaultborder text-xs sv-log-row"
           [class.is-selected]="isSelectedIncident(inc)"
+          [class.is-checked]="isRowChecked(inc)"
           tabindex="0"
           [attr.aria-label]="'listKit.accessLogs.openDetail' | translate: { name: inc.subjectName || 'Unknown' }"
           (click)="openIncident(inc)"
           (keydown.enter)="$event.target === $event.currentTarget && openIncident(inc)"
         >
+          <td class="p-3" (click)="$event.stopPropagation()">
+            <input
+              type="checkbox"
+              class="sv-check"
+              [checked]="isRowChecked(inc)"
+              (change)="toggleRowSelect(inc, $event)"
+              [attr.aria-label]="'listKit.accessLogs.selectRow' | translate: { name: inc.subjectName || 'Unknown' }"
+            />
+          </td>
           <th class="text-start p-3">
             <div class="font-semibold text-slate-900">{{ inc.subjectName || 'Unknown' }}</div>
             <div class="text-[0.7rem] text-dpu-muted">{{ inc.identityType || '-' }}</div>
@@ -157,6 +215,13 @@
               >
                 {{ inc.status || 'OPEN' }}
               </span>
+              <span
+                *ngIf="isOverdue(inc)"
+                class="sv-sla-badge"
+                [attr.title]="inc.slaDueAt | date: 'dd/MM/yyyy HH:mm:ss'"
+              >
+                {{ 'listKit.accessLogs.slaOverdue' | translate }}
+              </span>
               <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)" (click)="$event.stopPropagation()">
                 <button
                   *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
@@ -186,7 +251,7 @@
           </td>
         </tr>
         <tr *ngIf="!loading && incidents.length === 0">
-          <td colspan="6" class="py-8">
+          <td colspan="7" class="py-8">
             <div class="flex flex-col items-center justify-center gap-3 text-center px-4">
               <i class="ri-door-open-line text-3xl text-teal-700/70" aria-hidden="true"></i>
               <div>
@@ -244,10 +309,35 @@
       </ng-template>
     </figure>
 
+    <div class="sv-incident__clip" *ngIf="incidentClipUrl as clipUrl">
+      <div class="sv-incident__clip-label">{{ 'listKit.accessLogs.clipPlayback' | translate }}</div>
+      <video class="sv-incident__clip-video" [src]="clipUrl" controls playsinline></video>
+      <input
+        *ngIf="incidentClipDuration > 0"
+        class="sv-incident__clip-scrub"
+        type="range"
+        min="0"
+        [max]="incidentClipDuration"
+        step="0.1"
+        [ngModel]="incidentClipTime"
+        (ngModelChange)="onIncidentClipScrub($event)"
+        [attr.aria-label]="'cctv.playback.scrubber' | translate"
+      />
+    </div>
+    <a
+      class="sv-incident__link sv-incident__playback-link"
+      [routerLink]="['/company/playback']"
+      [queryParams]="{ incidentId: inc.incidentId }"
+    >
+      <i class="ri-play-circle-line me-1" aria-hidden="true"></i>
+      {{ 'cctv.playback.openFromIncident' | translate }}
+    </a>
+
     <div class="sv-incident__head">
       <h3 class="sv-incident__name">{{ inc.subjectName || 'Unknown' }}</h3>
       <span class="sv-incident__pill" [attr.data-tone]="(inc.severity || 'INFO').toLowerCase()">{{ inc.severity || 'INFO' }}</span>
       <span class="sv-incident__pill" [attr.data-tone]="'status-' + (inc.status || 'OPEN').toLowerCase()">{{ inc.status || 'OPEN' }}</span>
+      <span *ngIf="isOverdue(inc)" class="sv-sla-badge">{{ 'listKit.accessLogs.slaOverdue' | translate }}</span>
     </div>
 
     <dl class="sv-incident__facts">
@@ -272,6 +362,7 @@
       </div>
       <div *ngIf="inc.actionTaken"><dt>{{ 'listKit.accessLogs.actionTaken' | translate }}</dt><dd>{{ inc.actionTaken }}</dd></div>
       <div><dt>{{ 'listKit.accessLogs.occurredAt' | translate }}</dt><dd>{{ inc.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+      <div *ngIf="inc.slaDueAt"><dt>{{ 'listKit.accessLogs.slaDueAt' | translate }}</dt><dd>{{ inc.slaDueAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
       <div *ngIf="inc.acknowledgedAt"><dt>{{ 'listKit.accessLogs.acknowledgedAt' | translate }}</dt><dd>{{ inc.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
       <div *ngIf="inc.assignedAt"><dt>{{ 'listKit.accessLogs.assignedAt' | translate }}</dt><dd>{{ inc.assignedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
       <div *ngIf="inc.closedAt"><dt>{{ 'listKit.accessLogs.closedAt' | translate }}</dt><dd>{{ inc.closedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>

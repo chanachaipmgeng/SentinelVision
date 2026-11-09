@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -7,6 +8,12 @@ import { TokenService } from '../../../../shared/services/token.service';
 import { AuthedImageService } from '../../../../shared/services/authed-image.service';
 import { SavedViewsBarComponent } from '../../../../shared/components/saved-views-bar/saved-views-bar.component';
 import { SideDrawerComponent } from '../../../../shared/components/side-drawer/side-drawer.component';
+import {
+  isIncidentSoundEnabled,
+  playIncidentEventSound,
+  setIncidentSoundEnabled,
+  unlockBeepAudio,
+} from '../../../../shared/utils/beep';
 import { accessZoneScanRoute } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';
 
@@ -16,9 +23,13 @@ interface AccessLogsViewFilters {
   severity: string;
 }
 
+const POLL_MS = 15000;
+
 /**
  * Access Control logs (`/company/access-control/logs`).
  * Filters by zone + status; empty state points to create zone or open scan.
+ * Phase 4/6B: multi-select bulk ack/close, SLA overdue badge, incident sound toast,
+ * plus inline event-clip playback in the detail drawer.
  */
 @Component({
   selector: 'app-sentinel-access-logs-panel',
@@ -30,7 +41,7 @@ interface AccessLogsViewFilters {
     '../../../../shared/styles/dpu-filter-toolbar.css',
   ],
 })
-export class SentinelAccessLogsPanelComponent implements OnInit {
+export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
@@ -38,34 +49,62 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
   zones: any[] = [];
   incidents: any[] = [];
   loading = false;
+  bulkBusy = false;
   incidentFilterZoneId = '';
   incidentFilterStatus = '';
   incidentFilterSeverity = '';
   savedFilters: AccessLogsViewFilters = { zoneId: '', status: '', severity: '' };
   selectedIncident: any = null;
   drawerOpen = false;
+  incidentClipUrl = '';
+  incidentClipTime = 0;
+  incidentClipDuration = 0;
+  private incidentClipObjectUrl = '';
+  /** Multi-select for bulk ops (incidentId → true). */
+  selectedIds = new Set<string>();
+  soundEnabled = true;
+
+  private knownIds = new Set<string>();
+  private pollReady = false;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private api: SentinelApiService,
     private token: TokenService,
     private router: Router,
     private authedImages: AuthedImageService,
+    private http: HttpClient,
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
+    this.soundEnabled = isIncidentSoundEnabled();
   }
 
   ngOnInit(): void {
     if (!this.companyId) return;
     this.loadZones();
     this.loadIncidents();
+    this.pollTimer = setInterval(() => this.loadIncidents(true), POLL_MS);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.revokeIncidentClip();
+  }
+
+  get selectedCount(): number {
+    return this.selectedIds.size;
+  }
+
+  get allVisibleSelected(): boolean {
+    return this.incidents.length > 0 && this.incidents.every((i) => this.selectedIds.has(i.incidentId));
   }
 
   loadZones(): void {
     this.api.getZones(this.companyId).subscribe((rows) => (this.zones = rows || []));
   }
 
-  loadIncidents(): void {
-    this.loading = true;
+  loadIncidents(fromPoll = false): void {
+    if (!fromPoll) this.loading = true;
     this.savedFilters = {
       zoneId: this.incidentFilterZoneId || '',
       status: this.incidentFilterStatus || '',
@@ -80,8 +119,11 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
       )
       .subscribe({
         next: (rows) => {
-          this.incidents = rows || [];
+          const list = rows || [];
+          this.detectNewIncidents(list);
+          this.incidents = list;
           this.loading = false;
+          this.pruneSelection();
           this.resyncSelected();
         },
         error: () => {
@@ -103,10 +145,126 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
   openIncident(inc: any): void {
     this.selectedIncident = inc;
     this.drawerOpen = true;
+    this.loadIncidentClip(inc?.incidentId);
+  }
+
+  onIncidentClipScrub(value: string | number): void {
+    this.incidentClipTime = Number(value) || 0;
+    const video = document.querySelector(
+      '.sv-incident__clip-video',
+    ) as HTMLVideoElement | null;
+    if (video) video.currentTime = this.incidentClipTime;
+  }
+
+  private loadIncidentClip(incidentId: string | null | undefined): void {
+    this.revokeIncidentClip();
+    this.incidentClipUrl = '';
+    this.incidentClipTime = 0;
+    this.incidentClipDuration = 0;
+    if (!this.companyId || !incidentId) return;
+    this.http
+      .get<any[]>(`/cameras/company/${this.companyId}/clips`, {
+        params: { incidentId, kind: 'event', limit: '1' },
+      })
+      .subscribe({
+        next: (rows) => {
+          const clip = (rows || [])[0];
+          if (!clip?.clipId) return;
+          this.incidentClipDuration = Math.max(0, (clip.durationMs || 0) / 1000);
+          const path =
+            clip.downloadPath ||
+            `/cameras/company/${this.companyId}/clips/${clip.clipId}/download`;
+          this.http.get(path, { responseType: 'blob' }).subscribe({
+            next: (blob) => {
+              this.incidentClipObjectUrl = URL.createObjectURL(blob);
+              this.incidentClipUrl = this.incidentClipObjectUrl;
+            },
+          });
+        },
+      });
+  }
+
+  private revokeIncidentClip(): void {
+    if (this.incidentClipObjectUrl) {
+      URL.revokeObjectURL(this.incidentClipObjectUrl);
+      this.incidentClipObjectUrl = '';
+    }
   }
 
   isSelectedIncident(inc: any): boolean {
     return this.drawerOpen && this.selectedIncident?.incidentId === inc?.incidentId;
+  }
+
+  toggleRowSelect(inc: any, event: Event): void {
+    event.stopPropagation();
+    const id = inc?.incidentId;
+    if (!id) return;
+    if (this.selectedIds.has(id)) this.selectedIds.delete(id);
+    else this.selectedIds.add(id);
+    this.selectedIds = new Set(this.selectedIds);
+  }
+
+  isRowChecked(inc: any): boolean {
+    return this.selectedIds.has(inc?.incidentId);
+  }
+
+  toggleSelectAll(event: Event): void {
+    const checked = (event.target as HTMLInputElement)?.checked;
+    if (checked) {
+      this.selectedIds = new Set(this.incidents.map((i) => i.incidentId).filter(Boolean));
+    } else {
+      this.selectedIds = new Set();
+    }
+  }
+
+  clearSelection(): void {
+    this.selectedIds = new Set();
+  }
+
+  bulkAcknowledge(): void {
+    const ids = [...this.selectedIds];
+    if (!ids.length || this.bulkBusy) return;
+    this.bulkBusy = true;
+    this.api.bulkAcknowledgeIncidents(this.companyId, ids).subscribe({
+      next: (res) => {
+        this.bulkBusy = false;
+        const n = res?.acknowledgedCount ?? 0;
+        this.toast.emit(`รับทราบแล้ว ${n} เหตุการณ์`);
+        this.clearSelection();
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+      error: () => {
+        this.bulkBusy = false;
+        this.toast.emit('รับทราบหลายรายการไม่สำเร็จ');
+      },
+    });
+  }
+
+  bulkClose(): void {
+    const ids = [...this.selectedIds];
+    if (!ids.length || this.bulkBusy) return;
+    this.bulkBusy = true;
+    this.api.bulkCloseIncidents(this.companyId, ids).subscribe({
+      next: (res) => {
+        this.bulkBusy = false;
+        const n = res?.closedCount ?? 0;
+        this.toast.emit(`ปิดแล้ว ${n} เหตุการณ์`);
+        this.clearSelection();
+        this.loadIncidents();
+        this.overviewChanged.emit();
+      },
+      error: () => {
+        this.bulkBusy = false;
+        this.toast.emit('ปิดหลายรายการไม่สำเร็จ');
+      },
+    });
+  }
+
+  toggleSound(): void {
+    unlockBeepAudio();
+    this.soundEnabled = !this.soundEnabled;
+    setIncidentSoundEnabled(this.soundEnabled);
   }
 
   /** Incident evidence is served from `/images/*`; fetch via Bearer → blob URL. */
@@ -163,6 +321,43 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
 
   canAcknowledge(inc: any): boolean {
     return !inc?.acknowledgedAt && (inc?.severity === 'CRITICAL' || inc?.severity === 'WARNING');
+  }
+
+  isOverdue(inc: any): boolean {
+    if (!inc?.slaDueAt) return false;
+    const st = (inc?.status || 'OPEN').toUpperCase();
+    if (st === 'CLOSED') return false;
+    const due = new Date(inc.slaDueAt).getTime();
+    return Number.isFinite(due) && due < Date.now();
+  }
+
+  private detectNewIncidents(list: any[]): void {
+    const nextIds = new Set<string>(list.map((i) => i?.incidentId).filter(Boolean));
+    if (!this.pollReady) {
+      this.knownIds = nextIds;
+      this.pollReady = true;
+      return;
+    }
+    const newcomers = list.filter(
+      (i) => i?.incidentId && !this.knownIds.has(i.incidentId),
+    );
+    this.knownIds = nextIds;
+    if (!newcomers.length) return;
+    const newest = newcomers[0];
+    const label = newest.subjectName || newest.eventType || 'incident';
+    this.toast.emit(`เหตุการณ์ใหม่: ${label}`);
+    playIncidentEventSound(newest.eventType);
+    this.overviewChanged.emit();
+  }
+
+  private pruneSelection(): void {
+    if (!this.selectedIds.size) return;
+    const visible = new Set(this.incidents.map((i) => i.incidentId));
+    const next = new Set<string>();
+    for (const id of this.selectedIds) {
+      if (visible.has(id)) next.add(id);
+    }
+    this.selectedIds = next;
   }
 
   private resyncSelected(): void {

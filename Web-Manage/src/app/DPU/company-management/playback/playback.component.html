@@ -1,0 +1,109 @@
+<div class="sv-playback-page">
+  <app-page-toolbar [title]="'cctv.playback.title' | translate">
+    <ng-container controls>
+      <a routerLink="/company/cameras" class="ti-btn ti-btn-light modern-btn">
+        <i class="ri-cctv-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.nav' | translate }}
+      </a>
+      <a routerLink="/company/live-wall" class="ti-btn ti-btn-light modern-btn">
+        <i class="ri-layout-grid-line" aria-hidden="true"></i>
+        {{ 'cctv.liveWall.nav' | translate }}
+      </a>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="loadClips()">
+        {{ 'Refresh' | translate }}
+      </button>
+    </ng-container>
+  </app-page-toolbar>
+  <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.playback.subtitle' | translate }}</p>
+
+  <div class="sv-playback__filters">
+    <label>
+      <span>{{ 'cctv.playback.filterCamera' | translate }}</span>
+      <select class="form-control" [(ngModel)]="filterCameraId" (ngModelChange)="loadClips()">
+        <option value="">{{ 'cctv.playback.allCameras' | translate }}</option>
+        <option *ngFor="let c of cameras" [value]="c.cameraId">{{ c.name }} ({{ c.recordMode }})</option>
+      </select>
+    </label>
+    <label>
+      <span>{{ 'cctv.playback.filterKind' | translate }}</span>
+      <select class="form-control" [(ngModel)]="filterKind" (ngModelChange)="loadClips()">
+        <option value="">{{ 'cctv.playback.allKinds' | translate }}</option>
+        <option value="event">event</option>
+        <option value="continuous_ref">continuous_ref</option>
+      </select>
+    </label>
+    <label *ngIf="filterIncidentId">
+      <span>{{ 'cctv.playback.filterIncident' | translate }}</span>
+      <input class="form-control" [ngModel]="filterIncidentId" readonly />
+    </label>
+  </div>
+
+  <div *ngIf="loading" class="text-muted py-8 text-center">{{ 'Loading...' | translate }}</div>
+  <div *ngIf="error" class="alert alert-danger" role="alert">{{ error }}</div>
+
+  <div class="sv-playback" *ngIf="!loading">
+    <aside class="sv-playback__list modern-card glass">
+      <h3 class="sv-playback__list-title">{{ 'cctv.playback.clips' | translate }}</h3>
+      <div class="sv-playback__empty" *ngIf="!clips.length">
+        {{ 'cctv.playback.empty' | translate }}
+      </div>
+      <button
+        type="button"
+        class="sv-playback__item"
+        *ngFor="let clip of clips"
+        [class.is-active]="selected?.clipId === clip.clipId"
+        (click)="selectClip(clip)"
+      >
+        <div class="sv-playback__item-top">
+          <strong>{{ clip.cameraName || clip.cameraId }}</strong>
+          <span class="sv-playback__kind">{{ kindLabel(clip.kind) }}</span>
+        </div>
+        <div class="sv-playback__item-meta">
+          {{ clip.startedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+          · {{ formatTime((clip.durationMs || 0) / 1000) }}
+        </div>
+      </button>
+    </aside>
+
+    <section class="sv-playback__stage modern-card glass">
+      <div class="sv-playback__empty" *ngIf="!selected">
+        {{ 'cctv.playback.pickClip' | translate }}
+      </div>
+      <ng-container *ngIf="selected">
+        <div class="sv-playback__meta">
+          <div>
+            <strong>{{ selected.cameraName || selected.cameraId }}</strong>
+            <span class="sv-playback__kind">{{ kindLabel(selected.kind) }}</span>
+          </div>
+          <div class="text-sm text-dpu-muted">
+            {{ selected.startedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
+            → {{ selected.endedAt | date: 'HH:mm:ss' }}
+            <span *ngIf="selected.incidentId"> · incident {{ selected.incidentId }}</span>
+          </div>
+        </div>
+        <video
+          #player
+          class="sv-playback__video"
+          [src]="objectUrl"
+          controls
+          playsinline
+          (timeupdate)="onTimeUpdate()"
+          (loadedmetadata)="onTimeUpdate()"
+        ></video>
+        <div class="sv-playback__scrubber" *ngIf="duration > 0">
+          <span>{{ formatTime(currentTime) }}</span>
+          <input
+            type="range"
+            min="0"
+            [max]="duration"
+            step="0.1"
+            [ngModel]="currentTime"
+            (ngModelChange)="onScrub($event)"
+            [attr.aria-label]="'cctv.playback.scrubber' | translate"
+          />
+          <span>{{ formatTime(duration) }}</span>
+        </div>
+      </ng-container>
+    </section>
+  </div>
+</div>

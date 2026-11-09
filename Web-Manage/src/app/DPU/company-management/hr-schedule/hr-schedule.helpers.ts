@@ -77,12 +77,14 @@ export function defaultRetentionSettings(): {
   biometricDays: number;
   punchPhotoDays: number;
   incidentSnapshotDays: number;
+  videoClipDays: number;
   tempHours: number;
 } {
   return {
     biometricDays: 90,
     punchPhotoDays: 90,
     incidentSnapshotDays: 90,
+    videoClipDays: 30,
     tempHours: 24,
   };
 }
@@ -150,6 +152,7 @@ export function retentionFromPdpaSummary(
       retentionPolicy.punchPhotoDays ?? retentionPolicy.imageRetentionDays ?? fallback.punchPhotoDays,
     incidentSnapshotDays:
       retentionPolicy.incidentSnapshotDays ?? fallback.incidentSnapshotDays,
+    videoClipDays: retentionPolicy.videoClipDays ?? fallback.videoClipDays,
     tempHours: retentionPolicy.tempRetentionHours ?? fallback.tempHours,
   };
 }

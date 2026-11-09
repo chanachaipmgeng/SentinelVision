@@ -279,6 +279,12 @@
                           >
                             {{ inc.status || 'OPEN' }}
                           </span>
+                          <span
+                            *ngIf="isOverdue(inc)"
+                            class="inline-flex px-1.5 py-0.5 rounded text-[0.65rem] font-extrabold uppercase tracking-wide text-rose-800 bg-rose-100"
+                          >
+                            SLA overdue
+                          </span>
                           <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)">
                             <button
                               *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"

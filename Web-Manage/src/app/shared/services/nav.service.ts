@@ -388,6 +388,12 @@ export class NavService implements OnDestroy {
             type: 'link',
             permission: 'cameras.read',
           },
+          {
+            path: '/company/playback',
+            title: 'cctv.playback.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
         ],
       },
 

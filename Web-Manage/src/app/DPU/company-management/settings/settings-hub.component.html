@@ -80,6 +80,9 @@
             </div>
           </div>
         }
+        @case ('incident-sla') {
+          <app-incident-sla-settings-panel (statusFlash)="flash($event)"></app-incident-sla-settings-panel>
+        }
         @case ('scan-actions') {
           <app-scan-actions-summary-panel></app-scan-actions-summary-panel>
         }

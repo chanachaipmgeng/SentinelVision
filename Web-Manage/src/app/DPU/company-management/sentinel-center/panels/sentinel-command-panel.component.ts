@@ -180,4 +180,12 @@ export class SentinelCommandPanelComponent implements OnInit {
     const st = (inc?.status || 'OPEN').toUpperCase();
     return st !== 'CLOSED';
   }
+
+  isOverdue(inc: any): boolean {
+    if (!inc?.slaDueAt) return false;
+    const st = (inc?.status || 'OPEN').toUpperCase();
+    if (st === 'CLOSED') return false;
+    const due = new Date(inc.slaDueAt).getTime();
+    return Number.isFinite(due) && due < Date.now();
+  }
 }

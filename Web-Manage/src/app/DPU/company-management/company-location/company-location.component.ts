@@ -8,26 +8,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
-import {
-  GoogleMap,
-  GoogleMapsModule,
-  MapCircle,
-  MapMarker,
-} from '@angular/google-maps';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SharedModule } from '../../../shared/shared.module';
-import { LocationMapComponent } from '../../../shared/components/location-map/location-map.component';
+import {
+  GeofenceMapComponent,
+  GeofencePosition,
+} from '../../../shared/components/geofence-map/geofence-map.component';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
 import { TokenService } from '../../../shared/services/token.service';
-import { mountPlaceAutocomplete } from '../../../shared/utils/place-autocomplete';
 import swal from 'sweetalert';
-
-declare global {
-  interface Window {
-    __dpuMapsAuthFailed?: boolean;
-  }
-}
 
 @Component({
   selector: 'app-company-location',
@@ -38,30 +28,17 @@ declare global {
     TranslateModule,
     NgSelectModule,
     FormsModule,
-    GoogleMapsModule,
-    MapMarker,
-    MapCircle,
-    LocationMapComponent,
+    GeofenceMapComponent,
   ],
   templateUrl: './company-location.component.html',
   styleUrl: './company-location.component.css',
   encapsulation: ViewEncapsulation.None,
 })
 export class CompanyLocationComponent implements OnInit {
-  @ViewChild('placeAutocompleteHost', { static: false })
-  placeAutocompleteHost!: ElementRef<HTMLElement>;
-  @ViewChild(GoogleMap) map!: GoogleMap;
+  @ViewChild('editGeofenceMap') editGeofenceMap?: GeofenceMapComponent;
   @ViewChild('closeModal') public childModal?: ElementRef;
 
   readonly pageSize = 8;
-  readonly markerOptions: google.maps.MarkerOptions = { draggable: false };
-  readonly circleOptions: google.maps.CircleOptions = {
-    fillColor: '#0f766e',
-    fillOpacity: 0.15,
-    strokeColor: '#0f766e',
-    strokeOpacity: 0.7,
-    strokeWeight: 2,
-  };
 
   action: 'add' | 'edit' = 'add';
   loading = false;
@@ -81,8 +58,9 @@ export class CompanyLocationComponent implements OnInit {
   typeFilter: '' | '0' | '1' = '';
   private _searchTerm = '';
 
-  center: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
-  zoom = 12;
+  /** Map pan target for detail + edit (lat/lng). */
+  center = { lat: 13.7563, lng: 100.5018 };
+  zoom = 14;
 
   get searchTerm(): string {
     return this._searchTerm;
@@ -123,7 +101,7 @@ export class CompanyLocationComponent implements OnInit {
     return Math.max(1, Math.ceil(this.totalFiltered / this.pageSize));
   }
 
-  get mapCenter(): google.maps.LatLngLiteral {
+  get mapCenter(): { lat: number; lng: number } {
     return {
       lat: this.toCoord(this.selectModel?.latitude, 13.7563),
       lng: this.toCoord(this.selectModel?.longitude, 100.5018),
@@ -138,20 +116,16 @@ export class CompanyLocationComponent implements OnInit {
     return this.toCoord(this.selected?.longitude, 100.5018);
   }
 
-  get selectedRadiusM(): number {
-    return Math.max(0, Number(this.selected?.radius) || 0) * 1000;
+  get selectedRadiusKm(): number {
+    return Math.max(0, Number(this.selected?.radius) || 0);
   }
 
-  get editRadiusM(): number {
-    return Math.max(0, Number(this.selectModel?.radius) || 0) * 1000;
-  }
-
-  get mapsReady(): boolean {
-    return !window.__dpuMapsAuthFailed && !!(window as any).google?.maps?.Map;
+  get editRadiusKm(): number {
+    return Math.max(0, Number(this.selectModel?.radius) || 0);
   }
 
   get mapsLink(): string {
-    return `https://www.google.com/maps?q=${this.selectedLat},${this.selectedLng}`;
+    return `https://www.openstreetmap.org/?mlat=${this.selectedLat}&mlon=${this.selectedLng}#map=16/${this.selectedLat}/${this.selectedLng}`;
   }
 
   constructor(
@@ -274,23 +248,10 @@ export class CompanyLocationComponent implements OnInit {
     return Math.min(index, 8) * 40;
   }
 
-  async initPlaceAutocomplete() {
-    if (!this.mapsReady) return;
-    const host = this.placeAutocompleteHost?.nativeElement;
-    if (!host) return;
-
-    await mountPlaceAutocomplete(host, (place) => {
-      this.selectModel.latitude = place.lat;
-      this.selectModel.longitude = place.lng;
-      if (place.name) {
-        this.selectModel.locationName = place.name;
-      }
-      this.center = { lat: place.lat, lng: place.lng };
-    });
-  }
-
-  private schedulePlaceAutocomplete() {
-    setTimeout(() => void this.initPlaceAutocomplete(), 150);
+  private scheduleEditMapInvalidate() {
+    // Modal opens via HS overlay; give the host time to become visible.
+    setTimeout(() => this.editGeofenceMap?.invalidateSize(), 180);
+    setTimeout(() => this.editGeofenceMap?.invalidateSize(), 450);
   }
 
   new() {
@@ -305,7 +266,7 @@ export class CompanyLocationComponent implements OnInit {
     this.selectModel.startDate = today;
     this.selectModel.endDate = today;
     this.center = this.mapCenter;
-    this.schedulePlaceAutocomplete();
+    this.scheduleEditMapInvalidate();
   }
 
   view(item: CompanyLocationModel) {
@@ -319,11 +280,17 @@ export class CompanyLocationComponent implements OnInit {
       this.selectModel.endDate = String(this.selectModel.endDate).slice(0, 10);
     }
     this.center = this.mapCenter;
-    this.schedulePlaceAutocomplete();
+    this.scheduleEditMapInvalidate();
   }
 
   openEdit(item: CompanyLocationModel) {
     this.view(item);
+  }
+
+  onEditMapPosition(pos: GeofencePosition) {
+    this.selectModel.latitude = pos.lat;
+    this.selectModel.longitude = pos.lng;
+    this.center = { lat: pos.lat, lng: pos.lng };
   }
 
   save() {
@@ -464,15 +431,6 @@ export class CompanyLocationComponent implements OnInit {
       100.5018
     );
     this.center = this.mapCenter;
-  }
-
-  addMarker(event: google.maps.MapMouseEvent) {
-    if (!event.latLng) return;
-    const lat = event.latLng.toJSON().lat;
-    const lng = event.latLng.toJSON().lng;
-    this.selectModel.latitude = lat;
-    this.selectModel.longitude = lng;
-    this.center = { lat, lng };
   }
 
   private matchesSearch(item: CompanyLocationModel, q: string): boolean {

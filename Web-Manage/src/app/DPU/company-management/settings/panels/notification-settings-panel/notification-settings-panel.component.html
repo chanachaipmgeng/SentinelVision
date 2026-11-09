@@ -2,17 +2,56 @@
   <div class="box-body">
     <h3 class="text-base font-semibold mb-1">{{ 'settingsHub.notify.title' | translate }}</h3>
     <p class="text-sm text-dpu-muted mb-3">{{ 'settingsHub.notify.lead' | translate }}</p>
+
     <label class="form-label" for="dpu-notify-email">{{ 'settingsHub.notify.email' | translate }}</label>
     <input id="dpu-notify-email" class="form-control mb-2" type="email" [(ngModel)]="email" [disabled]="loading" />
+
     <label class="form-label" for="dpu-notify-line">{{ 'settingsHub.notify.lineToken' | translate }}</label>
     <input
       id="dpu-notify-line"
-      class="form-control mb-3"
+      class="form-control mb-1"
       type="password"
       autocomplete="off"
       [(ngModel)]="lineToken"
       [disabled]="loading"
+      [placeholder]="hasLineToken ? ('settingsHub.notify.secretConfigured' | translate) : ''"
     />
+    <p *ngIf="hasLineToken" class="text-xs text-dpu-muted mb-2">{{ 'settingsHub.notify.secretKeepHint' | translate }}</p>
+
+    <label class="form-label" for="dpu-notify-telegram-token">{{ 'settingsHub.notify.telegramBotToken' | translate }}</label>
+    <input
+      id="dpu-notify-telegram-token"
+      class="form-control mb-1"
+      type="password"
+      autocomplete="off"
+      [(ngModel)]="telegramBotToken"
+      [disabled]="loading"
+      [placeholder]="hasTelegramBotToken ? ('settingsHub.notify.secretConfigured' | translate) : ''"
+    />
+    <p *ngIf="hasTelegramBotToken" class="text-xs text-dpu-muted mb-2">{{ 'settingsHub.notify.secretKeepHint' | translate }}</p>
+
+    <label class="form-label" for="dpu-notify-telegram-chat">{{ 'settingsHub.notify.telegramChatId' | translate }}</label>
+    <input
+      id="dpu-notify-telegram-chat"
+      class="form-control mb-2"
+      type="text"
+      autocomplete="off"
+      [(ngModel)]="telegramChatId"
+      [disabled]="loading"
+    />
+
+    <label class="form-label" for="dpu-notify-discord">{{ 'settingsHub.notify.discordWebhookUrl' | translate }}</label>
+    <input
+      id="dpu-notify-discord"
+      class="form-control mb-1"
+      type="password"
+      autocomplete="off"
+      [(ngModel)]="discordWebhookUrl"
+      [disabled]="loading"
+      [placeholder]="hasDiscordWebhookUrl ? ('settingsHub.notify.secretConfigured' | translate) : ''"
+    />
+    <p *ngIf="hasDiscordWebhookUrl" class="text-xs text-dpu-muted mb-3">{{ 'settingsHub.notify.secretKeepHint' | translate }}</p>
+
     <div class="flex flex-wrap items-center gap-2">
       <button
         type="button"

@@ -109,9 +109,11 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 - Attendance exports (`GET /timestamp/export/company/{companyId}?format=xlsx|csv`) stream up to 5,000 rows per request.
 
 ## Multi-Replica Notification Outbox (D3)
-- `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `worker` replicas concurrently without duplicate Email / LINE Messaging / Webhook deliveries.
+- `drain_outbox` uses PostgreSQL `SELECT ... FOR UPDATE SKIP LOCKED`, making it safe to run multiple `worker` replicas concurrently without duplicate Email / LINE Messaging / Telegram / Discord / Webhook deliveries.
 - **LINE Messaging API** (`POST {LINE_MESSAGING_API_BASE}/message/push`) replaced LINE Notify. Needs a channel access token (`LINE_CHANNEL_ACCESS_TOKEN` or per-company setting) **and** a per-user `lineUserId` (stored in `notification_preference`).
-- Secrets in outbox / notify settings (`lineToken`, `webhookSecret`, `lineChannelAccessToken`) are Fernet-sealed when `OUTBOX_ENCRYPTION_KEY` is set (url-safe Fernet key from env — never commit it). Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+- **Telegram Bot API** (`POST https://api.telegram.org/bot{token}/sendMessage`) — company settings `telegramBotToken` + `telegramChatId`.
+- **Discord Incoming Webhook** — company setting `discordWebhookUrl` (full URL is the secret; Fernet-sealed at rest).
+- Secrets in outbox / notify settings (`lineToken`, `webhookSecret`, `lineChannelAccessToken`, `telegramBotToken`, `discordWebhookUrl`) are Fernet-sealed when `OUTBOX_ENCRYPTION_KEY` is set (url-safe Fernet key from env — never commit it). Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
 - Daily missing-attendance cutoff state is stored in `system_setting` under `key = "cutoff_sent:{companyId}"`.
 - Since B7 the dispatcher runs in the `worker` service, not in `dpu-api`. A row that fails `OUTBOX_MAX_ATTEMPTS` (5) deliveries is marked `failed` and stamped `deadLetteredAt`; retry from `/company/notification-center` (Dead letter tab) or `POST /notifications/company/{id}/dead-letter/{outboxId}/retry`.
 - In-app notification center: `/company/notification-center` → Inbox / Dead letter / Preferences / Templates (i18n keys under `notify.*`).
@@ -122,7 +124,7 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 | Face enrollment | Face image + 512-d embedding + consent version/text | Identify employee for attendance / access | Explicit consent (`biometric_consent_*` on `member`; version+text on kiosk/enroll) | `retention:{companyId}.biometricDays` (default `IMAGE_RETENTION_DAYS`) | GPU face workers (in-process / Face Core); no third-party AI SaaS |
 | Punch photo | JPEG on punch (`employee_timestamp.photoTimestamp`) | Dispute / audit of check-in | Legitimate interest / employment | `punchPhotoDays` | Company admins; payroll export excludes raw images |
 | Sentinel incident snapshot | Frame crop on watchlist/access hit | Security investigation | Legitimate interest / legal obligation | `incidentSnapshotDays` | Company security operators |
-| Notification outbox | Event payload (+ sealed channel secrets) | Deliver LINE/email/webhook alerts | Legitimate interest | Purged after send / dead-letter review | LINE Messaging API, SMTP, customer webhook |
+| Notification outbox | Event payload (+ sealed channel secrets) | Deliver LINE/email/Telegram/Discord/webhook alerts | Legitimate interest | Purged after send / dead-letter review | LINE Messaging API, Telegram Bot API, Discord webhooks, SMTP, customer webhook |
 | Audit log | Actor, path, companyId | Accountability | Legal obligation | Backup retention (see B5) | System / company admins |
 
 **DSAR:** `GET /hr/company/{companyId}/members/{memberId}/dsar-export` (JSON; embeddings flagged present, not exported raw). **Erasure:** `POST .../erasure` or revoke consent — deletes encodings, punch photos, incident snapshots and clears consent fields. Per-type retention is applied by the worker `retention` job via `company_retention_tick`.

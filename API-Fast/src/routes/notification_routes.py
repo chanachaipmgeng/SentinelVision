@@ -89,6 +89,30 @@ async def pending_count(
     return {"pending": int(count or 0), "unreadInApp": int(unread or 0)}
 
 
+def _secret_or_keep(body: dict | None, key: str, existing: dict, *alt_keys: str) -> str:
+    """Non-empty body secret wins; blank/omitted keeps the sealed value already stored."""
+    for candidate in (key, *alt_keys):
+        if body is not None and candidate in body:
+            raw = body.get(candidate)
+            if raw is not None and str(raw).strip() != "":
+                return str(raw).strip()
+    for candidate in (key, *alt_keys):
+        kept = str(existing.get(candidate) or "").strip()
+        if kept:
+            return kept
+    return ""
+
+
+def _field_or_keep(body: dict | None, key: str, existing: dict, default: str = "") -> str:
+    """Use body[key] when present; otherwise keep existing (hub partial saves must not wipe)."""
+    if body is not None and key in body:
+        val = body.get(key)
+        return "" if val is None else str(val).strip()
+    if key in existing and existing.get(key) is not None:
+        return str(existing.get(key)).strip()
+    return default
+
+
 @router.get("/company/{companyId}/settings")
 async def get_notify_settings(
     companyId: UUID,
@@ -108,6 +132,11 @@ async def get_notify_settings(
         "webhookUrl": "",
         "webhookSecret": "",
         "hasWebhookSecret": False,
+        "telegramBotToken": "",
+        "telegramChatId": "",
+        "hasTelegramBotToken": False,
+        "discordWebhookUrl": "",
+        "hasDiscordWebhookUrl": False,
         "cutoff": "09:30",
         "events": [
             "attendance.checked_in",
@@ -122,14 +151,21 @@ async def get_notify_settings(
     val = dict(row.value)
     secret = str(val.get("webhookSecret") or "")
     line_tok = str(val.get("lineChannelAccessToken") or val.get("lineToken") or "")
+    tg_tok = str(val.get("telegramBotToken") or "")
+    discord_url = str(val.get("discordWebhookUrl") or "")
     return {
         **default_cfg,
         **val,
         "lineToken": "",  # never echo secret
         "lineChannelAccessToken": "",
         "webhookSecret": "",
+        "telegramBotToken": "",
+        "discordWebhookUrl": "",
         "hasWebhookSecret": bool(secret),
         "hasLineToken": bool(line_tok),
+        "hasTelegramBotToken": bool(tg_tok),
+        "hasDiscordWebhookUrl": bool(discord_url),
+        "telegramChatId": str(val.get("telegramChatId") or ""),
     }
 
 
@@ -146,36 +182,38 @@ async def put_notify_settings(
     key = _notify_key(str(companyId))
     row = await db.get(SystemSetting, key)
     existing = row.value if (row and isinstance(row.value, dict)) else {}
-    raw_secret = (body or {}).get("webhookSecret")
-    webhook_secret = (
-        str(raw_secret).strip()
-        if raw_secret is not None and str(raw_secret).strip() != ""
-        else str(existing.get("webhookSecret") or "")
+    webhook_secret = _secret_or_keep(body, "webhookSecret", existing)
+    line_token = _secret_or_keep(
+        body, "lineChannelAccessToken", existing, "lineToken"
     )
-    raw_line = (body or {}).get("lineChannelAccessToken") or (body or {}).get("lineToken")
-    line_token = (
-        str(raw_line).strip()
-        if raw_line is not None and str(raw_line).strip() != ""
-        else str(existing.get("lineChannelAccessToken") or existing.get("lineToken") or "")
-    )
+    telegram_bot_token = _secret_or_keep(body, "telegramBotToken", existing)
+    discord_webhook_url = _secret_or_keep(body, "discordWebhookUrl", existing)
     # Store sealed at rest in system_setting when OUTBOX_ENCRYPTION_KEY is set.
     sealed_line = encrypt_secret(line_token) if line_token else ""
     sealed_webhook = encrypt_secret(webhook_secret) if webhook_secret else ""
+    sealed_telegram = encrypt_secret(telegram_bot_token) if telegram_bot_token else ""
+    sealed_discord = encrypt_secret(discord_webhook_url) if discord_webhook_url else ""
+    default_events = [
+        "attendance.checked_in",
+        "attendance.checked_out",
+        "attendance.approved",
+        "attendance.missing",
+        "import.finished",
+    ]
+    events = (body or {}).get("events") if body is not None and "events" in (body or {}) else None
+    if not isinstance(events, list) or not events:
+        events = existing.get("events") if isinstance(existing.get("events"), list) else default_events
     value = {
-        "email": (body or {}).get("email") or "",
+        "email": _field_or_keep(body, "email", existing, ""),
         "lineToken": sealed_line,
         "lineChannelAccessToken": sealed_line,
-        "webhookUrl": (body or {}).get("webhookUrl") or "",
+        "webhookUrl": _field_or_keep(body, "webhookUrl", existing, ""),
         "webhookSecret": sealed_webhook,
-        "cutoff": (body or {}).get("cutoff") or "09:30",
-        "events": (body or {}).get("events")
-        or [
-            "attendance.checked_in",
-            "attendance.checked_out",
-            "attendance.approved",
-            "attendance.missing",
-            "import.finished",
-        ],
+        "telegramBotToken": sealed_telegram,
+        "telegramChatId": _field_or_keep(body, "telegramChatId", existing, ""),
+        "discordWebhookUrl": sealed_discord,
+        "cutoff": _field_or_keep(body, "cutoff", existing, "09:30") or "09:30",
+        "events": events,
     }
     if row:
         row.value = value
@@ -185,13 +223,18 @@ async def put_notify_settings(
     return {
         "email": value["email"],
         "webhookUrl": value["webhookUrl"],
+        "telegramChatId": value["telegramChatId"],
         "cutoff": value["cutoff"],
         "events": value["events"],
         "hasWebhookSecret": bool(webhook_secret),
         "hasLineToken": bool(line_token),
+        "hasTelegramBotToken": bool(telegram_bot_token),
+        "hasDiscordWebhookUrl": bool(discord_webhook_url),
         "lineToken": "",
         "lineChannelAccessToken": "",
         "webhookSecret": "",
+        "telegramBotToken": "",
+        "discordWebhookUrl": "",
     }
 
 
@@ -264,6 +307,34 @@ async def test_notify(
             company_id=cid_str,
         )
         queued_channels.append("webhook")
+    tg_tok = decrypt_secret(str(value.get("telegramBotToken") or ""))
+    tg_chat = str(value.get("telegramChatId") or "").strip()
+    if tg_tok and tg_chat:
+        await enqueue(
+            "system.test",
+            "telegram",
+            {
+                "telegramBotToken": tg_tok,
+                "telegramChatId": tg_chat,
+                "subject": "DPU Telegram test",
+                "body": "DPU Telegram notification test",
+            },
+            company_id=cid_str,
+        )
+        queued_channels.append("telegram")
+    discord_url = decrypt_secret(str(value.get("discordWebhookUrl") or ""))
+    if discord_url:
+        await enqueue(
+            "system.test",
+            "discord",
+            {
+                "discordWebhookUrl": discord_url,
+                "subject": "DPU Discord test",
+                "body": "DPU Discord notification test",
+            },
+            company_id=cid_str,
+        )
+        queued_channels.append("discord")
     await enqueue(
         "system.test",
         "in_app",

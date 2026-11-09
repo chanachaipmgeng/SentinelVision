@@ -18,4 +18,5 @@ from . import (  # noqa: F401
     rbac,
     notification_platform,
     camera,
+    video_clip,
 )

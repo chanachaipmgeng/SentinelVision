@@ -35,16 +35,18 @@ describe('hr-schedule.helpers', () => {
 
   it('retentionFromPdpaSummary merges imageRetentionDays alias', () => {
     const result = retentionFromPdpaSummary(
-      { imageRetentionDays: 30, tempRetentionHours: 12 },
+      { imageRetentionDays: 30, tempRetentionHours: 12, videoClipDays: 14 },
       {
         biometricDays: 90,
         punchPhotoDays: 90,
         incidentSnapshotDays: 90,
+        videoClipDays: 30,
         tempHours: 24,
       },
     );
     expect(result.punchPhotoDays).toBe(30);
     expect(result.tempHours).toBe(12);
+    expect(result.videoClipDays).toBe(14);
   });
 
   it('isHrScheduleTab validates tab ids', () => {

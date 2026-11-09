@@ -63,6 +63,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 \
+        ffmpeg \
         libgl1 \
         libglib2.0-0 \
         libgomp1 \
@@ -82,7 +83,7 @@ COPY --chown=${APP_UID}:${APP_GID} . .
 
 # Image volumes (uploaded / enrolled / temp) are owned by `app`; existing root-owned volumes
 # from pre-B4 deployments must be chown'ed once — see docs/RUNBOOK.md "Upgrade to non-root".
-RUN mkdir -p enrolled_images uploaded_images temp_images import_jobs \
+RUN mkdir -p enrolled_images uploaded_images temp_images import_jobs video_clips \
     && chown -R ${APP_UID}:${APP_GID} /app
 
 USER ${APP_UID}:${APP_GID}

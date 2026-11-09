@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -30,7 +31,7 @@ interface AccessLogsViewFilters {
     '../../../../shared/styles/dpu-filter-toolbar.css',
   ],
 })
-export class SentinelAccessLogsPanelComponent implements OnInit {
+export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
@@ -44,12 +45,17 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
   savedFilters: AccessLogsViewFilters = { zoneId: '', status: '', severity: '' };
   selectedIncident: any = null;
   drawerOpen = false;
+  incidentClipUrl = '';
+  incidentClipTime = 0;
+  incidentClipDuration = 0;
+  private incidentClipObjectUrl = '';
 
   constructor(
     private api: SentinelApiService,
     private token: TokenService,
     private router: Router,
     private authedImages: AuthedImageService,
+    private http: HttpClient,
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
@@ -100,9 +106,57 @@ export class SentinelAccessLogsPanelComponent implements OnInit {
     if (this.companyId) this.loadIncidents();
   }
 
+  ngOnDestroy(): void {
+    this.revokeIncidentClip();
+  }
+
   openIncident(inc: any): void {
     this.selectedIncident = inc;
     this.drawerOpen = true;
+    this.loadIncidentClip(inc?.incidentId);
+  }
+
+  onIncidentClipScrub(value: string | number): void {
+    this.incidentClipTime = Number(value) || 0;
+    const video = document.querySelector(
+      '.sv-incident__clip-video',
+    ) as HTMLVideoElement | null;
+    if (video) video.currentTime = this.incidentClipTime;
+  }
+
+  private loadIncidentClip(incidentId: string | null | undefined): void {
+    this.revokeIncidentClip();
+    this.incidentClipUrl = '';
+    this.incidentClipTime = 0;
+    this.incidentClipDuration = 0;
+    if (!this.companyId || !incidentId) return;
+    this.http
+      .get<any[]>(`/cameras/company/${this.companyId}/clips`, {
+        params: { incidentId, kind: 'event', limit: '1' },
+      })
+      .subscribe({
+        next: (rows) => {
+          const clip = (rows || [])[0];
+          if (!clip?.clipId) return;
+          this.incidentClipDuration = Math.max(0, (clip.durationMs || 0) / 1000);
+          const path =
+            clip.downloadPath ||
+            `/cameras/company/${this.companyId}/clips/${clip.clipId}/download`;
+          this.http.get(path, { responseType: 'blob' }).subscribe({
+            next: (blob) => {
+              this.incidentClipObjectUrl = URL.createObjectURL(blob);
+              this.incidentClipUrl = this.incidentClipObjectUrl;
+            },
+          });
+        },
+      });
+  }
+
+  private revokeIncidentClip(): void {
+    if (this.incidentClipObjectUrl) {
+      URL.revokeObjectURL(this.incidentClipObjectUrl);
+      this.incidentClipObjectUrl = '';
+    }
   }
 
   isSelectedIncident(inc: any): boolean {

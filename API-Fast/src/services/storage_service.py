@@ -20,16 +20,19 @@ ROOTS = {
     "uploaded_images": Path("uploaded_images"),
     "enrolled_images": Path("enrolled_images"),
     "temp_images": Path("temp_images"),
+    "video_clips": Path("video_clips"),
 }
 
 # Evidence retention kinds (D4). Punch photos and incident snapshots must not share policy.
 EVIDENCE_KIND_PUNCH_PHOTO = "punch_photo"
 EVIDENCE_KIND_INCIDENT_SNAPSHOT = "incident_snapshot"
+EVIDENCE_KIND_VIDEO_CLIP = "video_clip"
 INCIDENT_SNAPSHOT_PREFIX = "incident_"
+VIDEO_CLIP_PREFIX = "videoclip_"
 
 
 def ensure_dirs() -> None:
-    """Create the image roots and make sure the (non-root) API user can write to them.
+    """Create the image / clip roots and make sure the (non-root) API user can write to them.
 
     Named volumes created by pre-B4 root containers stay root-owned; fail with the fix
     instead of surfacing as 500s on the first upload (docs/RUNBOOK.md "Upgrade to non-root").
@@ -43,7 +46,7 @@ def ensure_dirs() -> None:
             not_writable.append(str(path.resolve()))
     if not_writable:
         raise RuntimeError(
-            "image directories are not writable by uid %s: %s — chown the volumes once, e.g. "
+            "storage directories are not writable by uid %s: %s — chown the volumes once, e.g. "
             "`docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 %s`"
             % (os.getuid(), ", ".join(not_writable), " ".join(not_writable))
         )
@@ -357,8 +360,19 @@ def store_evidence_image(
 ) -> str:
     """Store evidence under a retention kind. Incident snapshots keep a distinct prefix
     so global punch-photo retention never deletes them (D4 ``incidentSnapshotDays`` owns them).
+    Video clips live in ``video_clips/`` and never share punch-photo retention.
     """
     safe_name = Path(filename).name
+    if kind == EVIDENCE_KIND_VIDEO_CLIP:
+        if not safe_name.startswith(VIDEO_CLIP_PREFIX):
+            safe_name = f"{VIDEO_CLIP_PREFIX}{safe_name}"
+        return store_image_file(
+            "video_clips",
+            safe_name,
+            source_path,
+            move=move,
+            content_type=content_type or "video/mp4",
+        )
     if kind == EVIDENCE_KIND_INCIDENT_SNAPSHOT:
         if not safe_name.startswith(INCIDENT_SNAPSHOT_PREFIX):
             safe_name = f"{INCIDENT_SNAPSHOT_PREFIX}{safe_name}"
@@ -369,6 +383,28 @@ def store_evidence_image(
     return store_image_file(
         "uploaded_images", safe_name, source_path, move=move, content_type=content_type
     )
+
+
+def store_evidence_bytes(
+    kind: str,
+    filename: str,
+    content: bytes,
+    *,
+    content_type: str = "application/octet-stream",
+) -> str:
+    """Byte-oriented evidence store (used by video clip export)."""
+    safe_name = Path(filename).name
+    if kind == EVIDENCE_KIND_VIDEO_CLIP:
+        if not safe_name.startswith(VIDEO_CLIP_PREFIX):
+            safe_name = f"{VIDEO_CLIP_PREFIX}{safe_name}"
+        return store_image_bytes(
+            "video_clips", safe_name, content, content_type=content_type or "video/mp4"
+        )
+    if kind == EVIDENCE_KIND_INCIDENT_SNAPSHOT:
+        if not safe_name.startswith(INCIDENT_SNAPSHOT_PREFIX):
+            safe_name = f"{INCIDENT_SNAPSHOT_PREFIX}{safe_name}"
+        return store_image_bytes("uploaded_images", safe_name, content, content_type=content_type)
+    return store_image_bytes("uploaded_images", safe_name, content, content_type=content_type)
 
 
 def retention_tick() -> dict:
@@ -395,6 +431,14 @@ def retention_tick() -> dict:
             incident_days * 86400,
             include_prefixes=(INCIDENT_SNAPSHOT_PREFIX,),
         )
+    clip_days = int(
+        getattr(settings, "VIDEO_CLIP_RETENTION_DAYS", None)
+        or getattr(settings, "IMAGE_RETENTION_DAYS", 90)
+        or 90
+    )
+    clips = 0
+    if clip_days > 0:
+        clips = purge_older_than("video_clips", clip_days * 86400)
     return {
         "backend": backend,
         "s3Configured": is_s3_enabled(),
@@ -402,9 +446,11 @@ def retention_tick() -> dict:
         "tempRemoved": temp,
         "uploadsRemoved": punches,
         "incidentSnapshotsRemoved": incidents,
+        "videoClipsRemoved": clips,
         "evidenceKinds": {
             EVIDENCE_KIND_PUNCH_PHOTO: "uploaded_images (non-incident_*)",
             EVIDENCE_KIND_INCIDENT_SNAPSHOT: f"uploaded_images ({INCIDENT_SNAPSHOT_PREFIX}*)",
+            EVIDENCE_KIND_VIDEO_CLIP: f"video_clips ({VIDEO_CLIP_PREFIX}*)",
         },
     }
 

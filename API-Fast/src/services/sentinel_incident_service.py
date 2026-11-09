@@ -133,13 +133,17 @@ async def record_incident(
     distance: Optional[float] = None,
     snapshot_url: Optional[str] = None,
     action_taken: Optional[str] = None,
+    camera_id: Optional[UUID] = None,
     outbox_factory: Optional[Callable[[], Optional[NotificationOutbox]]] = None,
     commit: bool = True,
+    schedule_clip: bool = True,
 ) -> tuple[SentinelIncidentLog, bool]:
     """
     Insert a new incident, or refresh an open duplicate within the dedupe window.
 
     Returns ``(incident, created_new)``. When ``created_new`` is False, outbox is skipped.
+    On a new incident, optionally schedules a Phase 4B event clip (5s pre / 10s post)
+    when a camera can be resolved (explicit ``camera_id`` or zone-matched camera).
     """
     now = datetime.now(timezone.utc)
     key = build_dedupe_key(
@@ -191,6 +195,28 @@ async def record_incident(
     if commit:
         await db.commit()
         await db.refresh(inc)
+
+    if schedule_clip and commit:
+        try:
+            from ..services import video_clip_service
+
+            cam = await video_clip_service.resolve_camera_for_incident(
+                db, company_id, camera_id=camera_id, zone_id=zone_id
+            )
+            if cam is not None and (cam.recordMode or "").strip().lower() != "off":
+                import asyncio
+
+                asyncio.create_task(
+                    video_clip_service.schedule_incident_clip_export(
+                        company_id=company_id,
+                        camera_id=cam.cameraId,
+                        incident_id=inc.incidentId,
+                        occurred_at=inc.occurredAt or now,
+                    )
+                )
+        except Exception as exc:
+            logger.warning("Failed to schedule incident clip export: %s", exc)
+
     return inc, True
 
 

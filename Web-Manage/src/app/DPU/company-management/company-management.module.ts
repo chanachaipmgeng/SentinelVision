@@ -208,6 +208,11 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./live-wall/live-wall.component').then((m) => m.LiveWallComponent),
     },
+    {
+      path: 'company/playback',
+      loadComponent: () =>
+        import('./playback/playback.component').then((m) => m.PlaybackComponent),
+    },
     { path: 'company/settings', pathMatch: 'full', redirectTo: 'company/settings/notifications' },
     {
       path: 'company/settings/:section',

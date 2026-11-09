@@ -244,6 +244,30 @@
       </ng-template>
     </figure>
 
+    <div class="sv-incident__clip" *ngIf="incidentClipUrl as clipUrl">
+      <div class="sv-incident__clip-label">{{ 'listKit.accessLogs.clipPlayback' | translate }}</div>
+      <video class="sv-incident__clip-video" [src]="clipUrl" controls playsinline></video>
+      <input
+        *ngIf="incidentClipDuration > 0"
+        class="sv-incident__clip-scrub"
+        type="range"
+        min="0"
+        [max]="incidentClipDuration"
+        step="0.1"
+        [ngModel]="incidentClipTime"
+        (ngModelChange)="onIncidentClipScrub($event)"
+        [attr.aria-label]="'cctv.playback.scrubber' | translate"
+      />
+    </div>
+    <a
+      class="sv-incident__link sv-incident__playback-link"
+      [routerLink]="['/company/playback']"
+      [queryParams]="{ incidentId: inc.incidentId }"
+    >
+      <i class="ri-play-circle-line me-1" aria-hidden="true"></i>
+      {{ 'cctv.playback.openFromIncident' | translate }}
+    </a>
+
     <div class="sv-incident__head">
       <h3 class="sv-incident__name">{{ inc.subjectName || 'Unknown' }}</h3>
       <span class="sv-incident__pill" [attr.data-tone]="(inc.severity || 'INFO').toLowerCase()">{{ inc.severity || 'INFO' }}</span>

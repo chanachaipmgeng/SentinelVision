@@ -10,6 +10,7 @@ import { SharedModule } from '../../../shared/shared.module';
 import { HrPdpaTabComponent } from '../hr-schedule/tabs/hr-pdpa-tab.component';
 import { HrSecurityTabComponent } from '../hr-schedule/tabs/hr-security-tab.component';
 import { DevicesSummaryPanelComponent } from './panels/devices-summary-panel.component';
+import { IncidentSlaSettingsPanelComponent } from './panels/incident-sla-settings-panel.component';
 import { NotificationSettingsPanelComponent } from './panels/notification-settings-panel/notification-settings-panel.component';
 import { ScanActionsSummaryPanelComponent } from './panels/scan-actions-summary-panel.component';
 import {
@@ -31,6 +32,7 @@ import {
     StatChipComponent,
     EmptyStateComponent,
     NotificationSettingsPanelComponent,
+    IncidentSlaSettingsPanelComponent,
     ScanActionsSummaryPanelComponent,
     DevicesSummaryPanelComponent,
     HrSecurityTabComponent,

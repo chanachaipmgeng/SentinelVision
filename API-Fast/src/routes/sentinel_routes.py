@@ -33,10 +33,16 @@ from ..services.sentinel_identity_service import (
     serialize_identity as _serialize_identity,
     serialize_zone as _serialize_zone,
 )
+from ..services.incident_sla_service import (
+    get_incident_sla_settings,
+    put_incident_sla_settings,
+)
 from ..services.sentinel_incident_service import (
     acknowledge_incident,
+    acknowledge_incidents_bulk,
     assign_incident,
     close_incident,
+    close_incidents_bulk,
     dispatch_relay_webhook_async as _dispatch_relay_webhook_async,
     evaluate_kiosk_sentinel_match,
     evaluate_unified_scan_decision,
@@ -331,6 +337,27 @@ async def unified_sentinel_scan(
     )
 
 
+@router.get("/company/{companyId}/incident-sla-settings")
+async def get_company_incident_sla_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await get_incident_sla_settings(db, companyId)
+
+
+@router.put("/company/{companyId}/incident-sla-settings")
+async def put_company_incident_sla_settings(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await put_incident_sla_settings(db, companyId, body or {})
+
+
 @router.get("/company/{companyId}/incidents")
 async def list_sentinel_incidents(
     companyId: UUID,
@@ -353,6 +380,40 @@ async def list_sentinel_incidents(
         zone_id=zoneId,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.post("/company/{companyId}/incidents/bulk-acknowledge")
+async def bulk_acknowledge_sentinel_incidents(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    actor = current_member_var.get()
+    return await acknowledge_incidents_bulk(
+        db,
+        companyId,
+        (body or {}).get("incidentIds"),
+        actor.memberId if actor else None,
+    )
+
+
+@router.post("/company/{companyId}/incidents/bulk-close")
+async def bulk_close_sentinel_incidents(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    actor = current_member_var.get()
+    return await close_incidents_bulk(
+        db,
+        companyId,
+        (body or {}).get("incidentIds"),
+        actor.memberId if actor else None,
     )
 
 

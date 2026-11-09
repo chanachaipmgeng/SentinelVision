@@ -56,7 +56,7 @@ async def upsert_pull_path(
         "record": bool(record),
     }
     if record:
-        body["recordPath"] = f"/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
+        body["recordPath"] = "/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
 
     timeout = httpx.Timeout(8.0, connect=3.0)
     async with httpx.AsyncClient(timeout=timeout) as client:

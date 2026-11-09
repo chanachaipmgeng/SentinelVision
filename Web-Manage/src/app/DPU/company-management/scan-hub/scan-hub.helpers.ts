@@ -60,6 +60,12 @@ const MODULE_META: Record<
     icon: 'ri-calendar-event-line',
     stationMode: 'EVENT_CHECKIN',
   },
+  CCTV: {
+    label: 'module.cctv',
+    hint: 'module.cctv.hint',
+    icon: 'ri-cctv-line',
+    stationMode: null,
+  },
 };
 
 /** Toggle a pluggable module on/off; always-on modules are ignored. */

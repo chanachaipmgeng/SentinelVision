@@ -22,6 +22,7 @@ ALL_PLATFORM_MODULES = (
     "WATCHLIST",
     "VISITOR",
     "EVENTS",
+    "CCTV",
     "GOVERNANCE",
 )
 ALWAYS_ON_MODULES = ("CORE", "GOVERNANCE")
@@ -31,6 +32,7 @@ TOGGLEABLE_COMPANY_MODULES = (
     "WATCHLIST",
     "VISITOR",
     "EVENTS",
+    "CCTV",
 )
 VALID_STATION_MODES = (
     "ATTENDANCE",
@@ -45,8 +47,8 @@ VALID_UNKNOWN_FACE_ACTIONS = ("IGNORE", "LOG_INCIDENT")
 # Package → allowed toggleable modules (D5 atop modules:{companyId}).
 PACKAGE_PRESETS_MODULES: dict[str, list[str]] = {
     "STARTER": ["ATTENDANCE"],
-    "PRO": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR"],
-    "ENTERPRISE": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR", "EVENTS"],
+    "PRO": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR", "CCTV"],
+    "ENTERPRISE": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR", "EVENTS", "CCTV"],
 }
 
 DEFAULT_COMPANY_MODULE_CONFIG: dict[str, Any] = {
@@ -56,6 +58,7 @@ DEFAULT_COMPANY_MODULE_CONFIG: dict[str, Any] = {
         "WATCHLIST",
         "VISITOR",
         "EVENTS",
+        "CCTV",
     ],
     "defaultStationMode": "ATTENDANCE",
     "defaultZoneId": None,

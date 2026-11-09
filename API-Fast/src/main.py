@@ -42,6 +42,7 @@ from .routes import (
     notification_routes,
     hr_routes,
     sentinel_routes,
+    camera_routes,
 )
 
 assert_runtime_secrets_configured()
@@ -276,6 +277,7 @@ def _mount_api(prefix: str = "") -> None:
     app.include_router(
         sentinel_routes.router, prefix=f"{p}/sentinel", tags=["SentinelVision Security & Access"]
     )
+    app.include_router(camera_routes.router, prefix=f"{p}/cameras", tags=["CCTV Cameras"])
 
 
 # Legacy root paths (SPA / kiosk continue to work unchanged).

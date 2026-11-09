@@ -367,6 +367,30 @@ export class NavService implements OnDestroy {
         ],
       },
 
+      { headTitle: 'CCTV — Cameras', moduleId: 'CCTV', permission: 'cameras.read' },
+      {
+        title: 'cctv.nav.module',
+        icon: 'video',
+        type: 'sub',
+        active: false,
+        moduleId: 'CCTV',
+        permission: 'cameras.read',
+        children: [
+          {
+            path: '/company/cameras',
+            title: 'cctv.cameras.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
+          {
+            path: '/company/live-wall',
+            title: 'cctv.liveWall.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
+        ],
+      },
+
       { headTitle: 'GOVERNANCE — Governance', moduleId: 'GOVERNANCE', permission: 'audit.read' },
       {
         icon: 'file-list',

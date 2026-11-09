@@ -213,6 +213,13 @@ class Settings(BaseSettings):
     SERVICE_NOTIFY_TOKEN: str = ""
     WEBHOOK_SIGNING_SECRET: str = ""
 
+    # Phase 3 CCTV / MediaMTX
+    MEDIAMTX_ENABLED: bool = True
+    MEDIAMTX_API_URL: str = "http://mediamtx:9997"
+    MEDIAMTX_WHEP_BASE_PATH: str = "/mediamtx"
+    MEDIAMTX_HLS_BASE_PATH: str = "/mediamtx-hls"
+    MEDIAMTX_RTSP_PUBLISH_URL: str = "rtsp://mediamtx:8554"
+
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 

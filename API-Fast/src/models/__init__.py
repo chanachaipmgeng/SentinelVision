@@ -17,4 +17,5 @@ from . import (  # noqa: F401
     approvals_payroll,
     rbac,
     notification_platform,
+    camera,
 )

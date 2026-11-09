@@ -229,18 +229,13 @@
             <span class="loc-map-coords">{{ selectedLat | number:'1.5-5' }}, {{ selectedLng | number:'1.5-5' }}</span>
           </div>
           <div class="loc-map-frame">
-            @if (mapsReady) {
-              <google-map height="100%" width="100%" [center]="center" [zoom]="zoom">
-                <map-circle
-                  [center]="center"
-                  [radius]="selectedRadiusM"
-                  [options]="circleOptions">
-                </map-circle>
-                <map-marker [position]="center" [options]="markerOptions"></map-marker>
-              </google-map>
-            } @else {
-              <app-location-map [lat]="selectedLat" [lng]="selectedLng" [zoom]="15" height="300px"></app-location-map>
-            }
+            <app-geofence-map
+              [lat]="selectedLat"
+              [lng]="selectedLng"
+              [radiusKm]="selectedRadiusKm"
+              [zoom]="zoom"
+              height="300px">
+            </app-geofence-map>
           </div>
         </div>
       </div>
@@ -271,13 +266,9 @@
               class="form-control">
           </div>
 
-          <div class="col-span-12" *ngIf="mapsReady">
-            <label class="form-label">ค้นหาบนแผนที่</label>
-            <div #placeAutocompleteHost class="w-full"></div>
-          </div>
-          <div class="col-span-12" *ngIf="!mapsReady">
-            <div class="loc-maps-hint">
-              Google Maps ยังใช้ไม่ได้บนโดเมนนี้ — ระบุพิกัดเอง หรือเปิด Maps แล้วคัดลอก lat/lng
+          <div class="col-span-12">
+            <div class="loc-maps-hint loc-maps-hint--info">
+              คลิกแผนที่เพื่อปักหมุด หรือกรอกพิกัดด้านล่าง — รัศมีหน่วยกิโลเมตร (เหมือนเดิม)
             </div>
           </div>
 
@@ -318,19 +309,16 @@
           <div class="col-span-12">
             <label class="form-label">แผนที่ — คลิกเพื่อปักหมุด</label>
             <div class="loc-modal-map">
-              @if (mapsReady) {
-                <google-map height="320px" width="100%" [center]="mapCenter" [zoom]="12" (mapClick)="addMarker($event)">
-                  <map-circle [center]="mapCenter" [radius]="editRadiusM" [options]="circleOptions"></map-circle>
-                  <map-marker [position]="mapCenter" [options]="markerOptions"></map-marker>
-                </google-map>
-              } @else {
-                <app-location-map
-                  [lat]="mapCenter.lat"
-                  [lng]="mapCenter.lng"
-                  [zoom]="14"
-                  height="280px">
-                </app-location-map>
-              }
+              <app-geofence-map
+                #editGeofenceMap
+                [lat]="mapCenter.lat"
+                [lng]="mapCenter.lng"
+                [radiusKm]="editRadiusKm"
+                [zoom]="12"
+                [editable]="true"
+                height="320px"
+                (positionChange)="onEditMapPosition($event)">
+              </app-geofence-map>
             </div>
           </div>
         </div>

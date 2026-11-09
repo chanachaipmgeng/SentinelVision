@@ -487,10 +487,10 @@
   height: 300px;
 }
 
-.loc-map-frame google-map,
-.loc-map-frame .map-container,
-.loc-modal-map google-map,
-.loc-modal-map .map-container {
+.loc-map-frame app-geofence-map,
+.loc-map-frame .dpu-geofence-map,
+.loc-modal-map app-geofence-map,
+.loc-modal-map .dpu-geofence-map {
   display: block;
   width: 100% !important;
   height: 100%;
@@ -518,6 +518,12 @@
   font-weight: 600;
   color: #9a3412;
   background: rgba(254, 243, 199, 0.95);
+}
+
+.loc-maps-hint--info {
+  color: #0b4f4a;
+  background: rgba(15, 118, 110, 0.1);
+  border: 1px solid rgba(15, 118, 110, 0.18);
 }
 
 .ng-dropdown-panel {

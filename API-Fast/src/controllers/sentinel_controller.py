@@ -353,11 +353,19 @@ async def create_zone(db: AsyncSession, company_id: UUID, body: dict) -> dict:
     loc_raw = body.get("locationId")
     loc_id = UUID(str(loc_raw)) if loc_raw else None
 
+    floor_raw = body.get("siteFloorId")
+    floor_id = UUID(str(floor_raw)) if floor_raw else None
+    map_x = body.get("mapPosX")
+    map_y = body.get("mapPosY")
+
     zone = SentinelAccessZone(
         companyId=company_id,
         name=name,
         code=str(body.get("code") or "GATE-01").strip().upper(),
         locationId=loc_id,
+        siteFloorId=floor_id,
+        mapPosX=None if map_x in (None, "") else float(map_x),
+        mapPosY=None if map_y in (None, "") else float(map_y),
         stationMode=station_mode,
         allowedDepartments=[str(d) for d in allowed_depts if d],
         allowedIdentityTypes=[str(t).upper() for t in allowed_types if t],
@@ -403,6 +411,16 @@ async def update_zone(db: AsyncSession, company_id: UUID, zone_id: UUID, body: d
         zone.relaySecret = seal_relay_secret(str(body.get("relaySecret") or "").strip() or None)
     if "isActive" in body:
         zone.isActive = bool(body["isActive"])
+    if "locationId" in body:
+        loc_raw = body.get("locationId")
+        zone.locationId = UUID(str(loc_raw)) if loc_raw else None
+    if "siteFloorId" in body:
+        floor_raw = body.get("siteFloorId")
+        zone.siteFloorId = UUID(str(floor_raw)) if floor_raw else None
+    if "mapPosX" in body:
+        zone.mapPosX = None if body.get("mapPosX") in (None, "") else float(body["mapPosX"])
+    if "mapPosY" in body:
+        zone.mapPosY = None if body.get("mapPosY") in (None, "") else float(body["mapPosY"])
 
     await db.commit()
     await db.refresh(zone)

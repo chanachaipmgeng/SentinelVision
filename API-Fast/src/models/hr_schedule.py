@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
@@ -107,6 +107,15 @@ class KioskDevice(Base):
     # Bound scan mode / access zone (SEN-21 stationMode wiring).
     stationMode = Column("station_mode", String(40), nullable=True)
     zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
+    # Phase 2 E-Map pin (normalized 0–1 on site_floor plan).
+    siteFloorId = Column(
+        "site_floor_id",
+        UUID(as_uuid=True),
+        ForeignKey("site_floor.siteFloorId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    mapPosX = Column("map_pos_x", Float, nullable=True)
+    mapPosY = Column("map_pos_y", Float, nullable=True)
     # sha256 of the current device token; NULL until the kiosk completes pairing.
     tokenHash = Column("token_hash", String(128), nullable=True)
     # ``fam`` claim shared by the device token + its refresh token; revoked on re-pair / revoke.
@@ -127,6 +136,12 @@ class KioskDevice(Base):
             "companyId",
             "zone_id",
             postgresql_where=text("zone_id IS NOT NULL"),
+        ),
+        Index(
+            "kiosk_device_floor_idx",
+            "companyId",
+            "site_floor_id",
+            postgresql_where=text("site_floor_id IS NOT NULL"),
         ),
         Index(
             "kiosk_device_pairing_code_idx",

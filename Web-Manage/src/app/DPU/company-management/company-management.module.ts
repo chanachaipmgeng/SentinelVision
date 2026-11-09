@@ -204,6 +204,11 @@ export const companyRoutes: Routes = [
         import('./cameras/cameras.component').then((m) => m.CamerasComponent),
     },
     {
+      path: 'company/e-map',
+      loadComponent: () =>
+        import('./e-map/e-map.component').then((m) => m.EMapComponent),
+    },
+    {
       path: 'company/live-wall',
       loadComponent: () =>
         import('./live-wall/live-wall.component').then((m) => m.LiveWallComponent),

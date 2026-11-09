@@ -29,6 +29,8 @@ EVIDENCE_KIND_INCIDENT_SNAPSHOT = "incident_snapshot"
 EVIDENCE_KIND_VIDEO_CLIP = "video_clip"
 INCIDENT_SNAPSHOT_PREFIX = "incident_"
 VIDEO_CLIP_PREFIX = "videoclip_"
+# Phase 2 E-Map floor plans live in uploaded_images; never purge with punch retention.
+FLOOR_PLAN_PREFIX = "floorplan_"
 
 
 def ensure_dirs() -> None:
@@ -416,7 +418,7 @@ def retention_tick() -> dict:
     punches = purge_older_than(
         "uploaded_images",
         int(settings.IMAGE_RETENTION_DAYS) * 86400,
-        exclude_prefixes=(INCIDENT_SNAPSHOT_PREFIX,),
+        exclude_prefixes=(INCIDENT_SNAPSHOT_PREFIX, FLOOR_PLAN_PREFIX),
     )
     # Global fallback for orphaned incident_* files (primary path is PDPA company_retention_tick).
     incident_days = int(

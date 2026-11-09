@@ -44,6 +44,7 @@ from .routes import (
     sentinel_routes,
     camera_routes,
     video_clip_routes,
+    site_floor_routes,
 )
 
 assert_runtime_secrets_configured()
@@ -281,6 +282,9 @@ def _mount_api(prefix: str = "") -> None:
     app.include_router(camera_routes.router, prefix=f"{p}/cameras", tags=["CCTV Cameras"])
     app.include_router(
         video_clip_routes.router, prefix=f"{p}/cameras", tags=["CCTV Video Clips"]
+    )
+    app.include_router(
+        site_floor_routes.router, prefix=f"{p}/site-floors", tags=["Site Floors / E-Map"]
     )
 
 

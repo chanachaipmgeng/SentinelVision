@@ -27,7 +27,12 @@ class Camera(Base):
     description = Column(Text, nullable=True)
     # Fernet-sealed JSON: {"username": "...", "password": "..."}
     credentialsEnc = Column("credentials_enc", Text, nullable=True)
-    siteFloorId = Column("site_floor_id", UUID(as_uuid=True), nullable=True)
+    siteFloorId = Column(
+        "site_floor_id",
+        UUID(as_uuid=True),
+        ForeignKey("site_floor.siteFloorId", ondelete="SET NULL"),
+        nullable=True,
+    )
     zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
     stationMode = Column("station_mode", String(30), nullable=True)
     mapPosX = Column("map_pos_x", Float, nullable=True)

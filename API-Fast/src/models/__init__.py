@@ -19,4 +19,5 @@ from . import (  # noqa: F401
     notification_platform,
     camera,
     video_clip,
+    site_floor,
 )

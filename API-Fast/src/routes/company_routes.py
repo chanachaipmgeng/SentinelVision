@@ -23,6 +23,12 @@ from ..security.deps import (
 )
 from ..services.audit_service import AuditLog
 from ..services import tenant_quota_service as tenant_svc
+from ..services import api_key_service
+from ..services.company_ai_settings_service import get_ai_settings, put_ai_settings
+from ..services.company_session_settings_service import (
+    get_session_settings,
+    put_session_settings,
+)
 
 _AUDIT_SORT_COLUMNS = {
     "occurredAt": AuditLog.occurredAt,
@@ -308,3 +314,96 @@ async def put_quotas(
             await save_company_module_config(db, companyId, cfg)
     usage = await tenant_svc.get_usage(db, company)
     return tenant_svc.serialize_tenant_admin(company, usage=usage)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — AI thresholds, session idle timeout, tenant API keys
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{companyId}/ai-settings")
+async def get_company_ai_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await get_ai_settings(db, companyId)
+
+
+@router.put("/{companyId}/ai-settings")
+async def put_company_ai_settings(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await put_ai_settings(db, companyId, body or {})
+
+
+@router.get("/{companyId}/session-settings")
+async def get_company_session_settings(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await get_session_settings(db, companyId)
+
+
+@router.put("/{companyId}/session-settings")
+async def put_company_session_settings(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await put_session_settings(db, companyId, body or {})
+
+
+@router.get("/{companyId}/api-keys")
+async def list_company_api_keys(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await api_key_service.list_api_keys(db, companyId)
+
+
+@router.post("/{companyId}/api-keys")
+async def create_company_api_key(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    member: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await api_key_service.create_api_key(
+        db,
+        companyId,
+        name=str((body or {}).get("name") or ""),
+        scopes=(body or {}).get("scopes"),
+        created_by=member.memberId,
+        notes=(body or {}).get("notes"),
+    )
+
+
+@router.delete("/{companyId}/api-keys/{apiKeyId}")
+async def revoke_company_api_key(
+    companyId: UUID,
+    apiKeyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("company.settings")),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await api_key_service.revoke_api_key(db, companyId, apiKeyId)

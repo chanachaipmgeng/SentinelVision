@@ -520,7 +520,9 @@ async def evaluate_unified_scan_decision(
         except Exception:
             event_uuid = None
 
-    threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+    from .company_ai_settings_service import resolve_face_match_threshold
+
+    threshold = await resolve_face_match_threshold(db, company_id)
     sentinel_match = await search_sentinel_identity_pgvector(
         db, encoding, threshold, companyId=company_id
     )

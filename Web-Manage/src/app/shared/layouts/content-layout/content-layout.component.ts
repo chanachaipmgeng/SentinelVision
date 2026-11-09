@@ -6,6 +6,7 @@ import { routeAnimations } from '../../services/animations/route.animations';
 import { UserService } from '../../../DPU/services/user.service';
 import { TokenService } from '../../services/token.service';
 import { ThemeService } from '../../services/theme.service';
+import { IdleTimeoutService } from '../../services/idle-timeout.service';
 
 const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 
@@ -29,6 +30,7 @@ export class ContentLayoutComponent implements OnDestroy {
     private tokenService: TokenService,
     private router: Router,
     private themeService: ThemeService,
+    private idleTimeout: IdleTimeoutService,
   ) {
     this.themeService.setShellActive(true);
     this.navServices.items.subscribe((menuItems: any) => {
@@ -42,11 +44,18 @@ export class ContentLayoutComponent implements OnDestroy {
     this.syncKioskMode(this.router.url);
     this.routerSub = this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe((e) => this.syncKioskMode(e.urlAfterRedirects || e.url));
+      .subscribe((e) => {
+        this.syncKioskMode(e.urlAfterRedirects || e.url);
+        // Re-read idle minutes when the selected company / shell route changes.
+        this.idleTimeout.reloadForSelectedCompany();
+      });
+    // Admin SPA idle logout (company session-settings); skipped for kiosk sessions.
+    this.idleTimeout.start();
   }
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+    this.idleTimeout.stop();
     this.setKioskMode(false);
     this.themeService.setShellActive(false);
   }

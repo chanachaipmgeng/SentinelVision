@@ -431,7 +431,9 @@ async def _resolve_match_response(
     companyId: Optional[UUID] = None,
     stationMode: Optional[str] = None,
 ) -> dict:
-    threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+    from ..services.company_ai_settings_service import resolve_face_match_threshold
+
+    threshold = await resolve_face_match_threshold(db, companyId)
     match = await _search_face_pgvector(
         db, target_encoding, threshold=threshold, companyId=companyId
     )
@@ -1280,7 +1282,10 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
             )
         target_encoding, _bbox = features
 
-        threshold = float(settings.FACE_RECOGNITION_THRESHOLD)
+        from ..services.company_ai_settings_service import resolve_face_match_threshold
+
+        # 1:1 test-scan against this member — still honour company threshold override.
+        threshold = await resolve_face_match_threshold(db, company_ids[0] if company_ids else None)
         distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
         stmt = (
             select(

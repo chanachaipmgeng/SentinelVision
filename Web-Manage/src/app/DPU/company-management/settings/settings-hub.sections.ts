@@ -3,6 +3,9 @@ export type SettingsSectionId =
   | 'security'
   | 'retention'
   | 'incident-sla'
+  | 'ai'
+  | 'session'
+  | 'api-keys'
   | 'scan-actions'
   | 'devices'
   | 'shifts';
@@ -85,6 +88,27 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     permission: 'company.settings',
     deepLink: '/company/access-control/logs',
     deepLinkKey: 'settingsHub.open.accessLogs',
+  },
+  {
+    id: 'ai',
+    labelKey: 'settingsHub.section.ai',
+    hintKey: 'settingsHub.section.ai.hint',
+    icon: 'ri-brain-line',
+    permission: 'company.settings',
+  },
+  {
+    id: 'session',
+    labelKey: 'settingsHub.section.session',
+    hintKey: 'settingsHub.section.session.hint',
+    icon: 'ri-timer-line',
+    permission: 'company.settings',
+  },
+  {
+    id: 'api-keys',
+    labelKey: 'settingsHub.section.apiKeys',
+    hintKey: 'settingsHub.section.apiKeys.hint',
+    icon: 'ri-key-2-line',
+    permission: 'company.settings',
   },
   {
     id: 'scan-actions',

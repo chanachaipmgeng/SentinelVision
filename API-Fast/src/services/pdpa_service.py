@@ -46,6 +46,8 @@ def default_retention() -> dict[str, int]:
         "biometricDays": int(getattr(settings, "IMAGE_RETENTION_DAYS", 90) or 90),
         "punchPhotoDays": int(getattr(settings, "IMAGE_RETENTION_DAYS", 90) or 90),
         "incidentSnapshotDays": int(getattr(settings, "IMAGE_RETENTION_DAYS", 90) or 90),
+        # Separate from punch-photo / incident stills (Phase 4B).
+        "videoClipDays": int(getattr(settings, "VIDEO_CLIP_RETENTION_DAYS", 30) or 30),
         "tempHours": int(getattr(settings, "TEMP_RETENTION_HOURS", 24) or 24),
     }
 
@@ -348,10 +350,13 @@ async def company_retention_tick(db: AsyncSession, company_id: UUID) -> dict[str
     """Apply per-type retention for one company (called from worker retention job)."""
     from datetime import timedelta
 
+    from ..models.video_clip import CLIP_KIND_EVENT, VideoClip
+
     cfg = await get_retention_settings(db, company_id)
     now = datetime.now(timezone.utc)
     removed_photos = 0
     removed_snaps = 0
+    removed_clips = 0
 
     punch_cut = now - timedelta(days=int(cfg["punchPhotoDays"]))
     if cfg["punchPhotoDays"] > 0:
@@ -388,5 +393,28 @@ async def company_retention_tick(db: AsyncSession, company_id: UUID) -> dict[str
                 removed_snaps += 1
             inc.snapshotUrl = None
 
+    clip_days = int(cfg.get("videoClipDays") or 0)
+    if clip_days > 0:
+        clip_cut = now - timedelta(days=clip_days)
+        old_clips = (
+            await db.execute(
+                select(VideoClip).where(
+                    VideoClip.companyId == company_id,
+                    VideoClip.kind == CLIP_KIND_EVENT,
+                    VideoClip.startedAt < clip_cut,
+                ).limit(500)
+            )
+        ).scalars().all()
+        for clip in old_clips:
+            key = (clip.storageKey or "").strip()
+            if key and not key.startswith("mtx:"):
+                delete_stored_image("video_clips", Path(key).name)
+                removed_clips += 1
+            await db.delete(clip)
+
     await db.commit()
-    return {"punchPhotosRemoved": removed_photos, "incidentSnapshotsRemoved": removed_snaps}
+    return {
+        "punchPhotosRemoved": removed_photos,
+        "incidentSnapshotsRemoved": removed_snaps,
+        "videoClipsRemoved": removed_clips,
+    }

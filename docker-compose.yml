@@ -115,11 +115,19 @@ services:
       MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://mediamtx:9997}
       MEDIAMTX_WHEP_BASE_PATH: ${MEDIAMTX_WHEP_BASE_PATH:-/mediamtx}
       MEDIAMTX_HLS_BASE_PATH: ${MEDIAMTX_HLS_BASE_PATH:-/mediamtx-hls}
+      MEDIAMTX_RTSP_PUBLISH_URL: ${MEDIAMTX_RTSP_PUBLISH_URL:-rtsp://mediamtx:8554}
+      MEDIAMTX_RECORDINGS_DIR: ${MEDIAMTX_RECORDINGS_DIR:-/recordings}
+      MEDIAMTX_HLS_INTERNAL_URL: ${MEDIAMTX_HLS_INTERNAL_URL:-http://mediamtx:8888}
+      VIDEO_CLIP_PRE_SECONDS: ${VIDEO_CLIP_PRE_SECONDS:-5}
+      VIDEO_CLIP_POST_SECONDS: ${VIDEO_CLIP_POST_SECONDS:-10}
+      VIDEO_CLIP_RETENTION_DAYS: ${VIDEO_CLIP_RETENTION_DAYS:-30}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
       - api_temp:/app/temp_images
       - api_import_jobs:/app/import_jobs
+      - api_video_clips:/app/video_clips
+      - mediamtx_recordings:/recordings:ro
     depends_on:
       db:
         condition: service_healthy
@@ -188,6 +196,8 @@ services:
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
       IMAGE_RETENTION_DAYS: ${IMAGE_RETENTION_DAYS:-90}
       TEMP_RETENTION_HOURS: ${TEMP_RETENTION_HOURS:-24}
+      VIDEO_CLIP_RETENTION_DAYS: ${VIDEO_CLIP_RETENTION_DAYS:-30}
+      MEDIAMTX_RECORDINGS_DIR: ${MEDIAMTX_RECORDINGS_DIR:-/recordings}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -203,6 +213,8 @@ services:
       - api_uploaded:/app/uploaded_images
       - api_temp:/app/temp_images
       - api_import_jobs:/app/import_jobs
+      - api_video_clips:/app/video_clips
+      - mediamtx_recordings:/recordings:ro
     depends_on:
       db:
         condition: service_healthy
@@ -321,4 +333,5 @@ volumes:
   api_uploaded:
   api_temp:
   api_import_jobs:
+  api_video_clips:
   mediamtx_recordings:

@@ -198,7 +198,14 @@ class Settings(BaseSettings):
     IMAGE_RETENTION_DAYS: int = 90
     # Global fallback for incident_* evidence; primary policy is PDPA incidentSnapshotDays.
     INCIDENT_SNAPSHOT_RETENTION_DAYS: int = 90
+    # Event/continuous clips — separate from punch-photo policy (Phase 4B).
+    VIDEO_CLIP_RETENTION_DAYS: int = 30
     TEMP_RETENTION_HOURS: int = 24
+    # Event clip window: 5s pre-roll / 10s post-roll around incident time.
+    VIDEO_CLIP_PRE_SECONDS: int = 5
+    VIDEO_CLIP_POST_SECONDS: int = 10
+    VIDEO_CLIP_FFMPEG_BIN: str = "ffmpeg"
+    VIDEO_CLIP_FFMPEG_TIMEOUT_SECONDS: int = 90
     UPLOAD_MAX_BYTES: int = 8 * 1024 * 1024
     S3_ENDPOINT_URL: str = ""
     S3_REGION: str = "ap-southeast-1"
@@ -230,6 +237,10 @@ class Settings(BaseSettings):
     MEDIAMTX_WHEP_BASE_PATH: str = "/mediamtx"
     MEDIAMTX_HLS_BASE_PATH: str = "/mediamtx-hls"
     MEDIAMTX_RTSP_PUBLISH_URL: str = "rtsp://mediamtx:8554"
+    # Shared with the mediamtx container (compose volume mediamtx_recordings).
+    MEDIAMTX_RECORDINGS_DIR: str = "/recordings"
+    # Internal HLS base for ffmpeg clip cut (docker network, not browser path).
+    MEDIAMTX_HLS_INTERNAL_URL: str = "http://mediamtx:8888"
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

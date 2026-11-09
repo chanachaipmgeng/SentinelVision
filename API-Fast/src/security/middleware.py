@@ -58,7 +58,22 @@ _COMPANY_RES = [
     re.compile(rf"/hr/company/({_UUID})"),
     re.compile(rf"/sentinel/company/({_UUID})"),
     re.compile(rf"/devices/company/({_UUID})"),
+    re.compile(rf"/cameras/company/({_UUID})"),
+    re.compile(rf"/site-floors/company/({_UUID})"),
 ]
+# Tenant API keys (Bearer sv_…) — read-only scopes → path allow-lists.
+_API_KEY_SCOPE_RES = (
+    (
+        "cameras.read",
+        re.compile(rf"^/cameras/company/({_UUID})(?:/|$)"),
+        frozenset({"GET"}),
+    ),
+    (
+        "incidents.read",
+        re.compile(rf"^/sentinel/company/({_UUID})/incidents(?:/|$)"),
+        frozenset({"GET"}),
+    ),
+)
 # D1: approval decision / inbox paths — require approve permission (or membership for boss fallback).
 # Self-service create/list paths stay on membership only.
 _APPROVAL_PERM_RES = [
@@ -164,6 +179,18 @@ def _client_ip(request: Request) -> Optional[str]:
     return request.client.host if request.client else None
 
 
+def _is_api_key_path_allowed(method: str, path: str, scopes: list[str] | None) -> bool:
+    allowed = set(scopes or [])
+    for scope, rx, methods in _API_KEY_SCOPE_RES:
+        if scope not in allowed:
+            continue
+        if method.upper() not in methods:
+            continue
+        if rx.search(path):
+            return True
+    return False
+
+
 def _is_kiosk_path_allowed(method: str, path: str) -> bool:
     if path == "/system/tts-settings" and method != "GET":
         return False
@@ -199,6 +226,27 @@ class AuthzMiddleware(BaseHTTPMiddleware):
         token = _token_from(request)
         if not token:
             return _error(401, "Authorization required", request)
+
+        # Phase 5 tenant API keys: Authorization: Bearer sv_…
+        if token.startswith("sv_"):
+            from ..services.api_key_service import verify_bearer_api_key
+
+            async with async_session() as db:
+                key_row = await verify_bearer_api_key(db, token)
+                if key_row is None:
+                    return _error(401, "Invalid API key", request)
+                cid = _company_id(path)
+                if not cid:
+                    return _error(403, "API key requires a company-scoped path", request)
+                if UUID(cid) != key_row.companyId:
+                    return _error(403, "API key does not match requested company", request)
+                if not _is_api_key_path_allowed(request.method, path, key_row.scopes):
+                    return _error(403, "API key scope does not allow this endpoint", request)
+                request.state.api_key_company_id = key_row.companyId
+                request.state.api_key_scopes = list(key_row.scopes or [])
+                request.state.api_key_id = key_row.apiKeyId
+                set_company_context(key_row.companyId)
+                return await call_next(request)
 
         try:
             raw_payload = decode_token(token, expected_typ=None)

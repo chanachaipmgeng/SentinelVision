@@ -110,6 +110,14 @@ async def assert_company_access(db: AsyncSession, member: Optional[Member], comp
 async def assert_request_company_access(request, db: AsyncSession, company_id) -> Optional[Member]:
     """Bind a companyId taken from a form/body to the member or kiosk device resolved by AuthzMiddleware."""
     cid = UUID(str(company_id))
+    api_cid = getattr(request.state, "api_key_company_id", None)
+    if api_cid is not None:
+        if UUID(str(api_cid)) == cid:
+            return None
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API key scoped to a different company",
+        )
     kiosk_cid = getattr(request.state, "kiosk_company_id", None) or current_kiosk_company_var.get()
     if kiosk_cid is not None:
         if UUID(str(kiosk_cid)) == cid:
@@ -341,6 +349,20 @@ async def assert_request_permission(
     """Permission check for handlers that already resolve the member via AuthzMiddleware."""
     cid = UUID(str(company_id)) if company_id is not None else None
     dept = UUID(str(department_id)) if department_id is not None else None
+    api_cid = getattr(request.state, "api_key_company_id", None)
+    if api_cid is not None:
+        if cid is not None and UUID(str(api_cid)) != cid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="API key scoped to a different company",
+            )
+        scopes = set(getattr(request.state, "api_key_scopes", None) or [])
+        if permission not in scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"API key missing scope {permission}",
+            )
+        return None
     kiosk_cid = getattr(request.state, "kiosk_company_id", None) or current_kiosk_company_var.get()
     if kiosk_cid is not None:
         if cid is not None and UUID(str(kiosk_cid)) != cid:

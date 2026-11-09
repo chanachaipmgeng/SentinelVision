@@ -2,10 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import uuid4
-
-import pytest
 
 from src.models.video_clip import CLIP_KIND_EVENT, VideoClip
 from src.services import storage_service, video_clip_service

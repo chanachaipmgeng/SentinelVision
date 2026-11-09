@@ -33,7 +33,7 @@ class Camera(Base):
     mapPosX = Column("map_pos_x", Float, nullable=True)
     mapPosY = Column("map_pos_y", Float, nullable=True)
     # off | event | continuous — continuous enables MediaMTX path recording
-    recordMode = Column(String(20), nullable=False, default="event", server_default="event")
+    recordMode = Column("record_mode", String(20), nullable=False, default="event", server_default="event")
     status = Column(String(20), nullable=False, default="unknown", server_default="unknown")
     lastPingAt = Column("last_ping_at", DateTime(timezone=True), nullable=True)
     lastPingLatencyMs = Column("last_ping_latency_ms", Float, nullable=True)

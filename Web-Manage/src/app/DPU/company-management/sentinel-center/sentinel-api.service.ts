@@ -102,6 +102,12 @@ export class SentinelApiService {
     return this.http.post(`${this.base(companyId)}/incidents/${incidentId}/acknowledge`, {});
   }
 
+  bulkAcknowledgeIncidents(companyId: string, incidentIds: string[]): Observable<any> {
+    return this.http.post(`${this.base(companyId)}/incidents/bulk-acknowledge`, {
+      incidentIds,
+    });
+  }
+
   assignIncident(
     companyId: string,
     incidentId: string,
@@ -112,6 +118,28 @@ export class SentinelApiService {
 
   closeIncident(companyId: string, incidentId: string): Observable<any> {
     return this.http.post(`${this.base(companyId)}/incidents/${incidentId}/close`, {});
+  }
+
+  bulkCloseIncidents(companyId: string, incidentIds: string[]): Observable<any> {
+    return this.http.post(`${this.base(companyId)}/incidents/bulk-close`, {
+      incidentIds,
+    });
+  }
+
+  getIncidentSlaSettings(companyId: string): Observable<{ incidentSlaMinutesHigh: number }> {
+    return this.http.get<{ incidentSlaMinutesHigh: number }>(
+      `${this.base(companyId)}/incident-sla-settings`,
+    );
+  }
+
+  putIncidentSlaSettings(
+    companyId: string,
+    body: { incidentSlaMinutesHigh: number },
+  ): Observable<{ incidentSlaMinutesHigh: number }> {
+    return this.http.put<{ incidentSlaMinutesHigh: number }>(
+      `${this.base(companyId)}/incident-sla-settings`,
+      body,
+    );
   }
 
   getEdgeSync(companyId: string): Observable<any> {

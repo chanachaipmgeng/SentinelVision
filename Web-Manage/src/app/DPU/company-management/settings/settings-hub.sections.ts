@@ -2,6 +2,7 @@ export type SettingsSectionId =
   | 'notifications'
   | 'security'
   | 'retention'
+  | 'incident-sla'
   | 'scan-actions'
   | 'devices'
   | 'shifts';
@@ -75,6 +76,15 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     permission: 'company.settings',
     deepLink: '/company/hr-schedule/pdpa',
     deepLinkKey: 'settingsHub.open.hrSchedule',
+  },
+  {
+    id: 'incident-sla',
+    labelKey: 'settingsHub.section.incidentSla',
+    hintKey: 'settingsHub.section.incidentSla.hint',
+    icon: 'ri-timer-flash-line',
+    permission: 'company.settings',
+    deepLink: '/company/access-control/logs',
+    deepLinkKey: 'settingsHub.open.accessLogs',
   },
   {
     id: 'scan-actions',

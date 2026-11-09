@@ -151,6 +151,7 @@ class SentinelIncidentLog(Base):
     closedBy = Column("closed_by", UUID(as_uuid=True), nullable=True)
     closedAt = Column("closed_at", DateTime(timezone=True), nullable=True)
     dedupeKey = Column("dedupe_key", String(180), nullable=True)
+    slaDueAt = Column("sla_due_at", DateTime(timezone=True), nullable=True)
     occurredAt = Column("occurred_at", DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

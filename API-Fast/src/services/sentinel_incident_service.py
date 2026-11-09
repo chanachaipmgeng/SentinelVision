@@ -17,6 +17,10 @@ from ..services.face_match_service import (
     search_face_pgvector,
     search_sentinel_identity_pgvector,
 )
+from ..services.incident_sla_service import (
+    get_incident_sla_settings,
+    is_high_severity,
+)
 from ..services.notification_service import NotificationOutbox
 from ..services.sentinel_identity_service import (
     bangkok_tz,
@@ -87,8 +91,27 @@ def serialize_incident(inc: SentinelIncidentLog) -> dict:
         "closedBy": str(inc.closedBy) if getattr(inc, "closedBy", None) else None,
         "closedAt": getattr(inc, "closedAt", None),
         "dedupeKey": getattr(inc, "dedupeKey", None),
+        "slaDueAt": getattr(inc, "slaDueAt", None),
         "occurredAt": inc.occurredAt,
     }
+
+
+async def compute_sla_due_at(
+    db: AsyncSession,
+    company_id: UUID,
+    severity: str,
+    *,
+    now: Optional[datetime] = None,
+) -> Optional[datetime]:
+    """Stamp SLA due time for OPEN high-severity incidents (company setting)."""
+    if not is_high_severity(severity):
+        return None
+    cfg = await get_incident_sla_settings(db, company_id)
+    minutes = int(cfg.get("incidentSlaMinutesHigh") or 0)
+    if minutes <= 0:
+        return None
+    base = now or datetime.now(timezone.utc)
+    return base + timedelta(minutes=minutes)
 
 
 async def find_open_dedupe_match(
@@ -167,6 +190,7 @@ async def record_incident(
             await db.refresh(existing)
         return existing, False
 
+    sla_due = await compute_sla_due_at(db, company_id, severity, now=now)
     inc = SentinelIncidentLog(
         companyId=company_id,
         eventType=event_type,
@@ -184,6 +208,7 @@ async def record_incident(
         snapshotUrl=snapshot_url,
         actionTaken=action_taken,
         dedupeKey=key,
+        slaDueAt=sla_due,
         occurredAt=now,
     )
     db.add(inc)
@@ -279,6 +304,8 @@ async def close_incident(
     company_id: UUID,
     incident_id: UUID,
     actor_id: Optional[UUID],
+    *,
+    commit: bool = True,
 ) -> SentinelIncidentLog:
     inc = await db.get(SentinelIncidentLog, incident_id)
     if not inc or inc.companyId != company_id:
@@ -292,9 +319,89 @@ async def close_incident(
     await queue_siem_incident_export(
         db, company_id, inc, event="sentinel.incident.closed"
     )
-    await db.commit()
-    await db.refresh(inc)
+    if commit:
+        await db.commit()
+        await db.refresh(inc)
     return inc
+
+
+def _parse_incident_ids(raw_ids: Optional[list]) -> list[UUID]:
+    out: list[UUID] = []
+    seen: set[UUID] = set()
+    for raw in raw_ids or []:
+        try:
+            uid = UUID(str(raw).strip())
+        except (ValueError, TypeError, AttributeError):
+            continue
+        if uid in seen:
+            continue
+        seen.add(uid)
+        out.append(uid)
+    return out
+
+
+async def acknowledge_incidents_bulk(
+    db: AsyncSession,
+    company_id: UUID,
+    incident_ids: Optional[list],
+    actor_id: Optional[UUID],
+) -> dict:
+    """Acknowledge many incidents; skip closed / missing without failing the batch."""
+    ids = _parse_incident_ids(incident_ids)
+    acknowledged: list[dict] = []
+    skipped: list[dict] = []
+    for incident_id in ids:
+        try:
+            inc = await acknowledge_incident(db, company_id, incident_id, actor_id)
+            acknowledged.append(serialize_incident(inc))
+        except HTTPException as exc:
+            skipped.append(
+                {
+                    "incidentId": str(incident_id),
+                    "status": exc.status_code,
+                    "detail": exc.detail,
+                }
+            )
+    return {
+        "acknowledged": acknowledged,
+        "skipped": skipped,
+        "acknowledgedCount": len(acknowledged),
+        "skippedCount": len(skipped),
+    }
+
+
+async def close_incidents_bulk(
+    db: AsyncSession,
+    company_id: UUID,
+    incident_ids: Optional[list],
+    actor_id: Optional[UUID],
+) -> dict:
+    """Close many incidents in one transaction; skip missing without failing the batch."""
+    ids = _parse_incident_ids(incident_ids)
+    closed: list[dict] = []
+    skipped: list[dict] = []
+    for incident_id in ids:
+        try:
+            inc = await close_incident(
+                db, company_id, incident_id, actor_id, commit=False
+            )
+            closed.append(serialize_incident(inc))
+        except HTTPException as exc:
+            skipped.append(
+                {
+                    "incidentId": str(incident_id),
+                    "status": exc.status_code,
+                    "detail": exc.detail,
+                }
+            )
+    if closed:
+        await db.commit()
+    return {
+        "closed": closed,
+        "skipped": skipped,
+        "closedCount": len(closed),
+        "skippedCount": len(skipped),
+    }
 
 
 async def list_incidents(
@@ -803,9 +910,12 @@ __all__ = [
     "STATUS_ASSIGNED",
     "STATUS_CLOSED",
     "acknowledge_incident",
+    "acknowledge_incidents_bulk",
     "assign_incident",
     "build_dedupe_key",
     "close_incident",
+    "close_incidents_bulk",
+    "compute_sla_due_at",
     "dispatch_relay_webhook_async",
     "evaluate_kiosk_sentinel_match",
     "evaluate_unified_scan_decision",

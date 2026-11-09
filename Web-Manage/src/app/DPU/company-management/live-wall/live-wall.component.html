@@ -1,0 +1,67 @@
+<div class="sv-live-wall-page">
+  <app-page-toolbar [title]="'cctv.liveWall.title' | translate">
+    <ng-container controls>
+      <a routerLink="/company/cameras" class="ti-btn ti-btn-light modern-btn">
+        <i class="ri-cctv-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.nav' | translate }}
+      </a>
+      <div class="sv-live-wall__layouts" role="group" [attr.aria-label]="'cctv.liveWall.layout' | translate">
+        <button
+          type="button"
+          *ngFor="let l of layouts"
+          class="ti-btn ti-btn-sm"
+          [class.ti-btn-primary]="layout === l"
+          [class.ti-btn-light]="layout !== l"
+          (click)="setLayout(l)"
+        >
+          {{ l }}
+        </button>
+      </div>
+      <label class="sv-live-wall__hls">
+        <input type="checkbox" [(ngModel)]="useHlsFallback" />
+        {{ 'cctv.liveWall.hlsFallback' | translate }}
+      </label>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="load()">
+        {{ 'Refresh' | translate }}
+      </button>
+    </ng-container>
+  </app-page-toolbar>
+  <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.liveWall.subtitle' | translate }}</p>
+
+  <div *ngIf="loading" class="text-muted py-8 text-center">{{ 'Loading...' | translate }}</div>
+  <div *ngIf="error" class="alert alert-danger" role="alert">{{ error }}</div>
+
+  <div
+    *ngIf="!loading && !error"
+    class="sv-live-wall"
+    [attr.data-layout]="layout"
+  >
+    <div class="sv-live-wall__empty" *ngIf="!slots.length">
+      {{ 'cctv.liveWall.empty' | translate }}
+      <a routerLink="/company/cameras">{{ 'cctv.cameras.add' | translate }}</a>
+    </div>
+
+    <div class="sv-live-wall__slot" *ngFor="let cam of slots">
+      <div class="sv-live-wall__label">
+        <strong>{{ cam.name }}</strong>
+        <span>{{ cam.status || 'unknown' }}</span>
+      </div>
+      <div class="sv-live-wall__player">
+        <app-webrtc-video-surface
+          *ngIf="!useHlsFallback"
+          [whepUrl]="streamSrc(cam)"
+          [label]="cam.name"
+        ></app-webrtc-video-surface>
+        <video
+          *ngIf="useHlsFallback"
+          class="sv-live-wall__hls-video"
+          [src]="streamSrc(cam)"
+          controls
+          autoplay
+          muted
+          playsinline
+        ></video>
+      </div>
+    </div>
+  </div>
+</div>

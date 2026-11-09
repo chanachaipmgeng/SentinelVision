@@ -13,6 +13,7 @@ export const TOGGLEABLE_COMPANY_MODULES = [
   'WATCHLIST',
   'VISITOR',
   'EVENTS',
+  'CCTV',
 ] as const;
 
 export type AlwaysOnModule = (typeof ALWAYS_ON_MODULES)[number];
@@ -65,6 +66,7 @@ export interface CompanyModuleConfig {
 }
 
 export const DEFAULT_COMPANY_MODULE_CONFIG: CompanyModuleConfig = {
+  // Spreads all toggleable modules including CCTV (Phase 3).
   enabledModules: [...TOGGLEABLE_COMPANY_MODULES],
   alwaysOnModules: [...ALWAYS_ON_MODULES],
   defaultStationMode: 'ATTENDANCE',

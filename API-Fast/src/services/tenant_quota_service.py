@@ -29,7 +29,7 @@ PACKAGE_PRESETS: dict[str, dict[str, Any]] = {
         "maxDevices": 10,
         "maxEmployees": 500,
         "gpuPriority": 5,
-        "allowedModules": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR"],
+        "allowedModules": ["ATTENDANCE", "ACCESS_CONTROL", "WATCHLIST", "VISITOR", "CCTV"],
     },
     "ENTERPRISE": {
         "maxDevices": None,
@@ -41,6 +41,7 @@ PACKAGE_PRESETS: dict[str, dict[str, Any]] = {
             "WATCHLIST",
             "VISITOR",
             "EVENTS",
+            "CCTV",
         ],
     },
 }

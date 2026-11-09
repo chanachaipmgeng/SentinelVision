@@ -41,6 +41,8 @@ PERM_NOTIFICATIONS_MANAGE = "notifications.manage"
 PERM_AUDIT_READ = "audit.read"
 PERM_PAYROLL_EXPORT = "payroll.export"
 PERM_SENTINEL_MANAGE = "sentinel.manage"
+PERM_CAMERAS_READ = "cameras.read"
+PERM_CAMERAS_MANAGE = "cameras.manage"
 PERM_SYSTEM_ADMIN = "system.admin"
 
 ALL_PERMISSIONS: tuple[str, ...] = (
@@ -65,6 +67,8 @@ ALL_PERMISSIONS: tuple[str, ...] = (
     PERM_AUDIT_READ,
     PERM_PAYROLL_EXPORT,
     PERM_SENTINEL_MANAGE,
+    PERM_CAMERAS_READ,
+    PERM_CAMERAS_MANAGE,
     PERM_SYSTEM_ADMIN,
 )
 
@@ -108,6 +112,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             PERM_HR_HOLIDAYS,
             PERM_AUDIT_READ,
             PERM_PAYROLL_EXPORT,
+            PERM_CAMERAS_READ,
         }
     ),
     RbacRoleCode.DEVICE_OPERATOR.value: frozenset(
@@ -115,6 +120,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             PERM_COMPANY_READ,
             PERM_DEVICES_MANAGE,
             PERM_ATTENDANCE_READ,
+            PERM_CAMERAS_READ,
         }
     ),
 }

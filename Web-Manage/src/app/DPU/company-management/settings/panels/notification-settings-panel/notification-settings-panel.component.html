@@ -1,0 +1,38 @@
+<div class="box modern-card glass">
+  <div class="box-body">
+    <h3 class="text-base font-semibold mb-1">{{ 'settingsHub.notify.title' | translate }}</h3>
+    <p class="text-sm text-dpu-muted mb-3">{{ 'settingsHub.notify.lead' | translate }}</p>
+    <label class="form-label" for="dpu-notify-email">{{ 'settingsHub.notify.email' | translate }}</label>
+    <input id="dpu-notify-email" class="form-control mb-2" type="email" [(ngModel)]="email" [disabled]="loading" />
+    <label class="form-label" for="dpu-notify-line">{{ 'settingsHub.notify.lineToken' | translate }}</label>
+    <input
+      id="dpu-notify-line"
+      class="form-control mb-3"
+      type="password"
+      autocomplete="off"
+      [(ngModel)]="lineToken"
+      [disabled]="loading"
+    />
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        class="ti-btn ti-btn-primary-full modern-btn"
+        [disabled]="busy || loading"
+        (click)="saveNotify()"
+      >
+        {{ 'settingsHub.notify.save' | translate }}
+      </button>
+      <button
+        type="button"
+        class="ti-btn ti-btn-light modern-btn"
+        [disabled]="busy || loading"
+        (click)="testNotify()"
+      >
+        {{ 'settingsHub.notify.test' | translate }}
+      </button>
+      <span *ngIf="status === 'saved'" class="text-sm text-success">{{ 'settingsHub.notify.saved' | translate }}</span>
+      <span *ngIf="status === 'tested'" class="text-sm text-success">{{ 'settingsHub.notify.tested' | translate }}</span>
+      <span *ngIf="status === 'error'" class="text-sm text-danger">{{ 'settingsHub.notify.error' | translate }}</span>
+    </div>
+  </div>
+</div>

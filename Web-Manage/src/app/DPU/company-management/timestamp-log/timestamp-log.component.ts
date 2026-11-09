@@ -3,10 +3,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { FlatpickrDefaults, FlatpickrModule } from 'angularx-flatpickr';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SharedModule } from '../../../shared/shared.module';
 import { LocationMapComponent } from '../../../shared/components/location-map/location-map.component';
+import { DateRangeFilterComponent } from '../../../shared/components/date-range-filter/date-range-filter.component';
+import {
+  DateRangeValue,
+  bangkokRangeToInstants,
+  refreshRange,
+  resolvePreset,
+} from '../../../shared/components/date-range-filter/date-range.utils';
+import { SavedViewsBarComponent } from '../../../shared/components/saved-views-bar/saved-views-bar.component';
+import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
+import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
+import { AuthedImageService } from '../../../shared/services/authed-image.service';
 import { TimestampService } from '../../services/timestamp.service';
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampModel } from '../../models/timestamp.model';
@@ -14,6 +24,15 @@ import { EmployeeModel } from '../../models/employee.model';
 import { EmployeeService } from '../../services/employee.service';
 import { clampPageIndex } from '../../../shared/utils/data-table-query';
 import swal from 'sweetalert';
+
+interface TimestampLogViewFilters {
+  q: string;
+  employee: string;
+  status: string;
+  range: Partial<DateRangeValue>;
+}
+
+const FACE_PLACEHOLDER = './assets/images/faces/1.jpg';
 
 @Component({
   selector: 'app-timestamp-log',
@@ -27,10 +46,15 @@ import swal from 'sweetalert';
     FormsModule,
     LocationMapComponent,
     RouterModule,
-    FlatpickrModule,
+    DateRangeFilterComponent,
+    SavedViewsBarComponent,
+    SkeletonLoaderComponent,
+    SideDrawerComponent,
   ],
-  styleUrls: ['./timestamp-log.component.css'],
-  providers: [FlatpickrDefaults],
+  styleUrls: [
+    './timestamp-log.component.css',
+    '../../../shared/styles/dpu-filter-toolbar.css',
+  ],
   encapsulation: ViewEncapsulation.None,
 })
 export class TimestampLogComponent implements OnInit, OnDestroy {
@@ -40,11 +64,12 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
   loading = false;
   actionBusy = false;
   exporting = false;
+  drawerOpen = false;
+  /** Route `/:company_employeeId` pins the employee, so the default saved view must not override it. */
+  readonly routeEmployeePinned: boolean;
 
-  dateRange: { from: Date; to: Date } = {
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-  };
+  range: DateRangeValue = resolvePreset('thisMonth')!;
+  savedFilters: TimestampLogViewFilters = { q: '', employee: '', status: '', range: { preset: 'thisMonth' } };
 
   /** Current page from server. */
   itemsList: TimestampModel[] = [];
@@ -128,10 +153,12 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     public translate: TranslateService,
     private tokenService: TokenService,
     private employeeService: EmployeeService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authedImages: AuthedImageService
   ) {
     this.empSelect =
       this.route.snapshot.paramMap.get('company_employeeId') || '';
+    this.routeEmployeePinned = !!this.empSelect;
     this.companyId = this.tokenService.getSelectCompany().companyId;
   }
 
@@ -147,6 +174,7 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
   getTimestamp(preferId?: string) {
     if (!this.companyId) return;
     this.loading = true;
+    this.syncSavedFilters();
     const keepId = preferId || this.selectModel?.timestampId;
     const { from, to } = this.resolveDateRange();
 
@@ -169,14 +197,11 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
           this.itemsList = page.items || [];
           this.pageItems = this.itemsList;
           this.loading = false;
-          if (!this.pageItems.length) {
-            this.selectModel = undefined;
-            return;
-          }
-          const preferred =
-            (keepId && this.pageItems.find((x) => x.timestampId === keepId)) ||
-            this.pageItems[0];
-          this.view(preferred);
+          const kept = keepId
+            ? this.pageItems.find((x) => x.timestampId === keepId)
+            : undefined;
+          this.selectModel = kept;
+          if (!kept) this.drawerOpen = false;
         },
         error: () => {
           this.loading = false;
@@ -254,15 +279,42 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     this.statusSelect = '';
     this._searchTerm = '';
     this.pageIndex = 0;
-    this.dateRange = {
-      from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-      to: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
-    };
+    this.range = resolvePreset('thisMonth')!;
+    this.getTimestamp();
+  }
+
+  onRangeChange(range: DateRangeValue) {
+    this.range = range;
+    this.pageIndex = 0;
+    this.getTimestamp();
+  }
+
+  onFilterChange() {
+    this.syncSavedFilters();
+  }
+
+  applySavedView(filters: Partial<TimestampLogViewFilters> | null) {
+    if (!filters) return;
+    this.empSelect = filters.employee || '';
+    this.statusSelect = filters.status || '';
+    this._searchTerm = filters.q || '';
+    this.range = refreshRange(filters.range);
+    this.pageIndex = 0;
+    if (this.searchTimer) clearTimeout(this.searchTimer);
     this.getTimestamp();
   }
 
   view(item: TimestampModel) {
     this.selectModel = item;
+    this.drawerOpen = true;
+  }
+
+  punchPhoto(item: TimestampModel): string {
+    return this.authedImages.urlFor(item.photoTimestamp, FACE_PLACEHOLDER);
+  }
+
+  profilePhoto(item: TimestampModel): string {
+    return this.authedImages.urlFor(item.employee?.member?.picture, FACE_PLACEHOLDER);
   }
 
   isSelected(item: TimestampModel): boolean {
@@ -331,19 +383,25 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Bangkok-day bounds of the selected range, as instants for the API. */
   private resolveDateRange(): { from: Date; to: Date } {
-    const raw: any = this.dateRange;
-    if (Array.isArray(raw) && raw.length >= 2) {
-      return { from: new Date(raw[0]), to: new Date(raw[1]) };
-    }
-    if (raw?.from && raw?.to) {
-      return { from: new Date(raw.from), to: new Date(raw.to) };
-    }
-    const now = new Date();
-    return {
-      from: new Date(now.getFullYear(), now.getMonth(), 1),
-      to: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+    const { start, end } = bangkokRangeToInstants(refreshRange(this.range));
+    return { from: start, to: end };
+  }
+
+  private syncSavedFilters() {
+    const relative = this.range.preset && this.range.preset !== 'custom';
+    const next: TimestampLogViewFilters = {
+      q: this._searchTerm || '',
+      employee: this.empSelect || '',
+      status: this.statusSelect || '',
+      range: relative
+        ? { preset: this.range.preset }
+        : { from: this.range.from, to: this.range.to, preset: 'custom' },
     };
+    if (JSON.stringify(next) !== JSON.stringify(this.savedFilters)) {
+      this.savedFilters = next;
+    }
   }
 
   private toCoord(value: unknown, fallback: number): number {

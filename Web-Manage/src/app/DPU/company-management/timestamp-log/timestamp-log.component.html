@@ -69,35 +69,25 @@
   <!-- Filters -->
   <div class="col-span-12">
     <div class="box ts-filters modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
-      <div class="box-body ts-filters-body">
-        <div class="ts-filter-grid">
-          <div class="ts-search">
-            <i class="ri-search-line ts-search-icon" aria-hidden="true"></i>
+      <div class="dpu-filter-toolbar">
+        <div class="dpu-filter-toolbar__row">
+          <div class="dpu-filter-toolbar__search">
+            <i class="ri-search-line" aria-hidden="true"></i>
             <input
-              class="form-control ts-search-input"
               type="search"
               [(ngModel)]="searchTerm"
               placeholder="{{'Search name ID dept location status...' | translate}}"
               [attr.aria-label]="'Search attendance history' | translate">
-            <button *ngIf="searchTerm" type="button" class="ts-search-clear" (click)="clearSearch()" [attr.title]="'Clear query' | translate">
+            <button *ngIf="searchTerm" type="button" class="dpu-filter-toolbar__clear" (click)="clearSearch()" [attr.title]="'Clear query' | translate">
               <i class="ri-close-line"></i>
             </button>
           </div>
 
-          <input
-            class="form-control ts-filter-control"
-            id="ts-daterange"
-            [(ngModel)]="dateRange"
-            placeholder="{{'Date range' | translate}}"
-            mwlFlatpickr
-            [altInput]="true"
-            [convertModelValue]="true"
-            mode="range">
-
           <ng-select
-            class="ts-filter-select"
+            class="ts-filter-select dpu-filter-toolbar__field"
             placeholder="{{'All employees' | translate}}"
             [(ngModel)]="empSelect"
+            (ngModelChange)="onFilterChange()"
             [clearable]="true"
             [appendTo]="'body'"
             [notFoundText]="'No employees found' | translate">
@@ -108,9 +98,10 @@
           </ng-select>
 
           <ng-select
-            class="ts-filter-select"
+            class="ts-filter-select dpu-filter-toolbar__field"
             placeholder="{{'All statuses' | translate}}"
             [(ngModel)]="statusSelect"
+            (ngModelChange)="onFilterChange()"
             [clearable]="true"
             [appendTo]="'body'">
             <ng-option value="">{{ 'All' | translate }}</ng-option>
@@ -122,21 +113,37 @@
             <ng-option value="3">{{ 'Absent' | translate }}</ng-option>
           </ng-select>
 
-          <button
-            type="button"
-            class="ti-btn ti-btn-primary-full modern-btn ts-search-btn"
-            [disabled]="loading"
-            (click)="pageIndex = 0; getTimestamp()">
-            <i class="ri-search-line" [class.ts-spin]="loading"></i>
-            <span>{{ 'Search' | translate }}</span>
-          </button>
+          <div class="dpu-filter-toolbar__actions">
+            <button
+              type="button"
+              class="ti-btn ti-btn-primary-full modern-btn ts-search-btn"
+              [disabled]="loading"
+              (click)="pageIndex = 0; getTimestamp()">
+              <i class="ri-search-line" [class.ts-spin]="loading"></i>
+              <span>{{ 'Search' | translate }}</span>
+            </button>
+          </div>
         </div>
+
+        <app-date-range-filter
+          class="dpu-filter-toolbar__range"
+          [value]="range"
+          (rangeChange)="onRangeChange($event)">
+        </app-date-range-filter>
+
+        <app-saved-views-bar
+          class="dpu-filter-toolbar__views"
+          pageKey="timestamp-log"
+          [currentFilters]="savedFilters"
+          [autoApplyDefault]="!routeEmployeePinned"
+          (apply)="applySavedView($event)">
+        </app-saved-views-bar>
       </div>
     </div>
   </div>
 
   <!-- List -->
-  <div class="col-span-12 xl:col-span-5">
+  <div class="col-span-12">
     <div class="box ts-list-panel modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
       <div class="box-header ts-panel-header">
         <div class="box-title !mb-0">{{ 'Attendance list' | translate }}</div>
@@ -146,10 +153,7 @@
       </div>
 
       <div class="box-body ts-list-body">
-        <div *ngIf="loading" class="ts-empty">
-          <span class="ti-spinner animation-spin ts-empty-spinner" role="status"></span>
-          <p>{{ 'Loading attendance history...' | translate }}</p>
-        </div>
+        <app-skeleton-loader *ngIf="loading" variant="rows" [count]="6"></app-skeleton-loader>
 
         <div *ngIf="!loading && pageItems.length === 0" class="ts-empty">
           <i class="ri-time-line ts-empty-icon"></i>
@@ -167,6 +171,7 @@
               class="ts-queue-item"
               [class.active]="isSelected(item)"
               [attr.data-tone]="statusTone(item)"
+              [attr.aria-haspopup]="'dialog'"
               [style.animation-delay.ms]="itemEnterDelay(i)"
               (click)="view(item)">
               <div class="ts-queue-face" [attr.data-tone]="statusTone(item)">
@@ -201,130 +206,120 @@
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Detail -->
-  <div class="col-span-12 xl:col-span-7">
-    <div
-      *ngIf="!selectModel && !loading"
-      class="box ts-detail-panel modern-card glass ts-detail-placeholder animate-in fade-in duration-500">
-      <div class="ts-empty">
-        <i class="ri-map-pin-user-line ts-empty-icon"></i>
-        <p>{{ 'Select a row to view face, details, and map' | translate }}</p>
+<!-- Detail drawer -->
+<app-side-drawer
+  [(open)]="drawerOpen"
+  size="lg"
+  [title]="'Attendance details'"
+  [subtitle]="selectModel ? (selectModel.timestamp | date: 'EEEE, dd MMMM yyyy HH:mm') || '' : ''"
+  [showFooter]="selectModel?.timestampType === 0">
+  <span drawerHeaderActions *ngIf="selectModel as item" class="ts-status-pill" [attr.data-tone]="statusTone(item)">
+    <i class="ri-checkbox-circle-line" *ngIf="statusTone(item) === 'success'"></i>
+    <i class="ri-error-warning-line" *ngIf="statusTone(item) === 'warning'"></i>
+    <i class="ri-close-circle-line" *ngIf="statusTone(item) === 'danger'"></i>
+    {{ item.getStatus() }}
+  </span>
+
+  <div class="ts-drawer" *ngIf="selectModel as item">
+    <div class="ts-hero">
+      <div class="ts-hero-photos">
+        <figure class="ts-stamp-photo">
+          <img [src]="punchPhoto(item)" [alt]="'Punch photo' | translate">
+          <figcaption>{{ 'Punch photo' | translate }}</figcaption>
+        </figure>
+        <figure class="ts-profile-photo">
+          <img [src]="profilePhoto(item)" [alt]="'Profile' | translate">
+          <figcaption>{{ 'Profile' | translate }}</figcaption>
+        </figure>
+      </div>
+
+      <div class="ts-hero-info">
+        <h3 class="ts-emp-name">{{ item.employee.getFullname() }}</h3>
+        <div class="ts-chip-row">
+          <span class="ts-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
+          <span class="ts-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>
+          <span class="ts-info-chip"><i class="ri-briefcase-line"></i>{{ item.employee.position.getName() || '—' }}</span>
+          <span class="ts-info-chip" *ngIf="item.shiftName"><i class="ri-time-line"></i>{{ item.shiftName }}</span>
+        </div>
+
+        <dl class="ts-facts">
+          <div>
+            <dt>{{ 'Punch time' | translate }}</dt>
+            <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+          </div>
+          <div *ngIf="item.isLate || (item.overtimeMinutes && item.overtimeMinutes > 0)">
+            <dt>{{ 'listKit.timestampLog.shiftMetrics' | translate }}</dt>
+            <dd class="ts-metric-row">
+              <span class="ts-metric ts-metric--late" *ngIf="item.isLate">
+                {{ 'listKit.timestampLog.lateMinutes' | translate: { minutes: item.lateMinutes } }}
+              </span>
+              <span class="ts-metric ts-metric--ot" *ngIf="item.overtimeMinutes && item.overtimeMinutes > 0">
+                {{ 'listKit.timestampLog.otMinutes' | translate: { minutes: item.overtimeMinutes } }}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'Location' | translate }}</dt>
+            <dd>
+              <input
+                *ngIf="item.timestampType === 0"
+                type="text"
+                class="form-control ts-location-input"
+                [(ngModel)]="item.locationName"
+                [placeholder]="'listKit.timestampLog.locationPlaceholder' | translate">
+              <span *ngIf="item.timestampType !== 0">{{ item.getLocation() }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>{{ 'Coordinates' | translate }}</dt>
+            <dd class="ts-coords">
+              {{ item.latitude }}, {{ item.longitude }}
+              <a class="ts-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
+                {{ 'listKit.timestampLog.openInMaps' | translate }} <i class="ri-external-link-line"></i>
+              </a>
+            </dd>
+          </div>
+          <div *ngIf="item.note">
+            <dt>{{ 'Note' | translate }}</dt>
+            <dd class="ts-note-text">{{ item.note }}</dd>
+          </div>
+          <div *ngIf="item.approvalStatus && item.approvalStatus !== 'NONE'">
+            <dt>{{ 'Approve' | translate }}</dt>
+            <dd>{{ item.approvalStatus }}<span *ngIf="item.rejectReason"> — {{ item.rejectReason }}</span></dd>
+          </div>
+        </dl>
       </div>
     </div>
 
-    <div
-      *ngIf="selectModel as item"
-      class="box ts-detail-panel modern-card glass animate-in zoom-in duration-400">
-      <div class="box-header ts-panel-header">
-        <div>
-          <div class="box-title !mb-0">{{ 'Attendance details' | translate }}</div>
-          <p class="ts-panel-sub mb-0">{{ item.timestamp | date: 'EEEE, dd MMMM yyyy HH:mm' }}</p>
-        </div>
-        <span class="ts-status-pill" [attr.data-tone]="statusTone(item)">
-          <i class="ri-checkbox-circle-line" *ngIf="statusTone(item) === 'success'"></i>
-          <i class="ri-error-warning-line" *ngIf="statusTone(item) === 'warning'"></i>
-          <i class="ri-close-circle-line" *ngIf="statusTone(item) === 'danger'"></i>
-          {{ item.getStatus() }}
-        </span>
+    <div class="ts-map-block">
+      <div class="ts-map-caption">
+        <span><i class="ri-map-pin-2-fill"></i> {{ 'listKit.timestampLog.punchLocation' | translate }}</span>
+        <span class="ts-map-coords">{{ mapLat | number:'1.5-5' }}, {{ mapLng | number:'1.5-5' }}</span>
       </div>
-
-      <div class="box-body ts-detail-body">
-        <div class="ts-hero">
-          <div class="ts-hero-photos">
-            <figure class="ts-stamp-photo">
-              <img [src]="item.getPicture()" alt="รูปตอนลงเวลา">
-              <figcaption>{{ 'Punch photo' | translate }}</figcaption>
-            </figure>
-            <figure class="ts-profile-photo">
-              <img [src]="item.employee.getPicture()" alt="รูปโปรไฟล์">
-              <figcaption>{{ 'Profile' | translate }}</figcaption>
-            </figure>
-          </div>
-
-          <div class="ts-hero-info">
-            <h3 class="ts-emp-name">{{ item.employee.getFullname() }}</h3>
-            <div class="ts-chip-row">
-              <span class="ts-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
-              <span class="ts-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>
-              <span class="ts-info-chip"><i class="ri-briefcase-line"></i>{{ item.employee.position.getName() || '—' }}</span>
-              <span class="ts-info-chip" *ngIf="item.shiftName"><i class="ri-time-line"></i>{{ item.shiftName }}</span>
-            </div>
-
-            <dl class="ts-facts">
-              <div>
-                <dt>{{ 'Punch time' | translate }}</dt>
-                <dd>{{ item.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
-              </div>
-              <div *ngIf="item.isLate || (item.overtimeMinutes && item.overtimeMinutes > 0)">
-                <dt>กะ / เวลาทำงาน</dt>
-                <dd>
-                  <span *ngIf="item.isLate">สาย {{ item.lateMinutes }} นาที</span>
-                  <span *ngIf="item.overtimeMinutes && item.overtimeMinutes > 0">OT {{ item.overtimeMinutes }} นาที</span>
-                </dd>
-              </div>
-              <div>
-                <dt>{{ 'Location' | translate }}</dt>
-                <dd>
-                  <input
-                    *ngIf="item.timestampType === 0"
-                    type="text"
-                    class="form-control ts-location-input"
-                    [(ngModel)]="item.locationName"
-                    placeholder="ชื่อสถานที่">
-                  <span *ngIf="item.timestampType !== 0">{{ item.getLocation() }}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>{{ 'Coordinates' | translate }}</dt>
-                <dd class="ts-coords">
-                  {{ item.latitude }}, {{ item.longitude }}
-                  <a class="ts-maps-link" [href]="mapsLink" target="_blank" rel="noopener noreferrer">
-                    เปิดใน Maps <i class="ri-external-link-line"></i>
-                  </a>
-                </dd>
-              </div>
-              <div *ngIf="item.note">
-                <dt>{{ 'Note' | translate }}</dt>
-                <dd class="ts-note-text">{{ item.note }}</dd>
-              </div>
-              <div *ngIf="item.approvalStatus && item.approvalStatus !== 'NONE'">
-                <dt>{{ 'Approve' | translate }}</dt>
-                <dd>{{ item.approvalStatus }}<span *ngIf="item.rejectReason"> — {{ item.rejectReason }}</span></dd>
-              </div>
-            </dl>
-
-            <div class="ts-actions" *ngIf="item.timestampType === 0">
-              <button
-                type="button"
-                class="ti-btn ti-btn-success-full modern-btn ts-action-btn"
-                [disabled]="actionBusy"
-                (click)="approveTime(item)">
-                <i class="ri-check-line"></i>
-                อนุมัติ
-              </button>
-              <button
-                type="button"
-                class="ti-btn ti-btn-danger-full modern-btn ts-action-btn"
-                [disabled]="actionBusy"
-                (click)="disapproveTime(item)">
-                <i class="ri-close-line"></i>
-                ไม่อนุมัติ
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="ts-map-block">
-          <div class="ts-map-caption">
-            <span><i class="ri-map-pin-2-fill"></i> ตำแหน่งที่ลงเวลา</span>
-            <span class="ts-map-coords">{{ mapLat | number:'1.5-5' }}, {{ mapLng | number:'1.5-5' }}</span>
-          </div>
-          <div class="ts-map-frame">
-            <app-location-map [lat]="mapLat" [lng]="mapLng" [zoom]="15" height="280px"></app-location-map>
-          </div>
-        </div>
+      <div class="ts-map-frame">
+        <app-location-map [lat]="mapLat" [lng]="mapLng" [zoom]="15" height="260px"></app-location-map>
       </div>
     </div>
   </div>
-</div>
+
+  <div drawerFooter class="ts-actions" *ngIf="selectModel?.timestampType === 0 && selectModel as item">
+    <button
+      type="button"
+      class="ti-btn ti-btn-danger-full modern-btn ts-action-btn"
+      [disabled]="actionBusy"
+      (click)="disapproveTime(item)">
+      <i class="ri-close-line"></i>
+      {{ 'listKit.common.reject' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-success-full modern-btn ts-action-btn"
+      [disabled]="actionBusy"
+      (click)="approveTime(item)">
+      <i class="ri-check-line"></i>
+      {{ 'listKit.common.approve' | translate }}
+    </button>
+  </div>
+</app-side-drawer>

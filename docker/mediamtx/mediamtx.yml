@@ -1,0 +1,49 @@
+# MediaMTX for SentinelVision Phase 3 live wall.
+# Paths are created at runtime via the Control API (API → mediamtx:9997).
+
+logLevel: info
+logDestinations: [stdout]
+
+api: yes
+apiAddress: :9997
+
+# Allow Control API from the Docker network (default is localhost-only → 401 from api).
+authMethod: internal
+authInternalUsers:
+  - user: any
+    pass:
+    permissions:
+      - action: api
+      - action: publish
+      - action: read
+      - action: playback
+      - action: metrics
+
+rtsp: yes
+rtspAddress: :8554
+
+# HLS (fallback for browsers that cannot use WebRTC)
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+
+# WebRTC / WHEP (primary live path; proxied at /mediamtx/)
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+# Set via MTX_WEBRTCADDITIONALHOSTS in compose for LAN ICE.
+
+# Continuous recording root (recordMode=continuous paths write here)
+pathDefaults:
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+  recordFormat: fmp4
+  recordPartDuration: 1s
+  recordSegmentDuration: 1h
+
+# Camera paths are created at runtime via Control API (no static entries).
+paths: {}

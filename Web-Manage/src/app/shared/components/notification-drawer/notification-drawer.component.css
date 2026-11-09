@@ -1,0 +1,176 @@
+.sv-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  background: var(--sv-overlay, rgb(15 23 42 / 0.45));
+  animation: sv-fade-in 0.15s ease both;
+}
+
+.sv-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1091;
+  width: min(400px, 100vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--dpu-surface-elevated);
+  color: var(--dpu-ink);
+  border-inline-start: 1px solid var(--dpu-border);
+  box-shadow: var(--dpu-shadow-lg);
+  animation: sv-slide-in-right 0.22s var(--dpu-ease) both;
+}
+
+.sv-drawer__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.85rem;
+  border-bottom: 1px solid var(--dpu-border);
+}
+
+.sv-drawer__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dpu-ink);
+}
+
+.sv-drawer__sub {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--dpu-muted);
+}
+
+.sv-drawer__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sv-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.sv-drawer__empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--dpu-muted);
+  font-size: 0.88rem;
+}
+
+.sv-drawer__empty-icon {
+  display: block;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+
+.sv-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sv-notif {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  border-radius: var(--dpu-radius-sm);
+}
+
+.sv-notif:hover {
+  background: var(--dpu-brand-soft);
+}
+
+.sv-notif__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem 0.7rem;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sv-notif__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: 0.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.sv-notif.is-unread .sv-notif__dot {
+  background: var(--dpu-brand);
+}
+
+.sv-notif__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.sv-notif__title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--dpu-ink);
+}
+
+.sv-notif:not(.is-unread) .sv-notif__title {
+  font-weight: 500;
+  color: var(--dpu-muted);
+}
+
+.sv-notif__body {
+  font-size: 0.8rem;
+  color: var(--dpu-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sv-notif__time {
+  font-size: 0.72rem;
+  color: var(--dpu-muted);
+}
+
+.sv-notif__read {
+  margin: 0.45rem 0.35rem 0 0;
+}
+
+.sv-drawer__foot {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--dpu-border);
+}
+
+.sv-drawer__link {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--dpu-radius-sm);
+  border: 1px solid var(--dpu-border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--dpu-brand);
+  text-decoration: none;
+}
+
+.sv-drawer__link:hover {
+  background: var(--dpu-brand-soft);
+}

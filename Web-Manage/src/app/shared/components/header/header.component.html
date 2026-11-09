@@ -23,6 +23,16 @@
       </div>
 
       <div class="header-content-right">
+        <!-- Command palette -->
+        <div class="header-element py-[1rem] md:px-[0.5rem] px-2">
+          <button type="button" class="sv-search-chip" (click)="openPalette()"
+            [attr.aria-label]="'shell.palette.open' | translate" [title]="'shell.palette.hint' | translate">
+            <i class="ri-search-line" aria-hidden="true"></i>
+            <span class="sv-search-chip__label">{{ 'shell.palette.chip' | translate }}</span>
+            <kbd class="sv-kbd sv-search-chip__kbd">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+          </button>
+        </div>
+
         <!-- Language -->
         <div
           class="header-element py-[1rem] md:px-[0.5rem] px-2 header-country hs-dropdown ti-dropdown hidden sm:block [--placement:bottom-left]">
@@ -70,6 +80,24 @@
           </div>
         </div>
 
+        <!-- Theme -->
+        <div class="header-element py-[1rem] md:px-[0.5rem] px-2">
+          <button type="button" class="sv-header-btn" (click)="themeService.toggleTheme()"
+            [attr.aria-label]="(themeService.theme() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | translate"
+            [title]="(themeService.theme() === 'dark' ? 'shell.theme.toLight' : 'shell.theme.toDark') | translate">
+            <i class="header-link-icon" [ngClass]="themeService.theme() === 'dark' ? 'ri-sun-line' : 'ri-moon-line'"></i>
+          </button>
+        </div>
+
+        <!-- Notifications -->
+        <div class="header-element py-[1rem] md:px-[0.5rem] px-2">
+          <button type="button" class="sv-header-btn relative" (click)="toggleNotifications()"
+            [attr.aria-label]="'shell.notifications.title' | translate" [attr.aria-expanded]="shellUi.notificationsOpen()">
+            <i class="ri-notification-3-line header-link-icon"></i>
+            <span class="sv-header-badge" *ngIf="notificationCount > 0">{{ notificationCount > 99 ? '99+' : notificationCount }}</span>
+          </button>
+        </div>
+
         <!-- Fullscreen -->
         <div class="header-element header-fullscreen py-[1rem] md:px-[0.5rem] px-2">
           <a aria-label="Fullscreen" appFullscreen (click)="toggleFullScreen()"
@@ -93,13 +121,27 @@
             <span class="opacity-[0.7] font-normal text-[#536485] block text-[0.6875rem]">{{ userModel.getRole() }}</span>
           </div>
           <div
-            class="hs-dropdown-menu ti-dropdown-menu !-mt-3 border-0 w-[11rem] !p-0 hidden main-header-dropdown pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end"
+            class="hs-dropdown-menu ti-dropdown-menu !-mt-3 border-0 w-[13rem] !p-0 hidden main-header-dropdown pt-0 overflow-hidden header-profile-dropdown dropdown-menu-end"
             aria-labelledby="dropdown-profile">
             <ul class="text-defaulttextcolor font-medium">
               <li>
                 <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
                   routerLink="/company/profile-security">
                   <i class="ti ti-user-shield text-[1.125rem] me-2 opacity-[0.7]"></i>{{ 'Profile & Security' | translate }}
+                </a>
+              </li>
+              <li>
+                <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
+                  href="javascript:void(0);" (click)="themeService.toggleDensity(); $event.stopPropagation()">
+                  <i class="ti text-[1.125rem] me-2 opacity-[0.7]"
+                    [ngClass]="themeService.density() === 'compact' ? 'ti-layout-rows' : 'ti-layout-list'"></i>
+                  {{ (themeService.density() === 'compact' ? 'shell.density.toComfortable' : 'shell.density.toCompact') | translate }}
+                </a>
+              </li>
+              <li>
+                <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
+                  href="javascript:void(0);" (click)="openShortcuts()">
+                  <i class="ti ti-keyboard text-[1.125rem] me-2 opacity-[0.7]"></i>{{ 'shell.shortcuts.title' | translate }}
                 </a>
               </li>
               <li>

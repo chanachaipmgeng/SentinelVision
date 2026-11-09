@@ -1,0 +1,115 @@
+/*
+ * Standard list filter toolbar. Register via component `styleUrls` next to dpu-list-page.css.
+ *
+ * <div class="dpu-filter-toolbar">
+ *   <div class="dpu-filter-toolbar__row">
+ *     <div class="dpu-filter-toolbar__search">…search…</div>
+ *     <div class="dpu-filter-toolbar__field">…select…</div>
+ *     <app-date-range-filter class="dpu-filter-toolbar__range" />
+ *     <div class="dpu-filter-toolbar__actions">…buttons…</div>
+ *   </div>
+ *   <app-saved-views-bar class="dpu-filter-toolbar__views" />
+ * </div>
+ */
+.dpu-filter-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  min-width: 0;
+}
+
+.dpu-filter-toolbar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 0.75rem;
+  min-width: 0;
+}
+
+.dpu-filter-toolbar__search {
+  position: relative;
+  flex: 1 1 16rem;
+  min-width: 12rem;
+  max-width: 28rem;
+}
+
+.dpu-filter-toolbar__search > i {
+  position: absolute;
+  inset-inline-start: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dpu-muted);
+  pointer-events: none;
+}
+
+.dpu-filter-toolbar__search input {
+  width: 100%;
+  height: 2.4rem;
+  padding-inline: 2.3rem 2.2rem;
+  border: 1px solid var(--dpu-border);
+  border-radius: 999px;
+  background: var(--dpu-surface-elevated);
+  color: var(--dpu-ink);
+}
+
+.dpu-filter-toolbar__search input:focus {
+  border-color: var(--dpu-brand);
+  outline: 2px solid var(--dpu-brand-soft);
+}
+
+.dpu-filter-toolbar__search .dpu-filter-toolbar__clear {
+  position: absolute;
+  inset-inline-end: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dpu-muted);
+  cursor: pointer;
+}
+
+.dpu-filter-toolbar__field {
+  flex: 0 1 12rem;
+  min-width: 9rem;
+}
+
+.dpu-filter-toolbar__field > select,
+.dpu-filter-toolbar__field > .form-control {
+  width: 100%;
+  height: 2.4rem;
+}
+
+.dpu-filter-toolbar__range {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.dpu-filter-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+.dpu-filter-toolbar__views {
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--dpu-border);
+}
+
+@media (max-width: 767.98px) {
+  .dpu-filter-toolbar__search,
+  .dpu-filter-toolbar__field {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .dpu-filter-toolbar__actions {
+    margin-inline-start: 0;
+    width: 100%;
+  }
+}

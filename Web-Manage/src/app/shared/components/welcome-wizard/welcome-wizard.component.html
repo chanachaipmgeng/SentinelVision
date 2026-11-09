@@ -1,0 +1,58 @@
+<div class="sv-welcome-backdrop" *ngIf="open">
+  <div class="sv-welcome" role="dialog" aria-modal="true" aria-labelledby="sv-welcome-title">
+    <button type="button" class="sv-icon-btn sv-welcome__skip" (click)="finish()" [attr.aria-label]="'shell.welcome.skip' | translate">
+      <i class="ri-close-line"></i>
+    </button>
+
+    <div class="sv-welcome__body" [ngSwitch]="step">
+      <ng-container *ngSwitchCase="0">
+        <div class="sv-welcome__hero"><i class="ri-shield-flash-line" aria-hidden="true"></i></div>
+        <h2 id="sv-welcome-title" class="sv-welcome__title">{{ 'shell.welcome.step1.title' | translate }}</h2>
+        <p class="sv-welcome__text">{{ 'shell.welcome.step1.body' | translate }}</p>
+        <p class="sv-welcome__tip">
+          <kbd class="sv-kbd">Ctrl</kbd><kbd class="sv-kbd">K</kbd> {{ 'shell.welcome.step1.tip' | translate }}
+        </p>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="1">
+        <h2 id="sv-welcome-title" class="sv-welcome__title">{{ 'shell.welcome.step2.title' | translate }}</h2>
+        <p class="sv-welcome__text">{{ 'shell.welcome.step2.body' | translate }}</p>
+        <ul class="sv-welcome__mods">
+          <li *ngFor="let m of modules">
+            <span class="sv-welcome__mod-icon"><i [class]="m.icon" aria-hidden="true"></i></span>
+            <span>
+              <strong>{{ m.title | translate }}</strong>
+              <small>{{ m.hint | translate }}</small>
+            </span>
+          </li>
+        </ul>
+      </ng-container>
+
+      <ng-container *ngSwitchCase="2">
+        <div class="sv-welcome__hero"><i class="ri-list-check-3" aria-hidden="true"></i></div>
+        <h2 id="sv-welcome-title" class="sv-welcome__title">{{ 'shell.welcome.step3.title' | translate }}</h2>
+        <p class="sv-welcome__text">{{ 'shell.welcome.step3.body' | translate }}</p>
+      </ng-container>
+    </div>
+
+    <div class="sv-welcome__foot">
+      <div class="sv-welcome__dots" aria-hidden="true">
+        <span *ngFor="let i of [0, 1, 2]" [class.is-active]="i === step"></span>
+      </div>
+      <div class="sv-welcome__actions">
+        <button type="button" class="ti-btn ti-btn-light" *ngIf="step === 0" (click)="finish()">
+          {{ 'shell.welcome.skip' | translate }}
+        </button>
+        <button type="button" class="ti-btn ti-btn-light" *ngIf="step > 0" (click)="back()">
+          {{ 'shell.common.back' | translate }}
+        </button>
+        <button type="button" class="ti-btn ti-btn-primary-full" *ngIf="step < lastStep" (click)="next()">
+          {{ 'shell.common.next' | translate }}
+        </button>
+        <button type="button" class="ti-btn ti-btn-primary-full" *ngIf="step === lastStep" (click)="finish(true)">
+          {{ 'shell.welcome.openChecklist' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

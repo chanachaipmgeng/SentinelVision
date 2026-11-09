@@ -199,6 +199,22 @@ export const companyRoutes: Routes = [
         import('./devices/devices.component').then((m) => m.DevicesComponent),
     },
     {
+      path: 'company/cameras',
+      loadComponent: () =>
+        import('./cameras/cameras.component').then((m) => m.CamerasComponent),
+    },
+    {
+      path: 'company/live-wall',
+      loadComponent: () =>
+        import('./live-wall/live-wall.component').then((m) => m.LiveWallComponent),
+    },
+    { path: 'company/settings', pathMatch: 'full', redirectTo: 'company/settings/notifications' },
+    {
+      path: 'company/settings/:section',
+      loadComponent: () =>
+        import('./settings/settings-hub.component').then((m) => m.SettingsHubComponent),
+    },
+    {
       path: 'company/notification-center',
       loadComponent: () =>
         import('./notification-center/notification-center.component').then(

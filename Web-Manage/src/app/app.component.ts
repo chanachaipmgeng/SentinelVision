@@ -11,6 +11,7 @@ import {
 } from '@angular/animations';
 import { fromEvent } from 'rxjs';
 import { routeAnimations } from './shared/animations/route-animations';
+import { ThemeService } from './shared/services/theme.service';
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -23,7 +24,7 @@ export class AppComponent {
   title = 'SentinelVision';
   public isSpinner = true;
 
-  constructor(private contexts: ChildrenOutletContexts) {}
+  constructor(private contexts: ChildrenOutletContexts, private themeService: ThemeService) {}
 
   getRouteAnimationData() {
     return this.contexts.getContext('primary')?.route?.snapshot?.data?.['animation'];
@@ -33,7 +34,10 @@ export class AppComponent {
     this.applyDpuThemeDefaults();
   }
 
-  /** Lock product palette to teal via DOM attrs/CSS vars only (no ynex-* localStorage writes). */
+  /**
+   * Lock product palette to teal via DOM attrs/CSS vars only (no ynex-* localStorage writes).
+   * Light/dark (`data-theme`, `data-theme-mode`, `.dark`) is owned by ThemeService.
+   */
   private applyDpuThemeDefaults(): void {
     const html = document.documentElement;
     const primary = '15, 118, 110';
@@ -42,8 +46,8 @@ export class AppComponent {
     html.style.setProperty('--primary', primarySpace);
     html.setAttribute('data-menu-styles', 'dark');
     html.setAttribute('data-header-styles', 'light');
-    html.setAttribute('data-theme-mode', 'light');
     localStorage.removeItem('ynexlight-primary-color');
     localStorage.removeItem('ynexlight-primary-color1');
+    this.themeService.apply();
   }
 }

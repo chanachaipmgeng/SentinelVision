@@ -71,6 +71,13 @@
     </button>
   </div>
 
+  <app-saved-views-bar
+    class="dpu-filter-toolbar__views"
+    pageKey="access-logs"
+    [currentFilters]="savedFilters"
+    (apply)="applySavedView($event)">
+  </app-saved-views-bar>
+
   <div
     tabindex="0"
     role="region"
@@ -89,7 +96,15 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let inc of incidents" class="border-b border-defaultborder text-xs">
+        <tr
+          *ngFor="let inc of incidents"
+          class="border-b border-defaultborder text-xs sv-log-row"
+          [class.is-selected]="isSelectedIncident(inc)"
+          tabindex="0"
+          [attr.aria-label]="'listKit.accessLogs.openDetail' | translate: { name: inc.subjectName || 'Unknown' }"
+          (click)="openIncident(inc)"
+          (keydown.enter)="$event.target === $event.currentTarget && openIncident(inc)"
+        >
           <th class="text-start p-3">
             <div class="font-semibold text-slate-900">{{ inc.subjectName || 'Unknown' }}</div>
             <div class="text-[0.7rem] text-dpu-muted">{{ inc.identityType || '-' }}</div>
@@ -116,6 +131,7 @@
               class="text-[0.7rem] text-teal-700 hover:underline"
               [routerLink]="['/company/scan/access-control']"
               [queryParams]="{ zoneId: inc.zoneId }"
+              (click)="$event.stopPropagation()"
             >
               เปิดสแกนโซนนี้
             </a>
@@ -141,7 +157,7 @@
               >
                 {{ inc.status || 'OPEN' }}
               </span>
-              <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)">
+              <div class="flex flex-wrap justify-end gap-1" *ngIf="canActOnIncident(inc)" (click)="$event.stopPropagation()">
                 <button
                   *ngIf="!inc.acknowledgedAt && (inc.severity === 'CRITICAL' || inc.severity === 'WARNING')"
                   type="button"
@@ -209,3 +225,79 @@
     </table>
   </div>
 </div>
+
+<app-side-drawer
+  [(open)]="drawerOpen"
+  [title]="'listKit.accessLogs.detailTitle'"
+  [subtitle]="selectedIncident?.occurredAt ? ((selectedIncident.occurredAt | date: 'dd/MM/yyyy HH:mm:ss') || '') : ''"
+  [showFooter]="canActOnIncident(selectedIncident)">
+  <div class="sv-incident" *ngIf="selectedIncident as inc">
+    <figure class="sv-incident__snapshot">
+      <ng-container *ngIf="inc.snapshotUrl; else noSnap">
+        <img *ngIf="snapshotSrc(inc) as src" [src]="src" [alt]="'listKit.accessLogs.snapshot' | translate" />
+      </ng-container>
+      <ng-template #noSnap>
+        <div class="sv-incident__nosnap">
+          <i class="ri-image-line" aria-hidden="true"></i>
+          <span>{{ 'listKit.accessLogs.noSnapshot' | translate }}</span>
+        </div>
+      </ng-template>
+    </figure>
+
+    <div class="sv-incident__head">
+      <h3 class="sv-incident__name">{{ inc.subjectName || 'Unknown' }}</h3>
+      <span class="sv-incident__pill" [attr.data-tone]="(inc.severity || 'INFO').toLowerCase()">{{ inc.severity || 'INFO' }}</span>
+      <span class="sv-incident__pill" [attr.data-tone]="'status-' + (inc.status || 'OPEN').toLowerCase()">{{ inc.status || 'OPEN' }}</span>
+    </div>
+
+    <dl class="sv-incident__facts">
+      <div><dt>{{ 'listKit.accessLogs.eventType' | translate }}</dt><dd>{{ inc.eventType || '-' }}</dd></div>
+      <div><dt>{{ 'listKit.accessLogs.identityType' | translate }}</dt><dd>{{ inc.identityType || '-' }}</dd></div>
+      <div>
+        <dt>{{ 'listKit.accessLogs.zone' | translate }}</dt>
+        <dd>
+          {{ inc.zoneName || '-' }}
+          <a
+            *ngIf="inc.zoneId"
+            class="sv-incident__link"
+            [routerLink]="['/company/scan/access-control']"
+            [queryParams]="{ zoneId: inc.zoneId }">
+            {{ 'listKit.accessLogs.openZoneScan' | translate }}
+          </a>
+        </dd>
+      </div>
+      <div>
+        <dt>{{ 'listKit.accessLogs.confidence' | translate }}</dt>
+        <dd>{{ inc.confidencePercent != null ? inc.confidencePercent + '%' : '-' }}</dd>
+      </div>
+      <div *ngIf="inc.actionTaken"><dt>{{ 'listKit.accessLogs.actionTaken' | translate }}</dt><dd>{{ inc.actionTaken }}</dd></div>
+      <div><dt>{{ 'listKit.accessLogs.occurredAt' | translate }}</dt><dd>{{ inc.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+      <div *ngIf="inc.acknowledgedAt"><dt>{{ 'listKit.accessLogs.acknowledgedAt' | translate }}</dt><dd>{{ inc.acknowledgedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+      <div *ngIf="inc.assignedAt"><dt>{{ 'listKit.accessLogs.assignedAt' | translate }}</dt><dd>{{ inc.assignedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+      <div *ngIf="inc.closedAt"><dt>{{ 'listKit.accessLogs.closedAt' | translate }}</dt><dd>{{ inc.closedAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>
+    </dl>
+  </div>
+
+  <div drawerFooter class="sv-incident__actions" *ngIf="selectedIncident as inc">
+    <button
+      *ngIf="canAcknowledge(inc)"
+      type="button"
+      class="ti-btn ti-btn-primary-full"
+      (click)="acknowledgeIncident(inc.incidentId)">
+      <i class="ri-eye-line me-1" aria-hidden="true"></i>{{ 'listKit.accessLogs.acknowledge' | translate }}
+    </button>
+    <button
+      *ngIf="inc.status !== 'ASSIGNED'"
+      type="button"
+      class="ti-btn ti-btn-outline-primary"
+      (click)="assignIncident(inc.incidentId)">
+      <i class="ri-user-shared-line me-1" aria-hidden="true"></i>{{ 'listKit.accessLogs.assign' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-outline-secondary"
+      (click)="closeIncident(inc.incidentId)">
+      <i class="ri-checkbox-circle-line me-1" aria-hidden="true"></i>{{ 'listKit.accessLogs.closeIncident' | translate }}
+    </button>
+  </div>
+</app-side-drawer>

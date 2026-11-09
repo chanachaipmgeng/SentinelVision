@@ -13,6 +13,8 @@ import { PageToolbarComponent } from '../../../shared/components/page-toolbar/pa
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { CheckinMapComponent } from '../../../shared/components/checkin-map/checkin-map.component';
+import { SetupChecklistComponent } from '../../../shared/components/setup-checklist/setup-checklist.component';
+import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizard/welcome-wizard.component';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -27,6 +29,8 @@ import { environment } from '../../../../environments/environment';
     StatChipComponent,
     EmptyStateComponent,
     CheckinMapComponent,
+    SetupChecklistComponent,
+    WelcomeWizardComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: [

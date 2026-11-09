@@ -1,0 +1,130 @@
+:host {
+  display: block;
+}
+
+.sv-setup {
+  padding: 1rem 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.sv-setup__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sv-setup__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dpu-ink);
+}
+
+.sv-setup__title i {
+  color: var(--dpu-brand);
+}
+
+.sv-setup__sub {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--dpu-muted);
+}
+
+.sv-setup__bar {
+  height: 6px;
+  margin: 0.75rem 0 0.5rem;
+  border-radius: 999px;
+  background: var(--dpu-brand-soft);
+  overflow: hidden;
+}
+
+.sv-setup__bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dpu-brand);
+  transition: width 0.4s var(--dpu-ease);
+}
+
+.sv-setup__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.sv-setup__step {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.65rem;
+  border-radius: var(--dpu-radius-sm);
+}
+
+.sv-setup__step:hover {
+  background: var(--dpu-brand-soft);
+}
+
+.sv-setup__check {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px dashed var(--dpu-border);
+  color: var(--dpu-muted);
+}
+
+.sv-setup__step.is-done .sv-setup__check {
+  border-style: solid;
+  border-color: var(--dpu-success);
+  background: var(--dpu-success);
+  color: #fff;
+}
+
+.sv-setup__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sv-setup__step-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--dpu-ink);
+}
+
+.sv-setup__step.is-done .sv-setup__step-title {
+  color: var(--dpu-muted);
+  text-decoration: line-through;
+}
+
+.sv-setup__hint {
+  font-size: 0.75rem;
+  color: var(--dpu-muted);
+}
+
+.sv-setup__cta {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dpu-brand);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.sv-setup__done {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--dpu-success);
+}

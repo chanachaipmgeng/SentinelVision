@@ -1,0 +1,34 @@
+<section class="sv-setup box" *ngIf="show" [attr.aria-label]="'shell.setup.title' | translate">
+  <div class="sv-setup__head">
+    <div>
+      <h2 class="sv-setup__title"><i class="ri-rocket-2-line" aria-hidden="true"></i>{{ 'shell.setup.title' | translate }}</h2>
+      <p class="sv-setup__sub">
+        {{ 'shell.setup.progress' | translate: { done: doneCount, total: visibleSteps.length } }}
+      </p>
+    </div>
+    <button type="button" class="sv-icon-btn" (click)="dismiss()" [attr.aria-label]="'shell.setup.dismiss' | translate"
+      [title]="'shell.setup.dismiss' | translate">
+      <i class="ri-close-line"></i>
+    </button>
+  </div>
+
+  <div class="sv-setup__bar" role="progressbar" [attr.aria-valuenow]="progressPct" aria-valuemin="0" aria-valuemax="100">
+    <span [style.width.%]="progressPct"></span>
+  </div>
+
+  <ol class="sv-setup__list">
+    <li *ngFor="let s of visibleSteps" class="sv-setup__step" [class.is-done]="s.done">
+      <span class="sv-setup__check" aria-hidden="true">
+        <i [class]="s.done ? 'ri-check-line' : s.icon"></i>
+      </span>
+      <span class="sv-setup__text">
+        <span class="sv-setup__step-title">{{ s.title | translate }}</span>
+        <span class="sv-setup__hint">{{ s.hint | translate }}</span>
+      </span>
+      <a *ngIf="!s.done" [routerLink]="s.link" class="sv-setup__cta">
+        {{ 'shell.setup.go' | translate }}<i class="ri-arrow-right-s-line" aria-hidden="true"></i>
+      </a>
+      <span *ngIf="s.done" class="sv-setup__done">{{ 'shell.setup.done' | translate }}</span>
+    </li>
+  </ol>
+</section>

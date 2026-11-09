@@ -1,0 +1,71 @@
+.sv-camera-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sv-camera-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--dpu-border);
+  border-radius: var(--dpu-radius);
+  background: var(--dpu-surface);
+}
+
+.sv-camera-row__main {
+  min-width: 0;
+  flex: 1 1 16rem;
+}
+
+.sv-camera-row__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sv-camera-row__url {
+  margin-top: 0.25rem;
+  max-width: 40rem;
+  color: var(--dpu-ink-muted, #64748b);
+}
+
+.sv-camera-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sv-camera-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.sv-camera-badge--online {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.sv-camera-badge--offline {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sv-camera-snapshot {
+  max-width: 100%;
+  max-height: 28rem;
+  border-radius: var(--dpu-radius);
+  border: 1px solid var(--dpu-border);
+}

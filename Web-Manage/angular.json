@@ -138,7 +138,8 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "ignore": [
-                  "**/models/**"
+                  "**/models/**",
+                  "**/iconfonts/**"
                 ],
                 "output": "/assets"
               },

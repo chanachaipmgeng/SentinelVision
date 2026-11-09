@@ -110,6 +110,11 @@ services:
       WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
       # B6: OpenTelemetry is a no-op until an OTLP endpoint is set (see docker-compose.observability.yml).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # Phase 3 CCTV / MediaMTX Control API
+      MEDIAMTX_ENABLED: ${MEDIAMTX_ENABLED:-true}
+      MEDIAMTX_API_URL: ${MEDIAMTX_API_URL:-http://mediamtx:9997}
+      MEDIAMTX_WHEP_BASE_PATH: ${MEDIAMTX_WHEP_BASE_PATH:-/mediamtx}
+      MEDIAMTX_HLS_BASE_PATH: ${MEDIAMTX_HLS_BASE_PATH:-/mediamtx-hls}
     volumes:
       - api_enrolled:/app/enrolled_images
       - api_uploaded:/app/uploaded_images
@@ -120,6 +125,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mediamtx:
+        condition: service_started
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -235,6 +242,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # Phase 3: MediaMTX — RTSP pull + WebRTC (WHEP) + HLS for live wall.
+  mediamtx:
+    image: bluenviron/mediamtx:1.12.2
+    container_name: dpu-mediamtx
+    volumes:
+      - ./docker/mediamtx/mediamtx.yml:/mediamtx.yml:ro
+      - mediamtx_recordings:/recordings
+    environment:
+      # Comma-separated hosts browsers use for ICE (LAN IP / hostname). Empty = container hostname only.
+      MTX_WEBRTCADDITIONALHOSTS: ${MEDIAMTX_WEBRTC_HOSTS:-}
+    expose:
+      - "8554"
+      - "8888"
+      - "8889"
+      - "9997"
+    # ICE UDP must reach the browser host; publish loopback+optional host mapping via env.
+    ports:
+      - "${MEDIAMTX_WEBRTC_UDP_PORT:-8189}:8189/udp"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+    # Image is scratch-based (no shell/wget) — readiness is probed by the API Control client.
+
   nginx:
     build:
       context: ./docker/nginx
@@ -254,6 +289,8 @@ services:
       api:
         condition: service_healthy
       admin:
+        condition: service_started
+      mediamtx:
         condition: service_started
     restart: unless-stopped
     security_opt:
@@ -275,3 +312,4 @@ volumes:
   api_uploaded:
   api_temp:
   api_import_jobs:
+  mediamtx_recordings:

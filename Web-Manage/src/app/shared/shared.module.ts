@@ -19,6 +19,9 @@ import { LandingLayoutComponent } from './layouts/landing-layout/landing-layout.
 import { NgxColorsModule } from 'ngx-colors';
 import { AuthService } from './services/auth.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { CommandPaletteComponent } from './components/command-palette/command-palette.component';
+import { NotificationDrawerComponent } from './components/notification-drawer/notification-drawer.component';
+import { OfflineBannerComponent } from './components/offline-banner/offline-banner.component';
 
 @NgModule({
   declarations: [
@@ -43,7 +46,10 @@ import { TranslateModule } from '@ngx-translate/core';
     FormsModule,
     ReactiveFormsModule,
     ColorPickerModule,
-    TranslateModule
+    TranslateModule,
+    CommandPaletteComponent,
+    NotificationDrawerComponent,
+    OfflineBannerComponent,
     // NgxColorsModule
   ],
   exports: [

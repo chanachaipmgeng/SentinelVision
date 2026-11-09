@@ -19,7 +19,14 @@ from ..config.settings import settings
 
 logger = logging.getLogger("dpu.outbox_crypto")
 
-SECRET_FIELDS = ("lineToken", "webhookSecret", "lineChannelAccessToken", "relaySecret")
+SECRET_FIELDS = (
+    "lineToken",
+    "webhookSecret",
+    "lineChannelAccessToken",
+    "relaySecret",
+    "telegramBotToken",
+    "discordWebhookUrl",
+)
 _PREFIX = "fernet:"
 
 

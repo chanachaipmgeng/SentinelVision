@@ -1,4 +1,4 @@
-"""Notification outbox (email / LINE / HMAC-SHA256 signed webhook) with multi-replica locking & non-blocking I/O."""
+"""Notification outbox (email / LINE / Telegram / Discord / HMAC webhook) with multi-replica locking & non-blocking I/O."""
 from __future__ import annotations
 
 import asyncio
@@ -279,6 +279,60 @@ def _send_webhook(payload: dict, *, delivery_id: str = "") -> None:
             raise RuntimeError(f"Webhook HTTP {resp.status}")
 
 
+def _send_telegram(payload: dict) -> None:
+    """Deliver via Telegram Bot API ``sendMessage``.
+
+    Expects ``telegramBotToken`` and ``telegramChatId`` (group/channel/user id).
+    """
+    token = str(payload.get("telegramBotToken") or "").strip()
+    chat_id = str(payload.get("telegramChatId") or payload.get("to") or "").strip()
+    if not token:
+        logger.info("notify telegram skipped (no bot token)")
+        return
+    if not chat_id:
+        logger.info("notify telegram skipped (no chat id)")
+        return
+    text = (payload.get("body") or payload.get("subject") or "DPU Attendance")[:4096]
+    api_base = (getattr(settings, "TELEGRAM_API_BASE", None) or "https://api.telegram.org").rstrip("/")
+    url = f"{api_base}/bot{token}/sendMessage"
+    body = json_bytes(
+        {
+            "chat_id": chat_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
+    )
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        if resp.status >= 300:
+            raise RuntimeError(f"Telegram Bot API HTTP {resp.status}")
+
+
+def _send_discord(payload: dict) -> None:
+    """Deliver via Discord Incoming Webhook (URL is the secret)."""
+    url = str(payload.get("discordWebhookUrl") or "").strip()
+    if not url:
+        logger.info("notify discord skipped (no webhook url)")
+        return
+    content = (payload.get("body") or payload.get("subject") or "DPU Attendance")[:2000]
+    body = json_bytes({"content": content})
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        # Discord returns 204 No Content on success.
+        if resp.status >= 300:
+            raise RuntimeError(f"Discord webhook HTTP {resp.status}")
+
+
 def json_bytes(obj) -> bytes:
     return json.dumps(obj, default=str, separators=(",", ":")).encode("utf-8")
 
@@ -512,6 +566,10 @@ async def drain_outbox(limit: int = 20) -> int:
                     await asyncio.to_thread(_send_email, delivery_payload)
                 elif row.channel == "line":
                     await asyncio.to_thread(_send_line, delivery_payload)
+                elif row.channel == "telegram":
+                    await asyncio.to_thread(_send_telegram, delivery_payload)
+                elif row.channel == "discord":
+                    await asyncio.to_thread(_send_discord, delivery_payload)
                 elif row.channel in ("webhook", "siem"):
                     # F4: SIEM export reuses HMAC-signed webhook delivery.
                     await asyncio.to_thread(

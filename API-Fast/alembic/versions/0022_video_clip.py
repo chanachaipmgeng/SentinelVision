@@ -1,15 +1,15 @@
 """Phase 4B: video_clip table for event clips + continuous refs.
 
-Revision ID: 0021_video_clip
-Revises: 0020_camera_cctv
+Revision ID: 0022_video_clip
+Revises: 0021_camera_analysis
 Create Date: 2026-11-09
 """
 from __future__ import annotations
 
 from alembic import op
 
-revision = "0021_video_clip"
-down_revision = "0020_camera_cctv"
+revision = "0022_video_clip"
+down_revision = "0021_camera_analysis"
 branch_labels = None
 depends_on = None
 

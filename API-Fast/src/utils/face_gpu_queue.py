@@ -15,8 +15,10 @@ from ..services.observability import observe_face_gpu_job
 
 logger = logging.getLogger(__name__)
 
-JobKind = Literal["checkin", "identify", "detect", "other"]
-_KIND_ORDER: tuple[JobKind, ...] = ("checkin", "identify", "detect", "other")
+# Priority high → low. ``cctv`` is a dedicated low-priority lane so kiosk
+# checkin/identify stay ahead of background camera analysis (Phase 4A).
+JobKind = Literal["checkin", "identify", "detect", "other", "cctv"]
+_KIND_ORDER: tuple[JobKind, ...] = ("checkin", "identify", "detect", "other", "cctv")
 
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="face-gpu")
 _started = False
@@ -197,14 +199,14 @@ async def _worker_loop(worker_id: int) -> None:
     loop = asyncio.get_running_loop()
     while True:
         job = await _wait_for_job()
-        # Drop stale detect frames before they burn a GPU slot.
+        # Drop stale detect/cctv frames before they burn a GPU slot.
         if (
-            job.kind == "detect"
+            job.kind in ("detect", "cctv")
             and job.stale_ms is not None
             and (time.monotonic() - job.enqueued_at) * 1000.0 > job.stale_ms
         ):
             if not job.future.done():
-                job.future.set_exception(StaleFaceJob("detect frame stale"))
+                job.future.set_exception(StaleFaceJob(f"{job.kind} frame stale"))
             _completed += 1
             observe_face_gpu_job(
                 job.kind,

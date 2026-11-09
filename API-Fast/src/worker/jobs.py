@@ -76,6 +76,16 @@ async def run_attendance_summary_tick() -> Dict[str, Any]:
     return await recompute_yesterday_all(lookback_days=1)
 
 
+async def run_cctv_analysis_tick(
+    *, worker_id: Optional[str] = None, stop_event: Optional[asyncio.Event] = None
+) -> Dict[str, Any]:
+    """Phase 4A: pull frames from analysis-enabled cameras → InsightFace → incident/attendance."""
+    from ..services.cctv_analysis_service import run_cctv_analysis_tick as _tick
+
+    _ = worker_id
+    return await _tick(stop_event=stop_event)
+
+
 def poll_interval(job: str) -> float:
     if job == "outbox":
         return float(max(5, int(settings.NOTIFY_POLL_SECONDS)))
@@ -85,4 +95,6 @@ def poll_interval(job: str) -> float:
         return float(max(1, int(settings.WORKER_IMPORT_POLL_SECONDS)))
     if job == "attendance_summary":
         return float(max(300, int(settings.WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS)))
+    if job == "cctv":
+        return float(max(5, int(settings.WORKER_CCTV_INTERVAL_SECONDS)))
     return 60.0

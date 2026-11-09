@@ -147,7 +147,7 @@ class Settings(BaseSettings):
     # single-container dev setup to run the same loops inside the API process instead.
     RUN_BACKGROUND_JOBS_IN_API: bool = False
     WORKER_ID: str = ""
-    WORKER_JOBS: str = "outbox,retention,imports,attendance_summary"
+    WORKER_JOBS: str = "outbox,retention,imports,attendance_summary,cctv"
     WORKER_METRICS_PORT: int = 9108
     WORKER_RETENTION_INTERVAL_SECONDS: int = 3600
     WORKER_IMPORT_POLL_SECONDS: int = 2
@@ -159,6 +159,17 @@ class Settings(BaseSettings):
     # Directory (shared volume between api and worker) holding uploaded import files per job.
     IMPORT_JOB_DIR: str = "import_jobs"
     IMPORT_JOB_RETENTION_DAYS: int = 7
+    # Phase 4A: CCTV → InsightFace (low-priority lane; keep kiosk queue healthy).
+    WORKER_CCTV_INTERVAL_SECONDS: int = 15
+    WORKER_CCTV_CAMERA_INTERVAL_SECONDS: int = 30
+    WORKER_CCTV_MAX_CONCURRENT: int = 2
+    # Pause CCTV submits when kiosk (checkin+identify) pending reaches this.
+    WORKER_CCTV_PAUSE_WHEN_KIOSK_PENDING: int = 4
+    # Soft cap on total GPU-queue pending before CCTV skips a tick.
+    WORKER_CCTV_MAX_QUEUE_PENDING: int = 24
+    # Drop CCTV embeds that waited longer than this (ms) — stale frames are useless.
+    WORKER_CCTV_STALE_MS: int = 8000
+    WORKER_CCTV_SNAPSHOT_TIMEOUT_SECONDS: float = 8.0
 
     # Multi-GPU. Comma list; worker i uses devices[i % len].
     FACE_DEVICES: str = ""

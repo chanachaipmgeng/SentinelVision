@@ -61,6 +61,16 @@
         <label class="form-label">{{ 'cctv.cameras.fields.description' | translate }}</label>
         <input class="form-control" [(ngModel)]="draft.description" />
       </div>
+      <div class="col-span-12 md:col-span-6 flex items-end">
+        <label class="form-check flex items-center gap-2 m-0">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [(ngModel)]="draft.analysisEnabled"
+          />
+          <span>{{ 'cctv.cameras.fields.analysisEnabled' | translate }}</span>
+        </label>
+      </div>
       <div class="col-span-6 md:col-span-3">
         <label class="form-label">{{ 'cctv.cameras.fields.username' | translate }}</label>
         <input class="form-control" [(ngModel)]="draft.streamUsername" autocomplete="off" />
@@ -115,6 +125,7 @@
             </div>
             <div class="sv-camera-row__meta text-muted text-xs">
               {{ cam.protocol }} · {{ cam.recordMode }} ·
+              <span *ngIf="cam.analysisEnabled">{{ 'cctv.cameras.analysisOn' | translate }} · </span>
               <code>{{ cam.mtxPath }}</code>
             </div>
             <div class="sv-camera-row__url text-xs truncate" [title]="cam.streamUrl">
@@ -122,6 +133,20 @@
             </div>
           </div>
           <div class="sv-camera-row__actions">
+            <button
+              type="button"
+              class="ti-btn ti-btn-sm"
+              [class.ti-btn-success]="cam.analysisEnabled"
+              [class.ti-btn-light]="!cam.analysisEnabled"
+              (click)="toggleAnalysis(cam)"
+            >
+              {{
+                (cam.analysisEnabled
+                  ? 'cctv.cameras.analysisOn'
+                  : 'cctv.cameras.analysisOff'
+                ) | translate
+              }}
+            </button>
             <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="ping(cam)">
               {{ 'cctv.cameras.ping' | translate }}
             </button>

@@ -112,6 +112,8 @@ def serialize_camera(cam: Camera, *, include_secrets: bool = False) -> dict[str,
         "lastPingLatencyMs": cam.lastPingLatencyMs,
         "previewImageUrl": cam.previewImageUrl,
         "isActive": cam.isActive,
+        "analysisEnabled": bool(cam.analysisEnabled),
+        "lastAnalyzedAt": cam.lastAnalyzedAt,
         "whepPath": mediamtx_service.whep_path(cam.cameraId),
         "hlsPath": mediamtx_service.hls_path(cam.cameraId),
         "mtxPath": mediamtx_service.path_name_for_camera(cam.cameraId),
@@ -200,6 +202,9 @@ def _apply_body(cam: Camera, body: dict[str, Any], *, creating: bool) -> None:
 
     if "isActive" in body:
         cam.isActive = bool(body.get("isActive"))
+
+    if "analysisEnabled" in body:
+        cam.analysisEnabled = bool(body.get("analysisEnabled"))
 
     # Credentials: accept streamUsername/streamPassword; empty password + clearCredentials clears.
     if body.get("clearCredentials"):

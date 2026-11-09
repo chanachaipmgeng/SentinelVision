@@ -117,6 +117,7 @@ compose-config:
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.observability.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.loki.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.backup.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.tls.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.face-core-remote.yml config -q
@@ -127,8 +128,10 @@ compose-config:
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.tls.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.backup.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.observability.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.observability.yml -f docker-compose.loki.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml -f docker-compose.tls.yml -f docker-compose.backup.yml -f docker-compose.observability.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.prod.yml -f docker-compose.api-readonly.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.observability.yml config -q
+    - docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.observability.yml -f docker-compose.loki.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.face-core.yml config -q
     - docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.loadtest.yml --profile loadtest config -q

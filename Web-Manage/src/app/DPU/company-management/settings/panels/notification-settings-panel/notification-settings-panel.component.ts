@@ -7,7 +7,7 @@ import { TokenService } from '../../../../../shared/services/token.service';
 
 type NotifyStatus = 'idle' | 'saved' | 'tested' | 'error';
 
-/** Company notification channels (email + LINE token) — shared by audit-log and the settings hub. */
+/** Company notification channels (email / LINE / Telegram / Discord) — settings hub. */
 @Component({
   selector: 'app-notification-settings-panel',
   standalone: true,
@@ -20,6 +20,12 @@ export class NotificationSettingsPanelComponent implements OnInit {
 
   email = '';
   lineToken = '';
+  hasLineToken = false;
+  telegramBotToken = '';
+  telegramChatId = '';
+  hasTelegramBotToken = false;
+  discordWebhookUrl = '';
+  hasDiscordWebhookUrl = false;
   loading = false;
   busy = false;
   status: NotifyStatus = 'idle';
@@ -35,7 +41,13 @@ export class NotificationSettingsPanelComponent implements OnInit {
     this.http.get<any>(`/notifications/company/${this.companyId}/settings`).subscribe({
       next: (s) => {
         this.email = s?.email || '';
-        this.lineToken = s?.lineToken || '';
+        this.lineToken = '';
+        this.hasLineToken = !!s?.hasLineToken;
+        this.telegramBotToken = '';
+        this.telegramChatId = s?.telegramChatId || '';
+        this.hasTelegramBotToken = !!s?.hasTelegramBotToken;
+        this.discordWebhookUrl = '';
+        this.hasDiscordWebhookUrl = !!s?.hasDiscordWebhookUrl;
         this.loading = false;
       },
       error: () => (this.loading = false),
@@ -45,16 +57,27 @@ export class NotificationSettingsPanelComponent implements OnInit {
   saveNotify(): void {
     if (!this.companyId || this.busy) return;
     this.busy = true;
-    this.http
-      .put(`/notifications/company/${this.companyId}/settings`, {
-        email: this.email,
-        lineToken: this.lineToken,
-        events: ['import.finished', 'approval.pending'],
-      })
-      .subscribe({
-        next: () => this.done('saved'),
-        error: () => this.done('error'),
-      });
+    const body: Record<string, string> = {
+      email: this.email,
+      telegramChatId: this.telegramChatId,
+    };
+    // Blank secret inputs mean "keep existing" on the API.
+    if (this.lineToken.trim()) body['lineToken'] = this.lineToken.trim();
+    if (this.telegramBotToken.trim()) body['telegramBotToken'] = this.telegramBotToken.trim();
+    if (this.discordWebhookUrl.trim()) body['discordWebhookUrl'] = this.discordWebhookUrl.trim();
+    this.http.put<any>(`/notifications/company/${this.companyId}/settings`, body).subscribe({
+      next: (s) => {
+        this.lineToken = '';
+        this.telegramBotToken = '';
+        this.discordWebhookUrl = '';
+        this.hasLineToken = !!s?.hasLineToken;
+        this.hasTelegramBotToken = !!s?.hasTelegramBotToken;
+        this.hasDiscordWebhookUrl = !!s?.hasDiscordWebhookUrl;
+        this.telegramChatId = s?.telegramChatId || this.telegramChatId;
+        this.done('saved');
+      },
+      error: () => this.done('error'),
+    });
   }
 
   testNotify(): void {

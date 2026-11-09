@@ -24,16 +24,22 @@ def test_seal_unseal_payload_fields(monkeypatch):
             "lineToken": "LINE-TOKEN",
             "webhookSecret": "WH-SECRET",
             "lineChannelAccessToken": "CA-TOKEN",
+            "telegramBotToken": "TG-TOKEN",
+            "discordWebhookUrl": "https://discord.com/api/webhooks/1/abc",
         }
     )
     assert sealed["body"] == "hello"
     assert sealed["lineToken"].startswith("fernet:")
     assert sealed["webhookSecret"].startswith("fernet:")
     assert sealed["lineChannelAccessToken"].startswith("fernet:")
+    assert sealed["telegramBotToken"].startswith("fernet:")
+    assert sealed["discordWebhookUrl"].startswith("fernet:")
     open_ = crypto.unseal_payload_secrets(sealed)
     assert open_["lineToken"] == "LINE-TOKEN"
     assert open_["webhookSecret"] == "WH-SECRET"
     assert open_["lineChannelAccessToken"] == "CA-TOKEN"
+    assert open_["telegramBotToken"] == "TG-TOKEN"
+    assert open_["discordWebhookUrl"] == "https://discord.com/api/webhooks/1/abc"
 
 
 def test_plaintext_passthrough_when_key_unset(monkeypatch):

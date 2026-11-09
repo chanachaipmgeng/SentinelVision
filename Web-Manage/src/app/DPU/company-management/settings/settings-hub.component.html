@@ -83,6 +83,15 @@
         @case ('incident-sla') {
           <app-incident-sla-settings-panel (statusFlash)="flash($event)"></app-incident-sla-settings-panel>
         }
+        @case ('ai') {
+          <app-ai-settings-panel (statusFlash)="flash($event)"></app-ai-settings-panel>
+        }
+        @case ('session') {
+          <app-session-settings-panel (statusFlash)="flash($event)"></app-session-settings-panel>
+        }
+        @case ('api-keys') {
+          <app-api-keys-panel (statusFlash)="flash($event)"></app-api-keys-panel>
+        }
         @case ('scan-actions') {
           <app-scan-actions-summary-panel></app-scan-actions-summary-panel>
         }

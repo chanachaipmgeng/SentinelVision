@@ -293,9 +293,17 @@ npm run test:ci       # Karma + Jasmine on ChromeHeadless (CHROME_BIN=/path/to/c
 npm run build:prod    # ng build --configuration production
 ```
 
-`npm test` keeps the interactive Chrome runner. Playwright end-to-end smoke tests are **not** wired yet
-(`e2e/smoke.spec.ts` + `playwright.config.ts` are placeholders; `@playwright/test` is not a dependency) — follow-up
-tracked in docs/BACKLOG.md.
+`npm test` keeps the interactive Chrome runner. Playwright smoke (login page + `GET /health` against the gateway,
+default `http://localhost:8880`):
+
+```bash
+npx playwright install chromium   # once per machine
+DPU_BASE_URL=http://localhost:8880 npm run test:e2e:smoke
+# optional live sign-in (do not commit credentials):
+DPU_E2E_USER=… DPU_E2E_PASSWORD=… npm run test:e2e:smoke
+```
+
+Not a CI gate yet (needs a running stack); see docs/RUNBOOK.md → "Playwright smoke".
 
 Static checks that CI also runs (Phase B3; config in `API-Fast/pyproject.toml`, `trivy.yaml`, `.trivyignore.yaml`):
 

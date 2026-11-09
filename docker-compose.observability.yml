@@ -5,6 +5,9 @@
 #   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
 #   Prometheus: http://localhost:${PROMETHEUS_PORT:-9090}   Grafana: http://localhost:${GRAFANA_PORT:-3000}
 #
+# Logs (optional): stack docker-compose.loki.yml for Loki + Promtail; Grafana Explore → Loki.
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.loki.yml up -d
+#
 # Traces: the overlay points OTEL_EXPORTER_OTLP_ENDPOINT at the bundled collector (debug exporter).
 # Replace docker/observability/otel-collector.yml exporters with your Tempo / Jaeger / vendor
 # endpoint, or set OTEL_EXPORTER_OTLP_ENDPOINT to an external collector and drop the service.

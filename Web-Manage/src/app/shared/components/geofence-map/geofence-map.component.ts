@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostBinding,
   Input,
   OnChanges,
   OnDestroy,
@@ -84,9 +85,6 @@ export interface GeofencePosition {
     `,
   ],
   encapsulation: ViewEncapsulation.None,
-  host: {
-    '[class.dpu-geofence-map--editable]': 'editable',
-  },
 })
 export class GeofenceMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapHost', { static: true }) mapHost!: ElementRef<HTMLDivElement>;
@@ -97,7 +95,9 @@ export class GeofenceMapComponent implements AfterViewInit, OnChanges, OnDestroy
   @Input() radiusKm = 0;
   @Input() zoom = 14;
   @Input() height = '300px';
-  @Input() editable = false;
+  @Input()
+  @HostBinding('class.dpu-geofence-map--editable')
+  editable = false;
 
   @Output() positionChange = new EventEmitter<GeofencePosition>();
 

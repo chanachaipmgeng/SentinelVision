@@ -49,8 +49,8 @@ Every other route needs a Bearer token in the `Authorization` header. `?token=` 
 | POST | `/employees/company/{companyId}/import` | JWT | multipart `file` (.xlsx) + optional `photos` (.zip). |
 | POST | `/employees/company/{companyId}/import-jobs` | JWT | Stores the upload and queues an `import_job` for the `worker` service → `{jobId, status: "pending", progress}`. Poll `GET .../import-jobs/{jobId}` → `{jobId, status: pending\|running\|done\|failed, progress: {processed,total,success,failed,facesEnrolled}, result, error, attempts, createdAt, startedAt, finishedAt}`. |
 | GET | `/companys/{companyId}/audit-logs` | JWT | Paginated audit trail (`limit`, `offset`). |
-| GET/PUT | `/notifications/company/{companyId}/settings` | JWT | Configure `email`, `lineToken`, `webhookUrl`, `webhookSecret` (HMAC-SHA256 signing key), `cutoff` (`HH:MM`), and `events` (`attendance.checked_in`, `attendance.checked_out`, `attendance.approved`, `attendance.missing`). |
-| POST | `/notifications/company/{companyId}/test` | JWT | Enqueue signed test notification across configured channels (`X-DPU-Signature-256: v1=<hmac>`). |
+| GET/PUT | `/notifications/company/{companyId}/settings` | JWT | Configure `email`, `lineToken`, `webhookUrl`, `webhookSecret` (HMAC-SHA256), `telegramBotToken`, `telegramChatId`, `discordWebhookUrl` (Incoming Webhook), `cutoff` (`HH:MM`), and `events`. Secrets are never echoed — use `hasLineToken` / `hasTelegramBotToken` / `hasDiscordWebhookUrl` / `hasWebhookSecret`. Blank secret on PUT keeps the stored value. |
+| POST | `/notifications/company/{companyId}/test` | JWT | Enqueue test notification across configured channels (email / LINE / webhook / Telegram / Discord / in_app). Webhook tests include `X-DPU-Signature-256: v1=<hmac>`. |
 | GET | `/notifications/company/{companyId}/outbox` | JWT | List recent Outbox deliveries (`status`, `attempts`, `event`, `channel`, `lastError`) for the company. |
 | GET | `/notifications/pending-count` | JWT | Optional `?companyId=` filter for pending outbox count. |
 

@@ -97,8 +97,20 @@ export class SetupChecklistComponent implements OnInit {
       ),
       notify: this.permissions.has('notifications.manage')
         ? this.probe(
-            this.http.get<{ hasLineToken?: boolean; webhookUrl?: string }>(`/notifications/company/${cid}/settings`),
-            (s) => !!(s && (s.hasLineToken || (s.webhookUrl || '').trim())),
+            this.http.get<{
+              hasLineToken?: boolean;
+              webhookUrl?: string;
+              hasTelegramBotToken?: boolean;
+              hasDiscordWebhookUrl?: boolean;
+            }>(`/notifications/company/${cid}/settings`),
+            (s) =>
+              !!(
+                s &&
+                (s.hasLineToken ||
+                  s.hasTelegramBotToken ||
+                  s.hasDiscordWebhookUrl ||
+                  (s.webhookUrl || '').trim())
+              ),
           )
         : of(null),
     }).subscribe((r) => {

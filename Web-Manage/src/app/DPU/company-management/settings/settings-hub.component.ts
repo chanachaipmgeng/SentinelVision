@@ -9,10 +9,13 @@ import { PermissionService } from '../../../shared/services/permission.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { HrPdpaTabComponent } from '../hr-schedule/tabs/hr-pdpa-tab.component';
 import { HrSecurityTabComponent } from '../hr-schedule/tabs/hr-security-tab.component';
+import { AiSettingsPanelComponent } from './panels/ai-settings-panel.component';
+import { ApiKeysPanelComponent } from './panels/api-keys-panel.component';
 import { DevicesSummaryPanelComponent } from './panels/devices-summary-panel.component';
 import { IncidentSlaSettingsPanelComponent } from './panels/incident-sla-settings-panel.component';
 import { NotificationSettingsPanelComponent } from './panels/notification-settings-panel/notification-settings-panel.component';
 import { ScanActionsSummaryPanelComponent } from './panels/scan-actions-summary-panel.component';
+import { SessionSettingsPanelComponent } from './panels/session-settings-panel.component';
 import {
   SHIFT_LINK_CARDS,
   SettingsSection,
@@ -33,6 +36,9 @@ import {
     EmptyStateComponent,
     NotificationSettingsPanelComponent,
     IncidentSlaSettingsPanelComponent,
+    AiSettingsPanelComponent,
+    SessionSettingsPanelComponent,
+    ApiKeysPanelComponent,
     ScanActionsSummaryPanelComponent,
     DevicesSummaryPanelComponent,
     HrSecurityTabComponent,

@@ -425,10 +425,20 @@ async def analyze_camera(db: AsyncSession, cam: Camera) -> dict[str, Any]:
 async def list_due_cameras(
     db: AsyncSession, *, now: Optional[datetime] = None
 ) -> list[Camera]:
-    """Active cameras with analysis enabled whose interval has elapsed."""
+    """Active cameras with analysis enabled whose interval has elapsed.
+
+    Uses the shortest env interval for the SQL prefilter, then applies any
+    per-company ``cctvCameraIntervalSeconds`` override in Python.
+    """
+    from .company_ai_settings_service import (
+        CCTV_INTERVAL_MIN,
+        resolve_cctv_camera_interval,
+    )
+
     now = now or _now()
-    interval = timedelta(seconds=max(5, int(settings.WORKER_CCTV_CAMERA_INTERVAL_SECONDS)))
-    due_before = now - interval
+    # Prefilter with the global floor so overrides that are *longer* still get filtered out below.
+    floor_seconds = max(CCTV_INTERVAL_MIN, 5)
+    due_before = now - timedelta(seconds=floor_seconds)
     stmt = (
         select(Camera)
         .where(
@@ -439,7 +449,20 @@ async def list_due_cameras(
         )
         .order_by(Camera.lastAnalyzedAt.asc().nullsfirst())
     )
-    return list((await db.execute(stmt)).scalars().all())
+    candidates = list((await db.execute(stmt)).scalars().all())
+    if not candidates:
+        return []
+
+    interval_cache: dict[UUID, int] = {}
+    due: list[Camera] = []
+    for cam in candidates:
+        cid = cam.companyId
+        if cid not in interval_cache:
+            interval_cache[cid] = await resolve_cctv_camera_interval(db, cid)
+        interval = timedelta(seconds=interval_cache[cid])
+        if cam.lastAnalyzedAt is None or cam.lastAnalyzedAt <= now - interval:
+            due.append(cam)
+    return due
 
 
 async def run_cctv_analysis_tick(

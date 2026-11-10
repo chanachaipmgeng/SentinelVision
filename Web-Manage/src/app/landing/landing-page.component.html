@@ -15,7 +15,7 @@
         <a href="#metrics" (click)="scrollTo('metrics'); $event.preventDefault()">{{ 'landing.nav.metrics' | translate }}</a>
       </nav>
 
-      <div class="dpu-landing__header-actions" style="display:inline-flex;align-items:center;gap:0.35rem">
+      <div class="dpu-landing__header-actions">
         <div class="dpu-landing__lang" role="group" [attr.aria-label]="'landing.lang' | translate">
           <button type="button" [class.is-active]="lang === 'th'" (click)="setLang('th')">TH</button>
           <button type="button" [class.is-active]="lang === 'en'" (click)="setLang('en')">EN</button>

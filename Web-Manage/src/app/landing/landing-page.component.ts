@@ -36,8 +36,8 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   menuOpen = false;
 
   readonly values = [
-    { icon: 'ri-face-recognition-line', titleKey: 'landing.value.face.title', bodyKey: 'landing.value.face.body' },
-    { icon: 'ri-cctv-line', titleKey: 'landing.value.cctv.title', bodyKey: 'landing.value.cctv.body' },
+    { icon: 'ri-user-smile-line', titleKey: 'landing.value.face.title', bodyKey: 'landing.value.face.body' },
+    { icon: 'ri-vidicon-line', titleKey: 'landing.value.cctv.title', bodyKey: 'landing.value.cctv.body' },
     { icon: 'ri-shield-keyhole-line', titleKey: 'landing.value.access.title', bodyKey: 'landing.value.access.body' },
     { icon: 'ri-calendar-check-line', titleKey: 'landing.value.attendance.title', bodyKey: 'landing.value.attendance.body' },
   ];

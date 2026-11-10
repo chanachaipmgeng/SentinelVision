@@ -130,7 +130,7 @@ export class NavService implements OnDestroy {
         permission: 'system.admin',
       },
       {
-        icon: 'settings',
+        icon: 'cog',
         path: '/admin/system-setting',
         title: 'System settings / TTS',
         type: 'link',
@@ -411,7 +411,7 @@ export class NavService implements OnDestroy {
 
       { headTitle: 'GOVERNANCE — Governance', moduleId: 'GOVERNANCE', permission: 'audit.read' },
       {
-        icon: 'file-list',
+        icon: 'list-ul',
         path: '/company/audit-log',
         title: 'Audit log',
         type: 'link',
@@ -419,7 +419,7 @@ export class NavService implements OnDestroy {
         permission: 'audit.read',
       },
       {
-        icon: 'tablet',
+        icon: 'devices',
         path: '/company/devices',
         title: 'Manage kiosk devices',
         type: 'link',
@@ -433,7 +433,7 @@ export class NavService implements OnDestroy {
         moduleId: 'GOVERNANCE',
       },
       {
-        icon: 'shield-user',
+        icon: 'shield-alt-2',
         path: '/company/profile-security',
         title: 'Profile & Security',
         type: 'link',

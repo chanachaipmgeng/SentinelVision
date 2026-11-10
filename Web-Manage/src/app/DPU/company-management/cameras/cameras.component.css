@@ -38,7 +38,14 @@
 .sv-camera-row__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.sv-camera-row__actions .ti-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .sv-camera-badge {

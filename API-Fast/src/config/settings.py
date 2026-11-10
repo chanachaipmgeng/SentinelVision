@@ -258,6 +258,9 @@ class Settings(BaseSettings):
     MEDIAMTX_WHEP_BASE_PATH: str = "/mediamtx"
     MEDIAMTX_HLS_BASE_PATH: str = "/mediamtx-hls"
     MEDIAMTX_RTSP_PUBLISH_URL: str = "rtsp://mediamtx:8554"
+    # Rolling buffer for event-mode pre-roll cuts (MediaMTX path recordSegmentDuration).
+    MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION: str = "5m"
+    MEDIAMTX_CONTINUOUS_RECORD_SEGMENT_DURATION: str = "1h"
     # Shared with the mediamtx container (compose volume mediamtx_recordings).
     MEDIAMTX_RECORDINGS_DIR: str = "/recordings"
     # Internal HLS base for ffmpeg clip cut (docker network, not browser path).

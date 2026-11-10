@@ -76,3 +76,38 @@ def test_video_clip_retention_kind_isolated_from_punch_photos(tmp_path, monkeypa
 def test_pre_post_defaults():
     assert video_clip_service.pre_seconds() >= 0
     assert video_clip_service.post_seconds() >= 0
+
+
+def test_parse_clip_query_dt_naive_is_bangkok():
+    dt = video_clip_service.parse_clip_query_dt("2026-11-10T12:00:00")
+    assert dt is not None
+    assert dt.tzinfo is not None
+    # Asia/Bangkok is UTC+7 → 05:00Z
+    assert dt.hour == 5
+    assert dt.minute == 0
+
+
+def test_parse_clip_query_dt_zulu():
+    dt = video_clip_service.parse_clip_query_dt("2026-11-10T12:00:00Z")
+    assert dt is not None
+    assert dt.hour == 12
+
+
+def test_resolve_clip_path_event_file(tmp_path, monkeypatch):
+    monkeypatch.setitem(storage_service.ROOTS, "video_clips", tmp_path / "video_clips")
+    (tmp_path / "video_clips").mkdir()
+    name = "videoclip_demo.mp4"
+    (tmp_path / "video_clips" / name).write_bytes(b"mp4")
+    clip = VideoClip(
+        clipId=uuid4(),
+        companyId=uuid4(),
+        cameraId=uuid4(),
+        startedAt=datetime(2026, 11, 9, 12, 0, tzinfo=timezone.utc),
+        endedAt=datetime(2026, 11, 9, 12, 0, 15, tzinfo=timezone.utc),
+        storageKey=name,
+        durationMs=15000,
+        kind=CLIP_KIND_EVENT,
+    )
+    path = video_clip_service.resolve_clip_path(clip)
+    assert path.name == name
+    assert path.is_file()

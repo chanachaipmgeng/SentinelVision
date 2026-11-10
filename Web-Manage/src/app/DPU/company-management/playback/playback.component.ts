@@ -47,7 +47,11 @@ export class PlaybackComponent implements OnInit, OnDestroy {
   filterCameraId = '';
   filterKind: '' | 'event' | 'continuous_ref' = '';
   filterIncidentId = '';
+  filterFrom = '';
+  filterTo = '';
   loading = false;
+  exporting = false;
+  syncing = false;
   error = '';
   objectUrl = '';
   currentTime = 0;
@@ -65,6 +69,8 @@ export class PlaybackComponent implements OnInit, OnDestroy {
     const q = this.route.snapshot.queryParamMap;
     this.filterCameraId = q.get('cameraId') || '';
     this.filterIncidentId = q.get('incidentId') || '';
+    this.filterFrom = q.get('from') || '';
+    this.filterTo = q.get('to') || '';
     const kind = q.get('kind');
     if (kind === 'event' || kind === 'continuous_ref') this.filterKind = kind;
     this.loadCameras();
@@ -77,6 +83,24 @@ export class PlaybackComponent implements OnInit, OnDestroy {
 
   get continuousCameras(): CameraRow[] {
     return this.cameras.filter((c) => (c.recordMode || '').toLowerCase() === 'continuous');
+  }
+
+  get canExport(): boolean {
+    return !!this.filterCameraId && !this.exporting;
+  }
+
+  get canSyncContinuous(): boolean {
+    if (!this.filterCameraId || this.syncing) return false;
+    const cam = this.cameras.find((c) => c.cameraId === this.filterCameraId);
+    return !!cam && (cam.recordMode || '').toLowerCase() === 'continuous';
+  }
+
+  downloadHref(clip: VideoClipRow | null): string {
+    if (!clip) return '';
+    return (
+      clip.downloadPath ||
+      `/cameras/company/${this.companyId}/clips/${clip.clipId}/download`
+    );
   }
 
   loadCameras(): void {
@@ -95,6 +119,8 @@ export class PlaybackComponent implements OnInit, OnDestroy {
     if (this.filterCameraId) params['cameraId'] = this.filterCameraId;
     if (this.filterIncidentId) params['incidentId'] = this.filterIncidentId;
     if (this.filterKind) params['kind'] = this.filterKind;
+    if (this.filterFrom) params['startedFrom'] = this.filterFrom;
+    if (this.filterTo) params['startedTo'] = this.filterTo;
 
     // continuous_ref is only valid for continuous cameras — clear kind if camera is not continuous.
     if (this.filterKind === 'continuous_ref' && this.filterCameraId) {
@@ -128,14 +154,75 @@ export class PlaybackComponent implements OnInit, OnDestroy {
       });
   }
 
+  exportClip(): void {
+    if (!this.canExport) return;
+    this.exporting = true;
+    this.error = '';
+    this.http
+      .post<VideoClipRow>(
+        `/cameras/company/${this.companyId}/cameras/${this.filterCameraId}/clips`,
+        { waitForPost: false },
+      )
+      .subscribe({
+        next: (clip) => {
+          this.exporting = false;
+          this.filterKind = 'event';
+          this.loadClips();
+          if (clip?.clipId) this.selectClip(clip);
+        },
+        error: (err) => {
+          this.exporting = false;
+          this.error = err?.error?.detail || 'Export failed';
+        },
+      });
+  }
+
+  syncContinuous(): void {
+    if (!this.canSyncContinuous) return;
+    this.syncing = true;
+    this.error = '';
+    this.http
+      .get<VideoClipRow[]>(
+        `/cameras/company/${this.companyId}/cameras/${this.filterCameraId}/continuous-refs`,
+      )
+      .subscribe({
+        next: () => {
+          this.syncing = false;
+          this.filterKind = 'continuous_ref';
+          this.loadClips();
+        },
+        error: (err) => {
+          this.syncing = false;
+          this.error = err?.error?.detail || 'Sync continuous failed';
+        },
+      });
+  }
+
+  downloadSelected(): void {
+    if (!this.selected) return;
+    const path = this.downloadHref(this.selected);
+    const name = `${this.selected.clipId || 'clip'}.mp4`;
+    this.http.get(path, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (err) => {
+        this.error = err?.error?.detail || 'Download failed';
+      },
+    });
+  }
+
   selectClip(clip: VideoClipRow): void {
     this.selected = clip;
     this.revokeObjectUrl();
     this.currentTime = 0;
     this.duration = Math.max(0, (clip.durationMs || 0) / 1000);
-    const path =
-      clip.downloadPath ||
-      `/cameras/company/${this.companyId}/clips/${clip.clipId}/download`;
+    const path = this.downloadHref(clip);
     this.http.get(path, { responseType: 'blob' }).subscribe({
       next: (blob) => {
         this.objectUrl = URL.createObjectURL(blob);

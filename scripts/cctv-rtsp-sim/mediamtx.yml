@@ -1,0 +1,11 @@
+# Standalone RTSP source for smoke tests (ffmpeg publishes to path "loop").
+logLevel: info
+logDestinations: [stdout]
+api: no
+rtsp: yes
+rtspAddress: :8554
+hls: no
+webrtc: no
+rtmp: no
+paths:
+  loop:

@@ -93,20 +93,38 @@ def _should_pause_for_kiosk(stats: dict) -> bool:
 
 
 def _frame_source_urls(cam: Camera) -> list[str]:
-    """Prefer camera streamUrl; fall back to MediaMTX publish path."""
+    """Prefer MediaMTX republish when enabled (Docker rarely reaches LAN cams); else direct URL."""
     urls: list[str] = []
     direct = effective_stream_url(cam)
-    if direct:
-        urls.append(direct)
     base = (settings.MEDIAMTX_RTSP_PUBLISH_URL or "").rstrip("/")
-    if base:
-        mtx = f"{base}/{path_name_for_camera(cam.cameraId)}"
-        if mtx not in urls:
+    mtx = f"{base}/{path_name_for_camera(cam.cameraId)}" if base else ""
+    prefer_mtx = bool(getattr(settings, "MEDIAMTX_ENABLED", True)) and bool(mtx)
+    if prefer_mtx:
+        urls.append(mtx)
+        if direct and direct not in urls:
+            urls.append(direct)
+    else:
+        if direct:
+            urls.append(direct)
+        if mtx and mtx not in urls:
             urls.append(mtx)
     return urls
 
 
+async def _warm_mediamtx_path(cam: Camera) -> None:
+    """Ensure Control API path exists / recording flags apply before the first OpenCV open."""
+    if not getattr(settings, "MEDIAMTX_ENABLED", True):
+        return
+    try:
+        from ..services.camera_service import _sync_mtx
+
+        await _sync_mtx(cam)
+    except Exception as exc:  # noqa: BLE001 — warm is best-effort
+        logger.debug("CCTV MediaMTX warm failed cam=%s: %s", cam.cameraId, exc)
+
+
 async def _grab_frame_jpeg(cam: Camera) -> bytes:
+    await _warm_mediamtx_path(cam)
     timeout = float(settings.WORKER_CCTV_SNAPSHOT_TIMEOUT_SECONDS)
     last_err: Optional[Exception] = None
     for url in _frame_source_urls(cam):
@@ -283,6 +301,7 @@ async def _handle_attendance_like(
             confidence_percent=confidence,
             distance=distance,
             snapshot_url=snapshot_url,
+            camera_id=cam.cameraId,
             action_taken=(
                 f"CCTV attendance ({mode})"
                 + (" · punched" if attendance and attendance.get("checkedIn") else "")
@@ -312,6 +331,7 @@ async def _handle_attendance_like(
             zone_id=cam.zoneId,
             zone_name=cam.name,
             snapshot_url=snapshot_url,
+            camera_id=cam.cameraId,
             action_taken=f"CCTV unknown face ({mode})",
         )
         return {
@@ -346,6 +366,7 @@ async def _handle_sentinel_mode(
         event_id=event_id,
         snapshot_url=snapshot_url,
         scan_action_rules=module_cfg.get("scanActionRules"),
+        camera_id=cam.cameraId,
     )
     incident = result.get("incident") or {}
     return {

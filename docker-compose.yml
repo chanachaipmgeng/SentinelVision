@@ -232,6 +232,8 @@ services:
       # worker never starts against an unmigrated schema.
       api:
         condition: service_healthy
+      mediamtx:
+        condition: service_started
     stop_grace_period: 45s
     restart: unless-stopped
     security_opt:

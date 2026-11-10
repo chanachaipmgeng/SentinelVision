@@ -1,0 +1,58 @@
+# Optional overlay: synthetic RTSP camera for CCTV worker / clip smoke.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.rtsp-sim.yml up -d --build
+# Then register a camera with streamUrl rtsp://rtsp-sim:8554/loop (see scripts/cctv-rtsp-sim/README.md).
+
+services:
+  rtsp-sim:
+    image: bluenviron/mediamtx:1.12.2
+    container_name: dpu-rtsp-sim
+    volumes:
+      - ./scripts/cctv-rtsp-sim/mediamtx.yml:/mediamtx.yml:ro
+    expose:
+      - "8554"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  rtsp-sim-publisher:
+    image: linuxserver/ffmpeg:7.1-cli-ls22
+    container_name: dpu-rtsp-sim-publisher
+    depends_on:
+      - rtsp-sim
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        sleep 2
+        while true; do
+          echo "publishing testsrc → rtsp://rtsp-sim:8554/loop"
+          ffmpeg -hide_banner -loglevel warning -re \
+            -f lavfi -i testsrc=size=640x360:rate=15 \
+            -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -an \
+            -f rtsp -rtsp_transport tcp rtsp://rtsp-sim:8554/loop \
+            || sleep 2
+        done
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  api:
+    environment:
+      OPENCV_FFMPEG_CAPTURE_OPTIONS: ${OPENCV_FFMPEG_CAPTURE_OPTIONS:-rtsp_transport;tcp}
+      MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION: ${MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION:-5m}
+
+  worker:
+    environment:
+      OPENCV_FFMPEG_CAPTURE_OPTIONS: ${OPENCV_FFMPEG_CAPTURE_OPTIONS:-rtsp_transport;tcp}
+      MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION: ${MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION:-5m}

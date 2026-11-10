@@ -9,6 +9,22 @@
         <i class="ri-layout-grid-line" aria-hidden="true"></i>
         {{ 'cctv.liveWall.nav' | translate }}
       </a>
+      <button
+        type="button"
+        class="ti-btn ti-btn-light modern-btn"
+        [disabled]="!canExport"
+        (click)="exportClip()"
+      >
+        {{ 'cctv.playback.export' | translate }}
+      </button>
+      <button
+        type="button"
+        class="ti-btn ti-btn-light modern-btn"
+        [disabled]="!canSyncContinuous"
+        (click)="syncContinuous()"
+      >
+        {{ 'cctv.playback.syncContinuous' | translate }}
+      </button>
       <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="loadClips()">
         {{ 'Refresh' | translate }}
       </button>
@@ -31,6 +47,24 @@
         <option value="event">event</option>
         <option value="continuous_ref">continuous_ref</option>
       </select>
+    </label>
+    <label>
+      <span>{{ 'cctv.playback.filterFrom' | translate }}</span>
+      <input
+        class="form-control"
+        type="datetime-local"
+        [(ngModel)]="filterFrom"
+        (ngModelChange)="loadClips()"
+      />
+    </label>
+    <label>
+      <span>{{ 'cctv.playback.filterTo' | translate }}</span>
+      <input
+        class="form-control"
+        type="datetime-local"
+        [(ngModel)]="filterTo"
+        (ngModelChange)="loadClips()"
+      />
     </label>
     <label *ngIf="filterIncidentId">
       <span>{{ 'cctv.playback.filterIncident' | translate }}</span>
@@ -79,6 +113,9 @@
             {{ selected.startedAt | date: 'dd/MM/yyyy HH:mm:ss' }}
             → {{ selected.endedAt | date: 'HH:mm:ss' }}
             <span *ngIf="selected.incidentId"> · incident {{ selected.incidentId }}</span>
+            <button type="button" class="ti-btn ti-btn-light modern-btn ms-2" (click)="downloadSelected()">
+              {{ 'cctv.playback.download' | translate }}
+            </button>
           </div>
         </div>
         <video

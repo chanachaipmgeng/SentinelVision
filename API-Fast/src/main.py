@@ -46,6 +46,7 @@ from .routes import (
     video_clip_routes,
     site_floor_routes,
     analytics_routes,
+    people_count_routes,
 )
 
 assert_runtime_secrets_configured()
@@ -289,6 +290,9 @@ def _mount_api(prefix: str = "") -> None:
     )
     app.include_router(
         analytics_routes.router, prefix=f"{p}/analytics", tags=["Face Monitor Analytics"]
+    )
+    app.include_router(
+        people_count_routes.router, prefix=f"{p}/people", tags=["People Counting"]
     )
 
 

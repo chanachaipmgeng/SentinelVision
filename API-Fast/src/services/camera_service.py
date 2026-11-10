@@ -114,6 +114,7 @@ def serialize_camera(cam: Camera, *, include_secrets: bool = False) -> dict[str,
         "isActive": cam.isActive,
         "analysisEnabled": bool(cam.analysisEnabled),
         "lastAnalyzedAt": cam.lastAnalyzedAt,
+        "aiConfig": cam.aiConfig if isinstance(getattr(cam, "aiConfig", None), dict) else (cam.aiConfig or None),
         "whepPath": mediamtx_service.whep_path(cam.cameraId),
         "hlsPath": mediamtx_service.hls_path(cam.cameraId),
         "mtxPath": mediamtx_service.path_name_for_camera(cam.cameraId),
@@ -205,6 +206,17 @@ def _apply_body(cam: Camera, body: dict[str, Any], *, creating: bool) -> None:
 
     if "analysisEnabled" in body:
         cam.analysisEnabled = bool(body.get("analysisEnabled"))
+
+    if "aiConfig" in body:
+        raw = body.get("aiConfig")
+        if raw in (None, ""):
+            cam.aiConfig = None
+        elif isinstance(raw, dict):
+            from ..services.people_analytics import normalize_ai_config
+
+            cam.aiConfig = normalize_ai_config(raw)
+        else:
+            raise HTTPException(status_code=400, detail="aiConfig must be an object")
 
     # Credentials: accept streamUsername/streamPassword; empty password + clearCredentials clears.
     if body.get("clearCredentials"):

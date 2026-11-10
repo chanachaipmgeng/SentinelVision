@@ -86,6 +86,16 @@ async def run_cctv_analysis_tick(
     return await _tick(stop_event=stop_event)
 
 
+async def run_people_count_tick(
+    *, worker_id: Optional[str] = None, stop_event: Optional[asyncio.Event] = None
+) -> Dict[str, Any]:
+    """Phase 6D: dedicated YOLO people lane (line/zone/loiter) — not InsightFace queue."""
+    from ..services.people_count_service import run_people_count_tick as _tick
+
+    _ = worker_id
+    return await _tick(stop_event=stop_event)
+
+
 def poll_interval(job: str) -> float:
     if job == "outbox":
         return float(max(5, int(settings.NOTIFY_POLL_SECONDS)))
@@ -97,4 +107,6 @@ def poll_interval(job: str) -> float:
         return float(max(300, int(settings.WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS)))
     if job == "cctv":
         return float(max(5, int(settings.WORKER_CCTV_INTERVAL_SECONDS)))
+    if job == "people":
+        return float(max(5, int(settings.WORKER_PEOPLE_INTERVAL_SECONDS)))
     return 60.0

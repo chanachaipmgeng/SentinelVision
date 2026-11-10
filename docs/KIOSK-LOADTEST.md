@@ -405,3 +405,26 @@ python kiosk_load.py --profile rush --kiosks 1,2 --hold 60 `
 | 502 หลัง recreate container | rebuild/restart nginx (DNS upstream) |
 
 Smoke เฟรมเดียวภายใน compose (ไม่ใช่โหลดเทส): `API-Fast/scripts/smoke_ws_kiosk.py`
+
+---
+
+## 8. People counting GPU gate (Phase 6D)
+
+People counting ใช้ **YOLOv8n ONNX บน onnxruntime-gpu ในเลนคนละคิวกับ InsightFace** (`WORKER_PEOPLE_*`) และจะ pause เมื่อ kiosk pending ≥ `WORKER_PEOPLE_PAUSE_WHEN_KIOSK_PENDING` (default 4). ค่าเริ่มต้น `peopleEnabled=false` จนกว่าจะวาด ROI บนกล้อง
+
+**เกณฑ์ที่ล็อกไว้:** kiosk checkin+identify p95 ถดถอยไม่เกิน **≤10%** เมื่อเปิด people
+
+```bash
+# เอกสารเกตอย่างเดียว
+python scripts/kiosk-load/people_gpu_sizing.py --dry-doc
+
+# เทียบ baseline vs people (ต้องมีโหลด kiosk พร้อมกัน)
+$env:KIOSK_LOAD_USER = "admin"
+$env:KIOSK_LOAD_PASSWORD = "Password123!"
+python scripts/kiosk-load/people_gpu_sizing.py --base-url http://localhost:8880 --hold 90 --phase compare
+
+# ดาวน์โหลด/export น้ำหนัก YOLO (ครั้งเดียว)
+python scripts/download_yolov8n_onnx.py --out API-Fast/models/yolov8n.onnx
+```
+
+Exit code `2` = gate fail (regression > 10%).

@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -49,6 +49,8 @@ class Camera(Base):
         "analysis_enabled", Boolean, nullable=False, default=False, server_default="false"
     )
     lastAnalyzedAt = Column("last_analyzed_at", DateTime(timezone=True), nullable=True)
+    # Phase 6D: people-count ROI / line / zone / loiter (JSONB). peopleEnabled defaults false.
+    aiConfig = Column("ai_config", JSONB, nullable=True)
     createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
     deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)

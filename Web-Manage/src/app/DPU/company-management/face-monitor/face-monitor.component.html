@@ -51,19 +51,18 @@
 
   <div class="box modern-card glass" *ngIf="loading">
     <div class="box-body">
-      <app-empty-state [loading]="true" [message]="'faceMonitor.loading' | translate"></app-empty-state>
+      <app-empty-state [loading]="true" message="faceMonitor.loading"></app-empty-state>
     </div>
   </div>
 
   <div class="box modern-card glass" *ngIf="error && !loading">
     <div class="box-body">
       <app-empty-state
-        [message]="'faceMonitor.error' | translate"
-        [hint]="'faceMonitor.errorHint' | translate">
+        message="faceMonitor.error"
+        actionLabel="faceMonitor.retry"
+        (action)="load()">
       </app-empty-state>
-      <button type="button" class="ti-btn ti-btn-primary-full modern-btn mt-3" (click)="load()">
-        {{ 'faceMonitor.retry' | translate }}
-      </button>
+      <p class="text-sm text-dpu-muted text-center mt-2">{{ 'faceMonitor.errorHint' | translate }}</p>
     </div>
   </div>
 

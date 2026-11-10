@@ -218,6 +218,11 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./playback/playback.component').then((m) => m.PlaybackComponent),
     },
+    {
+      path: 'company/face-monitor',
+      loadComponent: () =>
+        import('./face-monitor/face-monitor.component').then((m) => m.FaceMonitorComponent),
+    },
     { path: 'company/settings', pathMatch: 'full', redirectTo: 'company/settings/notifications' },
     {
       path: 'company/settings/:section',

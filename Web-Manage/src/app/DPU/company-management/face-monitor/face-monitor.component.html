@@ -1,0 +1,179 @@
+<div class="dpu-list-page face-monitor-page">
+  <app-page-toolbar title="faceMonitor.title">
+    <ng-container chips>
+      <app-stat-chip tone="ok" *ngIf="summary">
+        {{ 'faceMonitor.kpi.events' | translate }} {{ summary.kpis.totalEvents }}
+      </app-stat-chip>
+      <app-stat-chip tone="soft" *ngIf="summary">
+        {{ 'faceMonitor.kpi.peak' | translate }} {{ summary.kpis.peakOccupancy }}
+      </app-stat-chip>
+      <app-stat-chip tone="ok" *ngIf="summary">
+        {{ 'faceMonitor.kpi.camerasOnline' | translate }} {{ summary.kpis.camerasOnline }}/{{ summary.kpis.camerasTotal }}
+      </app-stat-chip>
+      <app-stat-chip tone="warn" *ngIf="summary">
+        {{ 'faceMonitor.kpi.avgDwell' | translate }} {{ summary.kpis.avgDwellSeconds }}s
+      </app-stat-chip>
+    </ng-container>
+    <ng-container controls>
+      <label class="face-monitor-ctrl">
+        <span>{{ 'faceMonitor.range' | translate }}</span>
+        <select class="form-select form-select-sm" [(ngModel)]="rangeDays" (ngModelChange)="load()">
+          <option [ngValue]="1">1d</option>
+          <option [ngValue]="7">7d</option>
+          <option [ngValue]="14">14d</option>
+          <option [ngValue]="30">30d</option>
+        </select>
+      </label>
+      <label class="face-monitor-ctrl">
+        <span>{{ 'faceMonitor.source' | translate }}</span>
+        <select class="form-select form-select-sm" [(ngModel)]="source" (ngModelChange)="load()">
+          <option value="both">{{ 'faceMonitor.source.both' | translate }}</option>
+          <option value="incidents">{{ 'faceMonitor.source.incidents' | translate }}</option>
+          <option value="attendance">{{ 'faceMonitor.source.attendance' | translate }}</option>
+        </select>
+      </label>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="load()" [disabled]="loading">
+        <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
+        <span>{{ 'faceMonitor.refresh' | translate }}</span>
+      </button>
+      <button
+        type="button"
+        class="ti-btn ti-btn-primary-full modern-btn"
+        (click)="exportPdf()"
+        [disabled]="loading || exporting || !summary">
+        <i class="ri-file-pdf-line"></i>
+        <span>{{ 'faceMonitor.exportPdf' | translate }}</span>
+      </button>
+    </ng-container>
+  </app-page-toolbar>
+
+  <p class="face-monitor-sub text-dpu-muted">{{ 'faceMonitor.subtitle' | translate }}</p>
+
+  <div class="box modern-card glass" *ngIf="loading">
+    <div class="box-body">
+      <app-empty-state [loading]="true" message="faceMonitor.loading"></app-empty-state>
+    </div>
+  </div>
+
+  <div class="box modern-card glass" *ngIf="error && !loading">
+    <div class="box-body">
+      <app-empty-state
+        message="faceMonitor.error"
+        actionLabel="faceMonitor.retry"
+        (action)="load()">
+      </app-empty-state>
+      <p class="text-sm text-dpu-muted text-center mt-2">{{ 'faceMonitor.errorHint' | translate }}</p>
+    </div>
+  </div>
+
+  <ng-container *ngIf="summary && !loading">
+    <div class="face-monitor-grid">
+      <section class="box modern-card glass face-monitor-panel">
+        <div class="box-body">
+          <h3 class="face-monitor-h">{{ 'faceMonitor.heatmap.title' | translate }}</h3>
+          <p class="text-sm text-dpu-muted mb-3">{{ 'faceMonitor.heatmap.hint' | translate }}</p>
+          <div echarts [options]="heatmapChart" class="face-monitor-chart"></div>
+        </div>
+      </section>
+
+      <section class="box modern-card glass face-monitor-panel">
+        <div class="box-body">
+          <h3 class="face-monitor-h">{{ 'faceMonitor.occupancy.title' | translate }}</h3>
+          <p class="text-sm text-dpu-muted mb-3">{{ 'faceMonitor.occupancy.hint' | translate }}</p>
+          <div echarts [options]="occupancyChart" class="face-monitor-chart"></div>
+        </div>
+      </section>
+
+      <section class="box modern-card glass face-monitor-panel">
+        <div class="box-body">
+          <h3 class="face-monitor-h">{{ 'faceMonitor.dwell.title' | translate }}</h3>
+          <p class="text-sm text-dpu-muted mb-3">{{ 'faceMonitor.dwell.hint' | translate }}</p>
+          <div *ngIf="!summary.dwell.cameras?.length" class="text-sm text-dpu-muted">
+            {{ 'faceMonitor.dwell.empty' | translate }}
+          </div>
+          <div class="table-responsive" *ngIf="summary.dwell.cameras?.length">
+            <table class="table table-hover mb-0 face-monitor-table">
+              <thead>
+                <tr>
+                  <th>{{ 'faceMonitor.dwell.col.name' | translate }}</th>
+                  <th>{{ 'faceMonitor.dwell.col.avg' | translate }}</th>
+                  <th>{{ 'faceMonitor.dwell.col.sessions' | translate }}</th>
+                  <th>{{ 'faceMonitor.dwell.col.total' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of summary.dwell.cameras">
+                  <td>{{ row.cameraName || row.zoneName || row.cameraId || '—' }}</td>
+                  <td>{{ row.avgDwellSeconds }}s</td>
+                  <td>{{ row.sessions }}</td>
+                  <td>{{ row.totalDwellSeconds }}s</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="box modern-card glass face-monitor-panel">
+        <div class="box-body">
+          <h3 class="face-monitor-h">{{ 'faceMonitor.health.title' | translate }}</h3>
+          <p class="text-sm text-dpu-muted mb-3">{{ 'faceMonitor.health.hint' | translate }}</p>
+          <div class="face-monitor-health-chips mb-3">
+            <app-stat-chip tone="ok">{{ 'faceMonitor.health.online' | translate }} {{ summary.cameraHealth.summary.online }}</app-stat-chip>
+            <app-stat-chip tone="danger">{{ 'faceMonitor.health.offline' | translate }} {{ summary.cameraHealth.summary.offline }}</app-stat-chip>
+            <app-stat-chip tone="warn">{{ 'faceMonitor.health.stale' | translate }} {{ summary.cameraHealth.summary.stale }}</app-stat-chip>
+            <app-stat-chip tone="soft">{{ 'faceMonitor.health.analysis' | translate }} {{ summary.cameraHealth.summary.analysisEnabled }}</app-stat-chip>
+          </div>
+          <div *ngIf="!summary.cameraHealth.cameras?.length" class="text-sm text-dpu-muted">
+            {{ 'faceMonitor.health.empty' | translate }}
+          </div>
+          <div class="table-responsive" *ngIf="summary.cameraHealth.cameras?.length">
+            <table class="table table-hover mb-0 face-monitor-table">
+              <thead>
+                <tr>
+                  <th>{{ 'faceMonitor.health.col.name' | translate }}</th>
+                  <th>{{ 'faceMonitor.health.col.health' | translate }}</th>
+                  <th>{{ 'faceMonitor.health.col.ping' | translate }}</th>
+                  <th>{{ 'faceMonitor.health.col.events' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let cam of summary.cameraHealth.cameras">
+                  <td>
+                    <div class="font-medium">{{ cam.name }}</div>
+                    <div class="text-xs text-dpu-muted" *ngIf="cam.analysisEnabled">
+                      {{ 'faceMonitor.health.analysisOn' | translate }}
+                    </div>
+                  </td>
+                  <td>
+                    <app-stat-chip [tone]="healthTone(cam.health)">{{ cam.health }}</app-stat-chip>
+                  </td>
+                  <td>
+                    <span *ngIf="cam.lastPingAt">{{ cam.lastPingAt | date:'short' }}</span>
+                    <span *ngIf="!cam.lastPingAt" class="text-dpu-muted">—</span>
+                    <span class="text-xs text-dpu-muted" *ngIf="cam.lastPingLatencyMs != null">
+                      · {{ cam.lastPingLatencyMs | number:'1.0-0' }} ms
+                    </span>
+                  </td>
+                  <td>{{ cam.eventsInRange }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="box modern-card glass mt-4" *ngIf="summary.kpis.busySlots?.length">
+      <div class="box-body">
+        <h3 class="face-monitor-h">{{ 'faceMonitor.busy.title' | translate }}</h3>
+        <ul class="face-monitor-busy">
+          <li *ngFor="let slot of summary.kpis.busySlots">
+            <span>{{ slot.label }}</span>
+            <strong>{{ slot.count }}</strong>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </ng-container>
+</div>

@@ -13,6 +13,7 @@ pydantic-settings
 email-validator
 python-dotenv
 openpyxl
+reportlab>=4.0
 pgvector
 numpy
 httpx

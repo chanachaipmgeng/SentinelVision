@@ -186,6 +186,8 @@ class SentinelIncidentLog(Base):
             "camera_id",
             occurredAt.desc(),
         ),
+        # Matches 0026_incident_camera — analytics hour/range scans (ASC, not DESC).
+        Index("sentinel_incident_company_hour_idx", "companyId", "occurred_at"),
         # Matches 0023_incident_sla — open-incident SLA sweep.
         Index(
             "sentinel_incident_sla_due_idx",

@@ -126,6 +126,9 @@ module = [
     "src.services.site_floor_service",
     "src.services.tenant_quota_service",
     "src.services.video_clip_service",
+    # Phase 6C/6D: SQLAlchemy Column[] comparisons / assignments (main CI red since #23/#24).
+    "src.services.analytics_service",
+    "src.services.people_count_service",
     "src.utils.face_engine",
     "src.utils.face_gpu_queue",
     "src.utils.file_handler",

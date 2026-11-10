@@ -26,6 +26,9 @@ API-Fast/**/*.webp
 *.pkl
 *.rar
 *_id_map.pkl
+# YOLOv8 ONNX weights (download via scripts/download_yolov8n_onnx.py)
+API-Fast/models/*.onnx
+!API-Fast/models/.gitkeep
 
 # Scratch spreadsheets & load-test result dumps (keep curated reports under docs/)
 API-Fast/*.xlsx

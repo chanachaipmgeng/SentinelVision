@@ -117,6 +117,12 @@ services:
       retries: 10
       start_period: 60s
 
+  # People lane scrapes both API replicas for kiosk pending (Phase 6D).
+  worker:
+    environment:
+      WORKER_PEOPLE_KIOSK_METRICS_URLS: ${WORKER_PEOPLE_KIOSK_METRICS_URLS:-http://api:8000/metrics,http://api-gpu1:8000/metrics}
+      PEOPLE_YOLO_PROVIDERS: ${PEOPLE_YOLO_PROVIDERS:-CUDAExecutionProvider,CPUExecutionProvider}
+
   nginx:
     volumes:
       - ./docker/nginx/default.dual-gpu.conf:/etc/nginx/conf.d/default.conf:ro

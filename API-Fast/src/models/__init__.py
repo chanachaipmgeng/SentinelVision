@@ -21,4 +21,5 @@ from . import (  # noqa: F401
     video_clip,
     site_floor,
     company_api_key,
+    people_count_bucket,
 )

@@ -3,12 +3,33 @@
     <ng-container chips>
       <app-stat-chip>{{ 'cctv.cameras.total' | translate }} {{ items.length }}</app-stat-chip>
       <app-stat-chip tone="ok">{{ 'cctv.cameras.online' | translate }} {{ onlineCount }}</app-stat-chip>
+      <app-stat-chip tone="soft">{{ 'cctv.cameras.peopleEnabled' | translate }} {{ peopleEnabledCount }}</app-stat-chip>
+      <app-stat-chip tone="ok" *ngIf="peopleMetrics?.totals as t">
+        {{ 'cctv.people.in' | translate }} {{ t.inCount }} / {{ 'cctv.people.out' | translate }} {{ t.outCount }}
+      </app-stat-chip>
     </ng-container>
     <ng-container controls>
       <app-pill-search
         [(value)]="searchTerm"
         placeholder="{{ 'cctv.cameras.search' | translate }}"
       ></app-pill-search>
+      <input
+        #csvInput
+        type="file"
+        accept=".csv,text/csv"
+        class="hidden"
+        hidden
+        (change)="onCsvSelected($event)"
+      />
+      <button
+        type="button"
+        class="ti-btn ti-btn-light modern-btn"
+        (click)="triggerCsvPick()"
+        [disabled]="importing"
+      >
+        <i class="ri-file-upload-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.importCsv' | translate }}
+      </button>
       <a routerLink="/company/live-wall" class="ti-btn ti-btn-light modern-btn">
         <i class="ri-grid-line" aria-hidden="true"></i>
         {{ 'cctv.liveWall.nav' | translate }}
@@ -20,6 +41,30 @@
     </ng-container>
   </app-page-toolbar>
   <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.cameras.subtitle' | translate }}</p>
+
+  <div class="box modern-card glass mb-4" *ngIf="peopleMetrics?.totals as t">
+    <div class="box-header">
+      <h3 class="box-title">{{ 'cctv.people.metricsTitle' | translate }}</h3>
+    </div>
+    <div class="box-body sv-people-metrics">
+      <div>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.in' | translate }}</span>
+        <strong>{{ t.inCount }}</strong>
+      </div>
+      <div>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.out' | translate }}</span>
+        <strong>{{ t.outCount }}</strong>
+      </div>
+      <div>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.net' | translate }}</span>
+        <strong>{{ t.net }}</strong>
+      </div>
+      <div>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.peakZone' | translate }}</span>
+        <strong>{{ t.peakZoneOccupancy }}</strong>
+      </div>
+    </div>
+  </div>
 
   <div class="box modern-card glass mb-4" *ngIf="showForm">
     <div class="box-header">
@@ -122,6 +167,13 @@
               >
                 {{ cam.status || 'unknown' }}
               </span>
+              <span
+                class="sv-camera-badge"
+                [class.sv-camera-badge--people]="!!cam.aiConfig?.peopleEnabled"
+                *ngIf="cam.aiConfig"
+              >
+                {{ cameraPeopleLabel(cam) | translate }}
+              </span>
             </div>
             <div class="sv-camera-row__meta text-muted text-xs">
               {{ cam.protocol }} · {{ cam.recordMode }} ·
@@ -146,6 +198,9 @@
                   : 'cctv.cameras.analysisOff'
                 ) | translate
               }}
+            </button>
+            <button type="button" class="ti-btn ti-btn-sm ti-btn-primary" (click)="openRoiEditor(cam)">
+              {{ 'cctv.cameras.roi' | translate }}
             </button>
             <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="ping(cam)">
               {{ 'cctv.cameras.ping' | translate }}
@@ -178,6 +233,80 @@
     </div>
     <div class="box-body">
       <img [src]="snapshotPreview" alt="Camera snapshot" class="sv-camera-snapshot" />
+    </div>
+  </div>
+
+  <!-- ROI editor overlay -->
+  <div class="sv-roi-backdrop" *ngIf="roiCamera && roiSnapshot">
+    <div class="sv-roi-panel box modern-card glass">
+      <div class="box-header flex justify-between items-center flex-wrap gap-2">
+        <h3 class="box-title m-0">
+          {{ 'cctv.cameras.roiTitle' | translate }} — {{ roiCamera.name }}
+        </h3>
+        <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="closeRoiEditor()">
+          {{ 'Close' | translate }}
+        </button>
+      </div>
+      <div class="box-body">
+        <p class="text-sm text-dpu-muted mb-2">{{ 'cctv.cameras.roiHint' | translate }}</p>
+        <div class="sv-roi-toolbar flex flex-wrap gap-2 mb-3">
+          <button
+            type="button"
+            class="ti-btn ti-btn-sm"
+            *ngFor="let m of roiModes"
+            [class.ti-btn-primary]="roiMode === m"
+            [class.ti-btn-light]="roiMode !== m"
+            (click)="setRoiMode(m)"
+          >
+            {{ ('cctv.cameras.roiMode.' + m) | translate }}
+          </button>
+          <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="undoRoiPoint()">
+            {{ 'cctv.cameras.roiUndo' | translate }}
+          </button>
+          <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="clearRoiDraft()">
+            {{ 'cctv.cameras.roiClear' | translate }}
+          </button>
+        </div>
+        <div class="sv-roi-stage">
+          <img
+            #roiImg
+            [src]="roiSnapshot"
+            alt="ROI snapshot"
+            class="sv-roi-img"
+            (load)="onRoiImgLoad()"
+          />
+          <canvas #roiCanvas class="sv-roi-canvas" (click)="onCanvasClick($event)"></canvas>
+        </div>
+        <div class="grid grid-cols-12 gap-3 mt-3">
+          <div class="col-span-6 md:col-span-3">
+            <label class="form-label">{{ 'cctv.cameras.crowdMin' | translate }}</label>
+            <input class="form-control" type="number" min="1" [(ngModel)]="roiCrowdMin" />
+          </div>
+          <div class="col-span-6 md:col-span-3">
+            <label class="form-label">{{ 'cctv.cameras.loiterSec' | translate }}</label>
+            <input class="form-control" type="number" min="1" [(ngModel)]="roiLoiterSec" />
+          </div>
+          <div class="col-span-12 md:col-span-6 flex items-end">
+            <label class="form-check flex items-center gap-2 m-0">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="roiPeopleEnabled" />
+              <span>{{ 'cctv.cameras.fields.peopleEnabled' | translate }}</span>
+            </label>
+          </div>
+          <div class="col-span-12 flex justify-end gap-2">
+            <button type="button" class="ti-btn ti-btn-light" (click)="closeRoiEditor()">
+              {{ 'Cancel' | translate }}
+            </button>
+            <button
+              type="button"
+              class="ti-btn ti-btn-primary"
+              (click)="saveRoi()"
+              [disabled]="roiSaving"
+            >
+              {{ 'Save' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

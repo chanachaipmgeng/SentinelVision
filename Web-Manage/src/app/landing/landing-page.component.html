@@ -1,5 +1,8 @@
 <div class="dpu-landing">
   <div class="dpu-landing__shell">
+    <app-dpu-mouse-glow></app-dpu-mouse-glow>
+    <app-dpu-cursor-dot></app-dpu-cursor-dot>
+
     <header class="dpu-landing__header">
       <a routerLink="/" class="dpu-landing__brand" aria-label="SentinelVision">
         <img src="./assets/images/brand-logos/logo.png" alt="" />
@@ -24,7 +27,7 @@
     </header>
 
     <main class="dpu-landing__main">
-      <!-- Hero: brand + one headline + one supporting line + one CTA + product visual -->
+      <!-- Hero -->
       <section class="dpu-landing__hero" aria-labelledby="landing-hero-title">
         <div class="dpu-landing__hero-bg" aria-hidden="true"></div>
         <div class="dpu-landing__hero-grid" aria-hidden="true"></div>
@@ -49,7 +52,8 @@
         </div>
 
         <div class="dpu-landing__product dpu-fold" dpuReveal="dashboard" aria-hidden="true">
-          <div class="dpu-landing__product-frame">
+          <app-dpu-horizon-glow [count]="48"></app-dpu-horizon-glow>
+          <div class="dpu-landing__product-frame" style="margin-top:-1px">
             <div class="dpu-landing__product-inner">
               <div class="dpu-landing__product-visual">
                 <div class="dpu-landing__mock-panel dpu-landing__mock-panel--scan"></div>
@@ -70,9 +74,25 @@
         </div>
       </section>
 
-      <!-- Value strip -->
-      <section id="values" class="dpu-landing__section">
-        <div class="dpu-landing__section-inner">
+      <!-- Capability marquee -->
+      <section class="dpu-landing__marquee" aria-hidden="true">
+        <p class="dpu-landing__marquee-label" dpuReveal="fade">{{ 'landing.marquee.label' | translate }}</p>
+        <div class="dpu-landing__marquee-track-wrap">
+          <div class="dpu-landing__marquee-track">
+            @for (chip of marqueeChips; track chip) {
+              <span class="dpu-landing__marquee-item">{{ chip | translate }}</span>
+            }
+            @for (chip of marqueeChips; track chip + '-dup') {
+              <span class="dpu-landing__marquee-item">{{ chip | translate }}</span>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Value strip + aura + horizon -->
+      <section id="values" class="dpu-landing__section dpu-landing__section--relative">
+        <app-dpu-aura-field intensity="soft"></app-dpu-aura-field>
+        <div class="dpu-landing__section-inner" style="position:relative;z-index:1">
           <div class="dpu-landing__section-head" dpuReveal="up">
             <span class="dpu-landing__tag">{{ 'landing.values.tag' | translate }}</span>
             <h2 class="dpu-text-display-gradient">{{ 'landing.values.title' | translate }}</h2>
@@ -96,11 +116,13 @@
             }
           </div>
         </div>
+        <app-dpu-horizon-glow [count]="40" style="margin-top:-4rem;position:relative;z-index:0"></app-dpu-horizon-glow>
       </section>
 
       <!-- Feature bento -->
-      <section id="features" class="dpu-landing__section" style="padding-top:0">
-        <div class="dpu-landing__section-inner">
+      <section id="features" class="dpu-landing__section dpu-landing__section--relative" style="padding-top:0">
+        <app-dpu-aura-field intensity="strong" [withParticles]="false"></app-dpu-aura-field>
+        <div class="dpu-landing__section-inner" style="position:relative;z-index:1">
           <div class="dpu-landing__section-head dpu-landing__section-head--center" dpuReveal="up">
             <span class="dpu-landing__tag">{{ 'landing.features.tag' | translate }}</span>
             <h2 class="dpu-text-display-gradient">{{ 'landing.features.title' | translate }}</h2>
@@ -123,12 +145,21 @@
         </div>
       </section>
 
-      <!-- Metrics -->
+      <!-- Metrics with beam -->
       <section id="metrics" class="dpu-landing__section" style="padding-top:0">
         <div class="dpu-landing__section-inner">
+          <div class="dpu-landing__section-head dpu-landing__section-head--center" dpuReveal="up">
+            <span class="dpu-landing__tag">{{ 'landing.metrics.tag' | translate }}</span>
+            <h2 class="dpu-text-display-gradient">{{ 'landing.metrics.title' | translate }}</h2>
+          </div>
           <div class="dpu-landing__metrics">
-            @for (m of metrics; track m.labelKey) {
-              <div class="dpu-landing__metric dpu-glass" dpuReveal="fade">
+            @for (m of metrics; track m.labelKey; let i = $index) {
+              <div
+                class="dpu-landing__metric dpu-card-surface dpu-beam"
+                dpuReveal="up"
+                [dpuRevealDelay]="(0.1 * (i + 1)) + 's'"
+                dpuCardTilt
+              >
                 <div
                   class="dpu-landing__metric-value"
                   [dpuCountUp]="m.value"
@@ -141,14 +172,41 @@
         </div>
       </section>
 
-      <!-- Final CTA -->
+      <!-- Float device -->
       <section class="dpu-landing__section" style="padding-top:0">
         <div class="dpu-landing__section-inner">
-          <div class="dpu-landing__cta-banner dpu-card-surface" dpuReveal="up">
-            <h2 class="dpu-text-display-gradient">{{ 'landing.final.title' | translate }}</h2>
-            <p>{{ 'landing.final.lead' | translate }}</p>
-            <a routerLink="/auth/login" class="dpu-btn-vault">{{ 'landing.cta.signin' | translate }}</a>
+          <div class="dpu-landing__float-grid">
+            <div class="dpu-landing__float-stage dpu-card-surface" dpuReveal="left" aria-hidden="true">
+              <div class="dpu-landing__float-device"></div>
+            </div>
+            <div>
+              <div dpuReveal="up">
+                <span class="dpu-landing__tag">{{ 'landing.float.tag' | translate }}</span>
+              </div>
+              <h2 class="dpu-text-display-gradient" style="margin-top:0.75rem" dpuReveal="up" dpuRevealDelay="0.12s">
+                {{ 'landing.float.title' | translate }}
+              </h2>
+              <p class="lead" dpuReveal="up" dpuRevealDelay="0.24s">{{ 'landing.float.lead' | translate }}</p>
+              <div style="margin-top:1.5rem" dpuReveal="up" dpuRevealDelay="0.36s">
+                <a routerLink="/kiosk/pair" class="dpu-btn-ghost">{{ 'landing.float.cta' | translate }}</a>
+              </div>
+            </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Final CTA banner -->
+      <section class="dpu-landing__section" style="padding-top:0">
+        <div class="dpu-landing__cta-wrap">
+          <div class="dpu-landing__cta-rule" aria-hidden="true"></div>
+          <div class="dpu-landing__section-inner" style="padding-block:clamp(2rem,5vw,3rem)">
+            <div class="dpu-landing__cta-banner dpu-card-surface dpu-beam" dpuReveal="up" dpuCardTilt>
+              <h2 class="dpu-text-display-gradient">{{ 'landing.final.title' | translate }}</h2>
+              <p>{{ 'landing.final.lead' | translate }}</p>
+              <a routerLink="/auth/login" class="dpu-btn-vault">{{ 'landing.cta.signin' | translate }}</a>
+            </div>
+          </div>
+          <div class="dpu-landing__cta-rule" aria-hidden="true"></div>
         </div>
       </section>
     </main>

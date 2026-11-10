@@ -8,6 +8,10 @@ import { DpuCountUpDirective } from '../shared/directives/dpu-count-up.directive
 import { DpuRevealDirective } from '../shared/directives/dpu-reveal.directive';
 import { EmployeeService } from '../DPU/services/employee.service';
 import { TokenService } from '../shared/services/token.service';
+import { DpuAuraFieldComponent } from './fx/dpu-aura-field.component';
+import { DpuCursorDotComponent } from './fx/dpu-cursor-dot.component';
+import { DpuHorizonGlowComponent } from './fx/dpu-horizon-glow.component';
+import { DpuMouseGlowComponent } from './fx/dpu-mouse-glow.component';
 
 @Component({
   selector: 'app-landing-page',
@@ -19,6 +23,10 @@ import { TokenService } from '../shared/services/token.service';
     DpuRevealDirective,
     DpuCountUpDirective,
     DpuCardTiltDirective,
+    DpuHorizonGlowComponent,
+    DpuAuraFieldComponent,
+    DpuMouseGlowComponent,
+    DpuCursorDotComponent,
   ],
   templateUrl: './landing-page.component.html',
   styleUrl: './landing-page.component.scss',
@@ -45,6 +53,17 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     { value: 512, suffix: '-d', labelKey: 'landing.metric.embedding' },
     { value: 1, suffix: ':N', labelKey: 'landing.metric.match' },
     { value: 24, suffix: '/7', labelKey: 'landing.metric.uptime' },
+  ];
+
+  readonly marqueeChips = [
+    'landing.marquee.face',
+    'landing.marquee.cctv',
+    'landing.marquee.access',
+    'landing.marquee.attendance',
+    'landing.marquee.hybrid',
+    'landing.marquee.shift',
+    'landing.marquee.export',
+    'landing.marquee.kiosk',
   ];
 
   constructor(

@@ -135,7 +135,7 @@ def collect_window(
 def print_gate_doc() -> None:
     print(
         """
-Phase 6D — People counting GPU / kiosk p95 gate
+Phase 6D - People counting GPU / kiosk p95 gate
 ===============================================
 
 Locked decision: <=10% kiosk checkin+identify p95 regression when people YOLO runs.
@@ -148,9 +148,9 @@ Env (worker):
   peopleEnabled                   false until ROI configured on camera.ai_config
 
 Procedure:
-  1. Baseline: people disabled (or no ROI) — run kiosk load + this script --phase baseline
+  1. Baseline: people disabled (or no ROI) - run kiosk load + this script --phase baseline
   2. Enable people on one camera with ROI; ensure yolov8n.onnx present
-  3. Repeat load — this script --phase people
+  3. Repeat load - this script --phase people
   4. Gate: people_p95 <= baseline_p95 * 1.10
 
 Download ONNX (once):

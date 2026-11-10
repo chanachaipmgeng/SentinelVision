@@ -138,7 +138,7 @@ def print_gate_doc() -> None:
 Phase 6D — People counting GPU / kiosk p95 gate
 ===============================================
 
-Locked decision: ≤10% kiosk checkin+identify p95 regression when people YOLO runs.
+Locked decision: <=10% kiosk checkin+identify p95 regression when people YOLO runs.
 
 Env (worker):
   WORKER_PEOPLE_*                 dedicated lane (not InsightFace queue)

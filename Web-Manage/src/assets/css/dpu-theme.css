@@ -112,7 +112,7 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   border-color: var(--dpu-border) !important;
 }
 
-/* ---- Glass header ---- */
+/* ---- Glass header (+ optional teal hairline) ---- */
 .app-header {
   background: rgba(255, 255, 255, 0.78) !important;
   backdrop-filter: blur(16px) saturate(1.25);
@@ -121,6 +121,24 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset, 0 4px 18px rgba(15, 23, 42, 0.04);
   transition: box-shadow var(--dpu-duration) var(--dpu-ease);
   z-index: 49 !important;
+  position: relative;
+}
+
+.app-header::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(15, 118, 110, 0.35),
+    transparent
+  );
+  opacity: 0.85;
 }
 
 .app-header .main-header {
@@ -447,7 +465,7 @@ html[data-toggled="dpu-sidebar-hidden"] .animated-arrow span {
   to { opacity: 1; }
 }
 
-/* ---- Cards / boxes ---- */
+/* ---- Cards / boxes (+ selective VaultX-inspired glass surface) ---- */
 .box {
   border-radius: var(--dpu-radius);
   border: 1px solid var(--dpu-border);
@@ -457,6 +475,34 @@ html[data-toggled="dpu-sidebar-hidden"] .animated-arrow span {
     transform var(--dpu-duration) var(--dpu-ease),
     box-shadow var(--dpu-duration) var(--dpu-ease),
     border-color var(--dpu-duration) var(--dpu-ease);
+}
+
+.box.modern-card.glass,
+.modern-card.glass {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82)) padding-box,
+    linear-gradient(
+      180deg,
+      rgba(15, 118, 110, 0.28),
+      rgba(255, 255, 255, 0.65) 32%,
+      rgba(226, 232, 240, 0.95) 78%
+    )
+      border-box;
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    var(--dpu-shadow);
+}
+
+.box.modern-card.glass:hover,
+.modern-card.glass:hover {
+  border-color: transparent;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 12px 32px rgba(15, 118, 110, 0.1),
+    var(--dpu-shadow-lg);
 }
 
 .main-content > .box,
@@ -643,11 +689,18 @@ body.dpu-login-body {
   position: relative;
   z-index: 1;
   width: min(440px, 100%);
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)) padding-box,
+    linear-gradient(180deg, rgba(94, 234, 212, 0.55), rgba(255, 255, 255, 0.35) 40%, rgba(255, 255, 255, 0.12))
+      border-box;
+  border: 1px solid transparent;
   border-radius: 20px;
   padding: 2.25rem 2rem 2rem;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 24px 64px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
   animation: dpu-card-in 0.55s var(--dpu-ease) both;
 }
 
@@ -696,17 +749,65 @@ body.dpu-login-body {
 }
 
 .dpu-auth__panel .form-control {
-  background: #f8fafc;
+  background: rgba(248, 250, 252, 0.92);
+  border-color: rgba(15, 118, 110, 0.18) !important;
+  transition:
+    border-color 0.25s var(--dpu-ease),
+    box-shadow 0.25s var(--dpu-ease),
+    background 0.25s var(--dpu-ease);
+}
+
+.dpu-auth__panel .form-control:focus {
+  border-color: rgba(15, 118, 110, 0.65) !important;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.16), 0 0 22px -6px rgba(15, 118, 110, 0.35);
+}
+
+.dpu-auth__panel .input-group:focus-within {
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.16);
+  border-radius: 0.5rem;
 }
 
 .dpu-auth__submit {
   width: 100%;
   margin-top: 0.5rem;
-  padding: 0.75rem 1rem !important;
-  border-radius: 12px !important;
-  font-weight: 650 !important;
+  padding: 0.8rem 1rem !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
   letter-spacing: 0.01em;
   color: #fff !important;
+  background: linear-gradient(135deg, #0f766e, #14b8a6) !important;
+  border-color: transparent !important;
+  box-shadow:
+    0 4px 22px -2px rgba(15, 118, 110, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition:
+    transform 0.25s var(--dpu-ease),
+    box-shadow 0.25s var(--dpu-ease),
+    filter 0.25s ease !important;
+}
+
+.dpu-auth__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow:
+    0 8px 28px -2px rgba(20, 184, 166, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.dpu-auth__submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Landing body: neutralize Ynex page chrome while marketing is mounted */
+body.dpu-landing-body {
+  background: #020808 !important;
+  background-image: none !important;
+  min-height: 100%;
+}
+
+body.dpu-landing-body .page::before {
+  display: none;
 }
 
 .dpu-auth__error {

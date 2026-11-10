@@ -79,10 +79,15 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
         width: min(28rem, 100%);
         padding: 2rem 2rem 1.5rem;
         border-radius: 1.25rem;
-        border: 1px solid rgba(94, 234, 212, 0.28);
-        background: rgba(4, 47, 46, 0.78);
-        backdrop-filter: blur(12px);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        border: 1px solid transparent;
+        background:
+          linear-gradient(180deg, rgba(4, 47, 46, 0.88), rgba(2, 24, 23, 0.82)) padding-box,
+          linear-gradient(180deg, rgba(94, 234, 212, 0.5), rgba(255, 255, 255, 0.08) 45%, transparent) border-box;
+        backdrop-filter: blur(16px) saturate(1.15);
+        -webkit-backdrop-filter: blur(16px) saturate(1.15);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.08) inset,
+          0 24px 60px rgba(0, 0, 0, 0.35);
         text-align: center;
       }
       .dpu-pair__logo { height: 3.25rem; margin: 0 auto 1rem; }
@@ -103,7 +108,12 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
         text-transform: uppercase;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       }
-      .dpu-pair__input:focus { outline: none; border-color: #5eead4; box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.25); }
+      .dpu-pair__input:focus {
+        outline: none;
+        border-color: #5eead4;
+        box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.25), 0 0 22px -4px rgba(45, 212, 191, 0.45);
+        background: rgba(255, 255, 255, 0.09);
+      }
       .dpu-pair__error { margin: 0.75rem 0 0; color: #fecaca; font-size: 0.85rem; font-weight: 600; }
       .dpu-pair__btn {
         width: 100%;
@@ -120,6 +130,13 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        box-shadow: 0 4px 22px -2px rgba(15, 118, 110, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease, filter 0.25s ease;
+      }
+      .dpu-pair__btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        box-shadow: 0 8px 28px -2px rgba(20, 184, 166, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.28);
       }
       .dpu-pair__btn:disabled { opacity: 0.55; cursor: not-allowed; }
       .dpu-pair__spinner {

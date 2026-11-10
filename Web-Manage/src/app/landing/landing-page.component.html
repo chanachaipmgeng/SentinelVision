@@ -1,0 +1,161 @@
+<div class="dpu-landing">
+  <div class="dpu-landing__shell">
+    <header class="dpu-landing__header">
+      <a routerLink="/" class="dpu-landing__brand" aria-label="SentinelVision">
+        <img src="./assets/images/brand-logos/logo.png" alt="" />
+        <span>SentinelVision</span>
+      </a>
+
+      <nav class="dpu-landing__nav" aria-label="Landing">
+        <a href="#values" (click)="scrollTo('values'); $event.preventDefault()">{{ 'landing.nav.values' | translate }}</a>
+        <a href="#features" (click)="scrollTo('features'); $event.preventDefault()">{{ 'landing.nav.features' | translate }}</a>
+        <a href="#metrics" (click)="scrollTo('metrics'); $event.preventDefault()">{{ 'landing.nav.metrics' | translate }}</a>
+      </nav>
+
+      <div class="dpu-landing__header-actions" style="display:inline-flex;align-items:center;gap:0.35rem">
+        <div class="dpu-landing__lang" role="group" [attr.aria-label]="'landing.lang' | translate">
+          <button type="button" [class.is-active]="lang === 'th'" (click)="setLang('th')">TH</button>
+          <button type="button" [class.is-active]="lang === 'en'" (click)="setLang('en')">EN</button>
+        </div>
+        <a routerLink="/auth/login" class="dpu-btn-vault" style="padding:0.55rem 1.1rem;font-size:0.85rem">
+          {{ 'landing.cta.signin' | translate }}
+        </a>
+      </div>
+    </header>
+
+    <main class="dpu-landing__main">
+      <!-- Hero: brand + one headline + one supporting line + one CTA + product visual -->
+      <section class="dpu-landing__hero" aria-labelledby="landing-hero-title">
+        <div class="dpu-landing__hero-bg" aria-hidden="true"></div>
+        <div class="dpu-landing__hero-grid" aria-hidden="true"></div>
+
+        <div class="dpu-landing__hero-inner">
+          <div dpuReveal="up">
+            <span class="dpu-landing__eyebrow">
+              <span class="dpu-landing__eyebrow-dot" aria-hidden="true"></span>
+              {{ 'landing.hero.badge' | translate }}
+            </span>
+          </div>
+
+          <h1 id="landing-hero-title" class="dpu-text-display-gradient" dpuReveal="up" dpuRevealDelay="0.1s">
+            SentinelVision
+          </h1>
+          <p class="dpu-landing__hero-lead" dpuReveal="up" dpuRevealDelay="0.2s">
+            {{ 'landing.hero.lead' | translate }}
+          </p>
+          <div class="dpu-landing__cta-row" dpuReveal="up" dpuRevealDelay="0.32s">
+            <a routerLink="/auth/login" class="dpu-btn-vault">{{ 'landing.cta.start' | translate }}</a>
+          </div>
+        </div>
+
+        <div class="dpu-landing__product dpu-fold" dpuReveal="dashboard" aria-hidden="true">
+          <div class="dpu-landing__product-frame">
+            <div class="dpu-landing__product-inner">
+              <div class="dpu-landing__product-visual">
+                <div class="dpu-landing__mock-panel dpu-landing__mock-panel--scan"></div>
+                <div class="dpu-landing__mock-panel dpu-landing__mock-panel--dash">
+                  <div class="dpu-landing__mock-bar dpu-landing__mock-bar--accent"></div>
+                  <div class="dpu-landing__mock-bar" style="width:78%"></div>
+                  <div class="dpu-landing__mock-bar" style="width:54%"></div>
+                  <div class="dpu-landing__mock-tiles">
+                    <div class="dpu-landing__mock-tile"></div>
+                    <div class="dpu-landing__mock-tile"></div>
+                    <div class="dpu-landing__mock-tile"></div>
+                    <div class="dpu-landing__mock-tile"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Value strip -->
+      <section id="values" class="dpu-landing__section">
+        <div class="dpu-landing__section-inner">
+          <div class="dpu-landing__section-head" dpuReveal="up">
+            <span class="dpu-landing__tag">{{ 'landing.values.tag' | translate }}</span>
+            <h2 class="dpu-text-display-gradient">{{ 'landing.values.title' | translate }}</h2>
+            <p class="lead">{{ 'landing.values.lead' | translate }}</p>
+          </div>
+
+          <div class="dpu-landing__values">
+            @for (item of values; track item.titleKey; let i = $index) {
+              <article
+                class="dpu-landing__value dpu-card-surface dpu-beam"
+                dpuReveal="up"
+                [dpuRevealDelay]="(0.08 * (i + 1)) + 's'"
+                dpuCardTilt
+              >
+                <div class="dpu-landing__value-icon" aria-hidden="true">
+                  <i [class]="item.icon"></i>
+                </div>
+                <h3>{{ item.titleKey | translate }}</h3>
+                <p>{{ item.bodyKey | translate }}</p>
+              </article>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Feature bento -->
+      <section id="features" class="dpu-landing__section" style="padding-top:0">
+        <div class="dpu-landing__section-inner">
+          <div class="dpu-landing__section-head dpu-landing__section-head--center" dpuReveal="up">
+            <span class="dpu-landing__tag">{{ 'landing.features.tag' | translate }}</span>
+            <h2 class="dpu-text-display-gradient">{{ 'landing.features.title' | translate }}</h2>
+            <p class="lead">{{ 'landing.features.lead' | translate }}</p>
+          </div>
+
+          <div class="dpu-landing__bento">
+            @for (feat of features; track feat.titleKey; let i = $index) {
+              <article
+                class="dpu-landing__bento-item dpu-card-surface dpu-beam"
+                dpuReveal="up"
+                [dpuRevealDelay]="(0.1 * (i + 1)) + 's'"
+                dpuCardTilt
+              >
+                <h3>{{ feat.titleKey | translate }}</h3>
+                <p>{{ feat.bodyKey | translate }}</p>
+              </article>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Metrics -->
+      <section id="metrics" class="dpu-landing__section" style="padding-top:0">
+        <div class="dpu-landing__section-inner">
+          <div class="dpu-landing__metrics">
+            @for (m of metrics; track m.labelKey) {
+              <div class="dpu-landing__metric dpu-glass" dpuReveal="fade">
+                <div
+                  class="dpu-landing__metric-value"
+                  [dpuCountUp]="m.value"
+                  [suffix]="m.suffix"
+                ></div>
+                <div class="dpu-landing__metric-label">{{ m.labelKey | translate }}</div>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA -->
+      <section class="dpu-landing__section" style="padding-top:0">
+        <div class="dpu-landing__section-inner">
+          <div class="dpu-landing__cta-banner dpu-card-surface" dpuReveal="up">
+            <h2 class="dpu-text-display-gradient">{{ 'landing.final.title' | translate }}</h2>
+            <p>{{ 'landing.final.lead' | translate }}</p>
+            <a routerLink="/auth/login" class="dpu-btn-vault">{{ 'landing.cta.signin' | translate }}</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="dpu-landing__footer">
+      <span>© {{ 2026 }} SentinelVision</span>
+      <a routerLink="/auth/login">{{ 'landing.cta.signin' | translate }}</a>
+    </footer>
+  </div>
+</div>

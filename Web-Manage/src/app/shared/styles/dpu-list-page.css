@@ -7,6 +7,21 @@
   min-height: 22rem;
 }
 
+/* Selective card-surface polish when paired with modern-card glass */
+.dpu-list-panel.modern-card.glass,
+.dpu-list-page .box.modern-card.glass {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86)) padding-box,
+    linear-gradient(
+      180deg,
+      rgba(15, 118, 110, 0.24),
+      rgba(255, 255, 255, 0.7) 34%,
+      rgba(226, 232, 240, 0.95) 80%
+    )
+      border-box;
+}
+
 .dpu-list-panel .box-header {
   display: flex !important;
   align-items: center;

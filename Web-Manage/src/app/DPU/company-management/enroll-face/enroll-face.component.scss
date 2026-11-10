@@ -220,6 +220,20 @@ html.dpu-kiosk-mode .dpu-kiosk {
   border-bottom-color: transparent;
   opacity: 0.55;
   transform: rotate(25deg);
+  /* Optional micro-motion only — keep teal face-scan identity */
+  animation: dpu-kiosk-lens-nudge 6.5s ease-in-out infinite;
+}
+
+@keyframes dpu-kiosk-lens-nudge {
+  0%,
+  100% {
+    transform: rotate(25deg) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: rotate(48deg) scale(1.08);
+    opacity: 0.8;
+  }
 }
 
 .dpu-kiosk__lens-arc::before {
@@ -1389,7 +1403,8 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
   .dpu-kiosk__chip,
   .dpu-kiosk__camera-panel,
   .dpu-kiosk__feed-panel,
-  .dpu-kiosk__viewport::after {
+  .dpu-kiosk__viewport::after,
+  .dpu-kiosk__lens-arc {
     animation: none !important;
     transition: none !important;
   }

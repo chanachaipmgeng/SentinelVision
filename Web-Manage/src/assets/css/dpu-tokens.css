@@ -24,6 +24,18 @@
   --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
   --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
 
+  /* VaultX-inspired surface utilities (teal family — never indigo #4f5ef7) */
+  --dpu-glass-border: rgba(255, 255, 255, 0.2);
+  --dpu-glass-bg: rgba(255, 255, 255, 0.4);
+  --dpu-card-surface-edge: linear-gradient(
+    180deg,
+    rgba(15, 118, 110, 0.22),
+    rgba(255, 255, 255, 0.55) 28%,
+    rgba(226, 232, 240, 0.9) 70%
+  );
+  --dpu-cta-glow: 0 8px 28px rgba(15, 118, 110, 0.35);
+  --dpu-landing-font-display: "Outfit", "Manrope", "Noto Sans Thai", system-ui, sans-serif;
+
   /* SentinelVision Unified Security & Identity Palette */
   --sv-critical: #dc2626;
   --sv-critical-soft: rgba(220, 38, 38, 0.12);

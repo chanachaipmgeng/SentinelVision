@@ -3,11 +3,17 @@ import { ContentLayoutComponent } from './shared/layouts/content-layout/content-
 import { content } from './shared/routes/content.routes';
 import { LoginComponent } from './authentication/login/login.component';
 import { CoverComponent } from './authentication/reset-password/cover/cover.component';
+import { LandingPageComponent } from './landing/landing-page.component';
 
 import { AuthGuard } from './shared/services/auth.guard';
 
 export const App_Route: Route[] = [
-  { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
+  {
+    path: '',
+    component: LandingPageComponent,
+    pathMatch: 'full',
+    data: { animation: 'Landing' },
+  },
   {
     path: '',
     component: ContentLayoutComponent,

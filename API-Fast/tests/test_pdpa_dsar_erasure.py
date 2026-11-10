@@ -37,7 +37,7 @@ async def _fresh_pool():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="module")
 async def pdpa_fx():
     """Minimal company + member with a punch photo, encoding, and incident snapshot."""
     ensure_dirs()

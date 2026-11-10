@@ -173,4 +173,12 @@ class SentinelIncidentLog(Base):
     __table_args__ = (
         Index("sentinel_incident_company_occurred_idx", "companyId", occurredAt.desc()),
         Index("sentinel_incident_dedupe_open_idx", "companyId", "dedupe_key", "status", occurredAt.desc()),
+        # Matches 0023_incident_sla — open-incident SLA sweep.
+        Index(
+            "sentinel_incident_sla_due_idx",
+            "companyId",
+            "status",
+            "sla_due_at",
+            postgresql_where=text("sla_due_at IS NOT NULL"),
+        ),
     )

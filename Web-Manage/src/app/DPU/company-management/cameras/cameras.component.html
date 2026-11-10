@@ -149,7 +149,7 @@
       ></app-empty-state>
       <app-empty-state
         *ngIf="!loading && !filtered.length"
-        icon="ri-cctv-line"
+        icon="ri-vidicon-line"
         message="{{ 'cctv.cameras.empty' | translate }}"
         [actionLabel]="'cctv.cameras.add' | translate"
         (action)="showForm = true"
@@ -187,7 +187,7 @@
           <div class="sv-camera-row__actions">
             <button
               type="button"
-              class="ti-btn ti-btn-sm"
+              class="ti-btn"
               [class.ti-btn-success]="cam.analysisEnabled"
               [class.ti-btn-light]="!cam.analysisEnabled"
               (click)="toggleAnalysis(cam)"
@@ -199,23 +199,23 @@
                 ) | translate
               }}
             </button>
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-primary" (click)="openRoiEditor(cam)">
+            <button type="button" class="ti-btn ti-btn-primary" (click)="openRoiEditor(cam)">
               {{ 'cctv.cameras.roi' | translate }}
             </button>
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="ping(cam)">
+            <button type="button" class="ti-btn ti-btn-light" (click)="ping(cam)">
               {{ 'cctv.cameras.ping' | translate }}
             </button>
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="snapshot(cam)">
+            <button type="button" class="ti-btn ti-btn-light" (click)="snapshot(cam)">
               {{ 'cctv.cameras.snapshot' | translate }}
             </button>
             <a
-              class="ti-btn ti-btn-sm ti-btn-primary"
+              class="ti-btn ti-btn-primary"
               [routerLink]="['/company/live-wall']"
               [queryParams]="{ cameraId: cam.cameraId }"
             >
               {{ 'cctv.cameras.live' | translate }}
             </a>
-            <button type="button" class="ti-btn ti-btn-sm ti-btn-danger" (click)="remove(cam)">
+            <button type="button" class="ti-btn ti-btn-danger" (click)="remove(cam)">
               {{ 'Delete' | translate }}
             </button>
           </div>

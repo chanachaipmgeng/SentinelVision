@@ -63,7 +63,7 @@ const MODULE_META: Record<
   CCTV: {
     label: 'module.cctv',
     hint: 'module.cctv.hint',
-    icon: 'ri-cctv-line',
+    icon: 'ri-vidicon-line',
     stationMode: null,
   },
 };

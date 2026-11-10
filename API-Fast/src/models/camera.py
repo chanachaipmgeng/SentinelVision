@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -56,4 +56,12 @@ class Camera(Base):
     __table_args__ = (
         Index("camera_company_active_idx", "companyId", "is_active"),
         Index("camera_company_status_idx", "companyId", "status"),
+        # Matches 0021_camera_analysis — CCTV worker due-queue scan.
+        Index(
+            "camera_analysis_due_idx",
+            "analysis_enabled",
+            "is_active",
+            "last_analyzed_at",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )

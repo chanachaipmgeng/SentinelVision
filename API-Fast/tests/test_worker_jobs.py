@@ -31,6 +31,7 @@ def test_parse_job_list_defaults_and_validation():
         "imports",
         "attendance_summary",
         "cctv",
+        "people",
     ]
     assert parse_job_list("all") == [
         "outbox",
@@ -38,6 +39,7 @@ def test_parse_job_list_defaults_and_validation():
         "imports",
         "attendance_summary",
         "cctv",
+        "people",
     ]
     assert parse_job_list(" imports , outbox ") == ["imports", "outbox"]
     with pytest.raises(ValueError):

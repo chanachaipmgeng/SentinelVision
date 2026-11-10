@@ -79,6 +79,7 @@ def serialize_incident(inc: SentinelIncidentLog) -> dict:
         "identityType": inc.identityType,
         "zoneId": str(inc.zoneId) if inc.zoneId else None,
         "zoneName": inc.zoneName,
+        "cameraId": str(getattr(inc, "cameraId", None)) if getattr(inc, "cameraId", None) else None,
         "eventId": str(inc.eventId) if inc.eventId else None,
         "confidencePercent": inc.confidencePercent,
         "distance": inc.distance,
@@ -191,6 +192,22 @@ async def record_incident(
         return existing, False
 
     sla_due = await compute_sla_due_at(db, company_id, severity, now=now)
+
+    # Resolve camera early so Phase 6C analytics can group by cameraId even when
+    # the caller only provided a zone (CCTV worker / kiosk station).
+    resolved_camera_id = camera_id
+    if resolved_camera_id is None and zone_id is not None:
+        try:
+            from ..services import video_clip_service
+
+            cam_early = await video_clip_service.resolve_camera_for_incident(
+                db, company_id, camera_id=None, zone_id=zone_id
+            )
+            if cam_early is not None:
+                resolved_camera_id = cam_early.cameraId
+        except Exception:
+            resolved_camera_id = None
+
     inc = SentinelIncidentLog(
         companyId=company_id,
         eventType=event_type,
@@ -202,6 +219,7 @@ async def record_incident(
         identityType=identity_type,
         zoneId=zone_id,
         zoneName=zone_name,
+        cameraId=resolved_camera_id,
         eventId=event_id,
         confidencePercent=confidence_percent,
         distance=distance,
@@ -226,7 +244,7 @@ async def record_incident(
             from ..services import video_clip_service
 
             cam = await video_clip_service.resolve_camera_for_incident(
-                db, company_id, camera_id=camera_id, zone_id=zone_id
+                db, company_id, camera_id=resolved_camera_id or camera_id, zone_id=zone_id
             )
             if cam is not None and (cam.recordMode or "").strip().lower() != "off":
                 import asyncio

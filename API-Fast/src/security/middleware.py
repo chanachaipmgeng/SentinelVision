@@ -60,12 +60,18 @@ _COMPANY_RES = [
     re.compile(rf"/devices/company/({_UUID})"),
     re.compile(rf"/cameras/company/({_UUID})"),
     re.compile(rf"/site-floors/company/({_UUID})"),
+    re.compile(rf"/analytics/company/({_UUID})"),
 ]
 # Tenant API keys (Bearer sv_…) — read-only scopes → path allow-lists.
 _API_KEY_SCOPE_RES = (
     (
         "cameras.read",
         re.compile(rf"^/cameras/company/({_UUID})(?:/|$)"),
+        frozenset({"GET"}),
+    ),
+    (
+        "cameras.read",
+        re.compile(rf"^/analytics/company/({_UUID})(?:/|$)"),
         frozenset({"GET"}),
     ),
     (

@@ -400,6 +400,12 @@ export class NavService implements OnDestroy {
             type: 'link',
             permission: 'cameras.read',
           },
+          {
+            path: '/company/face-monitor',
+            title: 'faceMonitor.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
         ],
       },
 

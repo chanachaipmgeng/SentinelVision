@@ -21,6 +21,13 @@ def test_cameras_read_get_allowed():
     assert not _is_api_key_path_allowed("GET", path, ["incidents.read"])
 
 
+def test_analytics_read_via_cameras_scope():
+    path = f"/analytics/company/{CID}/heatmap"
+    assert _is_api_key_path_allowed("GET", path, ["cameras.read"])
+    assert _is_api_key_path_allowed("GET", f"/analytics/company/{CID}/export/pdf", ["cameras.read"])
+    assert not _is_api_key_path_allowed("GET", path, ["incidents.read"])
+
+
 def test_incidents_read_get_allowed():
     path = f"/sentinel/company/{CID}/incidents"
     assert _is_api_key_path_allowed("GET", path, ["incidents.read"])

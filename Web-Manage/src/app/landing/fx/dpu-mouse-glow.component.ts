@@ -6,14 +6,14 @@ import { Component, HostBinding, HostListener } from '@angular/core';
   template: `
     <div class="dpu-mouse-glow__orb" aria-hidden="true"></div>
   `,
-  host: {
-    class: 'dpu-mouse-glow',
-  },
 })
 export class DpuMouseGlowComponent {
   x = 0;
   y = 0;
   active = false;
+
+  @HostBinding('class.dpu-mouse-glow')
+  readonly hostClass = true;
 
   @HostBinding('class.is-active')
   get isActive(): boolean {

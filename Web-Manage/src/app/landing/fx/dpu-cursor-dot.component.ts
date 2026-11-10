@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, NgZone, OnDestroy } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostBinding, NgZone, OnDestroy } from '@angular/core';
 
 const BALL_SIZE = 20;
 const EASE = 0.18;
@@ -8,10 +8,6 @@ const HOVER_SCALE = 1.4;
   selector: 'app-dpu-cursor-dot',
   standalone: true,
   template: '',
-  host: {
-    class: 'dpu-cursor-dot',
-    'aria-hidden': 'true',
-  },
 })
 export class DpuCursorDotComponent implements AfterViewInit, OnDestroy {
   private targetX = 0;
@@ -23,6 +19,12 @@ export class DpuCursorDotComponent implements AfterViewInit, OnDestroy {
   private frame = 0;
   private visible = false;
   private enabled = false;
+
+  @HostBinding('class.dpu-cursor-dot')
+  readonly hostClass = true;
+
+  @HostBinding('attr.aria-hidden')
+  readonly ariaHidden = 'true';
 
   constructor(
     private readonly el: ElementRef<HTMLElement>,

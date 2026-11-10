@@ -184,7 +184,7 @@ def detect_persons_bgr(
 
     orig_h, orig_w = frame_bgr.shape[:2]
     dets: list[dict[str, Any]] = []
-    for box, score in zip(boxes, scores):
+    for box, score in zip(boxes, scores, strict=True):
         bx1 = (float(box[0]) - dw) / ratio
         by1 = (float(box[1]) - dh) / ratio
         bx2 = (float(box[2]) - dw) / ratio

@@ -129,8 +129,6 @@ async def export_timestamps_route(
     # C5 payroll path: stream summary + detail, no 5000 in-memory cap.
     if export_mode in ("payroll", "summary", "full"):
         await assert_request_permission(request, db, "payroll.export", companyId)
-    else:
-        await assert_request_permission(request, db, "attendance.export", companyId)
         if fmt == "csv":
             return StreamingResponse(
                 iter_payroll_csv_chunks(db, UUID(str(companyId)), start_d, end_d, emp_uuid),
@@ -148,6 +146,7 @@ async def export_timestamps_route(
             },
         )
 
+    await assert_request_permission(request, db, "attendance.export", companyId)
     items = await search_timestamps(
         companyId,
         emp_id,

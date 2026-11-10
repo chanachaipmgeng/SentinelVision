@@ -45,6 +45,7 @@ def test_module_constants_include_unified_hybrid():
         "WATCHLIST",
         "VISITOR",
         "EVENTS",
+        "CCTV",
     }
     assert "UNIFIED_HYBRID" in VALID_STATION_MODES
     assert DEFAULT_COMPANY_MODULE_CONFIG["defaultStationMode"] == "ATTENDANCE"

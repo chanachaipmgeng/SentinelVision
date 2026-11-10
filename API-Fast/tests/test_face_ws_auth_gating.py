@@ -62,6 +62,13 @@ class _FakeSession:
             return self._device
         return self._member
 
+    async def execute(self, *_args: Any, **_kwargs: Any) -> Any:
+        # Revocation lookup + empty result sets used by WS session auth.
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        result.scalar_one_or_none.return_value = None
+        return result
+
     async def commit(self) -> None:
         return None
 
@@ -85,6 +92,9 @@ def _fake_device(token: str) -> MagicMock:
     d.companyId = COMPANY_ID
     d.revokedAt = None
     d.tokenHash = hash_kiosk_token(token)
+    # Explicit None — bare MagicMock attrs are truthy and break session_ok JSON.
+    d.stationMode = None
+    d.zoneId = None
     return d
 
 

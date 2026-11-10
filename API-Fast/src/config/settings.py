@@ -147,7 +147,7 @@ class Settings(BaseSettings):
     # single-container dev setup to run the same loops inside the API process instead.
     RUN_BACKGROUND_JOBS_IN_API: bool = False
     WORKER_ID: str = ""
-    WORKER_JOBS: str = "outbox,retention,imports,attendance_summary,cctv"
+    WORKER_JOBS: str = "outbox,retention,imports,attendance_summary,cctv,people"
     WORKER_METRICS_PORT: int = 9108
     WORKER_RETENTION_INTERVAL_SECONDS: int = 3600
     WORKER_IMPORT_POLL_SECONDS: int = 2
@@ -170,6 +170,27 @@ class Settings(BaseSettings):
     # Drop CCTV embeds that waited longer than this (ms) — stale frames are useless.
     WORKER_CCTV_STALE_MS: int = 8000
     WORKER_CCTV_SNAPSHOT_TIMEOUT_SECONDS: float = 8.0
+    # Phase 6D: people counting (dedicated YOLO lane — NOT InsightFace face_gpu_queue).
+    # Default off until camera.ai_config has ROI + peopleEnabled=true.
+    WORKER_PEOPLE_INTERVAL_SECONDS: int = 20
+    WORKER_PEOPLE_CAMERA_INTERVAL_SECONDS: int = 60
+    WORKER_PEOPLE_MAX_CONCURRENT: int = 1
+    # Pause people YOLO when kiosk (checkin+identify) pending reaches this (scraped from API /metrics).
+    WORKER_PEOPLE_PAUSE_WHEN_KIOSK_PENDING: int = 4
+    # Soft cap on scraped total face-queue pending before people skips a tick.
+    WORKER_PEOPLE_MAX_QUEUE_PENDING: int = 24
+    WORKER_PEOPLE_SNAPSHOT_TIMEOUT_SECONDS: float = 8.0
+    # Comma-separated Prometheus /metrics URLs (docker network → api containers).
+    WORKER_PEOPLE_KIOSK_METRICS_URLS: str = "http://api:8000/metrics"
+    # YOLOv8n person ONNX path (empty/missing → people job no-ops with a warning).
+    PEOPLE_YOLO_ONNX_PATH: str = "models/yolov8n.onnx"
+    PEOPLE_YOLO_CONFIDENCE: float = 0.4
+    PEOPLE_YOLO_IOU: float = 0.45
+    PEOPLE_YOLO_INPUT_SIZE: int = 640
+    # Prefer CUDAExecutionProvider when available; fall back to CPU.
+    PEOPLE_YOLO_PROVIDERS: str = "CUDAExecutionProvider,CPUExecutionProvider"
+    # Minute-bucket width for people_count_bucket aggregation.
+    PEOPLE_BUCKET_SECONDS: int = 60
 
     # Multi-GPU. Comma list; worker i uses devices[i % len].
     FACE_DEVICES: str = ""

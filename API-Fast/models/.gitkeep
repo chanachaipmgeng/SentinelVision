@@ -1,0 +1,2 @@
+# Place yolov8n.onnx here (see scripts/download_yolov8n_onnx.py).
+# People counting stays disabled until camera.ai_config has ROI + peopleEnabled.

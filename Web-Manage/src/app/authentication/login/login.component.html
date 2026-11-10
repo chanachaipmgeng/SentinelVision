@@ -1,36 +1,32 @@
 <div class="dpu-auth dpu-login">
-  <!-- Time atmosphere (decorative) -->
+  <!-- Feature atmosphere (decorative) — face scan / CCTV / access -->
   <div class="dpu-login__scene" aria-hidden="true">
     <div class="dpu-login__mesh"></div>
     <div class="dpu-login__orbit dpu-login__orbit--a"></div>
     <div class="dpu-login__orbit dpu-login__orbit--b"></div>
     <div class="dpu-login__orbit dpu-login__orbit--c"></div>
 
-    <div class="dpu-login__clock">
-      <div class="dpu-login__clock-glow"></div>
-      <div class="dpu-login__clock-face">
-        @for (tick of clockTicks; track tick) {
-          <span
-            class="dpu-login__tick"
-            [class.dpu-login__tick--hour]="tick % 5 === 0"
-            [style.--tick]="tick * 6 + 'deg'">
-          </span>
-        }
-        <div class="dpu-login__hand dpu-login__hand--hour" [style.transform]="'rotate(' + hourDeg + 'deg)'"></div>
-        <div class="dpu-login__hand dpu-login__hand--minute" [style.transform]="'rotate(' + minuteDeg + 'deg)'"></div>
-        <div class="dpu-login__hand dpu-login__hand--second" [style.transform]="'rotate(' + secondDeg + 'deg)'"></div>
-        <div class="dpu-login__hub"></div>
+    <div class="dpu-login__scan">
+      <div class="dpu-login__scan-glow"></div>
+      <div class="dpu-login__scan-frame">
+        <span class="dpu-login__bracket dpu-login__bracket--tl"></span>
+        <span class="dpu-login__bracket dpu-login__bracket--tr"></span>
+        <span class="dpu-login__bracket dpu-login__bracket--bl"></span>
+        <span class="dpu-login__bracket dpu-login__bracket--br"></span>
+        <div class="dpu-login__face-silhouette"></div>
+        <div class="dpu-login__lens-arc" aria-hidden="true"></div>
+        <div class="dpu-login__scan-line"></div>
       </div>
     </div>
 
-    <div class="dpu-login__readout">
-      <span class="dpu-login__readout-time">{{ nowTime }}</span>
-      <span class="dpu-login__readout-date">{{ nowDate }}</span>
+    <div class="dpu-login__time-chip">
+      <span class="dpu-login__time-chip-time">{{ nowTime }}</span>
+      <span class="dpu-login__time-chip-date">{{ nowDate }}</span>
     </div>
 
-    <span class="dpu-login__float dpu-login__float--1">12:00</span>
-    <span class="dpu-login__float dpu-login__float--2">CHECK-IN</span>
-    <span class="dpu-login__float dpu-login__float--3">09:15</span>
+    <span class="dpu-login__float dpu-login__float--1">{{ 'auth.atmosphere.face' | translate }}</span>
+    <span class="dpu-login__float dpu-login__float--2">{{ 'auth.atmosphere.cctv' | translate }}</span>
+    <span class="dpu-login__float dpu-login__float--3">{{ 'auth.atmosphere.access' | translate }}</span>
   </div>
 
   <div class="dpu-auth__panel glass modern-card dpu-login__panel">

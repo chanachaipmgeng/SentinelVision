@@ -59,7 +59,7 @@ html.dpu-kiosk-mode .dpu-kiosk {
   position: absolute;
   border-radius: 50%;
   border: 1px solid rgba(94, 234, 212, 0.14);
-  top: 78%;
+  top: 78vh;
   right: -4%;
   transform: translate(20%, -50%);
 }
@@ -100,102 +100,152 @@ html.dpu-kiosk-mode .dpu-kiosk {
   translate: -50% -50%;
 }
 
-.dpu-kiosk__decor-clock {
+/* Lighter face-scan décor — must not compete with camera preview.
+   Clip fix (PR #25): inset from edges + overflow visible so glow isn't cropped.
+   Use vh so the motif stays in the first viewport even when the stage grows taller. */
+.dpu-kiosk__scan {
   position: absolute;
   right: max(1.25rem, 3%);
-  bottom: max(1.25rem, 5%);
-  width: min(10rem, 20vw);
-  height: min(10rem, 20vw);
+  top: calc(100vh - min(12.5rem, 28vh));
+  width: min(8.5rem, 18vw);
+  height: min(10rem, 22vw);
   display: grid;
   place-items: center;
-  opacity: 0.55;
-  /* Keep face + glow inside scene (parent overflow:hidden clips overhang). */
+  opacity: 0.38;
   overflow: visible;
 }
 
-.dpu-kiosk__decor-glow {
+.dpu-kiosk__scan-glow {
   position: absolute;
-  inset: -8%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(45, 212, 191, 0.28), transparent 68%);
+  inset: -6%;
+  border-radius: 24%;
+  background: radial-gradient(ellipse at 50% 45%, rgba(45, 212, 191, 0.22), transparent 70%);
   animation: dpu-kiosk-pulse 5.5s ease-in-out infinite;
 }
 
-.dpu-kiosk__decor-face {
+.dpu-kiosk__scan-frame {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 0.95rem;
   background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.08), transparent 42%),
-    radial-gradient(circle at 50% 50%, rgba(4, 47, 46, 0.55), rgba(2, 20, 19, 0.82));
-  border: 1px solid rgba(94, 234, 212, 0.28);
+    radial-gradient(ellipse at 50% 38%, rgba(15, 118, 110, 0.18), transparent 55%),
+    linear-gradient(165deg, rgba(4, 47, 46, 0.55), rgba(2, 20, 19, 0.72));
+  border: 1px solid rgba(94, 234, 212, 0.2);
   box-shadow:
-    0 0 0 8px rgba(15, 118, 110, 0.08),
-    0 18px 40px rgba(0, 0, 0, 0.3);
+    0 0 0 6px rgba(15, 118, 110, 0.06),
+    0 14px 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
 }
 
-.dpu-kiosk__decor-tick {
-  --tick: 0deg;
+.dpu-kiosk__bracket {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 1px;
-  height: 0.35rem;
-  margin: -0.18rem 0 0 -0.5px;
-  background: rgba(204, 251, 241, 0.35);
-  transform: rotate(var(--tick)) translateY(-3.9rem);
-  transform-origin: center center;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-color: var(--kiosk-accent);
+  border-style: solid;
+  border-width: 0;
+  opacity: 0.9;
 }
 
-.dpu-kiosk__decor-tick--hour {
-  width: 2px;
-  height: 0.55rem;
-  margin-top: -0.28rem;
-  margin-left: -1px;
-  background: rgba(94, 234, 212, 0.85);
+.dpu-kiosk__bracket--tl {
+  top: 0.55rem;
+  left: 0.55rem;
+  border-top-width: 2px;
+  border-left-width: 2px;
+  border-top-left-radius: 3px;
 }
 
-.dpu-kiosk__decor-hand {
+.dpu-kiosk__bracket--tr {
+  top: 0.55rem;
+  right: 0.55rem;
+  border-top-width: 2px;
+  border-right-width: 2px;
+  border-top-right-radius: 3px;
+}
+
+.dpu-kiosk__bracket--bl {
+  bottom: 0.55rem;
+  left: 0.55rem;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+  border-bottom-left-radius: 3px;
+}
+
+.dpu-kiosk__bracket--br {
+  bottom: 0.55rem;
+  right: 0.55rem;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
+  border-bottom-right-radius: 3px;
+}
+
+.dpu-kiosk__face-silhouette {
   position: absolute;
-  top: 50%;
+  top: 22%;
   left: 50%;
-  transform-origin: 50% 100%;
-  border-radius: 999px;
-  translate: -50% -100%;
-  will-change: transform;
+  translate: -50% 0;
+  width: 40%;
+  height: 46%;
+  border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(204, 251, 241, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(94, 234, 212, 0.12), rgba(15, 118, 110, 0.06));
+  border: 1px solid rgba(94, 234, 212, 0.22);
 }
 
-.dpu-kiosk__decor-hand--hour {
-  width: 3px;
-  height: 26%;
-  background: linear-gradient(180deg, #f0fdfa, #99f6e4);
-}
-
-.dpu-kiosk__decor-hand--minute {
-  width: 2px;
-  height: 36%;
-  background: linear-gradient(180deg, #ccfbf1, #5eead4);
-}
-
-.dpu-kiosk__decor-hand--second {
-  width: 1.5px;
-  height: 40%;
-  background: linear-gradient(180deg, #fcd34d, #f59e0b);
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
-  transition: transform 0.08s linear;
-}
-
-.dpu-kiosk__decor-hub {
+.dpu-kiosk__face-silhouette::after {
+  content: "";
   position: absolute;
-  top: 50%;
   left: 50%;
-  width: 0.55rem;
-  height: 0.55rem;
+  bottom: -20%;
+  translate: -50% 0;
+  width: 66%;
+  height: 34%;
+  border-radius: 40% 40% 20% 20%;
+  background: linear-gradient(180deg, rgba(94, 234, 212, 0.1), transparent 80%);
+  border: 1px solid rgba(94, 234, 212, 0.12);
+  border-bottom: 0;
+}
+
+.dpu-kiosk__lens-arc {
+  position: absolute;
+  top: 12%;
+  right: 10%;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: 50%;
-  translate: -50% -50%;
-  background: #f0fdfa;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.45);
+  border: 1.5px solid rgba(94, 234, 212, 0.3);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  opacity: 0.55;
+  transform: rotate(25deg);
+}
+
+.dpu-kiosk__lens-arc::before {
+  content: "";
+  position: absolute;
+  inset: 24%;
+  border-radius: 50%;
+  background: rgba(94, 234, 212, 0.14);
+}
+
+.dpu-kiosk__scan-line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 1.5px;
+  top: 18%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(94, 234, 212, 0.12),
+    rgba(94, 234, 212, 0.7),
+    rgba(94, 234, 212, 0.12),
+    transparent
+  );
+  box-shadow: 0 0 12px rgba(94, 234, 212, 0.35);
+  animation: dpu-kiosk-scan 4.2s ease-in-out infinite;
 }
 
 .dpu-kiosk__float {
@@ -204,17 +254,19 @@ html.dpu-kiosk-mode .dpu-kiosk {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
-  color: rgba(204, 251, 241, 0.55);
-  border: 1px solid rgba(94, 234, 212, 0.18);
-  background: rgba(4, 47, 46, 0.6);
+  text-transform: uppercase;
+  color: rgba(204, 251, 241, 0.45);
+  border: 1px solid rgba(94, 234, 212, 0.16);
+  background: rgba(4, 47, 46, 0.45);
   border-radius: 999px;
   padding: 0.35rem 0.75rem;
   animation: dpu-kiosk-float 9s ease-in-out infinite;
+  opacity: 0.75;
 }
 
-.dpu-kiosk__float--1 { top: 12%; right: 28%; animation-delay: 0s; }
-.dpu-kiosk__float--2 { top: 38%; right: 4%; animation-delay: -2.5s; }
-.dpu-kiosk__float--3 { bottom: 22%; left: 6%; animation-delay: -5s; }
+.dpu-kiosk__float--1 { top: 12vh; right: 28%; animation-delay: 0s; }
+.dpu-kiosk__float--2 { top: 38vh; right: 4%; animation-delay: -2.5s; }
+.dpu-kiosk__float--3 { top: 72vh; left: 6%; bottom: auto; animation-delay: -5s; }
 
 @keyframes dpu-kiosk-spin {
   from { transform: translate(20%, -50%) rotate(0deg); }
@@ -238,6 +290,11 @@ html.dpu-kiosk-mode .dpu-kiosk {
 @keyframes dpu-kiosk-float {
   0%, 100% { transform: translateY(0); opacity: 0.5; }
   50% { transform: translateY(-10px); opacity: 0.9; }
+}
+
+@keyframes dpu-kiosk-scan {
+  0%, 100% { top: 16%; opacity: 0.3; }
+  50% { top: 76%; opacity: 0.85; }
 }
 
 @keyframes dpu-kiosk-stage-in {
@@ -1220,16 +1277,12 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
 }
 
 @media (max-width: 991.98px) {
-  .dpu-kiosk__decor-clock {
-    opacity: 0.28;
+  .dpu-kiosk__scan {
+    opacity: 0.22;
     right: max(0.75rem, 2%);
-    bottom: max(0.75rem, 3%);
-    width: min(7.5rem, 24vw);
-    height: min(7.5rem, 24vw);
-  }
-
-  .dpu-kiosk__decor-tick {
-    transform: rotate(var(--tick)) translateY(-2.9rem);
+    top: calc(100vh - min(10rem, 26vh));
+    width: min(6.5rem, 22vw);
+    height: min(7.75rem, 26vw);
   }
 
   .dpu-kiosk__float--2 { display: none; }
@@ -1329,15 +1382,20 @@ html.dpu-kiosk-mode .dpu-kiosk__viewport {
   .dpu-kiosk__latest,
   .dpu-kiosk__mesh,
   .dpu-kiosk__orbit,
-  .dpu-kiosk__decor-glow,
+  .dpu-kiosk__scan-glow,
+  .dpu-kiosk__scan-line,
   .dpu-kiosk__float,
   .dpu-kiosk__stage,
   .dpu-kiosk__chip,
   .dpu-kiosk__camera-panel,
   .dpu-kiosk__feed-panel,
-  .dpu-kiosk__viewport::after,
-  .dpu-kiosk__decor-hand--second {
+  .dpu-kiosk__viewport::after {
     animation: none !important;
     transition: none !important;
+  }
+
+  .dpu-kiosk__scan-line {
+    top: 42%;
+    opacity: 0.45;
   }
 }

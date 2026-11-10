@@ -31,12 +31,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   public error: any = '';
   public loginForm!: FormGroup;
 
-  readonly clockTicks = Array.from({ length: 60 }, (_, i) => i);
   nowTime = '';
   nowDate = '';
-  hourDeg = 0;
-  minuteDeg = 0;
-  secondDeg = 0;
 
   private clockTimer?: ReturnType<typeof setInterval>;
 
@@ -65,7 +61,7 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: () => (this.ssoEnabled = false),
     });
     this.tickClock();
-    this.clockTimer = setInterval(() => this.tickClock(), 250);
+    this.clockTimer = setInterval(() => this.tickClock(), 1000);
   }
 
   ngOnDestroy(): void {
@@ -165,13 +161,6 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private tickClock(): void {
     const now = new Date();
-    const ms = now.getMilliseconds() / 1000;
-    const s = now.getSeconds() + ms;
-    const m = now.getMinutes() + s / 60;
-    const h = (now.getHours() % 12) + m / 60;
-    this.secondDeg = s * 6;
-    this.minuteDeg = m * 6;
-    this.hourDeg = h * 30;
     this.nowTime = now.toLocaleTimeString('th-TH', {
       hour: '2-digit',
       minute: '2-digit',
@@ -179,10 +168,9 @@ export class LoginComponent implements OnInit, OnDestroy {
       hour12: false,
     });
     this.nowDate = now.toLocaleDateString('th-TH', {
-      weekday: 'long',
+      weekday: 'short',
       day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+      month: 'short',
     });
   }
 }

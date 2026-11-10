@@ -29,7 +29,6 @@ from ..services.storage_service import (
     EVIDENCE_KIND_VIDEO_CLIP,
     ROOTS,
     delete_stored_image,
-    read_image_bytes,
     store_evidence_image,
 )
 
@@ -447,6 +446,8 @@ async def list_clips(
     camera_id: Optional[UUID] = None,
     incident_id: Optional[UUID] = None,
     kind: Optional[str] = None,
+    started_from: Optional[datetime] = None,
+    started_to: Optional[datetime] = None,
     limit: int = 100,
 ) -> list[dict[str, Any]]:
     kind_norm = (kind or "").strip().lower() or None
@@ -480,6 +481,10 @@ async def list_clips(
         # Default list: event clips for all cameras + continuous_ref only for continuous cams
         # (already indexed above). Keep both kinds.
         pass
+    if started_from is not None:
+        stmt = stmt.where(VideoClip.startedAt >= started_from)
+    if started_to is not None:
+        stmt = stmt.where(VideoClip.startedAt <= started_to)
 
     # Hide continuous_ref for non-continuous cameras (stale rows after mode change).
     if kind_norm == CLIP_KIND_CONTINUOUS_REF and camera_id is not None:
@@ -526,13 +531,12 @@ async def get_clip(db: AsyncSession, company_id: UUID, clip_id: UUID) -> VideoCl
     return clip
 
 
-def resolve_clip_bytes(clip: VideoClip) -> tuple[bytes, str]:
-    """Return (bytes, filename) for download. continuous_ref reads MediaMTX volume."""
+def resolve_clip_path(clip: VideoClip) -> Path:
+    """Resolve on-disk path for a clip (event file or MediaMTX continuous segment)."""
     key = (clip.storageKey or "").strip()
     if clip.kind == CLIP_KIND_CONTINUOUS_REF or key.startswith("mtx:"):
         rel = key[4:] if key.startswith("mtx:") else key
         path = recordings_root() / rel
-        # Prevent path escape
         try:
             path = path.resolve()
             root = recordings_root().resolve()
@@ -542,15 +546,38 @@ def resolve_clip_bytes(clip: VideoClip) -> tuple[bytes, str]:
             raise HTTPException(status_code=404, detail="Recording file missing") from exc
         if not path.is_file():
             raise HTTPException(status_code=404, detail="Recording file missing")
-        return path.read_bytes(), path.name
+        return path
 
-    data = read_image_bytes("video_clips", Path(key).name)
-    if not data:
-        # Legacy fallback if somehow stored under uploaded_images
-        data = read_image_bytes("uploaded_images", Path(key).name)
-    if not data:
-        raise HTTPException(status_code=404, detail="Clip file missing")
-    return data, Path(key).name
+    name = Path(key).name
+    path = ROOTS["video_clips"] / name
+    if path.is_file():
+        return path
+    legacy = ROOTS.get("uploaded_images", Path("uploaded_images")) / name
+    if legacy.is_file():
+        return legacy
+    raise HTTPException(status_code=404, detail="Clip file missing")
+
+
+def resolve_clip_bytes(clip: VideoClip) -> tuple[bytes, str]:
+    """Return (bytes, filename) for download. Prefer ``resolve_clip_path`` + Range for large files."""
+    path = resolve_clip_path(clip)
+    return path.read_bytes(), path.name
+
+
+def parse_clip_query_dt(raw: Optional[str]) -> Optional[datetime]:
+    """Parse list filter timestamps; naive values are Asia/Bangkok, returned as UTC."""
+    if raw in (None, ""):
+        return None
+    text = str(raw).strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid datetime: {raw}") from exc
+    if dt.tzinfo is None:
+        from zoneinfo import ZoneInfo
+
+        dt = dt.replace(tzinfo=ZoneInfo("Asia/Bangkok"))
+    return dt.astimezone(timezone.utc)
 
 
 async def delete_clip(db: AsyncSession, company_id: UUID, clip_id: UUID) -> dict[str, Any]:

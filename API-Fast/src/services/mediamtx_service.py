@@ -41,6 +41,7 @@ async def upsert_pull_path(
     *,
     source_url: str,
     record: bool = False,
+    record_segment_duration: Optional[str] = None,
 ) -> dict[str, Any]:
     """Create or patch a MediaMTX path that pulls from an RTSP/HTTP source."""
     if not _enabled():
@@ -57,6 +58,10 @@ async def upsert_pull_path(
     }
     if record:
         body["recordPath"] = "/recordings/%path/%Y-%m-%d_%H-%M-%S-%f"
+        # Event-mode uses shorter segments so 5s-pre cuts land in a usable file.
+        seg = (record_segment_duration or "").strip()
+        if seg:
+            body["recordSegmentDuration"] = seg
 
     timeout = httpx.Timeout(8.0, connect=3.0)
     async with httpx.AsyncClient(timeout=timeout) as client:

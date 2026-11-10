@@ -521,6 +521,7 @@ async def evaluate_unified_scan_decision(
     totp_or_pin: Optional[str] = None,
     snapshot_url: Optional[str] = None,
     scan_action_rules: Optional[dict] = None,
+    camera_id: Optional[UUID] = None,
 ) -> dict:
     """
     Shared Decision Engine for HTTP /scan and WS station modes other than plain ATTENDANCE.
@@ -595,6 +596,7 @@ async def evaluate_unified_scan_decision(
             zone_id=zone.zoneId if zone else None,
             zone_name=zone.name if zone else station_mode,
             snapshot_url=snapshot_url,
+            camera_id=camera_id,
             action_taken="Face not registered in company database",
         )
         return {
@@ -641,6 +643,7 @@ async def evaluate_unified_scan_decision(
                 confidence_percent=confidence_pct,
                 distance=round(float(best_distance), 6),
                 snapshot_url=snapshot_url,
+                camera_id=camera_id,
                 action_taken=(
                     f"Silent Security Alert Dispatched "
                     f"({matched_ident.alertNote or 'Watchlist match'})"
@@ -685,6 +688,7 @@ async def evaluate_unified_scan_decision(
                 confidence_percent=confidence_pct,
                 distance=round(float(best_distance), 6),
                 snapshot_url=snapshot_url,
+                camera_id=camera_id,
                 action_taken=f"Checked in • Seat: {matched_ident.seatNumber or 'General'}",
             )
             return {
@@ -743,6 +747,7 @@ async def evaluate_unified_scan_decision(
             confidence_percent=confidence_pct,
             distance=round(float(best_distance), 6),
             snapshot_url=snapshot_url,
+            camera_id=camera_id,
             action_taken=(
                 f"Access Granted ({itype})"
                 + (" + Door Unlocked" if relay_ok else "")
@@ -810,6 +815,7 @@ async def evaluate_unified_scan_decision(
         confidence_percent=confidence_pct,
         distance=round(float(best_distance), 6),
         snapshot_url=snapshot_url,
+        camera_id=camera_id,
         action_taken=(
             "Employee Verified & Access Granted"
             + (" + Door Unlocked" if relay_ok else "")

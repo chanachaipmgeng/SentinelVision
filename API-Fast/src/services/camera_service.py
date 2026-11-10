@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib.parse import quote, urlparse, urlunparse
@@ -14,6 +15,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config.settings import settings
 from ..models.camera import Camera
 from ..services import mediamtx_service
 from ..services.company_module_service import VALID_STATION_MODES
@@ -21,6 +23,11 @@ from ..services.outbox_crypto import decrypt_secret, encrypt_secret
 from ..utils.stream_ping import check_stream_reachability
 
 logger = logging.getLogger(__name__)
+
+
+def ensure_opencv_rtsp_tcp() -> None:
+    """Prefer TCP for RTSP opens (many IP cams reject UDP / Docker UDP is flaky)."""
+    os.environ.setdefault("OPENCV_FFMPEG_CAPTURE_OPTIONS", "rtsp_transport;tcp")
 
 VALID_PROTOCOLS = ("rtsp", "http", "hls", "rtmp")
 VALID_RECORD_MODES = ("off", "event", "continuous")
@@ -240,10 +247,25 @@ async def _sync_mtx(cam: Camera) -> dict[str, Any]:
     if not cam.isActive:
         return await mediamtx_service.delete_path(cam.cameraId)
     source = effective_stream_url(cam)
-    record = cam.recordMode == "continuous"
+    mode = (cam.recordMode or "event").strip().lower()
+    # event + continuous both record so 5s-pre event clips can cut from disk;
+    # continuous keeps long segments, event uses a shorter rolling segment.
+    record = mode in ("event", "continuous")
+    segment = None
+    if mode == "event":
+        segment = (
+            getattr(settings, "MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION", None) or "5m"
+        ).strip()
+    elif mode == "continuous":
+        segment = (
+            getattr(settings, "MEDIAMTX_CONTINUOUS_RECORD_SEGMENT_DURATION", None) or ""
+        ).strip() or None
     try:
         return await mediamtx_service.upsert_pull_path(
-            cam.cameraId, source_url=source, record=record
+            cam.cameraId,
+            source_url=source,
+            record=record,
+            record_segment_duration=segment,
         )
     except Exception as exc:
         logger.warning("MediaMTX sync failed for %s: %s", cam.cameraId, exc)
@@ -304,6 +326,7 @@ async def ping_camera(db: AsyncSession, company_id: UUID, camera_id: UUID) -> di
 
 def _grab_snapshot_bgr(url: str, timeout_sec: float = 8.0) -> bytes:
     """Blocking OpenCV grab — run via asyncio.to_thread."""
+    ensure_opencv_rtsp_tcp()
     cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
     try:
         cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, int(timeout_sec * 1000))

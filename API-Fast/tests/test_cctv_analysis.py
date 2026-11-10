@@ -49,8 +49,9 @@ def test_should_pause_for_kiosk_backpressure(monkeypatch):
     assert cctv._should_pause_for_kiosk({"pending": 30, "pendingByKind": {"cctv": 30}}) is True
 
 
-def test_frame_source_urls_prefer_stream_then_mediamtx(monkeypatch):
+def test_frame_source_urls_prefer_mediamtx_when_enabled(monkeypatch):
     monkeypatch.setattr(cctv.settings, "MEDIAMTX_RTSP_PUBLISH_URL", "rtsp://mediamtx:8554")
+    monkeypatch.setattr(cctv.settings, "MEDIAMTX_ENABLED", True)
     cam = MagicMock()
     cam.cameraId = uuid.UUID("11111111-1111-1111-1111-111111111111")
     cam.streamUrl = "rtsp://cam.local/stream"
@@ -60,8 +61,22 @@ def test_frame_source_urls_prefer_stream_then_mediamtx(monkeypatch):
         return_value="rtsp://cam.local/stream",
     ):
         urls = cctv._frame_source_urls(cam)
+    assert urls[0] == "rtsp://mediamtx:8554/11111111111111111111111111111111"
+    assert urls[1] == "rtsp://cam.local/stream"
+
+
+def test_frame_source_urls_direct_when_mediamtx_disabled(monkeypatch):
+    monkeypatch.setattr(cctv.settings, "MEDIAMTX_RTSP_PUBLISH_URL", "rtsp://mediamtx:8554")
+    monkeypatch.setattr(cctv.settings, "MEDIAMTX_ENABLED", False)
+    cam = MagicMock()
+    cam.cameraId = uuid.UUID("11111111-1111-1111-1111-111111111111")
+    with patch(
+        "src.services.cctv_analysis_service.effective_stream_url",
+        return_value="rtsp://cam.local/stream",
+    ):
+        urls = cctv._frame_source_urls(cam)
     assert urls[0] == "rtsp://cam.local/stream"
-    assert urls[1] == "rtsp://mediamtx:8554/11111111111111111111111111111111"
+    assert urls[1].startswith("rtsp://mediamtx:8554/")
 
 
 @pytest.mark.asyncio

@@ -60,6 +60,8 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   incidentClipTime = 0;
   incidentClipDuration = 0;
   private incidentClipObjectUrl = '';
+  private incidentClipPollTimer: ReturnType<typeof setTimeout> | null = null;
+  private incidentClipPollAttempts = 0;
   /** Multi-select for bulk ops (incidentId → true). */
   selectedIds = new Set<string>();
   soundEnabled = true;
@@ -88,6 +90,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollTimer) clearInterval(this.pollTimer);
+    this.clearIncidentClipPoll();
     this.revokeIncidentClip();
   }
 
@@ -157,11 +160,17 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   }
 
   private loadIncidentClip(incidentId: string | null | undefined): void {
+    this.clearIncidentClipPoll();
     this.revokeIncidentClip();
     this.incidentClipUrl = '';
     this.incidentClipTime = 0;
     this.incidentClipDuration = 0;
+    this.incidentClipPollAttempts = 0;
     if (!this.companyId || !incidentId) return;
+    this.fetchIncidentClip(incidentId);
+  }
+
+  private fetchIncidentClip(incidentId: string): void {
     this.http
       .get<any[]>(`/cameras/company/${this.companyId}/clips`, {
         params: { incidentId, kind: 'event', limit: '1' },
@@ -169,7 +178,18 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (rows) => {
           const clip = (rows || [])[0];
-          if (!clip?.clipId) return;
+          if (!clip?.clipId) {
+            // Event export waits ~post-roll (default 10s); poll a few times.
+            if (this.incidentClipPollAttempts < 8) {
+              this.incidentClipPollAttempts += 1;
+              this.incidentClipPollTimer = setTimeout(
+                () => this.fetchIncidentClip(incidentId),
+                2500,
+              );
+            }
+            return;
+          }
+          this.clearIncidentClipPoll();
           this.incidentClipDuration = Math.max(0, (clip.durationMs || 0) / 1000);
           const path =
             clip.downloadPath ||
@@ -182,6 +202,13 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
           });
         },
       });
+  }
+
+  private clearIncidentClipPoll(): void {
+    if (this.incidentClipPollTimer) {
+      clearTimeout(this.incidentClipPollTimer);
+      this.incidentClipPollTimer = null;
+    }
   }
 
   private revokeIncidentClip(): void {

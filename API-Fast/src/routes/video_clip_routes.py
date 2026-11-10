@@ -5,7 +5,8 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
@@ -23,6 +24,12 @@ async def list_clips(
     cameraId: Optional[UUID] = Query(None),
     incidentId: Optional[UUID] = Query(None),
     kind: Optional[str] = Query(None, description="event | continuous_ref"),
+    startedFrom: Optional[str] = Query(
+        None, description="ISO datetime; naive = Asia/Bangkok"
+    ),
+    startedTo: Optional[str] = Query(
+        None, description="ISO datetime; naive = Asia/Bangkok"
+    ),
     limit: int = Query(100, ge=1, le=500),
 ):
     await assert_request_permission(request, db, "cameras.read", companyId)
@@ -32,6 +39,8 @@ async def list_clips(
         camera_id=cameraId,
         incident_id=incidentId,
         kind=kind,
+        started_from=video_clip_service.parse_clip_query_dt(startedFrom),
+        started_to=video_clip_service.parse_clip_query_dt(startedTo),
         limit=limit,
     )
 
@@ -55,11 +64,16 @@ async def download_clip(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """Stream clip bytes with HTTP Range support (Starlette FileResponse)."""
     await assert_request_permission(request, db, "cameras.read", companyId)
     clip = await video_clip_service.get_clip(db, companyId, clipId)
-    data, filename = video_clip_service.resolve_clip_bytes(clip)
-    headers = {"Content-Disposition": f'inline; filename="{filename}"'}
-    return Response(content=data, media_type="video/mp4", headers=headers)
+    path = video_clip_service.resolve_clip_path(clip)
+    return FileResponse(
+        path,
+        media_type="video/mp4",
+        filename=path.name,
+        content_disposition_type="inline",
+    )
 
 
 @router.post("/company/{companyId}/cameras/{cameraId}/clips")

@@ -102,6 +102,19 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | DELETE | `/hr/company/{companyId}/kiosk-devices/{deviceId}` | JWT | Revoke a Kiosk device immediately (`isActive=False`, `revokedAt`): its token family is denied, `token_hash` cleared, and pending pairing codes dropped. |
 | GET | `/dashboard/stats/{companyId}` | JWT | `Asia/Bangkok` daily summary (`checkInsToday`, `inAreaToday`, `outsideToday`, `checkOutsToday`, `lateToday`, `pendingApproval`), 7-day chart, map points, and recent activity. |
 
+## Face Monitor Analytics (Phase 6C)
+
+Postgres-first aggregates (no ClickHouse). Requires `cameras.read`. Admin UI: `/company/face-monitor`.
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/analytics/company/{companyId}/heatmap` | JWT (`cameras.read`) | Hour×weekday grid (`Asia/Bangkok`). Query `start`, `end`, `source`=`incidents`\|`attendance`\|`both`. |
+| GET | `/analytics/company/{companyId}/occupancy` | JWT | Distinct subjects per hour from `sentinel_incident_log`. |
+| GET | `/analytics/company/{companyId}/dwell` | JWT | Session dwell per camera/zone (5-minute gap). |
+| GET | `/analytics/company/{companyId}/camera-health` | JWT | MediaMTX camera registry status + event counts. |
+| GET | `/analytics/company/{companyId}/summary` | JWT | Bundle of KPIs + heatmap + occupancy + dwell + camera health. |
+| GET | `/analytics/company/{companyId}/export/pdf` | JWT | PDF attachment of the summary (reportlab, with minimal fallback). |
+
 ## System, Cloud Storage & Observability
 
 | Method | Path | Notes |

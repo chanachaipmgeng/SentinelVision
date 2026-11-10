@@ -154,6 +154,13 @@ class SentinelIncidentLog(Base):
     identityType = Column("identity_type", String(30), nullable=True)
     zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
     zoneName = Column("zone_name", String(120), nullable=True)
+    # Phase 6C: optional CCTV camera that produced the face/event (nullable for legacy rows).
+    cameraId = Column(
+        "camera_id",
+        UUID(as_uuid=True),
+        ForeignKey("camera.cameraId", ondelete="SET NULL"),
+        nullable=True,
+    )
     eventId = Column("event_id", UUID(as_uuid=True), nullable=True)
     confidencePercent = Column("confidence_percent", Float, nullable=True)
     distance = Column("distance", Float, nullable=True)
@@ -173,6 +180,12 @@ class SentinelIncidentLog(Base):
     __table_args__ = (
         Index("sentinel_incident_company_occurred_idx", "companyId", occurredAt.desc()),
         Index("sentinel_incident_dedupe_open_idx", "companyId", "dedupe_key", "status", occurredAt.desc()),
+        Index(
+            "sentinel_incident_company_camera_idx",
+            "companyId",
+            "camera_id",
+            occurredAt.desc(),
+        ),
         # Matches 0023_incident_sla — open-incident SLA sweep.
         Index(
             "sentinel_incident_sla_due_idx",

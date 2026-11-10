@@ -171,9 +171,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
   @ViewChild('clockDate') clockDateEl?: ElementRef<HTMLElement>;
-  @ViewChild('decorHour') decorHourEl?: ElementRef<HTMLElement>;
-  @ViewChild('decorMinute') decorMinuteEl?: ElementRef<HTMLElement>;
-  @ViewChild('decorSecond') decorSecondEl?: ElementRef<HTMLElement>;
   locationList: CompanyLocationModel[] = [];
   locationArea: CompanyLocationModel[] = [];
   companyId = '';
@@ -233,7 +230,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   toastKind: 'success' | 'warning' | 'error' | 'info' = 'info';
   showToast = false;
   companyName = '';
-  readonly clockTicks = Array.from({ length: 60 }, (_, i) => i);
   private ttsSettings: TtsSettings = resolveTtsSettings(null);
 
   feed: CheckInFeedItem[] = [];
@@ -894,7 +890,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     this.startSceneClock();
   }
 
-  /** Decorative + header clock only — never trigger component CD (face/WS work). */
+  /** Header digital clock only — never trigger component CD (face/WS work). */
   private startSceneClock(): void {
     this.tickSceneClock();
     this.ngZone.runOutsideAngular(() => {
@@ -921,16 +917,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
         year: 'numeric',
       });
     }
-
-    const hourDeg = (hh % 12) * 30 + mm * 0.5;
-    const minuteDeg = mm * 6 + ss * 0.1;
-    const secondDeg = ss * 6;
-    const hourHand = this.decorHourEl?.nativeElement;
-    const minuteHand = this.decorMinuteEl?.nativeElement;
-    const secondHand = this.decorSecondEl?.nativeElement;
-    if (hourHand) hourHand.style.transform = `rotate(${hourDeg}deg)`;
-    if (minuteHand) minuteHand.style.transform = `rotate(${minuteDeg}deg)`;
-    if (secondHand) secondHand.style.transform = `rotate(${secondDeg}deg)`;
   }
 
   private loadTtsSettings(): void {

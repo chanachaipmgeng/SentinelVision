@@ -18,8 +18,8 @@
 # sidecar (daily + weekly drill); BACKUP_DIR must be writable by BACKUP_UID:BACKUP_GID
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.backup.yml up -d --build backup
 docker compose ... run --rm backup backup.sh          # one-off backup
-docker compose ... run --rm backup restore-drill.sh   # one-off drill into a scratch DB on dpu-db
-# or from the host with the docker CLI (reads .env; runs pg_dump inside dpu-db)
+docker compose ... run --rm backup restore-drill.sh   # one-off drill into a scratch DB on sentinel-db
+# or from the host with the docker CLI (reads .env; runs pg_dump inside sentinel-db)
 scripts/backup.sh                 # → ./backups
 scripts/restore-drill.sh          # newest set, scratch pgvector container
 ```
@@ -33,13 +33,13 @@ Offsite: set `BACKUP_RCLONE_REMOTE=backup:bucket/dpu` and `RCLONE_CONFIG_BACKUP_
 5. `tar tzf` file count must equal `uploadedFiles + enrolledFiles` from the manifest.
 6. Scratch target dropped (keep it with `DRILL_KEEP=1`). Exit 0 only if every step passed.
 
-Record each manual drill (date, stamp, duration, result) in the ops log; the sidecar's automated runs are in `docker logs dpu-backup`.
+Record each manual drill (date, stamp, duration, result) in the ops log; the sidecar's automated runs are in `docker logs sentinel-backup` (overlay `container_name` may still read `dpu-backup` until renamed).
 
 ### Real restore
 ```bash
 scripts/restore-drill.sh 20260107-020000            # rehearse first
-scripts/restore.sh 20260107-020000 --yes --stop-api # stops dpu-api/dpu-api-gpu1, pg_restore --clean, untar, chown 10001, starts API
-curl -s localhost/ready && docker logs --tail 50 dpu-api
+scripts/restore.sh 20260107-020000 --yes --stop-api # stops sentinel-api/sentinel-api-gpu1, pg_restore --clean, untar, chown 10001, starts API
+curl -s localhost/ready && docker logs --tail 50 sentinel-api
 ```
 Then enrol one face and perform one check-in. `--db-only` / `--images-only` restore one half; on a fresh host start `db` first (`docker compose up -d db api`) so the volumes exist, then restore. Restoring to a different `DB_SCHEMA` requires `CREATE EXTENSION vector` first (the drill does this automatically).
 
@@ -47,7 +47,7 @@ Then enrol one face and perform one check-in. `--db-only` / `--images-only` rest
 `docker compose up -d --build nginx` so the gateway re-resolves `api`. Check `GET /ready`.
 
 ## GPU driver mismatch
-If `nvidia-smi` says driver/library mismatch, reboot the host so the kernel module matches the userspace libraries. Do not start `dpu-api` until `nvidia-smi` succeeds.
+If `nvidia-smi` says driver/library mismatch, reboot the host so the kernel module matches the userspace libraries. Do not start `sentinel-api` until `nvidia-smi` succeeds.
 
 ## 413 on import
 Host TLS nginx must set `client_max_body_size 500m`. See `docker/nginx/tls-edge.example.conf`.
@@ -55,16 +55,16 @@ Host TLS nginx must set `client_max_body_size 500m`. See `docker/nginx/tls-edge.
 ## Weak SECRET_KEY / example database password
 The API refuses to start when `AUTH_FAIL_FAST=true` and `SECRET_KEY` is shorter than 32 characters or still `change-me-in-production`. Set a new secret and restart `api`. Existing tokens become invalid.
 
-In production mode (`APP_ENV` unset or `production`) it also refuses an example database password (`dpu_secret`, `postgres`, `password`, …) in `DATABASE_URL` with `POSTGRES_PASSWORD / DATABASE_URL still uses an example password`. Fix: set a real `POSTGRES_PASSWORD` in `.env`, rotate the role (`ALTER ROLE dpu PASSWORD '...'` on the running `dpu-db`, or let a fresh volume initialise with it) and recreate `api` / `api-gpu1`. `docker compose` itself aborts with `required variable POSTGRES_PASSWORD is missing` when the variable is absent. `APP_ENV=development` turns the password check into a warning for laptops only.
+In production mode (`APP_ENV` unset or `production`) it also refuses an example database password (`dpu_secret`, `postgres`, `password`, …) in `DATABASE_URL` with `POSTGRES_PASSWORD / DATABASE_URL still uses an example password`. Fix: set a real `POSTGRES_PASSWORD` in `.env`, rotate the role (`ALTER ROLE dpu PASSWORD '...'` on the running `sentinel-db`, or let a fresh volume initialise with it) and recreate `api` / `api-gpu1`. `docker compose` itself aborts with `required variable POSTGRES_PASSWORD is missing` when the variable is absent. `APP_ENV=development` turns the password check into a warning for laptops only.
 
 ## Upgrade to non-root containers (B4)
 Images built from this release run the API as uid 10001 (`app`) and admin/nginx as uid 101. Named volumes created by older root containers stay root-owned, and the API now aborts at startup with `image directories are not writable by uid 10001` instead of failing on the first upload. One-time fix per host:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml up -d --build
-docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images /app/import_jobs
+docker run --rm --volumes-from sentinel-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images /app/import_jobs
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.prod.yml restart api api-gpu1
-docker exec dpu-api id        # uid=10001(app)
+docker exec sentinel-api id        # uid=10001(app)
 ```
 
 Other changes to apply on upgrade: `admin` and `nginx` listen on **8080** inside the network (`HTTP_PORT` on the host is unchanged); Postgres is published on `127.0.0.1:${POSTGRES_PORT}` only (none with the prod overlay); `/metrics` and `/docs` answer only to `INTERNAL_ALLOW_CIDRS`; `/auth/login` is rate limited (20/min per IP, burst 10) — raise the zones in `docker/nginx/00-dpu-http.conf` if a NAT hides many admins behind one address.
@@ -96,10 +96,10 @@ Operations:
 Face vectors in `face_encoding` are required for matching when DPU runs InsightFace itself. In BFF mode Face Core owns embeddings; DPU keeps timestamps and punch photos. `temp_images` can be deleted; the retention loop removes them after `TEMP_RETENTION_HOURS`.
 
 ## Face Core down
-`/ready` returns 503 `face_core_down` when `FACE_CORE_URL/v1/health` fails. The kiosk shows scan errors and the API opens a 15 second circuit instead of retrying every frame. Restart `face-core-api` on `face-net`, then `dpu-api`.
+`/ready` returns 503 `face_core_down` when `FACE_CORE_URL/v1/health` fails. The kiosk shows scan errors and the API opens a 15 second circuit instead of retrying every frame. Restart `face-core-api` on `face-net`, then `sentinel-api`.
 
 ## Rotate Face Core key
-Create a key with `POST /v1/api-keys` on face-core, put it in DPU `.env` as `FACE_CORE_API_KEY`, recreate `dpu-api`, then revoke the old key.
+Create a key with `POST /v1/api-keys` on face-core, put it in DPU `.env` as `FACE_CORE_API_KEY`, recreate `api` (`sentinel-api`), then revoke the old key.
 
 ## One GPU down
 Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Start `face-core-gpu1` again when the second card is back.
@@ -115,7 +115,7 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 - **Discord Incoming Webhook** — company setting `discordWebhookUrl` (full URL is the secret; Fernet-sealed at rest).
 - Secrets in outbox / notify settings (`lineToken`, `webhookSecret`, `lineChannelAccessToken`, `telegramBotToken`, `discordWebhookUrl`) are Fernet-sealed when `OUTBOX_ENCRYPTION_KEY` is set (url-safe Fernet key from env — never commit it). Generate with `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
 - Daily missing-attendance cutoff state is stored in `system_setting` under `key = "cutoff_sent:{companyId}"`.
-- Since B7 the dispatcher runs in the `worker` service, not in `dpu-api`. A row that fails `OUTBOX_MAX_ATTEMPTS` (5) deliveries is marked `failed` and stamped `deadLetteredAt`; retry from `/company/notification-center` (Dead letter tab) or `POST /notifications/company/{id}/dead-letter/{outboxId}/retry`.
+- Since B7 the dispatcher runs in the `worker` service (`sentinel-worker`), not in `sentinel-api`. A row that fails `OUTBOX_MAX_ATTEMPTS` (5) deliveries is marked `failed` and stamped `deadLetteredAt`; retry from `/company/notification-center` (Dead letter tab) or `POST /notifications/company/{id}/dead-letter/{outboxId}/retry`.
 - In-app notification center: `/company/notification-center` → Inbox / Dead letter / Preferences / Templates (i18n keys under `notify.*`).
 
 ## PDPA / Record of Processing (RoPA) — D4 brief
@@ -133,7 +133,7 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 - `worker` (same image as `api`, `python -m src.worker`, no GPU) default `WORKER_JOBS=outbox,retention,imports,attendance_summary,cctv,people`: `outbox` (notification dispatcher + daily attendance cutoff, every `NOTIFY_POLL_SECONDS`), `retention` (temp / uploaded image purge, expired Sentinel identities, finished import payloads older than `IMPORT_JOB_RETENTION_DAYS`, orphaned import jobs; every `WORKER_RETENTION_INTERVAL_SECONDS`), `imports` (Excel + ZIP employee import, polled every `WORKER_IMPORT_POLL_SECONDS`), `attendance_summary` (C1 nightly recompute of `attendance_daily` for yesterday Asia/Bangkok; every `WORKER_ATTENDANCE_SUMMARY_INTERVAL_SECONDS`, default 6h — punch/leave/holiday hooks also recompute same-day), `cctv` (OpenCV frame grab via MediaMTX/RTSP → InsightFace `cctv` lane → incident/attendance; pauses when kiosk queue is busy), and `people` (YOLO people counting). Scale with `docker compose up -d --scale worker=2` — every job claims rows with `FOR UPDATE SKIP LOCKED`.
 - **CCTV RTSP smoke (no real camera):** `docker compose -f docker-compose.yml -f docker-compose.rtsp-sim.yml up -d` then register `streamUrl=rtsp://rtsp-sim:8554/loop`, `recordMode=event`, `analysisEnabled=true`, enable company module CCTV. Event mode records a short MediaMTX rolling segment for 5s-pre clips. Details: `scripts/cctv-rtsp-sim/README.md`.
 - The API only accepts the upload: `POST /employees/company/{id}/import-jobs` stores the files under `IMPORT_JOB_DIR` (`/app/import_jobs`, volume `api_import_jobs` shared by `api`, `api-gpu1` and `worker`) and inserts an `import_job` row (`pending`). The worker claims it (`running`, `lockedBy`, `attempts`), updates `progress` (`processed/total/success/failed/facesEnrolled`) and finishes with `done` / `failed`; Web-Manage polls `GET .../import-jobs/{jobId}`. A `running` job whose `heartbeatAt` is older than `WORKER_IMPORT_LEASE_SECONDS` (900) is failed by the retention job (`importJobsOrphaned`) so the UI never spins forever; re-upload the file.
-- Single-container dev: `RUN_BACKGROUND_JOBS_IN_API=true` runs the same job loops inside `dpu-api` (startup logs a warning). Default is `false`; a stack without a `worker` then accumulates `pending` outbox rows and import jobs (alert `DpuImportJobsStuck`, `DpuOutboxLag`).
+- Single-container dev: `RUN_BACKGROUND_JOBS_IN_API=true` runs the same job loops inside `sentinel-api` (startup logs a warning). Default is `false`; a stack without a `worker` then accumulates `pending` outbox rows and import jobs (alert `DpuImportJobsStuck`, `DpuOutboxLag`).
 - Cron / one-shot mode: `docker compose run --rm worker python -m src.worker --once [--jobs outbox,retention] [--worker-id cron-1]` runs each job once and exits 0 only when every job succeeded (`1` otherwise). Metrics port is disabled in `--once` mode; the long-running worker serves `:9108/metrics` (`WORKER_METRICS_PORT`) and this is also its healthcheck.
 - Graceful shutdown: SIGTERM / SIGINT stop new iterations and wait up to `WORKER_SHUTDOWN_GRACE_SECONDS` (30; compose `stop_grace_period: 45s`) for the running import row to finish before cancelling. Import progress is persisted per row, so a cancelled job is re-claimed by the next worker (`attempts` + 1) after the lease expires.
 - Health: `dpu_job_runs_total{job_name,result}`, `dpu_job_duration_seconds`, `dpu_job_last_success_timestamp_seconds`, `dpu_import_jobs_pending` / `_running`, `dpu_import_job_duration_seconds`, `dpu_import_rows_total{result}`; `docker compose logs -f worker` prints JSON lines with `"service": "worker"` and `"job"`.
@@ -141,7 +141,7 @@ Stop `face-core-gpu1`. `face-api` on `cuda:0` keeps serving the Redis queue. Sta
 ## Observability & alerts
 - `GET /metrics` (api) and `http://worker:9108/metrics` (worker) expose Prometheus text via `prometheus_client`. Key series: `dpu_http_requests_total{method,route,status}`, `dpu_http_request_duration_seconds`, `dpu_face_gpu_queue_pending{kind}` / `_capacity` / `_wait_seconds` / `dpu_face_gpu_processing_seconds`, `dpu_face_match_duration_seconds{source}`, `dpu_ws_kiosk_connections`, `dpu_outbox_pending` / `dpu_outbox_oldest_pending_age_seconds` / `dpu_outbox_deliveries_total{channel,result}`, `dpu_import_jobs_*`, `dpu_job_runs_total{job_name,result}` / `dpu_job_last_success_timestamp_seconds`, `dpu_db_pool_*`, `dpu_ready_status{component}`. `/metrics` is unauthenticated inside the stack (Prometheus scrapes `api:8000` / `worker:9108` directly on the compose network); at the gateway nginx only answers `/metrics` to `INTERNAL_ALLOW_CIDRS` (B4).
 - Dashboards as code: `docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d` starts Prometheus (`:9090`, scrape config `docker/observability/prometheus/prometheus.yml`, rules `alerts.yml`), Grafana (`:3000`, requires `GRAFANA_ADMIN_PASSWORD`, dashboard "DPU Attendance — API, Face queue, Kiosk, Outbox" provisioned from `docker/observability/grafana/`) and an OTel Collector (debug exporter; swap in Tempo/Jaeger in `docker/observability/otel-collector.yml`).
-- **Loki log Explore (6E):** add `-f docker-compose.loki.yml` with the observability overlay. Promtail scrapes Docker `json-file` logs for `dpu-*` containers via the host `docker.sock` and pushes to Loki (`:3100`, override with `LOKI_PORT`). Grafana already provisions a **Loki** datasource (`docker/observability/grafana/provisioning/datasources/loki.yml`). In Explore try `{container="dpu-api"} |= "error"` or `{service="worker"}`. Retention default 7d (filesystem volume `loki_data`) — not a SIEM. No extra secrets beyond the existing `GRAFANA_ADMIN_PASSWORD`.
+- **Loki log Explore (6E):** add `-f docker-compose.loki.yml` with the observability overlay. Promtail scrapes Docker `json-file` logs via the host `docker.sock` and pushes to Loki (`:3100`, override with `LOKI_PORT`); relabel regex in `docker/observability/promtail/promtail-config.yml` still targets `dpu-*` (observability overlays) — widen to `sentinel-*` when app logs should land in Loki. Grafana already provisions a **Loki** datasource (`docker/observability/grafana/provisioning/datasources/loki.yml`). In Explore try `{container="sentinel-api"} |= "error"` or `{service="worker"}`. Retention default 7d (filesystem volume `loki_data`) — not a SIEM. No extra secrets beyond the existing `GRAFANA_ADMIN_PASSWORD`. Prometheus scrape `job` labels (`job="dpu-api"`, `job="dpu-worker"`) are unchanged in `docker/observability/prometheus/prometheus.yml`.
 - Tracing: off by default. Set `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g. `http://otel-collector:4318`) to enable FastAPI + SQLAlchemy + httpx spans; `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_PROTOCOL` (`http/protobuf` default, `grpc` needs `opentelemetry-exporter-otlp-proto-grpc`), `OTEL_TRACES_SAMPLER` / `OTEL_TRACES_SAMPLER_ARG` tune it. Unset the endpoint to return to a no-op (the SDK is not even imported). Note: `opentelemetry-instrumentation-sqlalchemy` skips SQLAlchemy ≥ 2.1 with a warning; HTTP spans still work.
 - Logs are JSON (`LOG_JSON=true`): `time`, `level`, `logger`, `service` (`api` / `worker`), `message`, `requestId`, `traceId` / `spanId` (OTel ids when tracing is on, else the W3C `traceparent` echoed in the response), `companyId` (bound by `AuthzMiddleware`), `job` (worker). `extra={...}` fields are emitted under `extra` with `password|secret|token|authorization|apiKey|embedding|cookie|signature` keys redacted. Correlate a user report with `X-Request-Id` from the response headers. With Loki up, the same `requestId` / `service` fields are promoted as labels where Promtail can parse them.
 - Alerts to configure (rules shipped in `docker/observability/prometheus/alerts.yml`, wire Alertmanager to your on-call tool):

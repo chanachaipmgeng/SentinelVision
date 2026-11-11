@@ -1,3 +1,4 @@
+from functools import partial
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -272,7 +273,7 @@ async def add_face(
             }
 
         encoding = await run_on_face_gpu(
-            lambda p=str(temp_file_path): generate_face_encoding(p),
+            partial(generate_face_encoding, str(temp_file_path)),
             kind="other",
         )
         if encoding is None:
@@ -339,7 +340,7 @@ async def detect_faces_upload(image_file: UploadFile) -> dict:
         return await client.detect(content)
     try:
         return await run_on_face_gpu(
-            lambda c=content: detect_faces_bytes(c),
+            partial(detect_faces_bytes, content),
             kind="detect",
         )
     except ValueError as ve:
@@ -558,7 +559,7 @@ async def check_face_emp(
             fc = await _face_core_identify(companyId, temp_image_paths, "secure")
             return await _enrich_face_core_match(db, companyId, fc)
         target_encoding = await run_on_face_gpu(
-            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
+            partial(verify_liveness_and_get_encoding, list(temp_image_paths)),
             kind="checkin",
             company_id=companyId,
         )
@@ -602,16 +603,20 @@ async def identify_face(
             return await _enrich_face_core_match(db, companyId, fc)
         if pre_cropped:
             features = await run_on_face_gpu(
-                lambda p=temp_image_paths[0]: extract_face_features_from_crop(
-                    p, require_quality=False
+                partial(
+                    extract_face_features_from_crop,
+                    temp_image_paths[0],
+                    require_quality=False,
                 ),
                 kind="identify",
                 company_id=companyId,
             )
         else:
             features = await run_on_face_gpu(
-                lambda p=temp_image_paths[0]: extract_face_features(
-                    p, require_quality=False
+                partial(
+                    extract_face_features,
+                    temp_image_paths[0],
+                    require_quality=False,
                 ),
                 kind="identify",
                 company_id=companyId,
@@ -869,7 +874,7 @@ async def _finalize_check_in(
         loop = asyncio.get_running_loop()
         photo_filename = await loop.run_in_executor(
             get_decode_executor(),
-            lambda b=photo_source_bytes: _persist_photo_from_bytes(b),
+            partial(_persist_photo_from_bytes, photo_source_bytes),
         )
     elif photo_source_path:
         photo_filename = _persist_photo_from_path(photo_source_path)
@@ -989,7 +994,7 @@ async def check_in_face(
                 station_mode=station_mode,
             )
         target_encoding = await run_on_face_gpu(
-            lambda ps=list(temp_image_paths): verify_liveness_and_get_encoding(ps),
+            partial(verify_liveness_and_get_encoding, list(temp_image_paths)),
             kind="checkin",
             company_id=companyId,
         )
@@ -1062,7 +1067,7 @@ async def check_in_face_walkby(
                 station_mode=station_mode,
             )
         target_encoding = await run_on_face_gpu(
-            lambda ps=list(temp_image_paths): get_walkby_encoding(ps),
+            partial(get_walkby_encoding, list(temp_image_paths)),
             kind="checkin",
             company_id=companyId,
         )
@@ -1271,7 +1276,7 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
             return score
 
         features = await run_on_face_gpu(
-            lambda p=temp_image_paths[0]: extract_face_features(p, require_quality=False),
+            partial(extract_face_features, temp_image_paths[0], require_quality=False),
             kind="identify",
             company_id=company_ids[0] if company_ids else None,
         )

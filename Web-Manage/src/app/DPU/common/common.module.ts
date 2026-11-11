@@ -49,10 +49,10 @@ export const admin: Routes = [
 @NgModule({
   imports: [
     CommonModule,
-    RouterModule.forChild(admin)
+    RouterModule.forChild(admin),
+    CommonComponent,
   ],
   exports: [RouterModule],
-  declarations: [CommonComponent]
 })
 export class CommonManageModule {
   static routes = admin;

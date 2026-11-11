@@ -10,7 +10,6 @@ import { HttpRequestInterceptor } from './shared/services/http-request.intercept
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { provideEchartsCore } from 'ngx-echarts';
-import * as echarts from 'echarts';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, "./assets/i18n/", ".json");
@@ -41,7 +40,8 @@ export const appConfig: ApplicationConfig = {
     progressBar: true,
   })),
     httpInterceptorProviders,
-    provideEchartsCore({ echarts }),
+    // Lazy-load echarts so the chart library is not in the initial main bundle.
+    provideEchartsCore({ echarts: () => import('echarts') }),
   ]
 };
 

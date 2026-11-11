@@ -26,7 +26,7 @@ services:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile
-    container_name: dpu-api-gpu1
+    container_name: sentinel-api-gpu1
     expose:
       - "8000"
     environment:

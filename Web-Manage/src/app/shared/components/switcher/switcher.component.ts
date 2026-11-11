@@ -1,11 +1,14 @@
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, Renderer2, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { ColorPickerModule } from 'ngx-color-picker';
 import { Menu, NavService } from '../../services/nav.service';
 import * as switcher from './switcher';
 @Component({
     selector: 'app-switcher',
+    imports: [CommonModule, FormsModule, ColorPickerModule],
     templateUrl: './switcher.component.html',
     styleUrls: ['./switcher.component.scss'],
-    standalone: false
 })
 export class SwitcherComponent implements OnInit {
   constructor(

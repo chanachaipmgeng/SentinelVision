@@ -1,8 +1,11 @@
+import { CommonModule } from '@angular/common';
 import { Component, ViewChild, ElementRef, Renderer2, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { Menu, NavService } from '../../services/nav.service';
 import { Subscription, fromEvent } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { SimplebarAngularModule } from 'simplebar-angular';
+import { TranslateModule } from '@ngx-translate/core';
 import { checkHoriMenu, switcherArrowFn } from './sidebar';
 import { TokenService } from '../../services/token.service';
 import { PermissionService } from '../../services/permission.service';
@@ -10,9 +13,9 @@ import { CompanyModel } from '../../../DPU/models/company.model';
 import { CompanyModuleConfigService } from '../../../DPU/services/company-module-config.service';
 @Component({
     selector: 'app-sidebar',
+    imports: [CommonModule, RouterModule, SimplebarAngularModule, TranslateModule],
     templateUrl: './sidebar.component.html',
     styleUrl: './sidebar.component.scss',
-    standalone: false
 })
 
 export class SidebarComponent implements OnInit, OnDestroy {

@@ -70,11 +70,19 @@ export class DepartmentComponent {
     private tokenService: TokenService,
     public translate: TranslateService
   ) {
-    this.companyId = this.tokenService.getSelectCompany().companyId;
+    this.companyId = this.tokenService.getSelectCompany()?.companyId || '';
+    if (!this.companyId) {
+      this.loading = false;
+      return;
+    }
     this.getDepartment();
   }
 
   getDepartment() {
+    if (!this.companyId) {
+      this.loading = false;
+      return;
+    }
     this.loading = true;
     this.departmentService.getLists(this.companyId).subscribe({
       next: (result) => {

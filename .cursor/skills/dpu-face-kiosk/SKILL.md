@@ -46,7 +46,7 @@ Kiosk default: **stream**, HTTP walk-by fallback.
 
 ## GPU / backpressure
 
-- Dual-GPU host: two API containers (`dpu-api` / `dpu-api-gpu1`), each `FACE_DEVICES=cuda:0` + `FACE_GPU_WORKERS` (default 2). nginx `least_conn` spreads WS connections
+- Dual-GPU host: two API containers (`sentinel-api` / `sentinel-api-gpu1`), each `FACE_DEVICES=cuda:0` + `FACE_GPU_WORKERS` (default 2). nginx `least_conn` spreads WS connections
 - Single process with `FACE_DEVICES=cuda:0,cuda:1` is legacy — confirm both GPU UUIDs in `nvidia-smi --query-compute-apps` or prefer dual-API
 - Detect frames use the 320 det-size model (decode may use `IMREAD_REDUCED`); embedding uses 640
 - When `pending >= WS_QUEUE_BACKPRESSURE` the server answers `detect` with `dropped: true`; use `nextCaptureInterval(queueDepth)` to slow the kiosk

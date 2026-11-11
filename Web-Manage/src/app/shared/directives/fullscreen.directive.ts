@@ -15,7 +15,6 @@ type FullscreenDocument = Document & {
 
 @Directive({
     selector: '[appFullscreen]',
-    standalone: false
 })
 export class FullscreenDirective implements OnInit {
 

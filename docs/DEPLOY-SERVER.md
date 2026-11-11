@@ -117,14 +117,14 @@ IMAGE_BRIGHTNESS_MAX=220
 หลังใส่ GPU ใบที่ 2 บนโฮสต์ — **แนะนำ dual API** (คนละ process ต่อการ์ด):
 
 ```bash
-# docker-compose.gpu.yml จะขึ้น dpu-api (GPU0) + dpu-api-gpu1 (GPU1)
+# docker-compose.gpu.yml จะขึ้น sentinel-api (GPU0) + sentinel-api-gpu1 (GPU1)
 # และ mount nginx default.dual-gpu.conf (least_conn)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 ```
 
 ตรวจ:
 
-- `docker ps` มีทั้ง `dpu-api` และ `dpu-api-gpu1` healthy
+- `docker ps` มีทั้ง `sentinel-api` และ `sentinel-api-gpu1` healthy
 - หลังยิง detect ครั้งแรก: `nvidia-smi --query-compute-apps` มี python บน **ทั้งสอง GPU UUID**
 - เพดานจอ / วิธีวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md)
 
@@ -133,12 +133,12 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 **2 process ต่อการ์ด (quad API)** — ใช้เมื่อโฮสต์มี CPU core เหลือ (คอขวดคือ GIL/decode ต่อ process ไม่ใช่ GPU; server ปัจจุบัน 32 core):
 
 ```bash
-# เพิ่ม dpu-api-gpu0b (GPU0) + dpu-api-gpu1b (GPU1) และ mount nginx default.quad-gpu.conf (4 upstreams)
+# เพิ่ม sentinel-api-gpu0b (GPU0) + sentinel-api-gpu1b (GPU1) และ mount nginx default.quad-gpu.conf (4 upstreams)
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml -f docker-compose.gpu-x2.yml up -d --build
 # ถอยกลับเป็น 2 process: ตัด -f docker-compose.gpu-x2.yml แล้ว up -d --remove-orphans
 ```
 
-ตรวจ: `docker exec dpu-nginx grep -c "server api" /etc/nginx/conf.d/default.conf` ต้องได้ `4`; ทุก `dpu-api*` healthy · ผลวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) §4c
+ตรวจ: `docker exec sentinel-nginx grep -c "server api" /etc/nginx/conf.d/default.conf` ต้องได้ `4`; ทุก `sentinel-api*` healthy · ผลวัด: [KIOSK-LOADTEST-SATURATION.md](KIOSK-LOADTEST-SATURATION.md) §4c
 
 **3 process ต่อการ์ด (hexa API — ทดลอง saturation)** — ช่วย idle concurrent แต่ทำให้ rush latency แย่ลง (ดู §4d):
 
@@ -196,10 +196,10 @@ docker compose logs -f api
 
 | Container (โดยประมาณ) | หน้าที่ |
 |----------------------|---------|
-| `dpu-db` | PostgreSQL + pgvector |
-| `dpu-api` | FastAPI + InsightFace |
-| `dpu-admin` | Web Admin + face kiosk (Angular) |
-| `dpu-nginx` | Gateway พอร์ต `HTTP_PORT` |
+| `sentinel-db` | PostgreSQL + pgvector |
+| `sentinel-api` | FastAPI + InsightFace |
+| `sentinel-admin` | Web Admin + face kiosk (Angular) |
+| `sentinel-nginx` | Gateway พอร์ต `HTTP_PORT` |
 
 ---
 
@@ -311,7 +311,7 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api
 ตรวจค่าใน container:
 
 ```bash
-docker exec dpu-api python -c "from src.config.settings import settings; print(settings.IMAGE_BLUR_THRESHOLD, settings.IMAGE_BLUR_THRESHOLD_IMPORT)"
+docker exec sentinel-api python -c "from src.config.settings import settings; print(settings.IMAGE_BLUR_THRESHOLD, settings.IMAGE_BLUR_THRESHOLD_IMPORT)"
 ```
 
 ต้องได้ `20.0 0.0`
@@ -324,7 +324,7 @@ docker exec dpu-api python -c "from src.config.settings import settings; print(s
 
 ### ไฟล์ใหญ่ (413 Request Entity Too Large)
 
-`dpu-nginx` รับได้ถึง 500MB และ `/employees/.../import` timeout 1 ชั่วโมง
+`sentinel-nginx` รับได้ถึง 500MB และ `/employees/.../import` timeout 1 ชั่วโมง
 
 ถ้าเข้าผ่าน **HTTPS** (เช่น `https://face-in.myhr.co.th`) nginx ฝั่ง TLS ด้านนอกมักยังเป็น 1MB — วางไฟล์นี้แล้ว reload:
 
@@ -392,7 +392,7 @@ docker compose run --rm \
 |-------|------------|
 | เปิดเว็บไม่ได้ | `docker compose ps` ดูว่า `nginx` / `admin` Up หรือยัง · ตรวจ firewall พอร์ต `HTTP_PORT` |
 | API 502 | `docker compose logs api` · restart nginx หลัง recreate api: `docker compose up -d --build nginx` |
-| Upload / import พนักงานได้ 413 Request Entity Too Large | nginx ค่าเริ่มต้นรับได้แค่ 1m · วาง `docker/nginx/host-upload-limit.conf` เป็น `/etc/nginx/conf.d/dpu-upload-limit.conf` บน **nginx ฝั่ง TLS ด้านนอก** แล้ว `nginx -t && nginx -s reload` · rebuild `dpu-nginx` ด้วย (`client_max_body_size 500m`) |
+| Upload / import พนักงานได้ 413 Request Entity Too Large | nginx ค่าเริ่มต้นรับได้แค่ 1m · วาง `docker/nginx/host-upload-limit.conf` เป็น `/etc/nginx/conf.d/dpu-upload-limit.conf` บน **nginx ฝั่ง TLS ด้านนอก** แล้ว `nginx -t && nginx -s reload` · rebuild `sentinel-nginx` ด้วย (`client_max_body_size 500m`) |
 | Seed ไม่ติด | API ต้อง healthy ก่อน · ดู log จากคำสั่ง `docker compose run ... seed_demo_data.py` |
 | Face / enroll ที่คีออสบอก blur | แสงสว่างพอ · เกณฑ์คีออสคือ `IMAGE_BLUR_THRESHOLD` (ค่าเริ่มต้น 20) |
 | Import พนักงานรูปจากระบบอื่นถูกตัด blur / แถวถัดไปพัง `greenlet_spawn` | ตั้ง `IMAGE_BLUR_THRESHOLD_IMPORT=0` ใน `.env` แล้ว rebuild `api` (+ `nginx` ถ้าอัปเดต timeout) · คีออสยังใช้เกณฑ์ 20 อยู่ |
@@ -467,7 +467,7 @@ docker compose run --rm \
 
 ### 10.2 การ์ดใบเดียว
 
-ตรวจบนเครื่องนี้แล้ว: Face Core `device=cuda:0`, worker 1, DPU `/ready` เห็นอุปกรณ์เดียวกัน, `/face/queue-stats` ได้ `source=face-core` และคอนเทนเนอร์ `dpu-api` ไม่มี GPU
+ตรวจบนเครื่องนี้แล้ว: Face Core `device=cuda:0`, worker 1, DPU `/ready` เห็นอุปกรณ์เดียวกัน, `/face/queue-stats` ได้ `source=face-core` และคอนเทนเนอร์ `sentinel-api` ไม่มี GPU
 
 ```bash
 docker network create face-net

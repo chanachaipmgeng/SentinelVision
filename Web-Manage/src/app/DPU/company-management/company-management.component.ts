@@ -7,7 +7,6 @@ import { CompanyService } from '../services/company.service';
     selector: 'app-company-management',
     templateUrl: './company-management.component.html',
     styleUrls: ['./company-management.component.css'],
-    standalone: false
 })
 export class InstallManagementComponent implements OnInit {
   companyId = ""

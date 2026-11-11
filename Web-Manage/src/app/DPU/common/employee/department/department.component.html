@@ -57,7 +57,13 @@
         </app-empty-state>
 
         <app-empty-state
-          *ngIf="!loading && pageItems.length === 0"
+          *ngIf="!loading && !companyId"
+          icon="ri-building-line"
+          message="กรุณาเลือกบริษัทก่อนจัดการแผนก">
+        </app-empty-state>
+
+        <app-empty-state
+          *ngIf="!loading && companyId && pageItems.length === 0"
           icon="ri-organization-chart"
           [message]="searchTerm ? 'ไม่พบแผนกตามคำค้น' : 'ยังไม่มีแผนก'"
           [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"

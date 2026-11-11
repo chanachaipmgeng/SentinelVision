@@ -28,7 +28,7 @@
         "@typescript-eslint/no-unsafe-declaration-merging": "error",
         "@typescript-eslint/no-wrapper-object-types": "error",
 
-        "@angular-eslint/prefer-standalone": "off"
+        "@angular-eslint/prefer-standalone": "error"
       }
     },
     {

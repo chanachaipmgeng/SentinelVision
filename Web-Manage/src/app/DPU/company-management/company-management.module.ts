@@ -244,10 +244,10 @@ export const companyRoutes: Routes = [
 @NgModule({
   imports: [
     CommonModule,
-    RouterModule.forChild(companyRoutes)
+    RouterModule.forChild(companyRoutes),
+    InstallManagementComponent,
   ],
   exports: [RouterModule],
-  declarations: [InstallManagementComponent]
 })
 export class CompanyManagementModule {
   static routes = companyRoutes;

@@ -23,21 +23,6 @@ import { NotificationDrawerComponent } from './components/notification-drawer/no
 import { OfflineBannerComponent } from './components/offline-banner/offline-banner.component';
 
 @NgModule({
-  declarations: [
-    HeaderComponent,
-    SidebarComponent,
-    ContentLayoutComponent,
-    SwitcherComponent,
-    PageHeaderComponent,
-    TabToTopComponent,
-    FooterComponent,
-    FullscreenDirective,
-    HoverEffectSidebarDirective,
-    AuthenticationLayoutComponent,
-    LandingSwitcherComponent,
-    LandingLayoutComponent
-  ],
-
   imports: [
     CommonModule,
     RouterModule,
@@ -49,7 +34,18 @@ import { OfflineBannerComponent } from './components/offline-banner/offline-bann
     CommandPaletteComponent,
     NotificationDrawerComponent,
     OfflineBannerComponent,
-    // NgxColorsModule
+    HeaderComponent,
+    SidebarComponent,
+    ContentLayoutComponent,
+    SwitcherComponent,
+    PageHeaderComponent,
+    TabToTopComponent,
+    FooterComponent,
+    FullscreenDirective,
+    HoverEffectSidebarDirective,
+    AuthenticationLayoutComponent,
+    LandingSwitcherComponent,
+    LandingLayoutComponent,
   ],
   exports: [
     HeaderComponent,
@@ -66,7 +62,7 @@ import { OfflineBannerComponent } from './components/offline-banner/offline-bann
     LandingLayoutComponent,
     TranslateModule,
   ],
-  providers: [ColorPickerService, AuthService , TranslateModule],
+  providers: [ColorPickerService, AuthService, TranslateModule],
 })
 
 export class SharedModule { }

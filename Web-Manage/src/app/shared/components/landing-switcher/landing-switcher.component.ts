@@ -1,11 +1,13 @@
 import { Component, ElementRef, Inject, Renderer2, OnInit } from '@angular/core';
 import * as switcher from '../switcher/switcher';
-import { DOCUMENT } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ColorPickerModule } from 'ngx-color-picker';
 @Component({
     selector: 'app-landing-switcher',
+    imports: [CommonModule, FormsModule, ColorPickerModule],
     templateUrl: './landing-switcher.component.html',
     styleUrl: './landing-switcher.component.scss',
-    standalone: false
 })
 export class LandingSwitcherComponent implements OnInit {
   body: HTMLBodyElement | null;

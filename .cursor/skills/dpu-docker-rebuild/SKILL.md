@@ -44,24 +44,24 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
 
 ## Before `up`
 
-`SECRET_KEY` in `.env` must be a random string of at least 32 characters and `POSTGRES_PASSWORD` must be set (compose has no defaults). With the placeholder secret, or an example DB password in `APP_ENV=production`, `dpu-api` exits during import and nginx never becomes healthy. Rotating the secret invalidates existing tokens. First start after the B4 upgrade: chown the image volumes to uid 10001 (RUNBOOK "Upgrade to non-root").
+`SECRET_KEY` in `.env` must be a random string of at least 32 characters and `POSTGRES_PASSWORD` must be set (compose has no defaults). With the placeholder secret, or an example DB password in `APP_ENV=production`, `sentinel-api` exits during import and nginx never becomes healthy. Rotating the secret invalidates existing tokens. First start after the B4 upgrade: chown the image volumes to uid 10001 (RUNBOOK "Upgrade to non-root").
 
 ## Verify
 
 ```bash
-docker ps --filter name=dpu-
+docker ps --filter name=sentinel-
 curl -s -o NUL -w "%{http_code}\n" http://localhost/health      # 200
 curl -s -o NUL -w "%{http_code}\n" http://localhost/ready       # 200 (DB + GPU queue)
 curl -s -o NUL -w "%{http_code}\n" http://localhost/companys    # 401 (auth enforced)
 curl -s -o NUL -w "%{http_code}\n" http://localhost/docs        # 404 (docs closed; 403 when EXPOSE_API_DOCS=true but caller not in INTERNAL_ALLOW_CIDRS)
-docker exec dpu-api id                                           # uid=10001(app)
+docker exec sentinel-api id                                           # uid=10001(app)
 # with a token from POST /auth/login
 curl -s -H "Authorization: Bearer $TOKEN" http://localhost/face/queue-stats
 ```
 
 Expect:
 
-- `dpu-api` **and** `dpu-api-gpu1` healthy (dual-GPU overlay)
+- `sentinel-api` **and** `sentinel-api-gpu1` healthy (dual-GPU overlay)
 - each queue `"started": true`, `devices=['cuda:0']`, `workers` = `FACE_GPU_WORKERS`
 - after first inference: `nvidia-smi --query-compute-apps` shows a python process on **GPU0 and GPU1**
 
@@ -77,7 +77,7 @@ Kiosk fullscreen is CSS-only (`dpu-kiosk-mode`); no API rebuild required for she
 
 ## 502 after API recreate
 
-Dual-GPU nginx uses a static upstream list — recreate `dpu-nginx` whenever `api` / `api-gpu1` are recreated. Single-upstream `default.conf` uses `resolver 127.0.0.11` + variable `proxy_pass`.
+Dual-GPU nginx uses a static upstream list — recreate `sentinel-nginx` whenever `api` / `api-gpu1` are recreated. Single-upstream `default.conf` uses `resolver 127.0.0.11` + variable `proxy_pass`.
 
 ## Auth smoke (after security changes)
 

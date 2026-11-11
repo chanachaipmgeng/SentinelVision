@@ -6,6 +6,7 @@ with 1008 so unauthenticated clients can never reach the GPU queue.
 """
 
 from __future__ import annotations
+from functools import partial
 
 import asyncio
 import base64
@@ -248,7 +249,7 @@ async def _handle_detect(
             try:
                 image = await loop.run_in_executor(
                     get_decode_executor(),
-                    lambda c=content: decode_image_bytes(c, for_detect=True),
+                    partial(decode_image_bytes, content, for_detect=True),
                 )
             except ValueError as exc:
                 await _send(
@@ -264,7 +265,7 @@ async def _handle_detect(
                 return
             try:
                 result = await run_on_face_gpu(
-                    lambda img=image: detect_faces_bgr(img),
+                    partial(detect_faces_bgr, image),
                     kind="detect",
                     company_id=company_id,
                     stale_ms=float(settings.FACE_DETECT_STALE_MS),
@@ -338,11 +339,12 @@ async def _handle_identify(
                 loop = asyncio.get_running_loop()
                 image = await loop.run_in_executor(
                     get_decode_executor(),
-                    lambda c=content: decode_image_bytes(c),
+                    partial(decode_image_bytes, content),
                 )
                 features = await run_on_face_gpu(
-                    lambda img=image: extract_face_features_bgr(
-                        img,
+                    partial(
+                        extract_face_features_bgr,
+                        image,
                         require_quality=False,
                         fast_detect=bool(settings.FACE_FAST_EMBED_DETECT),
                     ),
@@ -559,7 +561,7 @@ async def _handle_checkin(
                 for content in contents:
                     frame = await loop.run_in_executor(
                         get_decode_executor(),
-                        lambda c=content: decode_image_bytes(c),
+                        partial(decode_image_bytes, content),
                     )
                     frames.append(frame)
 
@@ -571,7 +573,7 @@ async def _handle_checkin(
                     encoding = cached
                 else:
                     encoding = await run_on_face_gpu(
-                        lambda fs=list(frames): get_walkby_encoding_frames(fs),
+                        partial(get_walkby_encoding_frames, list(frames)),
                         kind="checkin",
                         company_id=company_id,
                     )
@@ -623,7 +625,7 @@ async def _handle_checkin(
                 for content in contents:
                     frame = await loop.run_in_executor(
                         get_decode_executor(),
-                        lambda c=content: decode_image_bytes(c),
+                        partial(decode_image_bytes, content),
                     )
                     frames.append(frame)
                 cached = identify_cache.get(
@@ -634,7 +636,7 @@ async def _handle_checkin(
                     encoding = cached
                 else:
                     encoding = await run_on_face_gpu(
-                        lambda fs=list(frames): get_walkby_encoding_frames(fs),
+                        partial(get_walkby_encoding_frames, list(frames)),
                         kind="checkin",
                         company_id=company_id,
                     )

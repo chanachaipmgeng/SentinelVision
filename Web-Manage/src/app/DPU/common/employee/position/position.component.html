@@ -57,7 +57,13 @@
         </app-empty-state>
 
         <app-empty-state
-          *ngIf="!loading && pageItems.length === 0"
+          *ngIf="!loading && !companyId"
+          icon="ri-building-line"
+          message="กรุณาเลือกบริษัทก่อนจัดการตำแหน่ง">
+        </app-empty-state>
+
+        <app-empty-state
+          *ngIf="!loading && companyId && pageItems.length === 0"
           icon="ri-briefcase-line"
           [message]="searchTerm ? 'ไม่พบตำแหน่งตามคำค้น' : 'ยังไม่มีตำแหน่ง'"
           [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"

@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
     selector: 'app-common',
     templateUrl: './common.component.html',
     styleUrls: ['./common.component.css'],
-    standalone: false
 })
 export class CommonComponent {
 

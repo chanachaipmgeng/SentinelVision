@@ -1,5 +1,6 @@
 """Excel template + bulk import for company employees (optional face photos)."""
 from __future__ import annotations
+from functools import partial
 
 import io
 import re
@@ -329,7 +330,7 @@ async def _enroll_face_bytes(
         blur_limit = float(settings.IMAGE_BLUR_THRESHOLD_IMPORT)
         encoding_started = True
         encoding = await run_on_face_gpu(
-            lambda p=path, b=blur_limit: generate_face_encoding(p, blur_threshold=b),
+            partial(generate_face_encoding, path, blur_threshold=blur_limit),
             kind="other",
         )
         if encoding is None:

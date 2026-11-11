@@ -76,12 +76,12 @@ Default DB credentials are in `.env.example` (`dpu` / `dpu_secret`). Change them
 
 ### Shared local Postgres (`dev-postgres`)
 
-Local DPU can use the sibling shared instance (schema `dpu` in DB `localdev`) instead of builtin `dpu-db`:
+Local DPU can use the sibling shared instance (schema `dpu` in DB `localdev`) instead of builtin `sentinel-db` (compose service `db`):
 
 ```bash
 docker network create dev-net   # once
 cd ../dev-postgres && docker compose up -d
-# first-time data move: .\scripts\migrate-from-dpu.ps1  (needs old dpu-db running)
+# first-time data move: .\scripts\migrate-from-dpu.ps1  (needs old `sentinel-db` / legacy `dpu-db` container running)
 cd ../dpu-project
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
   -f docker-compose.external-db.yml up -d --build
@@ -130,13 +130,13 @@ Frontends in Docker use `baseUrl: ''` (same origin through nginx).
 
 ## Hardened containers (B4)
 
-- **Non-root everywhere:** `api` / `api-gpu1` run as `app` (uid 10001), `admin` and `nginx` as `nginx` (uid 101, `nginxinc/nginx-unprivileged`, listening on **8080** inside the network), `db` as `postgres` in the prod overlay. `docker exec dpu-api id` must show `uid=10001`.
-- **Multi-stage, digest-pinned images:** `API-Fast/Dockerfile` (CUDA), `Dockerfile.cpu`, `Dockerfile.bff`, `Web-Manage/Dockerfile`, `docker/nginx/Dockerfile`. Build stages compile wheels; runtime stages carry only the venv, the warmed `buffalo_l` model (`/home/app/.insightface`, read-only) and the source. Every image has a `HEALTHCHECK`. Runtime images carry no `pip` (immutable venv); for ad-hoc debugging run `docker exec -u 0 dpu-api python -m ensurepip` in a throw-away container, never in production.
+- **Non-root everywhere:** `api` / `api-gpu1` run as `app` (uid 10001), `admin` and `nginx` as `nginx` (uid 101, `nginxinc/nginx-unprivileged`, listening on **8080** inside the network), `db` as `postgres` in the prod overlay. `docker exec sentinel-api id` must show `uid=10001`.
+- **Multi-stage, digest-pinned images:** `API-Fast/Dockerfile` (CUDA), `Dockerfile.cpu`, `Dockerfile.bff`, `Web-Manage/Dockerfile`, `docker/nginx/Dockerfile`. Build stages compile wheels; runtime stages carry only the venv, the warmed `buffalo_l` model (`/home/app/.insightface`, read-only) and the source. Every image has a `HEALTHCHECK`. Runtime images carry no `pip` (immutable venv); for ad-hoc debugging run `docker exec -u 0 sentinel-api python -m ensurepip` in a throw-away container, never in production.
 - **Upgrading an existing deployment:** named volumes `api_enrolled` / `api_uploaded` / `api_temp` were created by root containers. Chown them once or the API refuses to start with a clear error:
 
   ```bash
   docker compose ... up -d --build            # pulls new images
-  docker run --rm --volumes-from dpu-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images /app/import_jobs
+  docker run --rm --volumes-from sentinel-api alpine chown -R 10001:10001 /app/enrolled_images /app/uploaded_images /app/temp_images /app/import_jobs
   docker compose ... restart api api-gpu1
   ```
 

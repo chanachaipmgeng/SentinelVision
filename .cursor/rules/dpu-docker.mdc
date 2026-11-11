@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Services
 
-`db` (pgvector), `api`, `worker` (B7: outbox / retention / import jobs, `python -m src.worker`, CPU only, metrics `:9108`), `admin`, `nginx` (host `HTTP_PORT`→ container 8080). All app containers are non-root (api/worker uid 10001, admin/nginx uid 101); `admin` serves on 8080 inside the network. Optional: `-f docker-compose.observability.yml` adds `prometheus` (:9090), `grafana` (:3000, needs `GRAFANA_ADMIN_PASSWORD`) and `otel-collector`. Stack `-f docker-compose.loki.yml` for Loki (:3100) + Promtail (scrapes `dpu-*` json-file logs into Grafana Explore).
+`db` (pgvector), `api`, `worker` (B7: outbox / retention / import jobs, `python -m src.worker`, CPU only, metrics `:9108`), `admin`, `nginx` (host `HTTP_PORT`→ container 8080). All app containers are non-root (api/worker uid 10001, admin/nginx uid 101); `admin` serves on 8080 inside the network. Optional: `-f docker-compose.observability.yml` adds `prometheus` (:9090), `grafana` (:3000, needs `GRAFANA_ADMIN_PASSWORD`) and `otel-collector`. Stack `-f docker-compose.loki.yml` for Loki (:3100) + Promtail (scrapes `sentinel-*` / overlay `dpu-*` json-file logs into Grafana Explore).
 
 ### Local InsightFace (DPU holds GPUs)
 
@@ -20,9 +20,9 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 | Container | Pin | Workers |
 |-----------|-----|---------|
-| `dpu-api` | `CUDA_VISIBLE_DEVICES=0` | `FACE_GPU_WORKERS` (default 2) |
-| `dpu-api-gpu1` | `CUDA_VISIBLE_DEVICES=1` | same |
-| `dpu-nginx` | mounts `docker/nginx/default.dual-gpu.conf` | `upstream least_conn` → both APIs |
+| `sentinel-api` | `CUDA_VISIBLE_DEVICES=0` | `FACE_GPU_WORKERS` (default 2) |
+| `sentinel-api-gpu1` | `CUDA_VISIBLE_DEVICES=1` | same |
+| `sentinel-nginx` | mounts `docker/nginx/default.dual-gpu.conf` | `upstream least_conn` → both APIs |
 
 Each process sees a single device as `cuda:0`. Do **not** set `FACE_DEVICES=cuda:0,cuda:1` inside one process expecting both cards — pin failed historically without `provider_options` + separate processes.
 
@@ -72,6 +72,6 @@ API volumes persist `enrolled_images` / `uploaded_images` / `temp_images` / `imp
 
 - API healthcheck hits `/ready` (DB ping + GPU queue started)
 - After recreate: `GET /health` → 200, `GET /ready` → 200, `GET /companys` without token → 401, then `GET /face/queue-stats` with a Bearer token
-- Dual-GPU: expect both `dpu-api` and `dpu-api-gpu1` healthy; `nvidia-smi --query-compute-apps` should show a python process on **each** GPU after first inference
+- Dual-GPU: expect both `sentinel-api` and `sentinel-api-gpu1` healthy; `nvidia-smi --query-compute-apps` should show a python process on **each** GPU after first inference
 - Backups: `scripts/backup.sh` (pg_dump -Fc + image volumes + manifest), `scripts/restore.sh`, `scripts/restore-drill.sh`, sidecar `docker-compose.backup.yml`; see `docs/RUNBOOK.md`
-- Non-root check after rebuild: `docker exec dpu-api id` → `uid=10001(app)`; root-owned legacy volumes → chown once (RUNBOOK "Upgrade to non-root")
+- Non-root check after rebuild: `docker exec sentinel-api id` → `uid=10001(app)`; root-owned legacy volumes → chown once (RUNBOOK "Upgrade to non-root")

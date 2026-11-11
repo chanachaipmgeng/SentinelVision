@@ -203,7 +203,7 @@ python kiosk_load.py --profile rush --kiosks 1,2 --faces-per-kiosk 3 --hold 45 -
 ตรวจ CUDA บนเซิร์ฟเวอร์ (host nginx ดึง `/ready` ไป SPA — อย่าใช้โดเมนสำหรับ `/ready`):
 
 ```bash
-docker logs dpu-api 2>&1 | grep -E "InsightFace|CUDAExecutionProvider|falling back to CPU"
+docker logs sentinel-api 2>&1 | grep -E "InsightFace|CUDAExecutionProvider|falling back to CPU"
 nvidia-smi -L
 # ระหว่างโหลดเทส: nvidia-smi -l 1  — util ควรขึ้น ถ้าติด 0% ตลอด = ยังไม่ใช้ GPU
 ```
@@ -310,7 +310,7 @@ python kiosk_load.py --faces-per-kiosk 3 --profile rush --kiosks 2,4,8,16 --hold
 
 ### ผล saturation 2026-09-23 (dual API + เฟรมสมจริง)
 
-หลังพบว่า GPU1 ว่างจริง (device ไม่ถูก pin) และ process เดียวติด GIL จึงแยกเป็น `dpu-api` / `dpu-api-gpu1` + nginx `least_conn` และย่อเฟรมเทสให้เท่า kiosk จริง (~1280 px, q70)
+หลังพบว่า GPU1 ว่างจริง (device ไม่ถูก pin) และ process เดียวติด GIL จึงแยกเป็น `sentinel-api` / `sentinel-api-gpu1` + nginx `least_conn` และย่อเฟรมเทสให้เท่า kiosk จริง (~1280 px, q70)
 
 | โปรไฟล์ | เพดาน SLO (รอบ saturation) |
 |---------|----------------------------|
@@ -324,7 +324,7 @@ python kiosk_load.py --faces-per-kiosk 3 --profile rush --kiosks 2,4,8,16 --hold
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
-# ตรวจ: dpu-api, dpu-api-gpu1, nginx (mount default.dual-gpu.conf)
+# ตรวจ: sentinel-api, sentinel-api-gpu1, nginx (mount default.dual-gpu.conf)
 ```
 
 Loadgen บน server (ตัด LAN/Windows ออก):
@@ -357,7 +357,7 @@ sudo nvidia-smi -L
 sudo docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build api admin nginx
 
 # 4) ตรวจ
-sudo docker logs dpu-api 2>&1 | grep -E 'Face GPU queue|InsightFace|CUDA'
+sudo docker logs sentinel-api 2>&1 | grep -E 'Face GPU queue|InsightFace|CUDA'
 # ต้องเห็น workers=2 และ CUDAExecutionProvider / devices=['cuda:0','cuda:1']
 ```
 

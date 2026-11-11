@@ -70,11 +70,19 @@ export class PositionComponent {
     private tokenService: TokenService,
     public translate: TranslateService
   ) {
-    this.companyId = this.tokenService.getSelectCompany().companyId;
+    this.companyId = this.tokenService.getSelectCompany()?.companyId || '';
+    if (!this.companyId) {
+      this.loading = false;
+      return;
+    }
     this.getPosition();
   }
 
   getPosition() {
+    if (!this.companyId) {
+      this.loading = false;
+      return;
+    }
     this.loading = true;
     this.positionService.getLists(this.companyId).subscribe({
       next: (result) => {

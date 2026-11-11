@@ -1,11 +1,11 @@
-import { ViewportScroller } from '@angular/common';
+import { CommonModule, ViewportScroller } from '@angular/common';
 import { Component, HostListener } from '@angular/core';
 
 @Component({
     selector: 'app-tab-to-top',
+    imports: [CommonModule],
     templateUrl: './tab-to-top.component.html',
     styleUrl: './tab-to-top.component.scss',
-    standalone: false
 })
 export class TabToTopComponent {
   public show: boolean = false;

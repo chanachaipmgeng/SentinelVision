@@ -8,12 +8,14 @@ import time
 from collections import defaultdict, deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Callable, Deque, Dict, Literal, Optional
+from typing import Any, Callable, Deque, Dict, Literal, Optional, TypeVar
 from uuid import UUID
 
 from ..services.observability import observe_face_gpu_job
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 # Priority high → low. ``cctv`` is a dedicated low-priority lane so kiosk
 # checkin/identify stay ahead of background camera analysis (Phase 4A).
@@ -49,7 +51,7 @@ class _Job:
     company_key: str = "_"
     enqueued_at: float = field(default_factory=time.monotonic)
     stale_ms: Optional[float] = None
-    future: asyncio.Future = field(
+    future: asyncio.Future[Any] = field(
         default_factory=lambda: asyncio.get_running_loop().create_future()
     )
 
@@ -58,7 +60,7 @@ class StaleFaceJob(Exception):
     """Detect frame waited longer than FACE_DETECT_STALE_MS."""
 
 
-def _call_on_device(fn: Callable[[], Any], device: str) -> Any:
+def _call_on_device(fn: Callable[[], T], device: str) -> T:
     try:
         from .face_engine import set_thread_device
     except ImportError:
@@ -223,7 +225,7 @@ async def _worker_loop(worker_id: int) -> None:
         outcome = "ok"
         try:
             result = await loop.run_in_executor(
-                _executor, lambda fn=job.fn, device=device: _call_on_device(fn, device)
+                _executor, _call_on_device, job.fn, device
             )
             if not job.future.done():
                 job.future.set_result(result)
@@ -244,12 +246,12 @@ async def _worker_loop(worker_id: int) -> None:
 
 
 async def run_on_face_gpu(
-    fn: Callable[[], Any],
+    fn: Callable[[], T],
     *,
     kind: str = "other",
     company_id: Optional[UUID | str] = None,
     stale_ms: Optional[float] = None,
-) -> Any:
+) -> T:
     """
     Enqueue a blocking InsightFace callable and await its result.
     Priority: checkin > identify > detect > other; fair round-robin per company.

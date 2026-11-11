@@ -2,10 +2,12 @@
 #   POSTGRES_PASSWORD, SECRET_KEY (>= 32 random chars). See docs/SETUP.md.
 # Images run as unprivileged users (api uid 10001, admin/nginx uid 101); the gateway and
 # admin listen on 8080 inside the network. Production: add docker-compose.prod.yml.
+name: sentinelvision
+
 services:
   db:
     image: pgvector/pgvector:pg16@sha256:0dd3149a06e4579a0d70d8fef9945636cd514005e7237deb27f9b67886f8dc4f
-    container_name: dpu-db
+    container_name: sentinel-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dpu}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}
@@ -35,7 +37,7 @@ services:
   # D7: shared Redis for app rate limits + Idempotency-Key (optional; API falls back to memory).
   redis:
     image: redis:7-alpine
-    container_name: dpu-redis
+    container_name: sentinel-redis
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     expose:
       - "6379"
@@ -57,7 +59,7 @@ services:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile
-    container_name: dpu-api
+    container_name: sentinel-api
     expose:
       - "8000"
     environment:
@@ -160,7 +162,7 @@ services:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile
-    container_name: dpu-worker
+    container_name: sentinel-worker
     command: ["python", "-m", "src.worker"]
     expose:
       - "9108"
@@ -254,7 +256,7 @@ services:
     build:
       context: ./Web-Manage
       dockerfile: Dockerfile
-    container_name: dpu-admin
+    container_name: sentinel-admin
     expose:
       - "8080"
     environment:
@@ -278,7 +280,7 @@ services:
   # Phase 3: MediaMTX — RTSP pull + WebRTC (WHEP) + HLS for live wall.
   mediamtx:
     image: bluenviron/mediamtx:1.12.2
-    container_name: dpu-mediamtx
+    container_name: sentinel-mediamtx
     volumes:
       - ./docker/mediamtx/mediamtx.yml:/mediamtx.yml:ro
       - mediamtx_recordings:/recordings
@@ -307,7 +309,7 @@ services:
     build:
       context: ./docker/nginx
       dockerfile: Dockerfile
-    container_name: dpu-nginx
+    container_name: sentinel-nginx
     ports:
       - "${HTTP_PORT:-80}:8080"
     environment:

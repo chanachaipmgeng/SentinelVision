@@ -56,18 +56,6 @@ show_error_codes = true
 pretty = false
 exclude = ["^enrolled_images/", "^uploaded_images/", "^temp_images/"]
 
-# ---- Phase B3 baseline -------------------------------------------------------------------
-# Narrow post-Mapped[] exceptions only (was 62 modules / ignore_errors).
-# face GPU queue call sites pass untyped lambdas; suppress [misc] there only.
-[[tool.mypy.overrides]]
-module = [
-    "src.controllers.face_controller",
-    "src.controllers.face_ws_controller",
-    "src.controllers.employee_import_controller",
-    "src.utils.face_gpu_queue",
-]
-disable_error_code = ["misc"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "strict"

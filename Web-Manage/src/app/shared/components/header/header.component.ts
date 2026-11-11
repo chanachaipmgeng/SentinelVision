@@ -1,4 +1,6 @@
+import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ThemeService } from '../../services/theme.service';
 import { ShellUiService } from '../../services/shell-ui.service';
@@ -7,8 +9,9 @@ import { Menu, NavService } from '../../services/nav.service';
 import { TokenService } from '../../services/token.service';
 import { AuthService } from '../../services/auth.service';
 import { PermissionService } from '../../services/permission.service';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UserProfileModel } from '../../../DPU/models/user.model';
+import { FullscreenDirective } from '../../directives/fullscreen.directive';
 
 interface Item {
   id: number;
@@ -19,9 +22,9 @@ interface Item {
 
 @Component({
     selector: 'app-header',
+    imports: [CommonModule, RouterModule, TranslateModule, FullscreenDirective],
     templateUrl: './header.component.html',
     styleUrls: ['./header.component.scss'],
-    standalone: false
 })
 
 export class HeaderComponent implements OnInit, OnDestroy {

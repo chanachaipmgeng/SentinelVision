@@ -29,7 +29,7 @@ nginx :80
 
 Start with `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build`.
 
-On a dual-GPU host the GPU overlay runs **two API processes** (`dpu-api` on GPU0, `dpu-api-gpu1` on GPU1) behind nginx `least_conn` (`docker/nginx/default.dual-gpu.conf`). Add `docker-compose.gpu-x2.yml` for **two processes per GPU** (`default.quad-gpu.conf`).
+On a dual-GPU host the GPU overlay runs **two API processes** (`sentinel-api` on GPU0, `sentinel-api-gpu1` on GPU1) behind nginx `least_conn` (`docker/nginx/default.dual-gpu.conf`). Add `docker-compose.gpu-x2.yml` for **two processes per GPU** (`default.quad-gpu.conf`).
 
 ## Components
 

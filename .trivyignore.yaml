@@ -9,15 +9,6 @@
 # Format: https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml
 
 vulnerabilities:
-  # swiper is consumed as SCSS only (src/styles.scss imports swiper/scss*); the JavaScript that
-  # carries the prototype-pollution bug is never bundled. Removing the dependency means
-  # re-styling the landing/auth carousels — tracked in docs/BACKLOG.md "Lint debt / deps".
-  - id: CVE-2026-27212
-    paths:
-      - Web-Manage/package-lock.json
-    statement: "swiper@8 is used for its SCSS only; the vulnerable JS is not shipped."
-    expired_at: 2027-03-31
-
   # API images (trivy image, target "Python"): pip >= 25 ships pip/_vendor/bom.cdx.json, a CycloneDX
   # SBOM that declares its vendored pkg_resources as setuptools==70.3.0. Only pkg_resources is
   # vendored; setuptools/package_index.py (the PackageIndex path-traversal) is not in the image. The

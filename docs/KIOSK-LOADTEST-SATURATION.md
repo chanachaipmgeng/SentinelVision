@@ -39,15 +39,15 @@
 | รายการ | รายละเอียด |
 |--------|-------------|
 | Device pin | `face_engine.get_face_app` ส่ง `provider_options=[{"device_id": N}, {}]` |
-| Dual API | `dpu-api` → `CUDA_VISIBLE_DEVICES=0`, `dpu-api-gpu1` → `CUDA_VISIBLE_DEVICES=1`, คนละ `FACE_GPU_WORKERS=2` |
+| Dual API | `sentinel-api` → `CUDA_VISIBLE_DEVICES=0`, `sentinel-api-gpu1` → `CUDA_VISIBLE_DEVICES=1`, คนละ `FACE_GPU_WORKERS=2` |
 | nginx | [`docker/nginx/default.dual-gpu.conf`](../docker/nginx/default.dual-gpu.conf) · `upstream least_conn` |
 | Decode CPU | `IMREAD_REDUCED` + decode pool แยกจาก GPU pool |
 
 ```mermaid
 flowchart LR
   K[Kiosks WS] --> N["nginx least_conn"]
-  N --> A0["dpu-api GPU0\nworkers=2"]
-  N --> A1["dpu-api-gpu1 GPU1\nworkers=2"]
+  N --> A0["sentinel-api GPU0\nworkers=2"]
+  N --> A1["sentinel-api-gpu1 GPU1\nworkers=2"]
   A0 --> G0[GPU0]
   A1 --> G1[GPU1]
 ```
@@ -119,7 +119,7 @@ Host metrics ระหว่างโหลด: GPU SM avg ~11% ต่อใบ 
 
 | รายการ | รายละเอียด | ถอยกลับ |
 |--------|-------------|---------|
-| Quad API | [`docker-compose.gpu-x2.yml`](../docker-compose.gpu-x2.yml) เพิ่ม `dpu-api-gpu0b` (GPU0) + `dpu-api-gpu1b` (GPU1) ผ่าน `extends` จาก `api-gpu1`; nginx mount [`default.quad-gpu.conf`](../docker/nginx/default.quad-gpu.conf) (4 upstreams, `least_conn`) | ตัด `-f docker-compose.gpu-x2.yml` แล้ว `up -d --remove-orphans` |
+| Quad API | [`docker-compose.gpu-x2.yml`](../docker-compose.gpu-x2.yml) เพิ่ม `sentinel-api-gpu0b` (GPU0) + `sentinel-api-gpu1b` (GPU1) ผ่าน `extends` จาก `api-gpu1`; nginx mount [`default.quad-gpu.conf`](../docker/nginx/default.quad-gpu.conf) (4 upstreams, `least_conn`) | ตัด `-f docker-compose.gpu-x2.yml` แล้ว `up -d --remove-orphans` |
 | whisper_server | process ของ `myhr` (พอร์ต 8091, th-large-v3 float32 ~4 GB) รันใหม่ด้วย `CUDA_VISIBLE_DEVICES=1` — GPU0 เหลือเฉพาะ DPU | รันตาม `/home/whisper_server/run.txt` โดยไม่ตั้ง env |
 | workers | คง `FACE_GPU_WORKERS=3` ต่อ process (A/B กับ 2 ไม่ต่างในระดับ noise) | — |
 
@@ -142,7 +142,7 @@ Host metrics: GPU SM avg ~16%/ใบ (peak 39%), API CPU ~120% × 4 process (ร
 
 | รายการ | รายละเอียด | ถอยกลับ |
 |--------|-------------|---------|
-| Hexa API | [`docker-compose.gpu-x3.yml`](../docker-compose.gpu-x3.yml) เพิ่ม `dpu-api-gpu0c` + `dpu-api-gpu1c`; nginx [`default.hexa-gpu.conf`](../docker/nginx/default.hexa-gpu.conf) (6 upstreams) | ตัด `-f docker-compose.gpu-x3.yml` แล้ว `up -d --remove-orphans` (กลับเป็น quad) |
+| Hexa API | [`docker-compose.gpu-x3.yml`](../docker-compose.gpu-x3.yml) เพิ่ม `sentinel-api-gpu0c` + `sentinel-api-gpu1c`; nginx [`default.hexa-gpu.conf`](../docker/nginx/default.hexa-gpu.conf) (6 upstreams) | ตัด `-f docker-compose.gpu-x3.yml` แล้ว `up -d --remove-orphans` (กลับเป็น quad) |
 | เป้าหมายวัด | หาเพดานฮาร์ดแวร์เมื่อยอมรับ latency 1–2 s / ไม่ยึด SLO 550 ms | — |
 
 ผลวัด — ตาราง [KIOSK-LOADTEST-PERF4-TABLE.md](KIOSK-LOADTEST-PERF4-TABLE.md):
@@ -218,7 +218,7 @@ Host metrics: GPU SM avg ~21%/ใบ (peak ~48%), VRAM ~5.5 GB/การ์ด (
 ```bash
 # บนเซิร์ฟเวอร์
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
-# ตรวจ: dpu-api + dpu-api-gpu1 + nginx (mount default.dual-gpu.conf)
+# ตรวจ: sentinel-api + sentinel-api-gpu1 + nginx (mount default.dual-gpu.conf)
 
 # จากเครื่องทดสอบ (หรือ compose profile loadtest)
 export KIOSK_LOAD_BASE_URL=http://10.50.0.117:8880
@@ -228,7 +228,7 @@ python kiosk_load.py --frame-width 1280 --jpeg-quality 70 \
 python kiosk_load.py --profile stress --kiosks 8 --rate 20 --hold 40
 
 # Host metrics (รันบนเครื่องที่มี nvidia-smi + docker)
-python poll_queue.py --host-metrics --api-container dpu-api,dpu-api-gpu1 --csv queue-sat.csv
+python poll_queue.py --host-metrics --api-container sentinel-api,sentinel-api-gpu1 --csv queue-sat.csv
 ```
 
 ไฟล์ดิบใน `scripts/kiosk-load/.cache/`:

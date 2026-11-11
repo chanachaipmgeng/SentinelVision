@@ -29,7 +29,7 @@ docker network create dev-net   # once
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
   -f docker-compose.external-db.yml up -d --build
 
-# Builtin dpu-db (legacy local volume) — omit external-db.yml
+# Builtin db (`sentinel-db`; legacy local volume) — omit external-db.yml
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 # Same-host BFF: Face Core on face-net (prefer dual-API for single-host saturation).

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, Renderer2 } from '@angular/core';
-import { NavigationEnd, Router } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import { Menu, NavService } from '../../services/nav.service';
 import { routeAnimations } from '../../services/animations/route.animations';
@@ -7,16 +7,36 @@ import { UserService } from '../../../DPU/services/user.service';
 import { TokenService } from '../../services/token.service';
 import { ThemeService } from '../../services/theme.service';
 import { IdleTimeoutService } from '../../services/idle-timeout.service';
+import { HeaderComponent } from '../../components/header/header.component';
+import { SidebarComponent } from '../../components/sidebar/sidebar.component';
+import { FooterComponent } from '../../components/footer/footer.component';
+import { TabToTopComponent } from '../../components/tab-to-top/tab-to-top.component';
+import { SwitcherComponent } from '../../components/switcher/switcher.component';
+import { HoverEffectSidebarDirective } from '../../directives/hover-effect-sidebar.directive';
+import { CommandPaletteComponent } from '../../components/command-palette/command-palette.component';
+import { NotificationDrawerComponent } from '../../components/notification-drawer/notification-drawer.component';
+import { OfflineBannerComponent } from '../../components/offline-banner/offline-banner.component';
 
 const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 
 @Component({
     selector: 'app-content-layout',
+    imports: [
+      RouterModule,
+      HeaderComponent,
+      SidebarComponent,
+      FooterComponent,
+      TabToTopComponent,
+      SwitcherComponent,
+      HoverEffectSidebarDirective,
+      CommandPaletteComponent,
+      NotificationDrawerComponent,
+      OfflineBannerComponent,
+    ],
     templateUrl: './content-layout.component.html',
     styleUrl: './content-layout.component.scss',
     animations: [routeAnimations],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
 })
 export class ContentLayoutComponent implements OnDestroy {
   public menuItems!: Menu[];

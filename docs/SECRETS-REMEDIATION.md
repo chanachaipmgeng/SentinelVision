@@ -141,7 +141,7 @@ Performed on the owner's workstation after PR #8 (Phase A integration) was merge
 **Rotated (values live only in the gitignored root `.env`):**
 
 - `SECRET_KEY` — new 64-char random value. Every pre-existing access/refresh/kiosk token is invalid; admins must log in again and kiosks must be re-paired (`/kiosk/pair`).
-- `POSTGRES_PASSWORD` for role `dpu` on the builtin `dpu-db` (`ALTER USER dpu WITH PASSWORD …`), new 32-char random value; `DATABASE_URL` is derived from it by `docker-compose.yml`. Verified: old default password rejected over the network, new one accepted, `api` recreated, `/health` and `/ready` 200, login works, pre-rotation token → 401, startup DDL clean.
+- `POSTGRES_PASSWORD` for role `dpu` on the builtin `sentinel-db` container (`ALTER USER dpu WITH PASSWORD …`), new 32-char random value; `DATABASE_URL` is derived from it by `docker-compose.yml`. Verified: old default password rejected over the network, new one accepted, `api` recreated, `/health` and `/ready` 200, login works, pre-rotation token → 401, startup DDL clean.
 
 **Still to do (owner):**
 

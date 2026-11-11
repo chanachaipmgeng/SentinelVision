@@ -18,16 +18,16 @@ export class CompanyLocationModel extends BaseModel{
     translateService? : TranslateService
   ) {
     super(data,translateService);
-    this.companyId = data?.companyId!
-    this.locationId = data?.locationId!
+    this.companyId = data?.companyId ?? ''
+    this.locationId = data?.locationId ?? ''
     this.latitude = this.toCoord(data?.latitude, 13.7563);
     this.longitude = this.toCoord(data?.longitude, 100.5018);
-    this.locationName = data?.locationName!;
-    this.startDate = data?.startDate!;
-    this.endDate = data?.endDate!
-    this.locationType = data?.locationType!
-    this.createdAt = data?.createdAt!;
-    this.updatedAt = data?.updatedAt!
+    this.locationName = data?.locationName ?? '';
+    this.startDate = data?.startDate ?? '';
+    this.endDate = data?.endDate ?? ''
+    this.locationType = Number(data?.locationType) || 0
+    this.createdAt = data?.createdAt ?? '';
+    this.updatedAt = data?.updatedAt ?? ''
     this.radius = Number(data?.radius) || 0
   }
 

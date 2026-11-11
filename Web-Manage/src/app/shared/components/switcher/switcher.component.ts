@@ -1,12 +1,13 @@
-import { Component, ElementRef, Renderer2 } from '@angular/core';
-import { NavService } from '../../services/nav.service';
+import { Component, ElementRef, Renderer2, OnInit } from '@angular/core';
+import { Menu, NavService } from '../../services/nav.service';
 import * as switcher from './switcher';
 @Component({
-  selector: 'app-switcher',
-  templateUrl: './switcher.component.html',
-  styleUrls: ['./switcher.component.scss']
+    selector: 'app-switcher',
+    templateUrl: './switcher.component.html',
+    styleUrls: ['./switcher.component.scss'],
+    standalone: false
 })
-export class SwitcherComponent {
+export class SwitcherComponent implements OnInit {
   constructor(
     private renderer: Renderer2,
     private elementRef: ElementRef,
@@ -95,7 +96,7 @@ export class SwitcherComponent {
     this.renderer.setAttribute(htmlElement, 'data-toggled', type1);
     localStorage.setItem('ynex-menu-style', type1);
   }
-  menuItems!: any;
+  menuItems: Menu[] = [];
   Menus(type: string, type1: string) {
     this.navServices.items.subscribe((items) => {
       this.menuItems = items;
@@ -180,13 +181,13 @@ export class SwitcherComponent {
     this.renderer.setAttribute(htmlElement, 'data-header-styles', type);
     localStorage.setItem('ynex-header-mode', type);
   }
-  closeMenu(type1: any) {
+  closeMenu(type1: string) {
     if (type1 == 'icon-hover' || type1 == 'menu-hover') {
-      this.menuItems?.forEach((a: any) => {
+      this.menuItems?.forEach((a) => {
         if (this.menuItems) {
           a.active = false;
         }
-        a?.children?.forEach((b: any) => {
+        a.children?.forEach((b) => {
           if (a.children) {
             b.active = false;
           }
@@ -226,7 +227,7 @@ export class SwitcherComponent {
   }
 
   //primary theme change
-  public dynamicLightPrimary(data: any): void {
+  public dynamicLightPrimary(data: { color: string }): void {
     this.color1 = data.color;
 
     const dynamicPrimaryLight = document.querySelectorAll(
@@ -255,7 +256,7 @@ export class SwitcherComponent {
 
   //background theme change
   public color4 = '#6c5ffc';
-  public dynamicTranparentBgPrimary(data: any,): void {
+  public dynamicTranparentBgPrimary(data: { color: string }): void {
     const darkChecked = document.getElementById(
       'switcher-dark-theme'
     ) as HTMLInputElement;
@@ -307,22 +308,22 @@ export class SwitcherComponent {
   }
   reset() {
     localStorage.clear();
-    const html: any = this.elementRef.nativeElement.ownerDocument.documentElement;
-    const body: any = document.querySelector('body');
-    html.style = '';
+    const html = this.elementRef.nativeElement.ownerDocument.documentElement as HTMLElement;
+    const body = document.querySelector('body') as HTMLElement | null;
+    html.removeAttribute('style');
     html.setAttribute('class', 'light');
     html.setAttribute('data-vertical-style', 'overlay');
     html.setAttribute('dir', 'ltr');
     html.setAttribute('data-nav-layout', 'vertical');
-    html.removeAttribute('data-page-style', 'regular');
-    html.removeAttribute('data-width', 'full-width');
-    html.removeAttribute('data-menu-position', 'fixed');
-    html.removeAttribute('data-header-position', 'fixed');
+    html.removeAttribute('data-page-style');
+    html.removeAttribute('data-width');
+    html.removeAttribute('data-menu-position');
+    html.removeAttribute('data-header-position');
     html.setAttribute('data-header-styles', 'light');
     html.setAttribute('data-menu-styles', 'dark');
-    html.removeAttribute('bg-img', 'dark');
-    html.removeAttribute('data-toggled', 'overlay');
-    body.removeAttribute('class');
+    html.removeAttribute('bg-img');
+    html.removeAttribute('data-toggled');
+    body?.removeAttribute('class');
     html.removeAttribute("data-nav-style")
 
     const menuclickclosed = document.getElementById(
@@ -369,6 +370,6 @@ export class SwitcherComponent {
   }
   ngOnInit(): void {
     switcher.localStorageBackUp();
-    this.closeMenu(localStorage.getItem('ynex-menu-style'));
+    this.closeMenu(localStorage.getItem('ynex-menu-style') || '');
   }
 }

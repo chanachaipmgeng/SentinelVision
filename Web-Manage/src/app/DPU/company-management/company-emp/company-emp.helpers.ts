@@ -1,4 +1,6 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { EmployeeModel } from '../../models/employee.model';
+import { isRecord } from '../../../shared/utils/type-guards';
 
 export type EmpListViewMode = 'table' | 'cards';
 
@@ -185,32 +187,38 @@ export function translateApiMessage(msg: string): string {
   return msg || 'ข้อมูลไม่ถูกต้อง';
 }
 
-export function translateValidationItem(d: any): string {
-  const locParts = Array.isArray(d?.loc)
-    ? d.loc.filter((x: any) => x !== 'body' && typeof x === 'string')
+export function translateValidationItem(d: unknown): string {
+  const item = isRecord(d) ? d : {};
+  const locParts = Array.isArray(item['loc'])
+    ? item['loc'].filter((x): x is string => x !== 'body' && typeof x === 'string')
     : [];
   const fieldKey = locParts[locParts.length - 1] || '';
   const label = fieldLabelTh(fieldKey, locParts);
-  const msg = translateApiMessage(String(d?.msg || ''));
+  const msg = translateApiMessage(String(item['msg'] || ''));
   if (label && msg) {
     return `• ${label}: ${msg}`;
   }
   return msg ? `• ${msg}` : '';
 }
 
-export function formatApiError(err: any): string {
-  const detail = err?.error?.detail;
+export function formatApiError(err: unknown): string {
+  const http = err instanceof HttpErrorResponse ? err : null;
+  const status = http?.status ?? (isRecord(err) ? Number(err['status']) : 0);
+  const body = http?.error ?? (isRecord(err) ? err['error'] : undefined);
+  const detail = isRecord(body) ? body['detail'] : undefined;
   if (typeof detail === 'string') {
     return translateApiMessage(detail);
   }
   if (Array.isArray(detail)) {
-    const lines = detail.map((d: any) => translateValidationItem(d));
+    const lines = detail.map((d: unknown) => translateValidationItem(d));
     return lines.filter(Boolean).join('\n') || 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
   }
-  if (err?.status === 0) {
+  if (status === 0) {
     return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่';
   }
-  return err?.message || 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
+  if (http?.message) return http.message;
+  if (err instanceof Error) return err.message;
+  return 'กรุณาตรวจสอบข้อมูลแล้วลองใหม่';
 }
 
 export function saveErrorTitle(status: number | undefined): string {

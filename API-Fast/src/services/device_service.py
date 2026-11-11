@@ -90,7 +90,7 @@ def _clean_uuid(raw: Any, *, field: str) -> Optional[UUID]:
     try:
         return UUID(str(raw))
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid UUID for {field}")
+        raise HTTPException(status_code=400, detail=f"Invalid UUID for {field}") from None
 
 
 def _clean_config(raw: Any) -> dict:
@@ -134,8 +134,8 @@ async def create_device(db: AsyncSession, company_id: UUID, body: dict) -> dict:
         stationMode=_clean_station_mode(body.get("stationMode")),
         zoneId=_clean_uuid(body.get("zoneId"), field="zoneId"),
         siteFloorId=_clean_uuid(body.get("siteFloorId"), field="siteFloorId"),
-        mapPosX=None if map_x in (None, "") else float(map_x),
-        mapPosY=None if map_y in (None, "") else float(map_y),
+        mapPosX=float(str(map_x)) if map_x not in (None, "") else None,
+        mapPosY=float(str(map_y)) if map_y not in (None, "") else None,
     )
     code = _issue_pairing_code(device)
     db.add(device)

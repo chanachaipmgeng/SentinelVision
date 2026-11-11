@@ -195,8 +195,8 @@
             </a>
           </td>
           <td class="p-3">
-            <span *ngIf="inc.confidencePercent != null">{{ inc.confidencePercent }}%</span>
-            <span *ngIf="inc.confidencePercent == null" class="text-dpu-muted">-</span>
+            <span *ngIf="inc.confidencePercent !== null && inc.confidencePercent !== undefined">{{ inc.confidencePercent }}%</span>
+            <span *ngIf="inc.confidencePercent === null || inc.confidencePercent === undefined" class="text-dpu-muted">-</span>
           </td>
           <td class="p-3">{{ inc.occurredAt | date:'dd/MM HH:mm:ss' }}</td>
           <td class="p-3 text-end">
@@ -294,7 +294,7 @@
 <app-side-drawer
   [(open)]="drawerOpen"
   [title]="'listKit.accessLogs.detailTitle'"
-  [subtitle]="selectedIncident?.occurredAt ? ((selectedIncident.occurredAt | date: 'dd/MM/yyyy HH:mm:ss') || '') : ''"
+  [subtitle]="selectedIncident?.occurredAt ? ((selectedIncident?.occurredAt | date: 'dd/MM/yyyy HH:mm:ss') || '') : ''"
   [showFooter]="canActOnIncident(selectedIncident)">
   <div class="sv-incident" *ngIf="selectedIncident as inc">
     <figure class="sv-incident__snapshot">
@@ -358,7 +358,7 @@
       </div>
       <div>
         <dt>{{ 'listKit.accessLogs.confidence' | translate }}</dt>
-        <dd>{{ inc.confidencePercent != null ? inc.confidencePercent + '%' : '-' }}</dd>
+        <dd>{{ inc.confidencePercent !== null && inc.confidencePercent !== undefined ? inc.confidencePercent + '%' : '-' }}</dd>
       </div>
       <div *ngIf="inc.actionTaken"><dt>{{ 'listKit.accessLogs.actionTaken' | translate }}</dt><dd>{{ inc.actionTaken }}</dd></div>
       <div><dt>{{ 'listKit.accessLogs.occurredAt' | translate }}</dt><dd>{{ inc.occurredAt | date: 'dd/MM/yyyy HH:mm:ss' }}</dd></div>

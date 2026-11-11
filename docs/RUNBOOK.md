@@ -180,7 +180,7 @@ npx playwright install chromium
 DPU_BASE_URL=http://localhost:8880 npm run test:e2e:smoke
 ```
 
-Checks `GET /health` and that `/auth/login` shows the username/password form. For a real sign-in, set `DPU_E2E_USER` and `DPU_E2E_PASSWORD` in the shell only — never commit them or put them in compose/docs. Not wired as a CI gate (needs the stack); npm script only until promoted.
+Checks `GET /health`, that `/auth/login` shows the username/password form, and (with credentials) that `/face/ws/kiosk` returns `session_ok` after a JWT `session` while refusing a non-session first message. For a real sign-in / kiosk handshake, set `DPU_E2E_USER` and `DPU_E2E_PASSWORD` in the shell only — never commit them or put them in compose/docs. Wired as the blocking `e2e` CI job (CPU compose stack + seed + Playwright).
 
 ## CI gates and lint baselines (Phase B3)
 `.github/workflows/ci.yml` (GitHub) and `.gitlab-ci.yml` (GitLab mirror, same commands) run on every push to `main`, `integration/**`, `phase-*/**` and on pull requests. Every job is blocking — there is no `|| true`, `continue-on-error` or `allow_failure`.
@@ -189,6 +189,7 @@ Checks `GET /health` and that `/auth/login` shows the username/password form. Fo
 |-----|--------------|------------|
 | `backend` | `ruff check .`, `mypy`, `alembic upgrade head && alembic check && alembic downgrade -1 && alembic upgrade head`, `pytest` against a `pgvector/pgvector:pg16` service (`TEST_DATABASE_URL`) | lint/type error, model↔migration drift, a migration without a working `downgrade()`, any failing or skipped-by-error test |
 | `frontend` | `npm ci`, `npm run lint`, `npm run test:ci` (Karma + ChromeHeadless, coverage artifact), `npm run build:prod` | eslint error, failing spec, production build error |
+| `e2e` | CPU `docker compose` stack + demo seed + Playwright (`test:e2e:smoke`: `/health`, login form, kiosk `session_ok`) | stack not ready, seed failure, failing smoke/kiosk handshake |
 | `security` | `trivy fs --config trivy.yaml --scanners vuln,secret,misconfig .` | HIGH/CRITICAL vulnerability with a fix available, leaked secret, Dockerfile misconfiguration not allow-listed |
 | `images` | `docker build` of `API-Fast/Dockerfile.cpu`, `Web-Manage/Dockerfile`, `docker/nginx/Dockerfile` + `trivy image` on each; `docker compose ... config -q` for the base/cpu/gpu/prod overlays | build failure, HIGH/CRITICAL in the image, invalid compose file |
 
@@ -198,9 +199,9 @@ The face stack (`insightface`, `onnxruntime*`, `onnx`) and `pgserver` are filter
 
 | Tool | Where | What is baselined | How to shrink |
 |------|-------|-------------------|---------------|
-| ruff | `API-Fast/pyproject.toml` `[tool.ruff.lint]` | `B008` (FastAPI `Depends()` defaults — intentional), `B904` (40 `raise` without `from`), `B017` (3 blind `pytest.raises`), `E402` per-file for modules that must set up `sys.path`/stubs before importing, `F401` per-file for re-export modules | delete the rule / path from `ignore` or `per-file-ignores`, run `ruff check .`, fix what appears |
-| mypy | `API-Fast/pyproject.toml` `[[tool.mypy.overrides]]` | 31 modules with `ignore_errors = true` (160 errors at baseline time); `check_untyped_defs = false` | remove a module from the list when `mypy src/<module>.py` passes; new modules are **not** in the list and are checked fully |
-| eslint | `Web-Manage/.eslintrc.json` (rules set to `"off"` at the end of the `*.ts` block, template `eqeqeq`) | `no-explicit-any`, `no-non-null-asserted-optional-chain`, `no-unused-vars`, `use-lifecycle-interface`, `ban-types`, `no-empty-lifecycle-method`, `no-unsafe-declaration-merging` | flip one rule to `"warn"`, fix, then `"error"` |
-| trivy | `.trivyignore.yaml` (+ `trivy.yaml` for severity/skip paths) | Angular 17 EOL CVEs and `swiper` SCSS CVE (`expired_at` 2027-03-31), `CVE-2025-47273` scoped to `pkg:pypi/setuptools@70.3.0` (pip's vendored `pkg_resources` SBOM entry in the API images), `DS-0002` non-root `USER` only for `scripts/kiosk-load/Dockerfile` (loadtest-profile tool writing to bind mounts; every product image is non-root since B4) | every entry needs a `statement` and an `expired_at`; CI fails automatically when the date passes, so upgrade or renew consciously |
+| ruff | `API-Fast/pyproject.toml` `[tool.ruff.lint]` | `B008` (FastAPI `Depends()` defaults — intentional); `E402` / `F401` only as per-file ignores for stubs and re-exports | delete a path from `per-file-ignores` when the module no longer needs it |
+| mypy | `API-Fast/pyproject.toml` `[[tool.mypy.overrides]]` | no `ignore_errors`; four face GPU modules suppress only `[misc]` for untyped `run_on_face_gpu` lambdas; `check_untyped_defs = false` | remove a module from the `[misc]` list when those call sites are typed |
+| eslint | `Web-Manage/.eslintrc.json` | former Phase B debt rules are `error`; `@angular-eslint/prefer-standalone` stays `off` for NgModule shell components | flip `prefer-standalone` to `error` after those shells become standalone |
+| trivy | `.trivyignore.yaml` (+ `trivy.yaml` for severity/skip paths) | `swiper` SCSS CVE (`CVE-2026-27212`, `expired_at` 2027-03-31) and `CVE-2025-47273` scoped to `pkg:pypi/setuptools@70.3.0` (pip's vendored `pkg_resources` SBOM entry in the API images) | every entry needs a `statement` and an `expired_at`; CI fails automatically when the date passes, so upgrade or renew consciously |
 
 To add an allow-list entry: `trivy fs --config trivy.yaml .` prints the finding id; append it to `.trivyignore.yaml` with a one-line justification and a date no more than ~6 months out. Never add `--exit-code 0`, `--severity CRITICAL` only, or `ignore-unfixed` changes to make a run pass.

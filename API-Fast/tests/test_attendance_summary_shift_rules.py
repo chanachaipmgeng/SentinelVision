@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 import pytest_asyncio
+from pydantic import ValidationError
 
 if not os.environ.get("DPU_TEST_DB_READY"):
     pytest.skip(
@@ -81,7 +82,7 @@ def test_round_local_time_helper():
 
 
 def test_work_shift_schema_rejects_bad_hhmm():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         WorkShiftCreate(name="Bad", startTime="9:00", endTime="18:00")
     ok = WorkShiftCreate(name="Ok", startTime="09:00", endTime="18:30", breakMinutes=45)
     assert ok.breakMinutes == 45

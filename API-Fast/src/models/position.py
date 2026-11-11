@@ -1,21 +1,33 @@
-from sqlalchemy import Column, String, ForeignKey , DateTime
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from ..config.database import Base
-from sqlalchemy.sql import func
+from __future__ import annotations
+
 import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+
+from ..config.database import Base
+
+if TYPE_CHECKING:
+    from .company import Company
+    from .company_employee import CompanyEmployee
+
 
 class Position(Base):
-    __tablename__ = 'position'
+    __tablename__ = "position"
 
-    positionId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    thName = Column(String, nullable=False)
-    engName = Column(String, nullable=False)
-    companyId = Column(UUID(as_uuid=True), ForeignKey('company.companyId', ondelete="CASCADE"), nullable=False)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    positionId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thName: Mapped[str] = mapped_column(String, nullable=False)
+    engName: Mapped[str] = mapped_column(String, nullable=False)
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.companyId", ondelete="CASCADE"), nullable=False
+    )
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
-    # ความสัมพันธ์กับ Company
-    company = relationship("Company", back_populates="positions")
-    companyEmployees = relationship("CompanyEmployee", back_populates="position")
+    company: Mapped["Company"] = relationship("Company", back_populates="positions")
+    companyEmployees: Mapped[list["CompanyEmployee"]] = relationship("CompanyEmployee", back_populates="position")

@@ -3,10 +3,9 @@ import { Component, Input } from '@angular/core';
 import { EmployeeImportProgress } from '../../../services/employee.service';
 
 @Component({
-  selector: 'app-emp-import-overlay',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-emp-import-overlay',
+    imports: [CommonModule],
+    template: `
     @if (isImporting) {
       <div class="fixed inset-0 z-[10050] flex items-center justify-center bg-black/40 backdrop-blur-[1px]"
         role="status" aria-live="polite" aria-busy="true">
@@ -28,7 +27,7 @@ import { EmployeeImportProgress } from '../../../services/employee.service';
         </div>
       </div>
     }
-  `,
+  `
 })
 export class EmpImportOverlayComponent {
   @Input() isImporting = false;

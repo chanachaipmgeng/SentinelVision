@@ -67,21 +67,20 @@ export interface PeopleMetrics {
 type RoiMode = 'line' | 'zone' | 'loiter' | 'roi';
 
 @Component({
-  selector: 'app-company-cameras',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterLink,
-    TranslateModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './cameras.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css', './cameras.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-cameras',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterLink,
+        TranslateModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './cameras.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css', './cameras.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class CamerasComponent implements OnInit {
   @ViewChild('roiCanvas') roiCanvas?: ElementRef<HTMLCanvasElement>;

@@ -23,7 +23,7 @@ export class TimestampService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<TimestampModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new TimestampModel(e, this.translateService)));
@@ -112,11 +112,11 @@ export class TimestampService {
     return this.http.get(url, { responseType: 'blob' });
   }
 
-  getShiftSettings(companyId: string): Observable<any> {
+  getShiftSettings(companyId: string): Observable<unknown> {
     return this.http.get(`${this.apiBaseUrl}/${companyId}/shift-settings`);
   }
 
-  updateShiftSettings(companyId: string, body: any): Observable<any> {
+  updateShiftSettings(companyId: string, body: unknown): Observable<unknown> {
     return this.http.put(`${this.apiBaseUrl}/${companyId}/shift-settings`, body);
   }
 
@@ -150,7 +150,7 @@ export class TimestampService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<TimestampModel>) => {
           const size = 500;
 
           const numOfPages = checkData.totalElements / size;

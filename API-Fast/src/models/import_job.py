@@ -3,10 +3,13 @@ service claims rows with `FOR UPDATE SKIP LOCKED`, streams progress into `progre
 finishes with `done` / `failed`. The Web-Manage import dialog polls this row."""
 from __future__ import annotations
 
-from uuid import uuid4
+from datetime import datetime
+from typing import Any
+from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Index, Integer, String
+from sqlalchemy import DateTime, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -20,24 +23,22 @@ STATUS_FAILED = "failed"
 class ImportJob(Base):
     __tablename__ = "import_job"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    companyId = Column(PGUUID(as_uuid=True), nullable=False)
-    status = Column(String, nullable=False, default=STATUS_PENDING)
-    result = Column(JSONB, nullable=True)
-    error = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    finishedAt = Column(DateTime(timezone=True), nullable=True)
-    # B7: hand-off to the worker.
-    requestedBy = Column(PGUUID(as_uuid=True), nullable=True)
-    fileName = Column(String, nullable=True)
-    photosFileName = Column(String, nullable=True)
-    # Sub-directory under settings.IMPORT_JOB_DIR (shared api/worker volume) holding the files.
-    payloadDir = Column(String, nullable=True)
-    progress = Column(JSONB, nullable=True)
-    attempts = Column(Integer, nullable=False, default=0, server_default="0")
-    lockedBy = Column(String, nullable=True)
-    startedAt = Column(DateTime(timezone=True), nullable=True)
-    heartbeatAt = Column(DateTime(timezone=True), nullable=True)
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    companyId: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default=STATUS_PENDING)
+    result: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finishedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    requestedBy: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    fileName: Mapped[str | None] = mapped_column(String, nullable=True)
+    photosFileName: Mapped[str | None] = mapped_column(String, nullable=True)
+    payloadDir: Mapped[str | None] = mapped_column(String, nullable=True)
+    progress: Mapped[Any | None] = mapped_column(JSONB, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    lockedBy: Mapped[str | None] = mapped_column(String, nullable=True)
+    startedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    heartbeatAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("import_job_status_created_idx", "status", "createdAt"),)
 

@@ -32,7 +32,7 @@ async def get_incident_sla_settings(
     if row and isinstance(row.value, dict):
         raw = row.value.get("incidentSlaMinutesHigh")
         try:
-            minutes = int(raw)
+            minutes = int(raw) if raw is not None else -1
             if minutes >= 0:
                 base["incidentSlaMinutesHigh"] = minutes
         except (TypeError, ValueError):

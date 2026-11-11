@@ -7,33 +7,38 @@ import { PageToolbarComponent } from '../../../shared/components/page-toolbar/pa
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { TranslateModule } from '@ngx-translate/core';
+import {
+  DeadLetterRow,
+  InboxNotification,
+  NotificationPrefs,
+  NotificationTemplatesView,
+} from './notification.models';
 
 type Tab = 'inbox' | 'dead-letter' | 'prefs' | 'templates';
 
 @Component({
-  selector: 'app-notification-center',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterModule,
-    TranslateModule,
-    PageToolbarComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './notification-center.component.html',
-  styleUrls: ['./notification-center.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-notification-center',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterModule,
+        TranslateModule,
+        PageToolbarComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './notification-center.component.html',
+    styleUrls: ['./notification-center.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class NotificationCenterComponent implements OnInit {
   companyId = '';
   activeTab: Tab = 'inbox';
   loading = false;
-  inbox: any[] = [];
-  inboxFiltered: any[] = [];
+  inbox: InboxNotification[] = [];
+  inboxFiltered: InboxNotification[] = [];
   searchTerm = '';
-  deadLetter: any[] = [];
-  prefs: any = {
+  deadLetter: DeadLetterRow[] = [];
+  prefs: NotificationPrefs = {
     channelEmail: true,
     channelLine: true,
     channelInApp: true,
@@ -41,7 +46,7 @@ export class NotificationCenterComponent implements OnInit {
     mutedEvents: [],
     locale: 'th',
   };
-  templates: any = { builtins: [], custom: [], i18nKeys: {} };
+  templates: NotificationTemplatesView = { builtins: [], custom: [], i18nKeys: {} };
   mutedRaw = '';
 
   constructor(private http: HttpClient, private token: TokenService) {
@@ -61,7 +66,7 @@ export class NotificationCenterComponent implements OnInit {
     if (!this.companyId) return;
     this.loading = true;
     if (this.activeTab === 'inbox') {
-      this.http.get<any[]>(`/notifications/company/${this.companyId}/inbox`).subscribe({
+      this.http.get<InboxNotification[]>(`/notifications/company/${this.companyId}/inbox`).subscribe({
         next: (rows) => {
           this.inbox = rows || [];
           this.applyInboxFilter();
@@ -70,7 +75,7 @@ export class NotificationCenterComponent implements OnInit {
         error: () => (this.loading = false),
       });
     } else if (this.activeTab === 'dead-letter') {
-      this.http.get<any[]>(`/notifications/company/${this.companyId}/dead-letter`).subscribe({
+      this.http.get<DeadLetterRow[]>(`/notifications/company/${this.companyId}/dead-letter`).subscribe({
         next: (rows) => {
           this.deadLetter = rows || [];
           this.loading = false;
@@ -78,40 +83,46 @@ export class NotificationCenterComponent implements OnInit {
         error: () => (this.loading = false),
       });
     } else if (this.activeTab === 'prefs') {
-      this.http.get<any>(`/notifications/company/${this.companyId}/preferences/me`).subscribe({
+      this.http.get<NotificationPrefs>(`/notifications/company/${this.companyId}/preferences/me`).subscribe({
         next: (p) => {
-          this.prefs = { ...this.prefs, ...p };
-          this.mutedRaw = (this.prefs.mutedEvents || []).join(', ');
+          this.prefs = { ...this.prefs, ...(p || {}) };
+          this.mutedRaw = (this.prefs.mutedEvents || []).join('\n');
           this.loading = false;
         },
         error: () => (this.loading = false),
       });
-    } else {
-      this.http.get<any>(`/notifications/company/${this.companyId}/templates`).subscribe({
-        next: (t) => {
-          this.templates = t || this.templates;
-          this.loading = false;
-        },
-        error: () => (this.loading = false),
-      });
+    } else if (this.activeTab === 'templates') {
+      this.http
+        .get<NotificationTemplatesView>(`/notifications/company/${this.companyId}/templates`)
+        .subscribe({
+          next: (t) => {
+            this.templates = t || this.templates;
+            this.loading = false;
+          },
+          error: () => (this.loading = false),
+        });
     }
   }
 
   applyInboxFilter(): void {
     const q = (this.searchTerm || '').trim().toLowerCase();
-    this.inboxFiltered = !q
-      ? [...this.inbox]
-      : this.inbox.filter((n) =>
-          [n.title, n.body, n.event, n.channel, n.status]
-            .join(' ')
-            .toLowerCase()
-            .includes(q)
-        );
+    if (!q) {
+      this.inboxFiltered = [...this.inbox];
+      return;
+    }
+    this.inboxFiltered = this.inbox.filter(
+      (n) =>
+        (n.title || '').toLowerCase().includes(q) ||
+        (n.body || '').toLowerCase().includes(q) ||
+        (n.event || '').toLowerCase().includes(q),
+    );
   }
 
-  markRead(n: any): void {
+  markRead(n: InboxNotification): void {
+    const id = n.id;
+    if (!id) return;
     this.http
-      .post(`/notifications/company/${this.companyId}/inbox/${n.notificationId}/read`, {})
+      .post(`/notifications/company/${this.companyId}/inbox/${id}/read`, {})
       .subscribe(() => this.reload());
   }
 
@@ -121,29 +132,29 @@ export class NotificationCenterComponent implements OnInit {
       .subscribe(() => this.reload());
   }
 
-  retryDead(row: any): void {
+  retryDead(row: DeadLetterRow): void {
+    const id = row.id;
+    if (!id) return;
     this.http
-      .post(`/notifications/company/${this.companyId}/dead-letter/${row.id}/retry`, {})
+      .post(`/notifications/company/${this.companyId}/dead-letter/${id}/retry`, {})
       .subscribe(() => this.reload());
+  }
+
+  i18nEntries(): { event: string; key: string }[] {
+    const keys = this.templates?.i18nKeys || {};
+    return Object.keys(keys).map((event) => ({ event, key: keys[event] || '' }));
   }
 
   savePrefs(): void {
     const muted = (this.mutedRaw || '')
-      .split(',')
+      .split(/[\n,]/)
       .map((s) => s.trim())
       .filter(Boolean);
+    this.prefs.mutedEvents = muted;
     this.http
-      .put(`/notifications/company/${this.companyId}/preferences/me`, {
-        ...this.prefs,
-        mutedEvents: muted,
-      })
-      .subscribe((p) => {
-        this.prefs = { ...this.prefs, ...p };
+      .put(`/notifications/company/${this.companyId}/preferences/me`, this.prefs)
+      .subscribe({
+        next: () => this.reload(),
       });
-  }
-
-  i18nEntries(): Array<{ event: string; key: string }> {
-    const keys = this.templates?.i18nKeys || {};
-    return Object.keys(keys).map((event) => ({ event, key: keys[event] }));
   }
 }

@@ -170,21 +170,29 @@ export class TokenService {
     return this.readCookie(CSRF_COOKIE);
   }
 
-  public saveUser(user: any): void {
-    // Never persist refresh/access tokens inside the cached user blob.
-    const safe = { ...user };
-    delete safe.refreshToken;
-    delete safe.refresh_token;
-    if (safe.accessToken) {
-      this.accessTokenMemory = safe.accessToken;
-    } else if (safe.access_token) {
-      this.accessTokenMemory = safe.access_token;
+  public saveUser(user: unknown): void {
+    if (typeof user !== 'object' || user === null) {
+      return;
     }
-    delete safe.accessToken;
-    delete safe.access_token;
-    if (safe.csrfToken) {
-      this.saveCsrfToken(safe.csrfToken);
-      delete safe.csrfToken;
+    // Never persist refresh/access tokens inside the cached user blob.
+    const safe = { ...(user as Record<string, unknown>) };
+    delete safe['refreshToken'];
+    delete safe['refresh_token'];
+    const access =
+      typeof safe['accessToken'] === 'string'
+        ? safe['accessToken']
+        : typeof safe['access_token'] === 'string'
+          ? safe['access_token']
+          : undefined;
+    if (access) {
+      this.accessTokenMemory = access;
+    }
+    delete safe['accessToken'];
+    delete safe['access_token'];
+    const csrf = safe['csrfToken'];
+    if (typeof csrf === 'string') {
+      this.saveCsrfToken(csrf);
+      delete safe['csrfToken'];
     }
     window.localStorage.removeItem(USER_KEY);
     window.localStorage.setItem(USER_KEY, JSON.stringify(safe));

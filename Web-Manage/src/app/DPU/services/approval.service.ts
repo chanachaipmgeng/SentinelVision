@@ -50,7 +50,7 @@ export class ApprovalService {
   }
 
   listPayrollPeriods(companyId: string) {
-    return this.http.get<{ items: any[] }>(`/hr/company/${companyId}/payroll-periods`);
+    return this.http.get<{ items: unknown[] }>(`/hr/company/${companyId}/payroll-periods`);
   }
 
   createPayrollPeriod(companyId: string, body: { name?: string; startDate: string; endDate: string }) {

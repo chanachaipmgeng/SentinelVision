@@ -4,9 +4,10 @@ import { TokenService } from '../../shared/services/token.service';
 import { CompanyService } from '../services/company.service';
 
 @Component({
-  selector: 'app-company-management',
-  templateUrl: './company-management.component.html',
-  styleUrls: ['./company-management.component.css']
+    selector: 'app-company-management',
+    templateUrl: './company-management.component.html',
+    styleUrls: ['./company-management.component.css'],
+    standalone: false
 })
 export class InstallManagementComponent implements OnInit {
   companyId = ""

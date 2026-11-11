@@ -9,10 +9,9 @@ import { HR_SCHEDULE_TABS, HrScheduleTab } from './hr-schedule.helpers';
  * Each tab loads its own data (no eager reloadAll).
  */
 @Component({
-  selector: 'app-hr-schedule',
-  standalone: true,
-  imports: [CommonModule, RouterModule, SharedModule],
-  template: `
+    selector: 'app-hr-schedule',
+    imports: [CommonModule, RouterModule, SharedModule],
+    template: `
     <app-page-header
       [title]="'กะทำงาน / วันลา / วันหยุด / PDPA / Kiosk 2FA / Webhook & Observability'"
       [activeTitle]="'จัดการข้อมูลการลงเวลา'"
@@ -47,7 +46,7 @@ import { HR_SCHEDULE_TABS, HrScheduleTab } from './hr-schedule.helpers';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class HrScheduleComponent {
   readonly tabs = HR_SCHEDULE_TABS;

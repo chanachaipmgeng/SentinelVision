@@ -1,6 +1,5 @@
 import { TranslateService } from "@ngx-translate/core";
 import { BaseModel } from "./base.model";
-import { UserProfileModel } from "./user.model";
 import { environment } from "../../../environments/environment";
 
 export class CompanyModel extends BaseModel {
@@ -30,19 +29,19 @@ export class CompanyModel extends BaseModel {
     translateService?: TranslateService
   ) {
     super(data, translateService);
-    this.companyId = data?.companyId!
-    this.companyName = data?.companyName!;
-    this.companyCode = data?.companyCode!;
-    this.companyInfo = data?.companyInfo!;
-    this.address = data?.address!;
+    this.companyId = data?.companyId ?? ''
+    this.companyName = data?.companyName ?? '';
+    this.companyCode = data?.companyCode ?? '';
+    this.companyInfo = data?.companyInfo ?? '';
+    this.address = data?.address ?? '';
     this.latitude = this.toCoord(data?.latitude, 13.7563);
     this.longitude = this.toCoord(data?.longitude, 100.5018);
-    this.status = data?.status!;
-    this.picture = data?.picture!;
-    this.ownerName = data?.ownerName!
-    this.contact = data?.contact!
-    this.created_at = data?.created_at!
-    this.updatedAt = data?.updatedAt!
+    this.status = data?.status ?? 0;
+    this.picture = data?.picture ?? '';
+    this.ownerName = data?.ownerName ?? ''
+    this.contact = data?.contact ?? ''
+    this.created_at = data?.created_at ?? ''
+    this.updatedAt = data?.updatedAt ?? ''
     this.lifecycleStatus = data?.lifecycleStatus || 'ACTIVE';
     this.packageCode = data?.packageCode ?? null;
     this.maxDevices = data?.maxDevices ?? null;

@@ -36,11 +36,10 @@ interface VerifyResult {
 }
 
 @Component({
-  selector: 'app-face-management',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './face-management.component.html',
-  styleUrls: ['./face-management.component.css'],
+    selector: 'app-face-management',
+    imports: [CommonModule],
+    templateUrl: './face-management.component.html',
+    styleUrls: ['./face-management.component.css']
 })
 export class FaceManagementComponent implements OnInit, OnDestroy {
   @Input() memberId!: string;
@@ -142,10 +141,10 @@ export class FaceManagementComponent implements OnInit, OnDestroy {
       this.http
         .delete(`${environment.baseUrl}/face/members/${this.memberId}/encodings`)
         .subscribe({
-          next: (res: any) => {
+          next: (res: { deleted?: number }) => {
             swal(
               'ล้างสำเร็จ',
-              `ลบใบหน้าแล้ว ${res?.deleted ?? this.encodings.length} รายการ`,
+              `ลบใบหน้าแล้ว ${res.deleted ?? this.encodings.length} รายการ`,
               'success',
             );
             this.verifyResult = null;
@@ -280,7 +279,7 @@ export class FaceManagementComponent implements OnInit, OnDestroy {
         ),
       );
       this.verifyResult = result;
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.verifyError = this.formatError(err);
       this.verifyResult = null;
     } finally {
@@ -299,8 +298,11 @@ export class FaceManagementComponent implements OnInit, OnDestroy {
     return q || '-';
   }
 
-  private formatError(err: any): string {
-    const detail = err?.error?.detail;
+  private formatError(err: unknown): string {
+    const detail =
+      err instanceof Object && 'error' in err
+        ? (err as { error?: { detail?: unknown } }).error?.detail
+        : undefined;
     if (typeof detail === 'string') {
       return detail;
     }

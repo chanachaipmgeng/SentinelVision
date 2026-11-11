@@ -25,28 +25,27 @@ import {
 
 /** Company settings hub: `/company/settings/:section` with a permission-filtered section rail. */
 @Component({
-  selector: 'app-settings-hub',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    SharedModule,
-    PageToolbarComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-    NotificationSettingsPanelComponent,
-    IncidentSlaSettingsPanelComponent,
-    AiSettingsPanelComponent,
-    SessionSettingsPanelComponent,
-    ApiKeysPanelComponent,
-    ScanActionsSummaryPanelComponent,
-    DevicesSummaryPanelComponent,
-    HrSecurityTabComponent,
-    HrPdpaTabComponent,
-  ],
-  templateUrl: './settings-hub.component.html',
-  styleUrls: ['./settings-hub.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-settings-hub',
+    imports: [
+        CommonModule,
+        RouterModule,
+        SharedModule,
+        PageToolbarComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+        NotificationSettingsPanelComponent,
+        IncidentSlaSettingsPanelComponent,
+        AiSettingsPanelComponent,
+        SessionSettingsPanelComponent,
+        ApiKeysPanelComponent,
+        ScanActionsSummaryPanelComponent,
+        DevicesSummaryPanelComponent,
+        HrSecurityTabComponent,
+        HrPdpaTabComponent,
+    ],
+    templateUrl: './settings-hub.component.html',
+    styleUrls: ['./settings-hub.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class SettingsHubComponent implements OnInit, OnDestroy {
   readonly shiftCards = SHIFT_LINK_CARDS;

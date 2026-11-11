@@ -11,11 +11,10 @@ import { EmployeeModel } from '../../../models/employee.model';
 import { PositionModel } from '../../../models/position.model';
 
 @Component({
-  selector: 'app-emp-detail-modal',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, NgSelectModule, FlatpickrModule, FileUploadModule],
-  providers: [FlatpickrDefaults],
-  templateUrl: './emp-detail-modal.component.html',
+    selector: 'app-emp-detail-modal',
+    imports: [CommonModule, FormsModule, SharedModule, NgSelectModule, FlatpickrModule, FileUploadModule],
+    providers: [FlatpickrDefaults],
+    templateUrl: './emp-detail-modal.component.html'
 })
 export class EmpDetailModalComponent {
   @ViewChild('closeModal') public childModal?: ElementRef;

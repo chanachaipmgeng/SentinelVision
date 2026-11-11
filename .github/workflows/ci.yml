@@ -2,6 +2,7 @@
 #
 #   backend   ruff + mypy + alembic upgrade/check + pytest against PostgreSQL 16 + pgvector
 #   frontend  npm ci + eslint + Karma/Jasmine on ChromeHeadless + production build
+#   e2e       CPU docker stack + Playwright smoke (login form + kiosk session_ok)
 #   security  trivy fs (vulnerabilities, secrets, Dockerfile misconfig) with .trivyignore.yaml
 #   images    docker build api (CPU image), admin, nginx, backup + trivy image scan
 #   compose   docker compose config for every documented overlay combination
@@ -138,6 +139,72 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  e2e:
+    name: E2E smoke (CPU stack + Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      # Throw-away CI secrets for compose `${VAR:?}` — never reuse outside this job.
+      POSTGRES_PASSWORD: ci-e2e-postgres-password-change-me
+      SECRET_KEY: ci-e2e-secret-key-at-least-32-chars-long
+      HTTP_PORT: "8880"
+      APP_ENV: development
+      MIGRATE_ON_STARTUP: "true"
+      FACE_DEVICE: cpu
+      FACE_DEVICES: cpu
+      AUTH_FAIL_FAST: "false"
+      DPU_BASE_URL: http://127.0.0.1:8880
+      DPU_E2E_USER: admin
+      DPU_E2E_PASSWORD: Password123!
+      DPU_E2E_COMPANY_ID: 11111111-1111-1111-1111-111111111111
+      COMPOSE_PROJECT_NAME: dpu-e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: Web-Manage/package-lock.json
+
+      - name: Start CPU docker stack
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8880/health || true)
+            ready=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8880/ready || true)
+            if [ "$code" = "200" ] && [ "$ready" = "200" ]; then
+              echo "stack healthy after ${i} attempts"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              docker compose -f docker-compose.yml -f docker-compose.cpu.yml ps
+              docker compose -f docker-compose.yml -f docker-compose.cpu.yml logs --tail=80 api
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Seed demo users
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.cpu.yml \
+            run --rm --entrypoint python api scripts/seed_demo_data.py --reset
+
+      - name: Playwright browsers
+        working-directory: Web-Manage
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Playwright smoke + kiosk session_ok
+        working-directory: Web-Manage
+        run: npm run test:e2e:smoke
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.cpu.yml down --remove-orphans
+
   security:
     name: Security (trivy fs)
     runs-on: ubuntu-latest
@@ -165,7 +232,7 @@ jobs:
     name: Docker images (build + trivy)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [backend, frontend, security]
+    needs: [backend, frontend, e2e, security]
     strategy:
       fail-fast: false
       matrix:

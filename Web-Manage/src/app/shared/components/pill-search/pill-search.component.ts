@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 @Component({
-  selector: 'app-pill-search',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-pill-search',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="dpu-pill-search">
       <i class="ri-search-line dpu-pill-search__icon" aria-hidden="true"></i>
       <input
@@ -26,8 +25,8 @@ import { FormsModule } from '@angular/forms';
       </button>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
         flex: 1 1 12rem;
@@ -80,7 +79,7 @@ import { FormsModule } from '@angular/forms';
         background: rgba(100, 116, 139, 0.12);
       }
     `,
-  ],
+    ]
 })
 export class PillSearchComponent {
   @Input() value = '';

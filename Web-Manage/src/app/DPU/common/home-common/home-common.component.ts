@@ -13,11 +13,10 @@ interface AdminLink {
 }
 
 @Component({
-  selector: 'app-home-common',
-  imports: [CommonModule, RouterModule, SharedModule, PageToolbarComponent, StatChipComponent],
-  standalone: true,
-  templateUrl: './home-common.component.html',
-  styleUrls: ['./home-common.component.css'],
+    selector: 'app-home-common',
+    imports: [CommonModule, RouterModule, SharedModule, PageToolbarComponent, StatChipComponent],
+    templateUrl: './home-common.component.html',
+    styleUrls: ['./home-common.component.css']
 })
 export class HomeCommonComponent {
   readonly links: AdminLink[] = [

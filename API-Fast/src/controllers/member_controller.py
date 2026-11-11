@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from fastapi import HTTPException
 from ..models.member import Member
 from uuid import UUID
-from ..schemas.member_schema import MemberUpdate
+from ..schemas.member_schema import MemberCreate, MemberUpdate
 
 async def get_users(db: AsyncSession, include_deleted: bool = False):
     stmt = select(Member)
@@ -17,8 +17,8 @@ async def get_user_by_id(id: UUID, db: AsyncSession):
     user = result.scalar_one_or_none()
     return user
 
-async def create_user(user_data: dict, db: AsyncSession):
-    user_dict = user_data.dict()  # แปลง Pydantic model เป็น dict
+async def create_user(user_data: MemberCreate, db: AsyncSession):
+    user_dict = user_data.model_dump()
     password = user_dict.pop('password')  # ดึง password ออก
     new_user = Member(**user_dict)  # ใช้ dict ในการสร้าง Member instance
     new_user.hash_password(password)  # แฮชรหัสผ่าน
@@ -72,7 +72,7 @@ async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
 
         return member
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 async def delete_user(memberId: UUID, db: AsyncSession):
     # Retrieve the member by ID

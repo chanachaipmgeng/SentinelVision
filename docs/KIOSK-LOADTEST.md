@@ -329,6 +329,10 @@ docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 
 Loadgen บน server (ตัด LAN/Windows ออก):
 
+คอนเทนเนอร์ `loadgen` รันเป็น uid `10001` (non-root). ไดเรกทอรีผลบนโฮสต์
+`scripts/kiosk-load/.cache/results` ต้องเขียนได้โดย uid 10001
+(เช่น `mkdir -p scripts/kiosk-load/.cache/results && chown -R 10001:10001 scripts/kiosk-load/.cache`).
+
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
   -f docker-compose.loadtest.yml --profile loadtest run --rm \

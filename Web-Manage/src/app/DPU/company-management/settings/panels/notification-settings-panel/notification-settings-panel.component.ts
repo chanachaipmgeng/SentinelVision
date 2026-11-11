@@ -7,12 +7,19 @@ import { TokenService } from '../../../../../shared/services/token.service';
 
 type NotifyStatus = 'idle' | 'saved' | 'tested' | 'error';
 
+interface CompanyNotifySettings {
+  email?: string;
+  hasLineToken?: boolean;
+  telegramChatId?: string;
+  hasTelegramBotToken?: boolean;
+  hasDiscordWebhookUrl?: boolean;
+}
+
 /** Company notification channels (email / LINE / Telegram / Discord) — settings hub. */
 @Component({
-  selector: 'app-notification-settings-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  templateUrl: './notification-settings-panel.component.html',
+    selector: 'app-notification-settings-panel',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    templateUrl: './notification-settings-panel.component.html'
 })
 export class NotificationSettingsPanelComponent implements OnInit {
   /** Override the selected company (defaults to TokenService selection). */
@@ -38,7 +45,7 @@ export class NotificationSettingsPanelComponent implements OnInit {
     }
     if (!this.companyId) return;
     this.loading = true;
-    this.http.get<any>(`/notifications/company/${this.companyId}/settings`).subscribe({
+    this.http.get<CompanyNotifySettings>(`/notifications/company/${this.companyId}/settings`).subscribe({
       next: (s) => {
         this.email = s?.email || '';
         this.lineToken = '';
@@ -65,7 +72,7 @@ export class NotificationSettingsPanelComponent implements OnInit {
     if (this.lineToken.trim()) body['lineToken'] = this.lineToken.trim();
     if (this.telegramBotToken.trim()) body['telegramBotToken'] = this.telegramBotToken.trim();
     if (this.discordWebhookUrl.trim()) body['discordWebhookUrl'] = this.discordWebhookUrl.trim();
-    this.http.put<any>(`/notifications/company/${this.companyId}/settings`, body).subscribe({
+    this.http.put<CompanyNotifySettings>(`/notifications/company/${this.companyId}/settings`, body).subscribe({
       next: (s) => {
         this.lineToken = '';
         this.telegramBotToken = '';

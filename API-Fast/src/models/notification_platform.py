@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -13,19 +16,19 @@ from ..config.database import Base
 class NotificationTemplate(Base):
     __tablename__ = "notification_template"
 
-    templateId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    templateId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=True,
     )
-    eventKey = Column(String(80), nullable=False)
-    locale = Column(String(10), nullable=False, default="th")
-    channel = Column(String(20), nullable=False, default="line")
-    subject = Column(String(255), nullable=True)
-    bodyTemplate = Column(Text, nullable=False)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    eventKey: Mapped[str] = mapped_column(String(80), nullable=False)
+    locale: Mapped[str] = mapped_column(String(10), nullable=False, default="th")
+    channel: Mapped[str] = mapped_column(String(20), nullable=False, default="line")
+    subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bodyTemplate: Mapped[str] = mapped_column(Text, nullable=False)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index("notification_template_company_idx", "companyId", "eventKey"),
@@ -43,25 +46,25 @@ class NotificationTemplate(Base):
 class NotificationPreference(Base):
     __tablename__ = "notification_preference"
 
-    preferenceId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    preferenceId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    memberId = Column(
+    memberId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("member.memberId", ondelete="CASCADE"),
         nullable=False,
     )
-    channelEmail = Column(Boolean, nullable=False, default=True, server_default="true")
-    channelLine = Column(Boolean, nullable=False, default=True, server_default="true")
-    channelInApp = Column(Boolean, nullable=False, default=True, server_default="true")
-    lineUserId = Column(String(64), nullable=True)
-    mutedEvents = Column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
-    locale = Column(String(10), nullable=False, default="th")
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    channelEmail: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    channelLine: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    channelInApp: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    lineUserId: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    mutedEvents: Mapped[Any] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    locale: Mapped[str] = mapped_column(String(10), nullable=False, default="th")
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index(
@@ -76,22 +79,22 @@ class NotificationPreference(Base):
 class InAppNotification(Base):
     __tablename__ = "in_app_notification"
 
-    notificationId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    notificationId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    memberId = Column(
+    memberId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("member.memberId", ondelete="CASCADE"),
         nullable=False,
     )
-    event = Column(String(80), nullable=False)
-    title = Column(String(255), nullable=False)
-    body = Column(Text, nullable=False)
-    readAt = Column(DateTime(timezone=True), nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
+    event: Mapped[str] = mapped_column(String(80), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    readAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("in_app_notification_member_created_idx", "memberId", "createdAt"),

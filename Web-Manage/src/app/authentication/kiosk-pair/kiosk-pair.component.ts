@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../shared/services/auth.service';
 import { KioskSession, TokenService } from '../../shared/services/token.service';
+import { CompanyModel } from '../../DPU/models/company.model';
 
 /**
  * Kiosk pairing screen. The admin creates a device under HR → Security and reads the one-time
@@ -11,10 +12,9 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
  * sessionStorage for this tab only and refreshed via /auth/kiosk/refresh.
  */
 @Component({
-  selector: 'app-kiosk-pair',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
-  template: `
+    selector: 'app-kiosk-pair',
+    imports: [CommonModule, FormsModule, RouterModule],
+    template: `
     <div class="dpu-pair">
       <div class="dpu-pair__card">
         <img src="./assets/images/brand-logos/logo.png" alt="SentinelVision" class="dpu-pair__logo" />
@@ -60,8 +60,8 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
       </div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host { display: block; min-height: 100vh; }
       .dpu-pair {
         min-height: 100vh;
@@ -148,7 +148,7 @@ import { KioskSession, TokenService } from '../../shared/services/token.service'
       .dpu-pair__hint { margin: 1.25rem 0 0.5rem; font-size: 0.78rem; color: rgba(236, 254, 255, 0.62); line-height: 1.5; }
       .dpu-pair__link { font-size: 0.8rem; color: #5eead4; text-decoration: underline; }
     `,
-  ],
+    ]
 })
 export class KioskPairComponent implements OnInit, OnDestroy {
   code = '';
@@ -196,7 +196,7 @@ export class KioskPairComponent implements OnInit, OnDestroy {
         this.tokenService.saveSelectCompany({
           companyId: session.companyId,
           companyName: session.deviceName || 'Kiosk Device',
-        } as any);
+        } as CompanyModel);
         this.busy = false;
         this.router.navigate(['/company/timestamp-face']);
       },

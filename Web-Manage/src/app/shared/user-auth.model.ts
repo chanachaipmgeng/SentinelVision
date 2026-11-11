@@ -19,14 +19,6 @@ export class UserModel {
   public member : UserProfileModel = new UserProfileModel()
 }
 
-export interface ProfileModel {
-  username: string;
-  password: string;
-  employee: EmployeeModel;
-  roleId: string;
-  groupId: string;
-}
-
 export class ProfileModel {
   public username: string = "";
   public password: string = "";

@@ -2,10 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 
 @Component({
-  selector: 'app-dpu-aura-field',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-dpu-aura-field',
+    imports: [CommonModule],
+    template: `
     <div class="dpu-aura" aria-hidden="true">
       <span
         class="dpu-aura__blob dpu-aura__blob--a"
@@ -30,14 +29,14 @@ import { Component, Input } from '@angular/core';
       }
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
         pointer-events: none;
       }
     `,
-  ],
+    ]
 })
 export class DpuAuraFieldComponent {
   @Input() intensity: 'soft' | 'strong' = 'soft';

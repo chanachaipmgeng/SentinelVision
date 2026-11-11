@@ -43,7 +43,7 @@ export interface Menu {
   providedIn: 'root',
 })
 export class NavService implements OnDestroy {
-  private unsubscriber: Subject<any> = new Subject();
+  private unsubscriber: Subject<void> = new Subject();
   public screenWidth: BehaviorSubject<number> = new BehaviorSubject(
     window.innerWidth
   );
@@ -67,20 +67,21 @@ export class NavService implements OnDestroy {
 
   // Full screen
   public fullScreen = false;
-  active: any;
+  active: Menu | null = null;
 
   constructor(private router: Router, private tokenService: TokenService) {
     this.setScreenWidth(window.innerWidth);
     fromEvent(window, 'resize')
       .pipe(debounceTime(1000), takeUntil(this.unsubscriber))
-      .subscribe((evt: any) => {
-        this.setScreenWidth(evt.target.innerWidth);
-        if (evt.target.innerWidth < 991) {
+      .subscribe((evt: Event) => {
+        const target = evt.target as Window;
+        this.setScreenWidth(target.innerWidth);
+        if (target.innerWidth < 991) {
           this.collapseSidebar = true;
           this.megaMenu = false;
           this.levelMenu = false;
         }
-        if (evt.target.innerWidth < 1199) {
+        if (target.innerWidth < 1199) {
           this.megaMenuColapse = true;
         }
       });
@@ -95,7 +96,7 @@ export class NavService implements OnDestroy {
   }
 
   ngOnDestroy() {
-    this.unsubscriber.next;
+    this.unsubscriber.next(undefined);
     this.unsubscriber.complete();
   }
 

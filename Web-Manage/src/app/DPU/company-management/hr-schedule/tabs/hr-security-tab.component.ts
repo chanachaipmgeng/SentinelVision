@@ -4,23 +4,33 @@ import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HrScheduleApiService } from '../hr-schedule-api.service';
+import { HrKioskDevice } from '../hr-schedule.models';
+
+interface MfaStatusView {
+  username?: string;
+  totpEnabled?: boolean;
+}
+
+interface MfaSetupDataView {
+  secret?: string;
+  otpauthUri?: string;
+}
 
 @Component({
-  selector: 'app-hr-security-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-security-tab.component.html',
+    selector: 'app-hr-security-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-security-tab.component.html'
 })
 export class HrSecurityTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  kioskDevices: any[] = [];
+  kioskDevices: HrKioskDevice[] = [];
   newKioskName = '';
-  issuedKiosk: any = null;
+  issuedKiosk: HrKioskDevice | null = null;
   readonly pairPageUrl = `${window.location.origin}/kiosk/pair`;
-  mfaStatus: any = null;
-  mfaSetupData: any = null;
+  mfaStatus: MfaStatusView | null = null;
+  mfaSetupData: MfaSetupDataView | null = null;
   mfaVerifyCode = '';
 
   constructor(private api: HrScheduleApiService, private token: TokenService) {

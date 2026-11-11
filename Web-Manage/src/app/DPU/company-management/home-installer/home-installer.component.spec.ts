@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { HomeInstallerComponent } from './home-installer.component';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 describe('HomeInstallerComponent', () => {
   let fixture: ComponentFixture<HomeInstallerComponent>;
@@ -12,11 +13,13 @@ describe('HomeInstallerComponent', () => {
   beforeEach(async () => {
     window.localStorage.clear();
     await TestBed.configureTestingModule({
-      imports: [HomeInstallerComponent, HttpClientTestingModule, RouterTestingModule, TranslateModule.forRoot()],
-      providers: [
+    imports: [HomeInstallerComponent, RouterTestingModule, TranslateModule.forRoot()],
+    providers: [
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
-      ],
-    }).compileComponents();
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+    ]
+}).compileComponents();
     fixture = TestBed.createComponent(HomeInstallerComponent);
     fixture.detectChanges();
   });

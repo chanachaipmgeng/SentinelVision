@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-empty-state',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  template: `
+    selector: 'app-empty-state',
+    imports: [CommonModule, TranslateModule],
+    template: `
     <div class="dpu-empty">
       <span *ngIf="loading" class="ti-spinner animation-spin dpu-empty__spinner" role="status"></span>
       <i *ngIf="!loading" class="dpu-empty__icon" [ngClass]="icon"></i>
@@ -20,8 +19,8 @@ import { TranslateModule } from '@ngx-translate/core';
       </button>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
       }
@@ -49,7 +48,7 @@ import { TranslateModule } from '@ngx-translate/core';
         height: 1.75rem;
       }
     `,
-  ],
+    ]
 })
 export class EmptyStateComponent {
   @Input() loading = false;

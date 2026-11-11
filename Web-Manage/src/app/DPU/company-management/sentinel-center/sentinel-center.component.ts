@@ -7,6 +7,7 @@ import { combineLatest } from 'rxjs';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { SentinelApiService } from './sentinel-api.service';
+import { SentinelOverview } from './sentinel.models';
 import {
   LEGACY_TAB_REDIRECTS,
   SentinelTab,
@@ -28,23 +29,22 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
  * with `moduleWorkspace` data; panels own their tab logic.
  */
 @Component({
-  selector: 'app-sentinel-center',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterModule,
-    SharedModule,
-    SentinelKpiRowComponent,
-    SentinelCommandPanelComponent,
-    SentinelWatchlistPanelComponent,
-    SentinelAccessPanelComponent,
-    SentinelAccessLogsPanelComponent,
-    SentinelVisitorsPanelComponent,
-    SentinelEventsPanelComponent,
-    SentinelMusterPanelComponent,
-  ],
-  template: `
+    selector: 'app-sentinel-center',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterModule,
+        SharedModule,
+        SentinelKpiRowComponent,
+        SentinelCommandPanelComponent,
+        SentinelWatchlistPanelComponent,
+        SentinelAccessPanelComponent,
+        SentinelAccessLogsPanelComponent,
+        SentinelVisitorsPanelComponent,
+        SentinelEventsPanelComponent,
+        SentinelMusterPanelComponent,
+    ],
+    template: `
     <app-page-header
       [title]="'SentinelVision — ศูนย์ควบคุมอัตลักษณ์ ความปลอดภัย Access Control & Smart Events'"
       [activeTitle]="'SentinelVision Command'"
@@ -207,7 +207,7 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class SentinelCenterComponent implements OnInit {
   companyId = '';
@@ -216,7 +216,7 @@ export class SentinelCenterComponent implements OnInit {
   moduleWorkspaceLabel = '';
   isLoading = false;
   toastMessage = '';
-  overview: any = null;
+  overview: SentinelOverview | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
 

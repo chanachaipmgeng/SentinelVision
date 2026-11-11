@@ -4,12 +4,11 @@ import { CommonModule } from '@angular/common';
 export type StatChipTone = 'default' | 'ok' | 'warn' | 'danger' | 'soft' | 'temp';
 
 @Component({
-  selector: 'app-stat-chip',
-  standalone: true,
-  imports: [CommonModule],
-  template: `<span class="dpu-stat-chip" [attr.data-tone]="tone"><ng-content></ng-content></span>`,
-  styles: [
-    `
+    selector: 'app-stat-chip',
+    imports: [CommonModule],
+    template: `<span class="dpu-stat-chip" [attr.data-tone]="tone"><ng-content></ng-content></span>`,
+    styles: [
+        `
       :host {
         display: inline-flex;
       }
@@ -41,7 +40,7 @@ export type StatChipTone = 'default' | 'ok' | 'warn' | 'danger' | 'soft' | 'temp
         background: rgba(100, 116, 139, 0.12);
       }
     `,
-  ],
+    ]
 })
 export class StatChipComponent {
   @Input() tone: StatChipTone = 'default';

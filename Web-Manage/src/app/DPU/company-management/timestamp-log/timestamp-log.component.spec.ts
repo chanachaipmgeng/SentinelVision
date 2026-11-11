@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { TimestampLogComponent } from './timestamp-log.component';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 describe('TimestampLogComponent', () => {
   let fixture: ComponentFixture<TimestampLogComponent>;
@@ -12,11 +13,13 @@ describe('TimestampLogComponent', () => {
   beforeEach(async () => {
     window.localStorage.clear();
     await TestBed.configureTestingModule({
-      imports: [TimestampLogComponent, HttpClientTestingModule, RouterTestingModule, TranslateModule.forRoot()],
-      providers: [
+    imports: [TimestampLogComponent, RouterTestingModule, TranslateModule.forRoot()],
+    providers: [
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({}) } } },
-      ],
-    }).compileComponents();
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+    ]
+}).compileComponents();
     fixture = TestBed.createComponent(TimestampLogComponent);
     fixture.detectChanges();
   });

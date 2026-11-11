@@ -2,7 +2,7 @@
 
 > **เวอร์ชันเอกสาร:** 4.0.0  
 > **Repository:** `https://github.com/chanachaipmgeng/SentinelVision.git`  
-> **เทคโนโลยีหลัก:** FastAPI v4.0 (Python 3.11) + InsightFace `buffalo_l` (512-d) + PostgreSQL `pgvector` (HNSW) + Angular 17 Console & Multi-Face WebSocket Kiosk
+> **เทคโนโลยีหลัก:** FastAPI v4.0 (Python 3.11) + InsightFace `buffalo_l` (512-d) + PostgreSQL `pgvector` (HNSW) + Angular 19 Console & Multi-Face WebSocket Kiosk
 
 ---
 

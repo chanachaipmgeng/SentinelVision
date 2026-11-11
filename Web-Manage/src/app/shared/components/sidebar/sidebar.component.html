@@ -146,8 +146,8 @@
 
                     <ul class="slide-menu child2" [ngStyle]="{
                                               display: childrenItem.active ? 'block' : 'none',
-                                              right: localdata['ynex-dir'] == 'rtl' ? 'auto' : '',
-                                              left: localdata['ynex-dir'] == 'rtl' ? '100%' : ''
+                                              right: localdata['ynex-dir'] === 'rtl' ? 'auto' : '',
+                                              left: localdata['ynex-dir'] === 'rtl' ? '100%' : ''
                                           }" [ngClass]="{'open': childrenItem.active}">
                       @for(childrenSubItem of childrenItem.children;track $index){
 

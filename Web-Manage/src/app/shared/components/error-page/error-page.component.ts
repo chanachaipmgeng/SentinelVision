@@ -14,10 +14,9 @@ const ICONS: Record<ErrorCode, string> = {
 
 /** Standalone 403 / 404 / 500 page rendered inside the admin shell (`route.data.code`). */
 @Component({
-  selector: 'app-error-page',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
-  template: `
+    selector: 'app-error-page',
+    imports: [CommonModule, RouterModule, TranslateModule],
+    template: `
     <section class="sv-error" role="alert">
       <div class="sv-error__icon"><i [class]="icon" aria-hidden="true"></i></div>
       <p class="sv-error__code">{{ code }}</p>
@@ -36,8 +35,8 @@ const ICONS: Record<ErrorCode, string> = {
       </div>
     </section>
   `,
-  styles: [
-    `
+    styles: [
+        `
       .sv-error {
         min-height: calc(100dvh - 12rem);
         display: flex;
@@ -87,7 +86,7 @@ const ICONS: Record<ErrorCode, string> = {
         justify-content: center;
       }
     `,
-  ],
+    ]
 })
 export class ErrorPageComponent implements OnInit {
   code: ErrorCode = '404';

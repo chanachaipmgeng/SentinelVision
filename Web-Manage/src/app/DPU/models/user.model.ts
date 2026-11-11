@@ -12,12 +12,13 @@ export class UserProfileModel extends BaseModel {
   phoneNumber: string;
   role: number;
   status: number;
-  picture: any;
+  picture: string;
   birthDate?: string;
   address?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   attachmentUrls?: string;
+  biometricConsentAt?: string | null;
   createdAt: string;
   updatedAt: string;
   constructor(
@@ -25,23 +26,23 @@ export class UserProfileModel extends BaseModel {
     translateService?: TranslateService
   ) {
     super(data, translateService);
-    this.memberId = data?.memberId!;
-    this.username = data?.username!
-    this.password = data?.password!
+    this.memberId = data?.memberId ?? '';
+    this.username = data?.username ?? ''
+    this.password = data?.password ?? ''
     this.phoneNumber = data?.phoneNumber || ""
     this.firstName = data?.firstName || ""
     this.lastName = data?.lastName || ""
-    this.status = data?.status!
-    this.email = data?.email!
-    this.role = data?.role!
+    this.status = data?.status ?? 0;
+    this.email = data?.email ?? '';
+    this.role = data?.role ?? 0;
     this.picture = data?.picture || ""
     this.birthDate = data?.birthDate || ""
     this.address = data?.address || ""
     this.emergencyContactName = data?.emergencyContactName || ""
     this.emergencyContactPhone = data?.emergencyContactPhone || ""
     this.attachmentUrls = data?.attachmentUrls || ""
-    this.createdAt = data?.createdAt!
-    this.updatedAt = data?.updatedAt!
+    this.createdAt = data?.createdAt ?? ''
+    this.updatedAt = data?.updatedAt ?? ''
   }
 
   getRole(): string {

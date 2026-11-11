@@ -41,7 +41,7 @@ def _clean_uuid(value: Any) -> Optional[str]:
     try:
         return str(UUID(str(value)))
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid UUID in SSO policy")
+        raise HTTPException(status_code=400, detail="Invalid UUID in SSO policy") from None
 
 
 def normalize_sso_policy(payload: dict) -> dict:

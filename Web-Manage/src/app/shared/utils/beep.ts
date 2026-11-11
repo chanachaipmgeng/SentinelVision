@@ -4,7 +4,9 @@ let sharedCtx: AudioContext | null = null;
 
 function getCtx(): AudioContext | null {
   try {
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const AC =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AC) {
       return null;
     }

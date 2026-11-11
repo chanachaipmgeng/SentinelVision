@@ -18,6 +18,7 @@ import {
   buildDataTableQuery,
   clampPageIndex,
   normalizePageEnvelope,
+  PageEnvelope,
   toDataTableParams,
 } from '../../../shared/utils/data-table-query';
 import { NotificationSettingsPanelComponent } from '../settings/panels/notification-settings-panel/notification-settings-panel.component';
@@ -36,22 +37,21 @@ interface AuditRow {
 }
 
 @Component({
-  selector: 'app-audit-log',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterModule,
-    SharedModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    EmptyStateComponent,
-    DataTableComponent,
-    NotificationSettingsPanelComponent,
-  ],
-  templateUrl: './audit-log.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-audit-log',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterModule,
+        SharedModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        EmptyStateComponent,
+        DataTableComponent,
+        NotificationSettingsPanelComponent,
+    ],
+    templateUrl: './audit-log.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class AuditLogComponent implements OnInit, OnDestroy {
   rows: AuditRow[] = [];
@@ -133,7 +133,7 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     if (f.dateTo) params = params.set('dateTo', f.dateTo);
 
     this.http
-      .get<any>(`/companys/${this.companyId}/audit-logs`, { params })
+      .get<PageEnvelope<AuditRow> | AuditRow[]>(`/companys/${this.companyId}/audit-logs`, { params })
       .subscribe({
         next: (payload) => {
           const page = normalizePageEnvelope<AuditRow>(payload);

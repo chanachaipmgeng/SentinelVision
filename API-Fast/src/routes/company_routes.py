@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -196,8 +196,8 @@ async def list_audit_logs(
         ).scalar_one()
         or 0
     )
-    sort_col = _AUDIT_SORT_COLUMNS.get(sort_by or "", AuditLog.occurredAt)
-    order = asc(sort_col) if (sort_dir or "").lower() == "asc" else desc(sort_col)
+    sort_col: Any = _AUDIT_SORT_COLUMNS.get(sort_by or "", AuditLog.occurredAt)
+    order: Any = asc(sort_col) if (sort_dir or "").lower() == "asc" else desc(sort_col)
     rows = (
         await db.execute(query.order_by(order).offset(safe_offset).limit(safe_limit))
     ).scalars().all()

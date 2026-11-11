@@ -8,19 +8,19 @@ import {
   filterWatchlistItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
+import { SentinelIdentity } from '../sentinel.models';
 
 @Component({
-  selector: 'app-sentinel-watchlist-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './sentinel-watchlist-panel.component.html',
+    selector: 'app-sentinel-watchlist-panel',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './sentinel-watchlist-panel.component.html'
 })
 export class SentinelWatchlistPanelComponent implements OnInit {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  identities: any[] = [];
+  identities: SentinelIdentity[] = [];
   selectedIdentityPhoto: File | null = null;
   watchlistForm = defaultWatchlistForm();
 
@@ -33,7 +33,7 @@ export class SentinelWatchlistPanelComponent implements OnInit {
     this.loadIdentities();
   }
 
-  get watchlistItems(): any[] {
+  get watchlistItems(): SentinelIdentity[] {
     return filterWatchlistItems(this.identities);
   }
 
@@ -45,7 +45,7 @@ export class SentinelWatchlistPanelComponent implements OnInit {
     this.selectedIdentityPhoto = firstFileFromInput(event);
   }
 
-  createIdentityRecord(formObj: any): void {
+  createIdentityRecord(formObj: { fullName?: string; [key: string]: unknown }): void {
     if (!formObj.fullName || !String(formObj.fullName).trim()) {
       this.toast.emit('กรุณาระบุชื่อ-นามสกุล');
       return;

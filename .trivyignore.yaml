@@ -18,69 +18,6 @@ vulnerabilities:
     statement: "swiper@8 is used for its SCSS only; the vulnerable JS is not shipped."
     expired_at: 2027-03-31
 
-  # Angular 17.3.x (EOL) framework advisories. Fixes exist only in Angular >= 19; the upgrade is a
-  # dedicated project (standalone APIs, control flow, Material 3 migration) tracked in
-  # docs/BACKLOG.md "Open — Phase B follow-ups". Exposure is limited: the admin UI is served
-  # behind the same origin as the API (no cross-origin XSRF leak), does not use HttpTransferCache,
-  # hydration, i18n attribute bindings or SVG animation templates, and only authenticated users
-  # reach it.
-  - id: CVE-2025-66035
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2025-66412
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-22610
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-27970
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-32635
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-50170
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-50171
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-54266
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-54267
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-54268
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-68945
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-69151
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-101896
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-  - id: CVE-2026-111752
-    paths: [Web-Manage/package-lock.json]
-    statement: "Angular 17 EOL; fixed in >=19. Upgrade tracked in BACKLOG."
-    expired_at: 2027-03-31
-
   # API images (trivy image, target "Python"): pip >= 25 ships pip/_vendor/bom.cdx.json, a CycloneDX
   # SBOM that declares its vendored pkg_resources as setuptools==70.3.0. Only pkg_resources is
   # vendored; setuptools/package_index.py (the PackageIndex path-traversal) is not in the image. The
@@ -89,15 +26,4 @@ vulnerabilities:
   - id: CVE-2025-47273
     purls: ["pkg:pypi/setuptools@70.3.0"]
     statement: "pip's vendored pkg_resources SBOM entry; the vulnerable PackageIndex module is not shipped."
-    expired_at: 2027-03-31
-
-misconfigurations:
-  # Every product image runs as a non-root USER since B4 (api/worker uid 10001, admin/nginx uid 101,
-  # backup uid 1000). The only remaining root container is the kiosk load generator: a
-  # loadtest-profile-only tool (never part of a deployment) that writes results into bind-mounted
-  # host directories, so a fixed non-root uid would need matching host chown on every test box.
-  - id: DS-0002
-    paths:
-      - scripts/kiosk-load/Dockerfile
-    statement: "Load-test generator only (compose profile loadtest); writes to bind-mounted result dirs. Not deployed."
     expired_at: 2027-03-31

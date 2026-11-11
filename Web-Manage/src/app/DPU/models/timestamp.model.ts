@@ -30,17 +30,17 @@ export class TimestampModel extends BaseModel {
     translateService?: TranslateService
   ) {
     super(data, translateService);
-    this.company_employeeId = data?.company_employeeId!
-    this.companyId = data?.companyId!
-    this.timestampId = data?.timestampId!
-    this.locationName = data?.locationName!
+    this.company_employeeId = data?.company_employeeId ?? ''
+    this.companyId = data?.companyId ?? ''
+    this.timestampId = data?.timestampId ?? ''
+    this.locationName = data?.locationName ?? ''
     this.latitude = this.toCoord(data?.latitude, 13.7563);
     this.longitude = this.toCoord(data?.longitude, 100.5018);
-    this.timestampType = data?.timestampType!;
-    this.timestamp = data?.timestamp!
-    this.photoTimestamp = data?.photoTimestamp!
-    this.createdAt = data?.createdAt!;
-    this.updatedAt = data?.updatedAt!
+    this.timestampType = data?.timestampType ?? 0;
+    this.timestamp = data?.timestamp ?? ''
+    this.photoTimestamp = data?.photoTimestamp ?? ''
+    this.createdAt = data?.createdAt ?? '';
+    this.updatedAt = data?.updatedAt ?? ''
     this.note = data?.note || ""
     this.approvalStatus = data?.approvalStatus || "NONE"
     this.approvedBy = data?.approvedBy

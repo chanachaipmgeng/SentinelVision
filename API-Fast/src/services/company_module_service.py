@@ -96,7 +96,7 @@ def _clean_uuid(value: Any, *, field: str) -> Optional[str]:
     try:
         return str(UUID(str(value)))
     except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid UUID for {field}")
+        raise HTTPException(status_code=400, detail=f"Invalid UUID for {field}") from None
 
 
 def _deep_merge(base: dict, overlay: dict) -> dict:
@@ -140,7 +140,8 @@ def merge_module_config(stored: Optional[dict]) -> dict:
         merged["packageCode"] = str(pkg).strip().upper()
     else:
         merged["packageCode"] = None
-    quotas = merged.get("quotas") if isinstance(merged.get("quotas"), dict) else {}
+    raw_quotas = merged.get("quotas")
+    quotas = raw_quotas if isinstance(raw_quotas, dict) else {}
     merged["quotas"] = {
         "maxDevices": quotas.get("maxDevices"),
         "maxEmployees": quotas.get("maxEmployees"),
@@ -213,9 +214,10 @@ def normalize_module_config(payload: dict) -> dict:
     else:
         package_code = None
 
-    quotas_in = payload.get("quotas") or {}
-    if quotas_in is not None and not isinstance(quotas_in, dict):
+    quotas_in_raw = payload.get("quotas") or {}
+    if quotas_in_raw is not None and not isinstance(quotas_in_raw, dict):
         raise HTTPException(status_code=400, detail="quotas must be an object")
+    quotas_in = quotas_in_raw if isinstance(quotas_in_raw, dict) else {}
     defaults_q = DEFAULT_COMPANY_MODULE_CONFIG["quotas"]
     quotas = {
         "maxDevices": quotas_in.get("maxDevices", defaults_q["maxDevices"]),

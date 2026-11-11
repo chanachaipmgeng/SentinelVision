@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from uuid import UUID
 from ..config.database import get_db
 from ..schemas.member_schema import MemberCreate, MemberResponse, MemberUpdate
 from ..controllers.member_controller import (
@@ -28,7 +29,7 @@ async def get_member(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    member = await get_user_by_id(memberId, db)
+    member = await get_user_by_id(UUID(memberId), db)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
     return member
@@ -47,7 +48,7 @@ async def update_existing_member(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    return await update_user(memberId, member_update, db)
+    return await update_user(UUID(memberId), member_update, db)
 
 @router.delete("/{memberId}")
 async def delete_existing_member(
@@ -55,4 +56,4 @@ async def delete_existing_member(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    return await delete_user(memberId, db)
+    return await delete_user(UUID(memberId), db)

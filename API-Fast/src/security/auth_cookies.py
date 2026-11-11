@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import secrets
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import Request, Response
 
@@ -28,9 +28,11 @@ def cookie_secure() -> bool:
     return (settings.APP_ENV or "").strip().lower() not in {"development", "dev", "test", "local"}
 
 
-def cookie_samesite() -> str:
+def cookie_samesite() -> Literal["lax", "strict", "none"]:
     raw = (settings.AUTH_COOKIE_SAMESITE or "lax").strip().lower()
-    return raw if raw in {"lax", "strict", "none"} else "lax"
+    if raw in {"lax", "strict", "none"}:
+        return raw  # type: ignore[return-value]
+    return "lax"
 
 
 def new_csrf_token() -> str:

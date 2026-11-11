@@ -11,10 +11,10 @@ export class PositionModel extends BaseModel{
     translateService? : TranslateService
   ) {
     super(data,translateService);
-    this.companyId = data?.companyId!
-    this.positionId = data?.positionId!;
-    this.thName = data?.thName!;
-    this.engName = data?.engName!;
+    this.companyId = data?.companyId ?? ''
+    this.positionId = data?.positionId ?? '';
+    this.thName = data?.thName ?? '';
+    this.engName = data?.engName ?? '';
   }
 
   getName(): string {

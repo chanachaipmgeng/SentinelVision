@@ -17,27 +17,26 @@ import { environment } from '../../../../../environments/environment';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-user-setting',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    NgSelectModule,
-    FormsModule,
-    FileUploadModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    SimplePagerComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './user-setting.component.html',
-  styleUrls: [
-    '../../../../shared/styles/dpu-list-page.css',
-    './user-setting.component.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-user-setting',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        NgSelectModule,
+        FormsModule,
+        FileUploadModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        SimplePagerComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './user-setting.component.html',
+    styleUrls: [
+        '../../../../shared/styles/dpu-list-page.css',
+        './user-setting.component.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class UserSettingComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
@@ -203,7 +202,7 @@ export class UserSettingComponent implements OnInit {
       text: this.selectModel.username || '',
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       const req$ =
         this.action === 'edit'
@@ -227,7 +226,7 @@ export class UserSettingComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.userService.delete(item).subscribe({
         next: () => {
@@ -269,7 +268,7 @@ export class UserSettingComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((user) => {
@@ -298,7 +297,7 @@ export class UserSettingComponent implements OnInit {
       text: targets.map((t) => t.getFullname?.() || t.username).join('\n'),
       icon: 'warning',
       buttons: ['ยกเลิก', 'ยืนยัน'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((user) => {

@@ -70,20 +70,19 @@ export interface AnalyticsSummary {
 }
 
 @Component({
-  selector: 'app-face-monitor',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    TranslateModule,
-    NgxEchartsModule,
-    PageToolbarComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './face-monitor.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css', './face-monitor.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-face-monitor',
+    imports: [
+        CommonModule,
+        FormsModule,
+        TranslateModule,
+        NgxEchartsModule,
+        PageToolbarComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './face-monitor.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css', './face-monitor.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class FaceMonitorComponent implements OnInit {
   companyId = '';
@@ -197,11 +196,14 @@ export class FaceMonitorComponent implements OnInit {
     this.heatmapChart = {
       tooltip: {
         position: 'top',
-        formatter: (p: any) => {
-          const hour = p?.value?.[0];
-          const wd = p?.value?.[1];
-          const cnt = p?.value?.[2] ?? 0;
-          return `${this.weekdayLabels[wd] || wd} ${String(hour).padStart(2, '0')}:00 — ${cnt}`;
+        formatter: (params) => {
+          const raw = (params as { value?: unknown }).value;
+          const tuple = Array.isArray(raw) ? raw : [];
+          const hour = Number(tuple[0]);
+          const wd = Number(tuple[1]);
+          const cnt = Number(tuple[2]) || 0;
+          const wdKey = Number.isFinite(wd) ? wd : 0;
+          return `${this.weekdayLabels[wdKey] || wd} ${String(hour).padStart(2, '0')}:00 — ${cnt}`;
         },
       },
       grid: { left: 48, right: 24, top: 16, bottom: 40 },

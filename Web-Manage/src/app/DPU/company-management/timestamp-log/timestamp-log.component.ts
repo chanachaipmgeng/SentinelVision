@@ -35,27 +35,26 @@ interface TimestampLogViewFilters {
 const FACE_PLACEHOLDER = './assets/images/faces/1.jpg';
 
 @Component({
-  selector: 'app-timestamp-log',
-  templateUrl: './timestamp-log.component.html',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    NgSelectModule,
-    FormsModule,
-    LocationMapComponent,
-    RouterModule,
-    DateRangeFilterComponent,
-    SavedViewsBarComponent,
-    SkeletonLoaderComponent,
-    SideDrawerComponent,
-  ],
-  styleUrls: [
-    './timestamp-log.component.css',
-    '../../../shared/styles/dpu-filter-toolbar.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-timestamp-log',
+    templateUrl: './timestamp-log.component.html',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        NgSelectModule,
+        FormsModule,
+        LocationMapComponent,
+        RouterModule,
+        DateRangeFilterComponent,
+        SavedViewsBarComponent,
+        SkeletonLoaderComponent,
+        SideDrawerComponent,
+    ],
+    styleUrls: [
+        './timestamp-log.component.css',
+        '../../../shared/styles/dpu-filter-toolbar.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class TimestampLogComponent implements OnInit, OnDestroy {
   readonly pageSize = 10;
@@ -293,12 +292,13 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     this.syncSavedFilters();
   }
 
-  applySavedView(filters: Partial<TimestampLogViewFilters> | null) {
-    if (!filters) return;
-    this.empSelect = filters.employee || '';
-    this.statusSelect = filters.status || '';
-    this._searchTerm = filters.q || '';
-    this.range = refreshRange(filters.range);
+  applySavedView(filters: unknown) {
+    if (!filters || typeof filters !== 'object') return;
+    const f = filters as Partial<TimestampLogViewFilters>;
+    this.empSelect = f.employee || '';
+    this.statusSelect = f.status || '';
+    this._searchTerm = f.q || '';
+    this.range = refreshRange(f.range);
     this.pageIndex = 0;
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.getTimestamp();
@@ -339,7 +339,7 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
       text: item.employee?.getFullname?.() || '',
       icon: 'warning',
       buttons: ['ยกเลิก', 'อนุมัติ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.actionBusy = true;
       item.timestampType = 1;
@@ -365,7 +365,7 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ไม่อนุมัติ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.actionBusy = true;
       item.timestampType = 3;

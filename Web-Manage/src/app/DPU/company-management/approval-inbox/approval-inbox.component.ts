@@ -25,21 +25,20 @@ const KIND_ICONS: Record<string, string> = {
 };
 
 @Component({
-  selector: 'app-approval-inbox',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    SharedModule,
-    RouterModule,
-    KpiGridComponent,
-    SavedViewsBarComponent,
-    SideDrawerComponent,
-    SkeletonLoaderComponent,
-  ],
-  templateUrl: './approval-inbox.component.html',
-  styleUrls: ['./approval-inbox.component.css', '../../../shared/styles/dpu-filter-toolbar.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-approval-inbox',
+    imports: [
+        CommonModule,
+        FormsModule,
+        SharedModule,
+        RouterModule,
+        KpiGridComponent,
+        SavedViewsBarComponent,
+        SideDrawerComponent,
+        SkeletonLoaderComponent,
+    ],
+    templateUrl: './approval-inbox.component.html',
+    styleUrls: ['./approval-inbox.component.css', '../../../shared/styles/dpu-filter-toolbar.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class ApprovalInboxComponent implements OnInit {
   readonly kinds = ['LEAVE', 'TIMESTAMP', 'REGULARIZATION', 'OT'];
@@ -126,7 +125,8 @@ export class ApprovalInboxComponent implements OnInit {
     this.setKind(key === 'ALL' || key === this.kindFilter ? '' : key);
   }
 
-  applySavedView(filters: Partial<ApprovalInboxViewFilters> | null): void {
+  applySavedView(raw: unknown): void {
+    const filters = raw as Partial<ApprovalInboxViewFilters> | null;
     if (!filters) return;
     this.kindFilter = filters.kind || '';
     this._searchTerm = filters.q || '';
@@ -160,11 +160,11 @@ export class ApprovalInboxComponent implements OnInit {
     swal({
       title: 'ไม่อนุมัติรายการนี้?',
       text: item.employeeName || '',
-      content: { element: 'input', attributes: { placeholder: 'เหตุผล (ถ้ามี)' } } as any,
+      content: { element: 'input', attributes: { placeholder: 'เหตุผล (ถ้ามี)' } },
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ไม่อนุมัติ'],
-    }).then((reason: any) => {
+    }).then((reason: unknown) => {
       if (reason === null || reason === false) return;
       const rejectReason = typeof reason === 'string' ? reason : 'ไม่อนุมัติ';
       this.decide(item, false, rejectReason);

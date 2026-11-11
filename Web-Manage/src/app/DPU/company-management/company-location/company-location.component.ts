@@ -20,19 +20,18 @@ import { TokenService } from '../../../shared/services/token.service';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-company-location',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    NgSelectModule,
-    FormsModule,
-    GeofenceMapComponent,
-  ],
-  templateUrl: './company-location.component.html',
-  styleUrl: './company-location.component.css',
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-location',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        NgSelectModule,
+        FormsModule,
+        GeofenceMapComponent,
+    ],
+    templateUrl: './company-location.component.html',
+    styleUrl: './company-location.component.css',
+    encapsulation: ViewEncapsulation.None
 })
 export class CompanyLocationComponent implements OnInit {
   @ViewChild('editGeofenceMap') editGeofenceMap?: GeofenceMapComponent;
@@ -321,7 +320,7 @@ export class CompanyLocationComponent implements OnInit {
       text: name,
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.saving = true;
       const req$ =
@@ -341,7 +340,13 @@ export class CompanyLocationComponent implements OnInit {
           let msg = 'บันทึกสถานที่ไม่สำเร็จ';
           if (typeof detail === 'string') msg = detail;
           else if (Array.isArray(detail)) {
-            msg = detail.map((d: any) => d?.msg || JSON.stringify(d)).join('\n');
+            msg = detail
+              .map((d: unknown) =>
+                typeof d === 'object' && d !== null && 'msg' in d
+                  ? String((d as { msg?: string }).msg)
+                  : JSON.stringify(d),
+              )
+              .join('\n');
           }
           swal('บันทึกไม่สำเร็จ', msg, 'error');
         },
@@ -356,7 +361,7 @@ export class CompanyLocationComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((willDelete: any) => {
+    }).then((willDelete: unknown) => {
       if (!willDelete) return;
       this.comLocationService.delete(this.companyId, item).subscribe({
         next: () => {
@@ -403,7 +408,7 @@ export class CompanyLocationComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((willDelete: any) => {
+    }).then((willDelete: unknown) => {
       if (!willDelete) return;
       let pending = targets.length;
       targets.forEach((item) => {

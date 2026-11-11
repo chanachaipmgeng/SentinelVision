@@ -5,19 +5,19 @@ import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HrScheduleApiService } from '../hr-schedule-api.service';
 import { defaultNewLeave, parseLeaveList } from '../hr-schedule.helpers';
+import { HrEmployeeShiftRow, HrLeave } from '../hr-schedule.models';
 
 @Component({
-  selector: 'app-hr-leaves-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-leaves-tab.component.html',
+    selector: 'app-hr-leaves-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-leaves-tab.component.html'
 })
 export class HrLeavesTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  employees: any[] = [];
-  leaves: any[] = [];
+  employees: HrEmployeeShiftRow[] = [];
+  leaves: HrLeave[] = [];
   newLeave = defaultNewLeave();
 
   constructor(private api: HrScheduleApiService, private token: TokenService) {

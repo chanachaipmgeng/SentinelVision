@@ -14,12 +14,6 @@ select = ["E4", "E7", "E9", "F", "B"]
 ignore = [
   # FastAPI idiom: `db: AsyncSession = Depends(get_db)` in signatures.
   "B008",
-  # ---- Phase B3 baseline (pre-existing, measured 2026-11-07) ------------------------------
-  # 40× `raise HTTPException(...)` inside `except` without `from exc`. Legit to fix, but it
-  # touches almost every controller; tracked in docs/BACKLOG.md "Lint debt".
-  "B904",
-  # 3× `pytest.raises(Exception)` in older tests.
-  "B017",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -63,77 +57,16 @@ pretty = false
 exclude = ["^enrolled_images/", "^uploaded_images/", "^temp_images/"]
 
 # ---- Phase B3 baseline -------------------------------------------------------------------
-# These modules carried pre-existing errors (mostly SQLAlchemy legacy `Column()` attributes
-# typed as Column[...] → [assignment]/[arg-type], and Optional narrowing). Count was 31 on
-# 2026-11-07; extended after Phase 5+6E merge when CI mypy surfaced 147 more across 18 files.
-# Every other module under src/ is fully type-checked and new modules are checked by default.
-# Remove a module from this list when its errors are fixed (tracked in docs/BACKLOG.md).
+# Narrow post-Mapped[] exceptions only (was 62 modules / ignore_errors).
+# face GPU queue call sites pass untyped lambdas; suppress [misc] there only.
 [[tool.mypy.overrides]]
 module = [
-    "src.clients.face_core_client",
-    "src.config.database",
-    "src.controllers.company_employee_controller",
-    "src.controllers.dashboard_controller",
-    "src.controllers.employee_import_controller",
-    "src.controllers.employee_timestamp_controller",
     "src.controllers.face_controller",
     "src.controllers.face_ws_controller",
-    "src.controllers.hr_controller",
-    "src.controllers.member_controller",
-    "src.controllers.sentinel_controller",
-    "src.controllers.system_controller",
-    "src.models.company_employee",
-    "src.models.company_location",
-    "src.models.company",
-    "src.models.employee_timestamp",
-    "src.models.member",
-    "src.routes.auth_routes",
-    "src.routes.company_routes",
-    "src.routes.employee_routes",
-    "src.routes.employee_timestamp_routes",
-    "src.routes.hr_routes",
-    "src.routes.member_routes",
-    "src.routes.notification_routes",
-    "src.routes.sentinel_routes",
-    # F1: SQLAlchemy legacy Column[] on incident lifecycle / scan decision writes.
-    "src.services.sentinel_incident_service",
-    "src.security.auth_cookies",
-    "src.security.deps",
-    "src.security.middleware",
-    "src.security.oidc",
-    "src.services.face_match_service",
-    # C1: SQLAlchemy Column[] comparisons on attendance_daily lookups.
-    "src.services.attendance_summary_service",
-    # B7 import hand-off: same legacy `Column()` attribute typing as the controllers above.
-    "src.services.import_job_service",
-    "src.services.observability",
-    "src.services.sso_policy_service",
-    "src.services.token_revocation_service",
-    # Post-#21 mypy baseline: SQLAlchemy Column[] + Phase 5 settings JSONB writes.
-    "src.services.api_key_service",
-    "src.services.camera_service",
-    "src.services.cctv_analysis_service",
-    "src.services.company_ai_settings_service",
-    "src.services.company_module_service",
-    "src.services.company_session_settings_service",
-    "src.services.device_service",
-    "src.services.holiday_service",
-    "src.services.incident_sla_service",
-    "src.services.payroll_export_service",
-    "src.services.payroll_period_service",
-    "src.services.pdpa_service",
-    "src.services.rbac_service",
-    "src.services.site_floor_service",
-    "src.services.tenant_quota_service",
-    "src.services.video_clip_service",
-    # Phase 6C/6D: SQLAlchemy Column[] comparisons / assignments (main CI red since #23/#24).
-    "src.services.analytics_service",
-    "src.services.people_count_service",
-    "src.utils.face_engine",
+    "src.controllers.employee_import_controller",
     "src.utils.face_gpu_queue",
-    "src.utils.file_handler",
 ]
-ignore_errors = true
+disable_error_code = ["misc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

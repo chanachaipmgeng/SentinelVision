@@ -1,9 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { TokenService } from '../../shared/services/token.service';
 import { UserRole, UserRoleModel } from '../models/user-role-model';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 
@@ -17,7 +16,7 @@ export class UserRoleService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<UserRoleModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new UserRole(e, this.translateService)));
@@ -54,7 +53,7 @@ export class UserRoleService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<UserRoleModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 

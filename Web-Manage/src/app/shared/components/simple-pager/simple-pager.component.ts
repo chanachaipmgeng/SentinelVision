@@ -2,10 +2,9 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-simple-pager',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-simple-pager',
+    imports: [CommonModule],
+    template: `
     <div class="dpu-pager" *ngIf="total > pageSize">
       <button type="button" class="dpu-pager__btn" [disabled]="pageIndex <= 0" (click)="go(pageIndex - 1)">
         <i class="ri-arrow-left-s-line"></i>
@@ -22,8 +21,8 @@ import { CommonModule } from '@angular/common';
       </button>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
       }
@@ -56,7 +55,7 @@ import { CommonModule } from '@angular/common';
         color: #0f172a;
       }
     `,
-  ],
+    ]
 })
 export class SimplePagerComponent {
   @Input() pageIndex = 0;

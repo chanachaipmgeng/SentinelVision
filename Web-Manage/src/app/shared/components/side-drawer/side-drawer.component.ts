@@ -34,11 +34,10 @@ const FOCUSABLE =
  * Slots: default content, `[drawerHeaderActions]`, `[drawerFooter]` (sticky).
  */
 @Component({
-  selector: 'app-side-drawer',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  templateUrl: './side-drawer.component.html',
-  styleUrls: ['./side-drawer.component.css'],
+    selector: 'app-side-drawer',
+    imports: [CommonModule, TranslateModule],
+    templateUrl: './side-drawer.component.html',
+    styleUrls: ['./side-drawer.component.css']
 })
 export class SideDrawerComponent implements OnChanges, AfterViewInit, OnDestroy {
   @Input() open = false;

@@ -14,12 +14,11 @@ import { SystemSettingService } from '../../services/system-setting.service';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-system-setting',
-  standalone: true,
-  imports: [SharedModule, CommonModule, FormsModule],
-  templateUrl: './system-setting.component.html',
-  styleUrl: './system-setting.component.css',
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-system-setting',
+    imports: [SharedModule, CommonModule, FormsModule],
+    templateUrl: './system-setting.component.html',
+    styleUrl: './system-setting.component.css',
+    encapsulation: ViewEncapsulation.None
 })
 export class SystemSettingComponent implements OnInit {
   loading = false;
@@ -101,7 +100,7 @@ export class SystemSettingComponent implements OnInit {
       text: 'ใช้ร่วมกันทุกบริษัท',
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.saving = true;
       this.systemSettingService.updateTtsSettings(payload).subscribe({

@@ -1,21 +1,17 @@
-import { Component, ElementRef, Inject, Renderer2 } from '@angular/core';
-import { NgxColorsModule } from 'ngx-colors';
+import { Component, ElementRef, Inject, Renderer2, OnInit } from '@angular/core';
 import * as switcher from '../switcher/switcher';
 import { DOCUMENT } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 @Component({
-  selector: 'app-landing-switcher',
-  templateUrl: './landing-switcher.component.html',
-  styleUrl: './landing-switcher.component.scss'
+    selector: 'app-landing-switcher',
+    templateUrl: './landing-switcher.component.html',
+    styleUrl: './landing-switcher.component.scss',
+    standalone: false
 })
-export class LandingSwitcherComponent {
+export class LandingSwitcherComponent implements OnInit {
   body: HTMLBodyElement | null;
   constructor( @Inject(DOCUMENT) private document: Document,private elementRef: ElementRef,
   private renderer: Renderer2,  private el: ElementRef,){
     this.body = document.querySelector('body');
-    const htmlElement =
-    this.elementRef.nativeElement.ownerDocument.documentElement;
-  const bodyElement = document.body;
   }
   CheckOpe = () => {
     if (localStorage.getItem('ynex-dir') == 'rtl') {
@@ -58,7 +54,7 @@ export class LandingSwitcherComponent {
   
   color1 = '#1457e6';
     //primary theme change
-    public dynamicLightPrimary(data: any): void {
+    public dynamicLightPrimary(data: { color: string }): void {
       this.color1 = data.color;
   
       const dynamicPrimaryLight = document.querySelectorAll(
@@ -92,8 +88,8 @@ export class LandingSwitcherComponent {
   }
   public localDark = localStorage;
   public localdata = localStorage;
-  public darkchecked: any;
-  public RtlChecked: any;
+  public darkchecked: unknown;
+  public RtlChecked: unknown;
   reset() {
     localStorage.clear();
     const htmlElement = this.elementRef.nativeElement.ownerDocument.documentElement;

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { DepartmentModel } from '../models/department.model';
@@ -17,7 +17,7 @@ export class DepartmentService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<DepartmentModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new DepartmentModel(e, this.translateService)));
@@ -54,7 +54,7 @@ export class DepartmentService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<DepartmentModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 

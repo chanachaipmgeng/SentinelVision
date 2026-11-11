@@ -20,11 +20,10 @@ declare global {
 }
 
 @Component({
-  selector: 'app-location-map',
-  standalone: true,
-  imports: [CommonModule, GoogleMapsModule, MapMarker],
-  templateUrl: './location-map.component.html',
-  styleUrls: ['./location-map.component.css'],
+    selector: 'app-location-map',
+    imports: [CommonModule, GoogleMapsModule, MapMarker],
+    templateUrl: './location-map.component.html',
+    styleUrls: ['./location-map.component.css']
 })
 export class LocationMapComponent implements OnInit, OnChanges, OnDestroy {
   @Input() lat = 13.7563;
@@ -107,7 +106,8 @@ export class LocationMapComponent implements OnInit, OnChanges, OnDestroy {
 
   private isGoogleMapsUsable(): boolean {
     try {
-      return !!(window as any).google?.maps?.Map;
+      const w = window as Window & { google?: { maps?: { Map?: unknown } } };
+      return !!w.google?.maps?.Map;
     } catch {
       return false;
     }

@@ -3,7 +3,7 @@ import { TranslateService } from '@ngx-translate/core';
 export class BaseModel{
    translateService: TranslateService;
 
-   constructor(data?: Partial<any> ,translateService?: TranslateService){
+   constructor(data?: Partial<unknown> ,translateService?: TranslateService){
       Object.assign(this , data);
       this.translateService = translateService!;
 
@@ -43,7 +43,7 @@ export interface PageResponseModel<T> {
 export interface ResponseModel {
   message: string;
   statusCode: number;
-  resultObject?: any;
+  resultObject?: unknown;
   fail: boolean;
   actionStatus: string;
   none: boolean;

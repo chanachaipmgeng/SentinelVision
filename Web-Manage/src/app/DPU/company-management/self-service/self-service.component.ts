@@ -12,13 +12,39 @@ import swal from 'sweetalert';
 
 type Tab = 'attendance' | 'leave' | 'regularization';
 
+interface SelfAttendanceRow {
+  timestamp?: string;
+  createdAt?: string;
+  timestampTypeText?: string;
+  timestampType?: string | number;
+  approvalStatusText?: string;
+  approvalStatus?: string;
+  note?: string;
+}
+
+interface SelfLeaveRow {
+  leaveId?: string;
+  status?: string | number;
+  approvalStatus?: string;
+  leaveType?: string;
+  startDate?: string;
+  endDate?: string;
+  reason?: string;
+}
+
+interface SelfLeaveBalanceRow {
+  leaveType?: string;
+  balance?: number;
+  used?: number;
+  remainingDays?: number;
+}
+
 @Component({
-  selector: 'app-employee-self-service',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
-  templateUrl: './self-service.component.html',
-  styleUrls: ['./self-service.component.css', '../../../shared/styles/dpu-list-page.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-employee-self-service',
+    imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
+    templateUrl: './self-service.component.html',
+    styleUrls: ['./self-service.component.css', '../../../shared/styles/dpu-list-page.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class SelfServiceComponent implements OnInit {
   companyId = '';
@@ -31,9 +57,9 @@ export class SelfServiceComponent implements OnInit {
   missingEmployeeRecord = false;
   loadError = '';
   activeTab: Tab = 'attendance';
-  attendance: any[] = [];
-  leaves: any[] = [];
-  leaveBalances: any[] = [];
+  attendance: SelfAttendanceRow[] = [];
+  leaves: SelfLeaveRow[] = [];
+  leaveBalances: SelfLeaveBalanceRow[] = [];
   leaveDraft = { startDate: '', endDate: '', leaveType: 'ANNUAL', reason: '' };
   regenDraft = {
     workDate: '',
@@ -81,7 +107,11 @@ export class SelfServiceComponent implements OnInit {
       },
     });
     // Employees (and non-admin deep links) resolve their CompanyEmployee row.
-    this.http.get<any>(`/employees/company/${this.companyId}/member/${this.memberId}`).subscribe({
+    this.http
+      .get<{ company_employeeId?: string; companyEmployeeId?: string }>(
+        `/employees/company/${this.companyId}/member/${this.memberId}`,
+      )
+      .subscribe({
       next: (emp) => {
         this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
         this.missingEmployeeRecord = !this.companyEmployeeId;
@@ -125,22 +155,25 @@ export class SelfServiceComponent implements OnInit {
         });
     } else if (this.activeTab === 'leave') {
       this.http
-        .get<any>(`/hr/company/${this.companyId}/leaves`, {
+        .get<SelfLeaveRow[] | { items?: SelfLeaveRow[] }>(`/hr/company/${this.companyId}/leaves`, {
           params: { company_employeeId: this.companyEmployeeId },
         })
         .subscribe({
           next: (res) => {
-            this.leaves = res?.items || res || [];
+            this.leaves = Array.isArray(res) ? res : res?.items || [];
             this.loading = false;
           },
           error: () => (this.loading = false),
         });
       this.http
-        .get<any>(`/hr/company/${this.companyId}/leave-balances`, {
+        .get<SelfLeaveBalanceRow[] | { items?: SelfLeaveBalanceRow[] }>(
+          `/hr/company/${this.companyId}/leave-balances`,
+          {
           params: { company_employeeId: this.companyEmployeeId },
         })
         .subscribe({
-          next: (res) => (this.leaveBalances = res?.items || res || []),
+          next: (res) =>
+            (this.leaveBalances = Array.isArray(res) ? res : res?.items || []),
           error: () => undefined,
         });
     } else {

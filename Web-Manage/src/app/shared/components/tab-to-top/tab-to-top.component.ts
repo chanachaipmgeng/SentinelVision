@@ -2,9 +2,10 @@ import { ViewportScroller } from '@angular/common';
 import { Component, HostListener } from '@angular/core';
 
 @Component({
-  selector: 'app-tab-to-top',
-  templateUrl: './tab-to-top.component.html',
-  styleUrl: './tab-to-top.component.scss'
+    selector: 'app-tab-to-top',
+    templateUrl: './tab-to-top.component.html',
+    styleUrl: './tab-to-top.component.scss',
+    standalone: false
 })
 export class TabToTopComponent {
   public show: boolean = false;
@@ -12,9 +13,6 @@ export class TabToTopComponent {
   constructor(
     private viewScroller: ViewportScroller
   ) { }
-
-  ngOnInit(): void {
-  }
 
   @HostListener("window:scroll", [])
 
@@ -28,8 +26,10 @@ export class TabToTopComponent {
   }
 
   taptotop(){
-    const body:any = document.querySelector('body')
-    body.style. scrollBehavior = 'smooth';
+    const body = document.querySelector('body') as HTMLElement | null;
+    if (body) {
+      body.style.scrollBehavior = 'smooth';
+    }
     this.viewScroller.scrollToPosition([0,0]);
   }
 }

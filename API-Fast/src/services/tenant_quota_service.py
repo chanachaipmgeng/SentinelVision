@@ -207,12 +207,18 @@ async def update_quotas(db: AsyncSession, company: Company, body: dict) -> Compa
         apply_package_preset(company, body.get("packageCode"))
     if "maxDevices" in body:
         val = body.get("maxDevices")
-        company.maxDevices = None if val in (None, "") else int(val)
+        if val in (None, ""):
+            company.maxDevices = None
+        else:
+            company.maxDevices = int(str(val))
         if company.maxDevices is not None and company.maxDevices < 0:
             raise HTTPException(status_code=400, detail="maxDevices must be >= 0")
     if "maxEmployees" in body:
         val = body.get("maxEmployees")
-        company.maxEmployees = None if val in (None, "") else int(val)
+        if val in (None, ""):
+            company.maxEmployees = None
+        else:
+            company.maxEmployees = int(str(val))
         if company.maxEmployees is not None and company.maxEmployees < 0:
             raise HTTPException(status_code=400, detail="maxEmployees must be >= 0")
     if "gpuPriority" in body:

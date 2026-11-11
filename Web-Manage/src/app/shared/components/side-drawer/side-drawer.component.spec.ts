@@ -4,15 +4,14 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SideDrawerComponent } from './side-drawer.component';
 
 @Component({
-  standalone: true,
-  imports: [SideDrawerComponent],
-  template: `
+    imports: [SideDrawerComponent],
+    template: `
     <button id="opener" (click)="open = true">open</button>
     <app-side-drawer [(open)]="open" title="Detail">
       <input id="first" />
       <button drawerFooter id="last">ok</button>
     </app-side-drawer>
-  `,
+  `
 })
 class HostComponent {
   open = false;

@@ -6,10 +6,9 @@ import { Router } from '@angular/router';
 import { TokenService } from '../../shared/services/token.service';
 
 @Component({
-  selector: 'app-change-password',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  template: `
+    selector: 'app-change-password',
+    imports: [CommonModule, FormsModule],
+    template: `
     <div class="min-h-screen flex items-center justify-center p-6">
       <form class="box p-6 w-full max-w-md space-y-3" (ngSubmit)="submit()">
         <h2 class="text-lg font-semibold">ตั้งรหัสผ่านใหม่</h2>
@@ -21,7 +20,7 @@ import { TokenService } from '../../shared/services/token.service';
         <button class="ti-btn ti-btn-primary w-full" type="submit" [disabled]="busy">บันทึก</button>
       </form>
     </div>
-  `,
+  `
 })
 export class ChangePasswordComponent {
   current = '';

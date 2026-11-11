@@ -7,14 +7,14 @@ import { PageToolbarComponent } from '../../../shared/components/page-toolbar/pa
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import swal from 'sweetalert';
-
+import { HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../shared/utils/http-error-body';
 @Component({
-  selector: 'app-profile-security',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent],
-  templateUrl: './profile-security.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-profile-security',
+    imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent],
+    templateUrl: './profile-security.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class ProfileSecurityComponent implements OnInit {
   username = '';
@@ -40,8 +40,13 @@ export class ProfileSecurityComponent implements OnInit {
   }
 
   reloadMfa(): void {
-    this.http.get<any>('/auth/mfa/status').subscribe({
-      next: (s) => (this.mfa = { ...this.mfa, ...s }),
+    this.http.get<{ totpEnabled?: boolean; oidcConfigured?: boolean }>('/auth/mfa/status').subscribe({
+      next: (s) => {
+        this.mfa = {
+          totpEnabled: !!s.totpEnabled,
+          oidcConfigured: !!s.oidcConfigured,
+        };
+      },
       error: () => undefined,
     });
   }
@@ -67,17 +72,17 @@ export class ProfileSecurityComponent implements OnInit {
           this.pw = { currentPassword: '', newPassword: '', confirm: '' };
           swal('สำเร็จ', 'เปลี่ยนรหัสผ่านแล้ว', 'success');
         },
-        error: (err) => {
+        error: (err: HttpErrorResponse) => {
           this.busy = false;
-          swal('Error', err?.error?.detail || 'เปลี่ยนรหัสผ่านไม่สำเร็จ', 'error');
+          swal('Error', apiErrorMessage(err, 'เปลี่ยนรหัสผ่านไม่สำเร็จ'), 'error');
         },
       });
   }
 
   startMfa(): void {
-    this.http.post<any>('/auth/mfa/setup', {}).subscribe({
+    this.http.post<{ secret: string; otpauthUri: string }>('/auth/mfa/setup', {}).subscribe({
       next: (s) => (this.setup = s),
-      error: (err) => swal('Error', err?.error?.detail || 'เริ่มตั้งค่า MFA ไม่สำเร็จ', 'error'),
+      error: (err: HttpErrorResponse) => swal('Error', apiErrorMessage(err, 'เริ่มตั้งค่า MFA ไม่สำเร็จ'), 'error'),
     });
   }
 

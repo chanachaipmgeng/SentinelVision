@@ -1,4 +1,4 @@
-(window as any).global = window;
-(window as any).process = {
+(window as unknown).global = window;
+(window as unknown).process = {
   env: { DEBUG: undefined },
 };

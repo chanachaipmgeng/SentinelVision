@@ -12,19 +12,18 @@ import type { CameraRow } from '../cameras/cameras.component';
 type WallLayout = '1x1' | '2x2' | '3x3';
 
 @Component({
-  selector: 'app-live-wall',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterLink,
-    TranslateModule,
-    PageToolbarComponent,
-    WebrtcVideoSurfaceComponent,
-  ],
-  templateUrl: './live-wall.component.html',
-  styleUrl: './live-wall.component.css',
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-live-wall',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterLink,
+        TranslateModule,
+        PageToolbarComponent,
+        WebrtcVideoSurfaceComponent,
+    ],
+    templateUrl: './live-wall.component.html',
+    styleUrl: './live-wall.component.css',
+    encapsulation: ViewEncapsulation.None
 })
 export class LiveWallComponent implements OnInit {
   companyId = '';

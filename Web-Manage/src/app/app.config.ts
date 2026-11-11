@@ -9,7 +9,8 @@ import { HTTP_INTERCEPTORS, provideHttpClient, HttpClient, withInterceptorsFromD
 import { HttpRequestInterceptor } from './shared/services/http-request.interceptor';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
-import { provideEcharts } from 'ngx-echarts';
+import { provideEchartsCore } from 'ngx-echarts';
+import * as echarts from 'echarts';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, "./assets/i18n/", ".json");
@@ -40,7 +41,7 @@ export const appConfig: ApplicationConfig = {
     progressBar: true,
   })),
     httpInterceptorProviders,
-    provideEcharts(),
+    provideEchartsCore({ echarts }),
   ]
 };
 

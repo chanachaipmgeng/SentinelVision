@@ -8,19 +8,19 @@ import {
   filterVisitorItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
+import { SentinelIdentity } from '../sentinel.models';
 
 @Component({
-  selector: 'app-sentinel-visitors-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './sentinel-visitors-panel.component.html',
+    selector: 'app-sentinel-visitors-panel',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './sentinel-visitors-panel.component.html'
 })
 export class SentinelVisitorsPanelComponent implements OnInit {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  identities: any[] = [];
+  identities: SentinelIdentity[] = [];
   selectedIdentityPhoto: File | null = null;
   visitorForm = defaultVisitorForm();
 
@@ -33,7 +33,7 @@ export class SentinelVisitorsPanelComponent implements OnInit {
     this.loadIdentities();
   }
 
-  get visitorItems(): any[] {
+  get visitorItems(): SentinelIdentity[] {
     return filterVisitorItems(this.identities);
   }
 
@@ -45,7 +45,7 @@ export class SentinelVisitorsPanelComponent implements OnInit {
     this.selectedIdentityPhoto = firstFileFromInput(event);
   }
 
-  createIdentityRecord(formObj: any): void {
+  createIdentityRecord(formObj: { fullName?: string; [key: string]: unknown }): void {
     if (!formObj.fullName || !String(formObj.fullName).trim()) {
       this.toast.emit('กรุณาระบุชื่อ-นามสกุล');
       return;

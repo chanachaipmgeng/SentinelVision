@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
+from datetime import date, datetime
+from typing import Any
+
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -11,26 +15,25 @@ from ..config.database import Base
 class WorkShift(Base):
     __tablename__ = "work_shift"
 
-    shiftId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    shiftId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    name = Column(String(100), nullable=False)
-    startTime = Column("start_time", String(10), nullable=False, default="09:00")
-    endTime = Column("end_time", String(10), nullable=False, default="18:00")
-    graceMinutes = Column("grace_minutes", Integer, nullable=False, default=15)
-    # C2 shift rules — punch clock rounding, unpaid break, OT gate past shift end.
-    roundingMinutes = Column("rounding_minutes", Integer, nullable=False, default=0)
-    breakMinutes = Column("break_minutes", Integer, nullable=False, default=0)
-    breakWindows = Column("break_windows", JSONB, nullable=False, default=list)
-    otThresholdMinutes = Column("ot_threshold_minutes", Integer, nullable=False, default=0)
-    isCrossMidnight = Column("is_cross_midnight", Boolean, nullable=False, default=False)
-    isDefault = Column("is_default", Boolean, nullable=False, default=False)
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    startTime: Mapped[str] = mapped_column("start_time", String(10), nullable=False, default="09:00")
+    endTime: Mapped[str] = mapped_column("end_time", String(10), nullable=False, default="18:00")
+    graceMinutes: Mapped[int] = mapped_column("grace_minutes", Integer, nullable=False, default=15)
+    roundingMinutes: Mapped[int] = mapped_column("rounding_minutes", Integer, nullable=False, default=0)
+    breakMinutes: Mapped[int] = mapped_column("break_minutes", Integer, nullable=False, default=0)
+    breakWindows: Mapped[Any] = mapped_column("break_windows", JSONB, nullable=False, default=list)
+    otThresholdMinutes: Mapped[int] = mapped_column("ot_threshold_minutes", Integer, nullable=False, default=0)
+    isCrossMidnight: Mapped[bool] = mapped_column("is_cross_midnight", Boolean, nullable=False, default=False)
+    isDefault: Mapped[bool] = mapped_column("is_default", Boolean, nullable=False, default=False)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("work_shift_company_idx", "companyId"),)
 
@@ -38,18 +41,17 @@ class WorkShift(Base):
 class CompanyHoliday(Base):
     __tablename__ = "company_holiday"
 
-    holidayId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    holidayId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    holidayDate = Column("holiday_date", Date, nullable=False)
-    name = Column(String(150), nullable=False)
-    # MANUAL | CSV | ICAL | THAI_PRESET (C6 import provenance)
-    source = Column(String(30), nullable=False, default="MANUAL", server_default="MANUAL")
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    holidayDate: Mapped[date] = mapped_column("holiday_date", Date, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    source: Mapped[str] = mapped_column(String(30), nullable=False, default="MANUAL", server_default="MANUAL")
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("company_holiday_company_date_idx", "companyId", "holiday_date"),)
 
@@ -57,27 +59,27 @@ class CompanyHoliday(Base):
 class LeaveRequest(Base):
     __tablename__ = "leave_request"
 
-    leaveId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    leaveId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    company_employeeId = Column(
+    company_employeeId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
         nullable=False,
     )
-    leaveType = Column("leave_type", String(30), nullable=False, default="ANNUAL")
-    startDate = Column("start_date", Date, nullable=False)
-    endDate = Column("end_date", Date, nullable=False)
-    reason = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default="PENDING")
-    approvedBy = Column("approved_by", UUID(as_uuid=True), nullable=True)
-    approvedAt = Column("approved_at", DateTime(timezone=True), nullable=True)
-    rejectReason = Column("reject_reason", String, nullable=True)
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    leaveType: Mapped[str] = mapped_column("leave_type", String(30), nullable=False, default="ANNUAL")
+    startDate: Mapped[date] = mapped_column("start_date", Date, nullable=False)
+    endDate: Mapped[date] = mapped_column("end_date", Date, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
+    approvedBy: Mapped[uuid.UUID | None] = mapped_column("approved_by", UUID(as_uuid=True), nullable=True)
+    approvedAt: Mapped[datetime | None] = mapped_column("approved_at", DateTime(timezone=True), nullable=True)
+    rejectReason: Mapped[str | None] = mapped_column("reject_reason", String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index("leave_request_company_dates_idx", "companyId", "start_date", "end_date", "status"),
@@ -87,46 +89,39 @@ class LeaveRequest(Base):
 class KioskDevice(Base):
     __tablename__ = "kiosk_device"
 
-    deviceId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    deviceId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    locationId = Column("location_id", UUID(as_uuid=True), nullable=True)
-    name = Column(String(120), nullable=False)
-    # Human-readable site label (building/floor); distinct from GPS company_location.
-    locationLabel = Column("location_label", String(255), nullable=True)
-    # Device hardware / browser fingerprint reported by the kiosk client.
-    fingerprint = Column(String(255), nullable=True)
-    appVersion = Column("app_version", String(64), nullable=True)
-    # Explicit WS/HTTP heartbeat timestamp (lastSeenAt also updates on auth touches).
-    heartbeatAt = Column("heartbeat_at", DateTime(timezone=True), nullable=True)
-    # Per-device runtime config (display, TTS, camera prefs, …).
-    config = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"), default=dict)
-    # Bound scan mode / access zone (SEN-21 stationMode wiring).
-    stationMode = Column("station_mode", String(40), nullable=True)
-    zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
-    # Phase 2 E-Map pin (normalized 0–1 on site_floor plan).
-    siteFloorId = Column(
+    locationId: Mapped[uuid.UUID | None] = mapped_column("location_id", UUID(as_uuid=True), nullable=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    locationLabel: Mapped[str | None] = mapped_column("location_label", String(255), nullable=True)
+    fingerprint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    appVersion: Mapped[str | None] = mapped_column("app_version", String(64), nullable=True)
+    heartbeatAt: Mapped[datetime | None] = mapped_column("heartbeat_at", DateTime(timezone=True), nullable=True)
+    config: Mapped[Any] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb"), default=dict
+    )
+    stationMode: Mapped[str | None] = mapped_column("station_mode", String(40), nullable=True)
+    zoneId: Mapped[uuid.UUID | None] = mapped_column("zone_id", UUID(as_uuid=True), nullable=True)
+    siteFloorId: Mapped[uuid.UUID | None] = mapped_column(
         "site_floor_id",
         UUID(as_uuid=True),
         ForeignKey("site_floor.siteFloorId", ondelete="SET NULL"),
         nullable=True,
     )
-    mapPosX = Column("map_pos_x", Float, nullable=True)
-    mapPosY = Column("map_pos_y", Float, nullable=True)
-    # sha256 of the current device token; NULL until the kiosk completes pairing.
-    tokenHash = Column("token_hash", String(128), nullable=True)
-    # ``fam`` claim shared by the device token + its refresh token; revoked on re-pair / revoke.
-    tokenFamily = Column("token_family", String(64), nullable=True)
-    # One-time pairing code (sha256) + expiry; cleared once exchanged at /auth/kiosk/pair.
-    pairingCodeHash = Column("pairing_code_hash", String(128), nullable=True)
-    pairingExpiresAt = Column("pairing_expires_at", DateTime(timezone=True), nullable=True)
-    pairedAt = Column("paired_at", DateTime(timezone=True), nullable=True)
-    lastSeenAt = Column("last_seen_at", DateTime(timezone=True), nullable=True)
-    revokedAt = Column("revoked_at", DateTime(timezone=True), nullable=True)
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
+    mapPosX: Mapped[float | None] = mapped_column("map_pos_x", Float, nullable=True)
+    mapPosY: Mapped[float | None] = mapped_column("map_pos_y", Float, nullable=True)
+    tokenHash: Mapped[str | None] = mapped_column("token_hash", String(128), nullable=True)
+    tokenFamily: Mapped[str | None] = mapped_column("token_family", String(64), nullable=True)
+    pairingCodeHash: Mapped[str | None] = mapped_column("pairing_code_hash", String(128), nullable=True)
+    pairingExpiresAt: Mapped[datetime | None] = mapped_column("pairing_expires_at", DateTime(timezone=True), nullable=True)
+    pairedAt: Mapped[datetime | None] = mapped_column("paired_at", DateTime(timezone=True), nullable=True)
+    lastSeenAt: Mapped[datetime | None] = mapped_column("last_seen_at", DateTime(timezone=True), nullable=True)
+    revokedAt: Mapped[datetime | None] = mapped_column("revoked_at", DateTime(timezone=True), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("kiosk_device_company_idx", "companyId", "revoked_at"),

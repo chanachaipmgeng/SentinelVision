@@ -18,26 +18,25 @@ import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizar
 import { environment } from '../../../../environments/environment';
 
 @Component({
-  selector: 'app-dashboard',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    NgxEchartsModule,
-    SharedModule,
-    PageToolbarComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-    CheckinMapComponent,
-    SetupChecklistComponent,
-    WelcomeWizardComponent,
-  ],
-  templateUrl: './dashboard.component.html',
-  styleUrls: [
-    '../../../shared/styles/dpu-list-page.css',
-    './dashboard.component.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-dashboard',
+    imports: [
+        CommonModule,
+        RouterModule,
+        NgxEchartsModule,
+        SharedModule,
+        PageToolbarComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+        CheckinMapComponent,
+        SetupChecklistComponent,
+        WelcomeWizardComponent,
+    ],
+    templateUrl: './dashboard.component.html',
+    styleUrls: [
+        '../../../shared/styles/dpu-list-page.css',
+        './dashboard.component.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   stats: DashboardStats | null = null;

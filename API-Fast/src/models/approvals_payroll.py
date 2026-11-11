@@ -3,20 +3,11 @@ from __future__ import annotations
 
 import enum
 import uuid
+from datetime import date, datetime
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Date,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -37,23 +28,23 @@ class PayrollPeriodStatus(str, enum.Enum):
 class LeaveBalance(Base):
     __tablename__ = "leave_balance"
 
-    balanceId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    balanceId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    company_employeeId = Column(
+    company_employeeId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
         nullable=False,
     )
-    leaveType = Column(String(30), nullable=False, default="ANNUAL")
-    year = Column(Integer, nullable=False)
-    entitledDays = Column(Float, nullable=False, default=0)
-    usedDays = Column(Float, nullable=False, default=0)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    leaveType: Mapped[str] = mapped_column(String(30), nullable=False, default="ANNUAL")
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    entitledDays: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    usedDays: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index(
@@ -77,28 +68,30 @@ class RegularizationRequest(Base):
 
     __tablename__ = "regularization_request"
 
-    requestId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    requestId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    company_employeeId = Column(
+    company_employeeId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
         nullable=False,
     )
-    workDate = Column(Date, nullable=False)
-    requestedTimestamp = Column(DateTime(timezone=True), nullable=False)
-    requestedType = Column(Integer, nullable=False, default=1)  # TimestampType value
-    reason = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default=ApprovalRequestStatus.PENDING.value, server_default="PENDING")
-    originalTimestampId = Column(UUID(as_uuid=True), nullable=True)
-    approvedBy = Column(UUID(as_uuid=True), nullable=True)
-    approvedAt = Column(DateTime(timezone=True), nullable=True)
-    rejectReason = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    workDate: Mapped[date] = mapped_column(Date, nullable=False)
+    requestedTimestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    requestedType: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=ApprovalRequestStatus.PENDING.value, server_default="PENDING"
+    )
+    originalTimestampId: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    approvedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index("regularization_company_status_idx", "companyId", "status"),
@@ -111,28 +104,30 @@ class OtApprovalRequest(Base):
 
     __tablename__ = "ot_approval_request"
 
-    requestId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    requestId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    company_employeeId = Column(
+    company_employeeId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
         nullable=False,
     )
-    workDate = Column(Date, nullable=False)
-    otMinutes = Column(Integer, nullable=False, default=0)
-    thresholdMinutes = Column(Integer, nullable=True)
-    reason = Column(Text, nullable=True)
-    status = Column(String(20), nullable=False, default=ApprovalRequestStatus.PENDING.value, server_default="PENDING")
-    requiresApproval = Column(Boolean, nullable=False, default=True, server_default="true")
-    approvedBy = Column(UUID(as_uuid=True), nullable=True)
-    approvedAt = Column(DateTime(timezone=True), nullable=True)
-    rejectReason = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    workDate: Mapped[date] = mapped_column(Date, nullable=False)
+    otMinutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    thresholdMinutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=ApprovalRequestStatus.PENDING.value, server_default="PENDING"
+    )
+    requiresApproval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    approvedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index("ot_approval_company_status_idx", "companyId", "status"),
@@ -143,20 +138,22 @@ class OtApprovalRequest(Base):
 class PayrollPeriod(Base):
     __tablename__ = "payroll_period"
 
-    periodId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    periodId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    name = Column(String(120), nullable=True)
-    startDate = Column(Date, nullable=False)
-    endDate = Column(Date, nullable=False)
-    status = Column(String(20), nullable=False, default=PayrollPeriodStatus.OPEN.value, server_default="OPEN")
-    lockedAt = Column(DateTime(timezone=True), nullable=True)
-    lockedBy = Column(UUID(as_uuid=True), nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    startDate: Mapped[date] = mapped_column(Date, nullable=False)
+    endDate: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=PayrollPeriodStatus.OPEN.value, server_default="OPEN"
+    )
+    lockedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lockedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
         Index(

@@ -1,7 +1,11 @@
-from datetime import datetime
+from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, String
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ..config.database import Base
 
@@ -11,6 +15,8 @@ class SystemSetting(Base):
 
     __tablename__ = "system_setting"
 
-    key = Column(String, primary_key=True)
-    value = Column(JSONB, nullable=False, default=dict)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[Any] = mapped_column(JSONB, nullable=False, default=dict)
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )

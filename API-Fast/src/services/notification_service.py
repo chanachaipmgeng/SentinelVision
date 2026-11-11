@@ -15,8 +15,9 @@ import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, select, text
+from sqlalchemy import DateTime, Index, Integer, String, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base, async_session
@@ -38,16 +39,16 @@ logger = logging.getLogger("dpu.notify")
 class NotificationOutbox(Base):
     __tablename__ = "notification_outbox"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    companyId = Column(PGUUID(as_uuid=True), nullable=True)
-    event = Column(String, nullable=False)
-    channel = Column(String, nullable=False)
-    payload = Column(JSONB, nullable=False)
-    status = Column(String, nullable=False, default="pending")
-    attempts = Column(Integer, nullable=False, default=0)
-    lastError = Column(String, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    deadLetteredAt = Column(DateTime(timezone=True), nullable=True)
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    companyId: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    event: Mapped[str] = mapped_column(String, nullable=False)
+    channel: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[Any] = mapped_column(JSONB, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    lastError: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    deadLetteredAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("notification_outbox_status_created_idx", "status", "createdAt"),

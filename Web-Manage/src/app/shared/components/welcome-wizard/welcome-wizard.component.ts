@@ -18,11 +18,10 @@ export const WELCOME_SEEN_PREFIX = 'sv_welcome_seen:';
 
 /** First-run 3-step intro for company admins (once per user, stored in localStorage). */
 @Component({
-  selector: 'app-welcome-wizard',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  templateUrl: './welcome-wizard.component.html',
-  styleUrl: './welcome-wizard.component.css',
+    selector: 'app-welcome-wizard',
+    imports: [CommonModule, TranslateModule],
+    templateUrl: './welcome-wizard.component.html',
+    styleUrl: './welcome-wizard.component.css'
 })
 export class WelcomeWizardComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Fired when the user picks "open checklist" on the final step. */

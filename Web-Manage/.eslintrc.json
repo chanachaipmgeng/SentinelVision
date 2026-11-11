@@ -20,20 +20,22 @@
         "no-dupe-else-if": "error",
         "no-debugger": "error",
 
-        "@typescript-eslint/no-explicit-any": "off",
-        "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
-        "@typescript-eslint/no-unused-vars": "off",
-        "@angular-eslint/use-lifecycle-interface": "off",
-        "@typescript-eslint/ban-types": "off",
-        "@angular-eslint/no-empty-lifecycle-method": "off",
-        "@typescript-eslint/no-unsafe-declaration-merging": "off"
+        "@typescript-eslint/no-explicit-any": "error",
+        "@typescript-eslint/no-non-null-asserted-optional-chain": "error",
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+        "@angular-eslint/use-lifecycle-interface": "error",
+        "@angular-eslint/no-empty-lifecycle-method": "error",
+        "@typescript-eslint/no-unsafe-declaration-merging": "error",
+        "@typescript-eslint/no-wrapper-object-types": "error",
+
+        "@angular-eslint/prefer-standalone": "off"
       }
     },
     {
       "files": ["*.html"],
       "extends": ["plugin:@angular-eslint/template/recommended"],
       "rules": {
-        "@angular-eslint/template/eqeqeq": "off"
+        "@angular-eslint/template/eqeqeq": "error"
       }
     }
   ]

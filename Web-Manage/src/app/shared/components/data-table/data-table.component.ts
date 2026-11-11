@@ -24,11 +24,10 @@ export interface DataTableSortChange {
  * Uses DPU list chrome (pager) — not a card grid.
  */
 @Component({
-  selector: 'app-data-table',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SimplePagerComponent],
-  templateUrl: './data-table.component.html',
-  styleUrls: ['./data-table.component.css'],
+    selector: 'app-data-table',
+    imports: [CommonModule, FormsModule, SimplePagerComponent],
+    templateUrl: './data-table.component.html',
+    styleUrls: ['./data-table.component.css']
 })
 export class DataTableComponent<T = unknown> {
   @Input() columns: DataTableColumn<T>[] = [];

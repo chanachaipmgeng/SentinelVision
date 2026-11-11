@@ -3,7 +3,7 @@ import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@an
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { FileItem, FileUploader, FileUploadModule, ParsedResponseHeaders } from 'ng2-file-upload';
+import { FileItem, FileUploader, FileUploadModule } from 'ng2-file-upload';
 import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
@@ -17,27 +17,26 @@ import { environment } from '../../../../environments/environment';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-admin-manage',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    NgSelectModule,
-    FormsModule,
-    FileUploadModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    SimplePagerComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './admin-manage.component.html',
-  styleUrls: [
-    '../../../shared/styles/dpu-list-page.css',
-    './admin-manage.component.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-admin-manage',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        NgSelectModule,
+        FormsModule,
+        FileUploadModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        SimplePagerComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './admin-manage.component.html',
+    styleUrls: [
+        '../../../shared/styles/dpu-list-page.css',
+        './admin-manage.component.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class AdminManageComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
@@ -191,7 +190,7 @@ export class AdminManageComponent implements OnInit {
       text: this.selectModel.username || '',
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       const req$ =
         this.action === 'edit'
@@ -215,7 +214,7 @@ export class AdminManageComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.userService.delete(item).subscribe({
         next: () => {
@@ -257,7 +256,7 @@ export class AdminManageComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((user) => {
@@ -286,7 +285,7 @@ export class AdminManageComponent implements OnInit {
       text: targets.map((t) => t.getFullname?.() || t.username).join('\n'),
       icon: 'warning',
       buttons: ['ยกเลิก', 'ยืนยัน'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((user) => {

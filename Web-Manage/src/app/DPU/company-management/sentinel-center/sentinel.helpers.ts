@@ -1,14 +1,16 @@
-export function filterWatchlistItems(identities: any[]): any[] {
+import { SentinelIdentity, SentinelIncident } from './sentinel.models';
+
+export function filterWatchlistItems(identities: SentinelIdentity[]): SentinelIdentity[] {
   return (identities || []).filter((i) =>
-    ['BLACKLIST', 'POI', 'VIP'].includes(i.identityType),
+    !!i.identityType && ['BLACKLIST', 'POI', 'VIP'].includes(i.identityType),
   );
 }
 
-export function filterVisitorItems(identities: any[]): any[] {
+export function filterVisitorItems(identities: SentinelIdentity[]): SentinelIdentity[] {
   return (identities || []).filter((i) => i.identityType === 'VISITOR');
 }
 
-export function filterEventAttendeeItems(identities: any[]): any[] {
+export function filterEventAttendeeItems(identities: SentinelIdentity[]): SentinelIdentity[] {
   return (identities || []).filter((i) => i.identityType === 'EVENT_ATTENDEE');
 }
 
@@ -147,9 +149,9 @@ export function accessZoneScanRoute(zoneId: string | null | undefined): string {
 
 /** Client-side zone filter for incident rows (when API zoneId not used). */
 export function filterIncidentsByZone(
-  incidents: any[] | null | undefined,
+  incidents: SentinelIncident[] | null | undefined,
   zoneId: string | null | undefined,
-): any[] {
+): SentinelIncident[] {
   const rows = incidents || [];
   const id = (zoneId || '').trim();
   if (!id) return rows;

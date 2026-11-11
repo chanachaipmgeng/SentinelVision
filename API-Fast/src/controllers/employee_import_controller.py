@@ -138,7 +138,7 @@ def _parse_salary(value: Any) -> float:
     try:
         return float(value)
     except (TypeError, ValueError):
-        raise ValueError(f"เงินเดือนไม่ถูกต้อง: {value}")
+        raise ValueError(f"เงินเดือนไม่ถูกต้อง: {value}") from None
 
 
 def _lookup_by_name(items: List[Any], name: str) -> Optional[Any]:
@@ -229,7 +229,7 @@ def _load_photos_zip(content: bytes) -> Dict[str, bytes]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="ไฟล์รูปต้องเป็น ZIP ที่ถูกต้อง",
-        )
+        ) from None
     return out
 
 
@@ -470,9 +470,9 @@ ProgressCallback = Callable[[Dict[str, int]], Awaitable[None]]
 
 async def import_employees_from_excel(
     companyId: str,
-    file: UploadFile,
+    file: UploadFile | Any,
     db: AsyncSession,
-    photos: Optional[UploadFile] = None,
+    photos: Optional[UploadFile | Any] = None,
     *,
     progress_cb: Optional[ProgressCallback] = None,
 ) -> Dict[str, Any]:
@@ -511,7 +511,7 @@ async def import_employees_from_excel(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="อ่านไฟล์ Excel ไม่ได้ กรุณาใช้เทมเพลตที่ดาวน์โหลดจากระบบ",
-        )
+        ) from None
 
     if "Employees" in wb.sheetnames:
         ws = wb["Employees"]

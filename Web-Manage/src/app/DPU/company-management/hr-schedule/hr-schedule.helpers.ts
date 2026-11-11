@@ -1,3 +1,5 @@
+import { HrLeave, RetentionPolicyFields } from './hr-schedule.models';
+
 export type HrScheduleTab =
   | 'shifts'
   | 'leaves'
@@ -137,12 +139,13 @@ export function holidayImportFormat(fileName: string): 'ical' | 'csv' {
   return 'csv';
 }
 
-export function parseLeaveList(res: any): any[] {
-  return Array.isArray(res) ? res : res?.items || [];
+export function parseLeaveList(res: HrLeave[] | { items?: HrLeave[] } | null | undefined): HrLeave[] {
+  if (!res) return [];
+  return Array.isArray(res) ? res : res.items || [];
 }
 
 export function retentionFromPdpaSummary(
-  retentionPolicy: any,
+  retentionPolicy: RetentionPolicyFields | null | undefined,
   fallback: ReturnType<typeof defaultRetentionSettings>,
 ): ReturnType<typeof defaultRetentionSettings> {
   if (!retentionPolicy) return { ...fallback };

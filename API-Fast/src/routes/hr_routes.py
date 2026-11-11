@@ -236,7 +236,7 @@ async def create_company_holiday(
     try:
         parsed_date = date.fromisoformat(raw_date)
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid holidayDate format")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid holidayDate format") from None
 
     name = str(body.name or "").strip()
     if not name:
@@ -361,7 +361,7 @@ async def apply_thai_holiday_preset(
     try:
         year_i = int(year_val)
     except (TypeError, ValueError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid year")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid year") from None
     if year_i < 2000 or year_i > 2100:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="year out of range")
 
@@ -504,7 +504,7 @@ async def create_leave_request(
         start_d = date.fromisoformat(str(body.startDate or "")[:10])
         end_d = date.fromisoformat(str(body.endDate or "")[:10])
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate are required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate are required") from None
     if end_d < start_d:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
 
@@ -1116,7 +1116,7 @@ async def create_regularization(
         work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
         req_ts = datetime.fromisoformat(str(body.get("requestedTimestamp") or "").replace("Z", "+00:00"))
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate and requestedTimestamp required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate and requestedTimestamp required") from None
     await assert_date_not_locked(db, companyId, work_d)
     row = RegularizationRequest(
         companyId=companyId,
@@ -1180,7 +1180,7 @@ async def create_ot_approval(
     try:
         work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate required") from None
     await assert_date_not_locked(db, companyId, work_d)
     ot_minutes = int(body.get("otMinutes") or 0)
     threshold = body.get("thresholdMinutes")
@@ -1276,7 +1276,7 @@ async def create_payroll_period(
         start_d = date.fromisoformat(str(body.get("startDate") or "")[:10])
         end_d = date.fromisoformat(str(body.get("endDate") or "")[:10])
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required") from None
     if end_d < start_d:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
     period = PayrollPeriod(

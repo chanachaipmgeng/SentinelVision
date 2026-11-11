@@ -86,9 +86,12 @@ async def is_on_approved_leave(
     return row is not None
 
 
+def _timestamp_type_int(t: TimestampType | None) -> int:
+    return int(t.value) if t is not None else -1
+
+
 def _is_check_in(ts: EmployeeTimestamp) -> bool:
-    t = ts.timestampType
-    val = int(getattr(t, "value", t) if t is not None else -1)
+    val = _timestamp_type_int(ts.timestampType)
     if val == TimestampType.CHECK_IN.value:
         return True
     # Approved geofence warnings become CHECK_IN after approval; also count APPROVED warnings.
@@ -99,9 +102,7 @@ def _is_check_in(ts: EmployeeTimestamp) -> bool:
 
 
 def _is_check_out(ts: EmployeeTimestamp) -> bool:
-    t = ts.timestampType
-    val = int(getattr(t, "value", t) if t is not None else -1)
-    return val == TimestampType.CHECK_OUT.value
+    return _timestamp_type_int(ts.timestampType) == TimestampType.CHECK_OUT.value
 
 
 async def recompute_daily(
@@ -141,8 +142,7 @@ async def recompute_daily(
         for p in punches
         if getattr(p, "approvalStatus", None)
         not in (ApprovalStatus.REJECTED, ApprovalStatus.REJECTED.value, "REJECTED")
-        and int(getattr(p.timestampType, "value", p.timestampType) or -1)
-        != TimestampType.DISAPPROVE.value
+        and _timestamp_type_int(p.timestampType) != TimestampType.DISAPPROVE.value
     ]
 
     first_in: Optional[datetime] = None

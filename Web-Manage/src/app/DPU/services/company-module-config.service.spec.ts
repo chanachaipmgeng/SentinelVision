@@ -1,18 +1,19 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 
 import {
   ALWAYS_ON_MODULES,
   CompanyModuleConfigService,
   DEFAULT_COMPANY_MODULE_CONFIG,
 } from './company-module-config.service';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 describe('CompanyModuleConfigService', () => {
   let service: CompanyModuleConfigService;
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [HttpClientTestingModule] });
+    TestBed.configureTestingModule({ imports: [], providers: [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()] });
     service = TestBed.inject(CompanyModuleConfigService);
     http = TestBed.inject(HttpTestingController);
   });

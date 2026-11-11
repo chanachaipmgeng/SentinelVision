@@ -1,16 +1,17 @@
 import { fromEvent } from 'rxjs';
 
 export function switcherArrowFn() {
-  const slideLeft: any = document.querySelector('.slide-left');
-  const slideRight: any = document.querySelector('.slide-right');
+  const slideLeft= document.querySelector<HTMLElement>('.slide-left');
+  const slideRight= document.querySelector<HTMLElement>('.slide-right');
 
   checkHoriMenu();
 
-  if (slideLeft) {
+  if (slideLeft && slideRight) {
     fromEvent(slideLeft, 'click').subscribe(() => {
-      const menuNav: any = document.querySelector('.main-menu');
-      const Html: any = document.querySelector('html');
-      const mainContainer1: any = document.querySelector('.main-sidebar');
+      const menuNav= document.querySelector<HTMLElement>('.main-menu');
+      const Html= document.querySelector<HTMLElement>('html');
+      const mainContainer1= document.querySelector<HTMLElement>('.main-sidebar');
+      if (!menuNav || !Html || !mainContainer1) return;
       const marginLeftValue = Math.ceil(
         Number(window.getComputedStyle(menuNav).marginLeft.split('px')[0])
       );
@@ -24,7 +25,7 @@ export function switcherArrowFn() {
             marginLeftValue < 0 &&
             !(Math.abs(marginLeftValue) < mainContainer1Width)
           ) {
-            menuNav.style.marginRight = 0;
+            menuNav.style.marginRight = '0px';
             menuNav.style.marginLeft =
               Number(menuNav.style.marginLeft.split('px')[0]) +
               Math.abs(mainContainer1Width) +
@@ -44,7 +45,7 @@ export function switcherArrowFn() {
             marginRightValue < 0 &&
             !(Math.abs(marginRightValue) < mainContainer1Width)
           ) {
-            menuNav.style.marginLeft = 0;
+            menuNav.style.marginLeft = '0px';
             menuNav.style.marginRight =
               Number(menuNav.style.marginRight.split('px')[0]) +
               Math.abs(mainContainer1Width) +
@@ -65,7 +66,7 @@ export function switcherArrowFn() {
         menuNav.style.marginRight = '0px';
       }
       const element = document.querySelector('.main-menu > .slide.open');
-      const element1: any = document.querySelector(
+      const element1= document.querySelector<HTMLElement>(
         '.main-menu > .slide.open >ul'
       );
       if (element) {
@@ -77,11 +78,12 @@ export function switcherArrowFn() {
     });
   }
 
-  if (slideRight) {
+  if (slideRight && slideLeft) {
     fromEvent(slideRight, 'click').subscribe(() => {
-      const menuNav: any = document.querySelector('.main-menu');
-      const Html: any = document.querySelector('html');
-      const mainContainer1: any = document.querySelector('.main-sidebar');
+      const menuNav= document.querySelector<HTMLElement>('.main-menu');
+      const Html= document.querySelector<HTMLElement>('html');
+      const mainContainer1= document.querySelector<HTMLElement>('.main-sidebar');
+      if (!menuNav || !Html || !mainContainer1) return;
       const marginLeftValue = Math.ceil(
         Number(window.getComputedStyle(menuNav).marginLeft.split('px')[0])
       );
@@ -93,7 +95,7 @@ export function switcherArrowFn() {
       if (menuNav.scrollWidth > mainContainer1.offsetWidth) {
         if (!(Html.getAttribute('dir') === 'rtl')) {
           if (Math.abs(check) > Math.abs(marginLeftValue)) {
-            menuNav.style.marginRight = 0;
+            menuNav.style.marginRight = '0px';
             if (
               !(
                 Math.abs(check) >
@@ -111,7 +113,7 @@ export function switcherArrowFn() {
           }
         } else {
           if (Math.abs(check) > Math.abs(marginRightValue)) {
-            menuNav.style.marginLeft = 0;
+            menuNav.style.marginLeft = '0px';
             if (
               !(
                 Math.abs(check) >
@@ -131,7 +133,7 @@ export function switcherArrowFn() {
         }
       }
       const element = document.querySelector('.main-menu > .slide.open');
-      const element1: any = document.querySelector(
+      const element1= document.querySelector<HTMLElement>(
         '.main-menu > .slide.open >ul'
       );
       if (element) {
@@ -145,11 +147,12 @@ export function switcherArrowFn() {
 }
 export function checkHoriMenu() {
   if (document.querySelector('.slide-left')) {
-    const menuNav: any = document.querySelector('.main-menu');
-    const mainContainer1: any = document.querySelector('.main-sidebar');
-    const slideLeft: any = document.querySelector('.slide-left');
-    const slideRight: any = document.querySelector('.slide-right');
-    const Html: any = document.querySelector('html');
+    const menuNav= document.querySelector<HTMLElement>('.main-menu');
+    const mainContainer1= document.querySelector<HTMLElement>('.main-sidebar');
+    const slideLeft= document.querySelector<HTMLElement>('.slide-left');
+    const slideRight= document.querySelector<HTMLElement>('.slide-right');
+    const Html= document.querySelector<HTMLElement>('html');
+    if (!menuNav || !mainContainer1 || !slideLeft || !slideRight || !Html) return;
     const marginLeftValue = Math.ceil(
       Number(window.getComputedStyle(menuNav).marginLeft.split('px')[0])
     );

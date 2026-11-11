@@ -4,7 +4,7 @@ import {
   ElementRef,
   OnInit,
   ViewChild,
-  ViewEncapsulation,
+  ViewEncapsulation, AfterViewInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { GoogleMapsModule, MapMarker } from '@angular/google-maps';
@@ -27,24 +27,23 @@ declare global {
 }
 
 @Component({
-  selector: 'app-company-info',
-  standalone: true,
-  imports: [
-    SharedModule,
-    NgSelectModule,
-    CommonModule,
-    FormsModule,
-    FileUploadModule,
-    TranslateModule,
-    GoogleMapsModule,
-    MapMarker,
-    LocationMapComponent,
-  ],
-  templateUrl: './company-info.component.html',
-  styleUrl: './company-info.component.css',
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-info',
+    imports: [
+        SharedModule,
+        NgSelectModule,
+        CommonModule,
+        FormsModule,
+        FileUploadModule,
+        TranslateModule,
+        GoogleMapsModule,
+        MapMarker,
+        LocationMapComponent,
+    ],
+    templateUrl: './company-info.component.html',
+    styleUrl: './company-info.component.css',
+    encapsulation: ViewEncapsulation.None
 })
-export class CompanyInfoComponent implements OnInit {
+export class CompanyInfoComponent implements OnInit, AfterViewInit {
   @ViewChild('placeAutocompleteHost', { static: false })
   placeAutocompleteHost!: ElementRef<HTMLElement>;
 
@@ -67,7 +66,8 @@ export class CompanyInfoComponent implements OnInit {
   }
 
   get mapsReady(): boolean {
-    return !window.__dpuMapsAuthFailed && !!(window as any).google?.maps?.Map;
+    const w = window as Window & { google?: { maps?: { Map?: unknown } } };
+    return !window.__dpuMapsAuthFailed && !!w.google?.maps?.Map;
   }
 
   get mapsLink(): string {
@@ -204,7 +204,7 @@ export class CompanyInfoComponent implements OnInit {
       text: 'ข้อมูลที่ยังไม่บันทึกจะหายไป',
       icon: 'warning',
       buttons: ['อยู่ต่อ', 'รีเซ็ต'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (ok) this.getCompanyInfo();
     });
   }
@@ -221,7 +221,7 @@ export class CompanyInfoComponent implements OnInit {
       text: name,
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.saving = true;
       this.comService.update(this.companyModel).subscribe({

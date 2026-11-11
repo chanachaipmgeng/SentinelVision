@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
 import { environment } from '../../../../environments/environment';
@@ -82,11 +82,67 @@ import {
   KioskOfflineQueueService,
   OfflinePunchPayload,
 } from './kiosk-offline-queue.service';
+import { SentinelEventRule, SentinelZone } from '../sentinel-center/sentinel.models';
 
 /** GPU pending depth at/above this enters degraded mode (slower detect + banner). */
 const KIOSK_DEGRADED_QUEUE_PENDING = 8;
 
 export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'BREAK_OUT' | 'BREAK_IN' | 'CHECK_OUT';
+
+interface KioskWsDetectMessage {
+  frameWidth?: number;
+  frameHeight?: number;
+  faces?: Array<Record<string, unknown>>;
+  queue?: { pending?: number };
+}
+
+interface CheckInMember {
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  memberId?: string;
+  username?: string;
+}
+
+interface CheckInEmployee {
+  fullName?: string;
+  firstName?: string;
+  employeeId?: string;
+  department?: string;
+  position?: string;
+  member?: CheckInMember;
+}
+
+interface CheckInTimestamp {
+  timestampType?: number | string;
+  isLate?: boolean;
+  lateMinutes?: number;
+  overtimeMinutes?: number;
+  timestamp?: string;
+  photoTimestamp?: string | null;
+  photoUrl?: string;
+  locationName?: string;
+  timestampId?: string;
+}
+
+/** HTTP identify / check-in / modular station payloads (shape varies by mode). */
+interface CheckInApiResponse {
+  employee?: CheckInEmployee;
+  member?: CheckInMember;
+  timestamp?: CheckInTimestamp;
+  subjectName?: string;
+  memberId?: string;
+  confidencePercent?: number;
+  distance?: number;
+  matchQuality?: string | null;
+  isWarning?: boolean;
+  accessGranted?: boolean;
+  decision?: string;
+  identityType?: string;
+  welcomeMessage?: string;
+  seatNumber?: string | number;
+  duplicate?: boolean;
+}
 
 export interface CheckInFeedItem {
   id: string;
@@ -160,13 +216,12 @@ interface FaceTrack {
 }
 
 @Component({
-  selector: 'app-enroll-face',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, RouterModule, TranslateModule, FocusTrapDirective],
-  templateUrl: './enroll-face.component.html',
-  styleUrl: './enroll-face.component.scss'
+    selector: 'app-enroll-face',
+    imports: [CommonModule, FormsModule, SharedModule, RouterModule, TranslateModule, FocusTrapDirective],
+    templateUrl: './enroll-face.component.html',
+    styleUrl: './enroll-face.component.scss'
 })
-export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
+export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   @ViewChild('video') video!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
@@ -791,7 +846,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.consentLoading = true;
-    this.http.get<any>(`/hr/company/${this.companyId}/pdpa/consent-policy`).subscribe({
+    this.http
+      .get<{ version?: string; textTh?: string; textEn?: string }>(
+        `/hr/company/${this.companyId}/pdpa/consent-policy`,
+      )
+      .subscribe({
       next: (policy) => {
         this.consentPolicy = policy || null;
         const accepted = sessionStorage.getItem(this.consentStorageKey());
@@ -861,9 +920,13 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (this.showAccessChrome || this.showVisitorChrome) {
-      this.http.get<any[]>(`/sentinel/company/${this.companyId}/zones`).subscribe({
+      this.http.get<SentinelZone[]>(`/sentinel/company/${this.companyId}/zones`).subscribe({
         next: (rows) => {
-          this.zones = rows || [];
+          this.zones = (rows || []).map((z) => ({
+            zoneId: z.zoneId,
+            name: String(z.name ?? z.thName ?? z.zoneId),
+            require2FA: Boolean(z['require2FA']),
+          }));
           if (!this.zoneId && this.zones.length === 1) {
             this.zoneId = this.zones[0].zoneId;
           }
@@ -873,9 +936,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
       });
     }
     if (this.showEventChrome) {
-      this.http.get<any[]>(`/sentinel/company/${this.companyId}/events`).subscribe({
+      this.http.get<SentinelEventRule[]>(`/sentinel/company/${this.companyId}/events`).subscribe({
         next: (rows) => {
-          this.events = rows || [];
+          this.events = (rows || []).map((e) => ({
+            eventId: e.eventId,
+            name: String(e.name ?? e.eventId),
+            capacity: typeof e['capacity'] === 'number' ? e['capacity'] : undefined,
+            checkedInCount:
+              typeof e['checkedInCount'] === 'number' ? e['checkedInCount'] : undefined,
+          }));
           if (!this.eventId && this.events.length === 1) {
             this.eventId = this.events[0].eventId;
           }
@@ -1228,7 +1297,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   /** Server detection result → display-space boxes → shared pipeline. */
-  private onServerDetected(msg: any): void {
+  private onServerDetected(msg: KioskWsDetectMessage): void {
     this.wsDetectInFlight = false;
     this.wsDetectMisses = 0;
     this.serverDetectFailures = 0;
@@ -1574,7 +1643,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   /** Apply modular scan payload fields (door / VIP / event seat) onto kiosk HUD state. */
-  private applyStationModeResult(response: any): void {
+  private applyStationModeResult(response: CheckInApiResponse | null | undefined): void {
     if (!response) {
       return;
     }
@@ -1842,15 +1911,16 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
     formData.append('companyId', this.companyId);
     formData.append('stationMode', this.stationMode);
     this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
-      next: (response: any) => {
+      next: (response) => {
+        const body = response as CheckInApiResponse;
         const t = this.tracks.find((x) => x.id === trackId);
         if (!t) {
           return;
         }
         t.identifyInFlight = false;
-        t.memberId = response.memberId || response.member?.memberId || null;
-        t.label = response.member?.fullName || response.member?.firstName || t.label;
-        const confidence = Number(response.confidencePercent ?? NaN);
+        t.memberId = body.memberId || body.member?.memberId || null;
+        t.label = body.member?.fullName || body.member?.firstName || t.label;
+        const confidence = Number(body.confidencePercent ?? NaN);
         t.confidence = Number.isFinite(confidence) ? confidence : null;
         if (t.memberId && this.isMemberOnCooldown(t.memberId)) {
           t.phase = 'cooldown';
@@ -2042,7 +2112,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleCheckInSuccess(
-    response: any,
+    response: CheckInApiResponse,
     frames: string[],
     track: FaceTrack | undefined,
     isDuplicate = false,

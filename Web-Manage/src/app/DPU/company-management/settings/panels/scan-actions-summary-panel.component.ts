@@ -19,10 +19,9 @@ interface RuleRow {
 
 /** Read-only summary of module toggles + scan action rules; editing stays in Scan & Action Hub. */
 @Component({
-  selector: 'app-scan-actions-summary-panel',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule, EmptyStateComponent, StatChipComponent],
-  template: `
+    selector: 'app-scan-actions-summary-panel',
+    imports: [CommonModule, RouterModule, TranslateModule, EmptyStateComponent, StatChipComponent],
+    template: `
     <app-empty-state *ngIf="loading" [loading]="true" message="settingsHub.loading"></app-empty-state>
     <div *ngIf="!loading" class="grid grid-cols-12 gap-4">
       <div class="col-span-12 xl:col-span-7">
@@ -73,7 +72,7 @@ interface RuleRow {
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class ScanActionsSummaryPanelComponent implements OnInit {
   loading = true;

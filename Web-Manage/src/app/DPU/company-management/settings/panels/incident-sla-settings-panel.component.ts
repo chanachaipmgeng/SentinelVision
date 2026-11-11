@@ -9,10 +9,9 @@ type SlaStatus = 'idle' | 'saved' | 'error';
 
 /** Company SLA minutes for high-severity OPEN incidents — settings hub panel. */
 @Component({
-  selector: 'app-incident-sla-settings-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  template: `
+    selector: 'app-incident-sla-settings-panel',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    template: `
     <div class="box modern-card glass">
       <div class="box-body space-y-4">
         <div>
@@ -57,7 +56,7 @@ type SlaStatus = 'idle' | 'saved' | 'error';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class IncidentSlaSettingsPanelComponent implements OnInit {
   @Input() companyId = '';

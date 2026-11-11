@@ -59,7 +59,14 @@ export class EmpImportService {
   startImport(
     companyId: string,
     photosZip: File | null,
-    onDone: (result: any) => void,
+    onDone: (result: {
+      total: number;
+      success: number;
+      failed: number;
+      facesEnrolled?: number;
+      created?: { faceEnrolled?: boolean; faceWarning?: string | null; row: number; email: string }[];
+      errors?: { row: number; email: string; message: string }[];
+    }) => void,
     onError: (msg: string) => void,
   ): void {
     const file = this.pendingImportExcel;
@@ -90,7 +97,14 @@ export class EmpImportService {
   private pollImportJob(
     companyId: string,
     jobId: string,
-    onDone: (result: any) => void,
+    onDone: (result: {
+      total: number;
+      success: number;
+      failed: number;
+      facesEnrolled?: number;
+      created?: { faceEnrolled?: boolean; faceWarning?: string | null; row: number; email: string }[];
+      errors?: { row: number; email: string; message: string }[];
+    }) => void,
     onError: (msg: string) => void,
   ): void {
     this.employeeService.importJob(companyId, jobId).subscribe({

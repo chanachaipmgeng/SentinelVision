@@ -1002,6 +1002,18 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 )
                 return
 
+            if company_id is None:
+                await _send(
+                    websocket,
+                    {
+                        "type": "error",
+                        "code": "unauthenticated",
+                        "detail": "companyId not bound; send session first",
+                    },
+                    lock=send_lock,
+                )
+                continue
+
             if msg_type == "heartbeat":
                 if kiosk_device_id is None or company_id is None:
                     await _send(
@@ -1034,9 +1046,11 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         {
                             "type": "heartbeat_ok",
                             "deviceId": row["deviceId"],
-                            "heartbeatAt": row.get("heartbeatAt").isoformat()
-                            if row.get("heartbeatAt")
-                            else None,
+                            "heartbeatAt": (
+                                hb.isoformat()
+                                if (hb := row.get("heartbeatAt")) is not None
+                                else None
+                            ),
                         },
                         lock=send_lock,
                     )

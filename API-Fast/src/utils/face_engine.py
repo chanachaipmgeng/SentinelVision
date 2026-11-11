@@ -291,7 +291,8 @@ def extract_face_features_bgr(
         embedding = _embed_from_det(image, bbox, kps, score)
         if embedding is None:
             return None
-        return embedding.astype(np.float32).tolist(), bbox.astype(np.float32)
+        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        return vec, bbox.astype(np.float32)
 
     faces = get_face_app().get(image)
     face = _largest_face(faces)
@@ -309,7 +310,8 @@ def extract_face_features_bgr(
     if embedding is None:
         return None
 
-    return embedding.astype(np.float32).tolist(), face.bbox.astype(np.float32)
+    slow_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+    return slow_vec, face.bbox.astype(np.float32)
 
 
 def _synthetic_kps_for_crop(width: int, height: int) -> np.ndarray:
@@ -376,7 +378,8 @@ def extract_face_features_from_crop_bgr(
     embedding = _embed_from_det(image, bbox, kps, det_score=1.0)
     if embedding is None:
         return None
-    return embedding.astype(np.float32).tolist(), bbox
+    vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+    return vec, bbox
 
 
 def extract_face_features_from_crop(
@@ -478,7 +481,8 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
 
     mid = image_paths[len(image_paths) // 2]
     mid_img = _read_bgr(mid)
-    mid_bbox = frames[len(frames) // 2]["bbox"] if frames[len(frames) // 2] else None
+    mid_frame = frames[len(frames) // 2]
+    mid_bbox = mid_frame["bbox"] if isinstance(mid_frame, dict) else None
     passed, spoof_msg = check_liveness_frame_bgr(mid_img, mid_bbox)
     if not passed:
         raise ValueError(spoof_msg)

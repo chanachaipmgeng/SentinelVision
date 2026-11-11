@@ -5,13 +5,14 @@ import {
   transition,
   trigger,
   stagger,
-  sequence
+  sequence,
+  type AnimationMetadata,
 } from '@angular/animations';
 import { AnimationsService } from './animations.service';
 
 export const ROUTE_ANIMATIONS_ELEMENTS = 'route-animations-elements';
 
-const STEPS_ALL: any[] = [
+const STEPS_ALL: AnimationMetadata[] = [
   query(':enter > *', style({ opacity: 0, position: 'fixed' }), {
     optional: true
   }),
@@ -58,7 +59,7 @@ const STEPS_ALL: any[] = [
     { optional: true }
   )
 ];
-const STEPS_NONE : any = [];
+const STEPS_NONE: AnimationMetadata[] = [];
 const STEPS_PAGE = [STEPS_ALL[0], STEPS_ALL[2]];
 const STEPS_ELEMENTS = [STEPS_ALL[1], STEPS_ALL[3]];
 

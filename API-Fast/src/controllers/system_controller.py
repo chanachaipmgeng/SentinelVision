@@ -40,7 +40,8 @@ async def rebuild_face_index():
 
 def _merge_tts(raw: Any) -> Dict[str, Any]:
     src = raw if isinstance(raw, dict) else {}
-    templates_src = src.get("templates") if isinstance(src.get("templates"), dict) else {}
+    raw_templates = src.get("templates")
+    templates_src = raw_templates if isinstance(raw_templates, dict) else {}
     templates = dict(DEFAULT_TTS_SETTINGS["templates"])
     for key, default_val in DEFAULT_TTS_SETTINGS["templates"].items():
         val = templates_src.get(key)

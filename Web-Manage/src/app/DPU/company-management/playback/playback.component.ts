@@ -30,12 +30,11 @@ export interface VideoClipRow {
 }
 
 @Component({
-  selector: 'app-company-playback',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageToolbarComponent],
-  templateUrl: './playback.component.html',
-  styleUrl: './playback.component.css',
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-playback',
+    imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageToolbarComponent],
+    templateUrl: './playback.component.html',
+    styleUrl: './playback.component.css',
+    encapsulation: ViewEncapsulation.None
 })
 export class PlaybackComponent implements OnInit, OnDestroy {
   @ViewChild('player') playerRef?: ElementRef<HTMLVideoElement>;

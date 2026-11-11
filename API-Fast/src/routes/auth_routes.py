@@ -187,11 +187,12 @@ async def login(
         await write_audit(actor=member, action="LOGIN_FAIL", path="/auth/login", status_code=401)
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if bool(getattr(member, "totpEnabled", False)) and getattr(member, "totpSecret", None):
+    totp_secret = member.totpSecret
+    if bool(member.totpEnabled) and totp_secret:
         code = (request.totpCode or "").strip()
         if not code:
             raise HTTPException(status_code=401, detail="MFA_REQUIRED")
-        if not verify_totp(member.totpSecret, code):
+        if not verify_totp(totp_secret, code):
             register_failure(member)
             await db.commit()
             await write_audit(actor=member, action="LOGIN_MFA_FAIL", path="/auth/login", status_code=401)
@@ -427,6 +428,8 @@ async def change_password(
     if not _verify_password(body.currentPassword, member.passwordHash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     db_member = await db.get(Member, member.memberId)
+    if db_member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
     db_member.passwordHash = hash_password(body.newPassword)
     db_member.mustChangePassword = False
     await db.commit()
@@ -449,6 +452,8 @@ async def mfa_setup(
     db: AsyncSession = Depends(get_db),
 ):
     db_member = await db.get(Member, member.memberId)
+    if db_member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
     secret = generate_totp_secret()
     db_member.totpSecret = secret
     db_member.totpEnabled = False
@@ -467,7 +472,9 @@ async def mfa_enable(
     db: AsyncSession = Depends(get_db),
 ):
     db_member = await db.get(Member, member.memberId)
-    secret = getattr(db_member, "totpSecret", None)
+    if db_member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+    secret = db_member.totpSecret
     if not secret:
         raise HTTPException(status_code=400, detail="Run /auth/mfa/setup first")
     if not verify_totp(secret, body.code):
@@ -484,6 +491,8 @@ async def mfa_disable(
     db: AsyncSession = Depends(get_db),
 ):
     db_member = await db.get(Member, member.memberId)
+    if db_member is None:
+        raise HTTPException(status_code=404, detail="Member not found")
     db_member.totpEnabled = False
     db_member.totpSecret = None
     await db.commit()
@@ -534,7 +543,7 @@ async def sso_oidc_start(body: OidcStartRequest | None = None):
         try:
             company_id = str(UUID(str(body.companyId)))
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid companyId")
+            raise HTTPException(status_code=400, detail="Invalid companyId") from None
     return_to = (body.returnTo or "").strip() or None
     if return_to and (not return_to.startswith("/") or return_to.startswith("//")):
         # only same-origin paths may be used as a post-login redirect
@@ -542,7 +551,7 @@ async def sso_oidc_start(body: OidcStartRequest | None = None):
     try:
         return await provider.build_authorization_request(company_id=company_id, return_to=return_to)
     except OidcError as exc:
-        raise _oidc_http_error(exc)
+        raise _oidc_http_error(exc) from exc
 
 
 @router.post("/sso/oidc", response_model=Token)
@@ -558,7 +567,7 @@ async def sso_oidc_callback(
         email = extract_email(claims)
     except OidcError as exc:
         await _audit_sso(action="SSO_LOGIN_FAIL", path="/auth/sso/oidc/callback", status_code=exc.status_code)
-        raise _oidc_http_error(exc)
+        raise _oidc_http_error(exc) from exc
 
     result = await db.execute(select(Member).where(func.lower(Member.email) == email))
     member = result.scalars().first()
@@ -612,13 +621,13 @@ def _expose_reset_token() -> bool:
 async def send_reset_password(body: SendResetPasswordRequest, db: AsyncSession = Depends(get_db)):
     """Always returns ok (no email enumeration). Issues a short-lived password-reset JWT."""
     email = (body.email or "").strip().lower()
-    result = {"ok": True}
+    result: dict[str, object] = {"ok": True}
     if not email or "@" not in email:
         return result
     member = (
         await db.execute(select(Member).where(func.lower(Member.email) == email))
     ).scalars().first()
-    if member is None or getattr(member, "deletedAt", None) is not None:
+    if member is None or member.deletedAt is not None:
         return result
     token = create_password_reset_token(str(member.memberId), member.username, member.email)
     await write_audit(

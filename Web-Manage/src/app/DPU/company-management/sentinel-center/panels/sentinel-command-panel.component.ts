@@ -3,28 +3,36 @@ import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
+import { HttpErrorResponse } from '@angular/common/http';
 import { SentinelApiService } from '../sentinel-api.service';
 import { defaultScanForm, firstFileFromInput } from '../sentinel.helpers';
+import {
+  SentinelEventRule,
+  SentinelIncident,
+  SentinelScanResult,
+  SentinelSiemSettings,
+  SentinelZone,
+} from '../sentinel.models';
+import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 
 @Component({
-  selector: 'app-sentinel-command-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './sentinel-command-panel.component.html',
+    selector: 'app-sentinel-command-panel',
+    imports: [CommonModule, FormsModule, RouterModule],
+    templateUrl: './sentinel-command-panel.component.html'
 })
 export class SentinelCommandPanelComponent implements OnInit {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  zones: any[] = [];
-  events: any[] = [];
-  incidents: any[] = [];
+  zones: SentinelZone[] = [];
+  events: SentinelEventRule[] = [];
+  incidents: SentinelIncident[] = [];
   incidentFilterSeverity = '';
   incidentFilterStatus = '';
   incidentFilterZoneId = '';
   scanSelectedFile: File | null = null;
-  lastScanResult: any = null;
+  lastScanResult: SentinelScanResult | null = null;
   isScanning = false;
   scanForm = defaultScanForm();
 
@@ -49,11 +57,11 @@ export class SentinelCommandPanelComponent implements OnInit {
 
   loadSiemSettings(): void {
     this.api.getSiemSettings(this.companyId).subscribe({
-      next: (s) => {
+      next: (s: SentinelSiemSettings) => {
         this.siemForm = {
-          siemWebhookUrl: s?.siemWebhookUrl || '',
+          siemWebhookUrl: s.siemWebhookUrl || '',
           siemWebhookSecret: '',
-          hasSiemWebhookSecret: !!s?.hasSiemWebhookSecret,
+          hasSiemWebhookSecret: !!s.hasSiemWebhookSecret,
         };
       },
     });
@@ -85,8 +93,9 @@ export class SentinelCommandPanelComponent implements OnInit {
   testSiemSettings(): void {
     this.api.testSiemSettings(this.companyId).subscribe({
       next: (res) => {
+        const body = res as { queued?: boolean; reason?: string };
         this.toast.emit(
-          res?.queued ? 'ส่ง SIEM test ping เข้า outbox แล้ว' : res?.reason || 'ยังไม่ได้ตั้งค่า webhook'
+          body.queued ? 'ส่ง SIEM test ping เข้า outbox แล้ว' : body.reason || 'ยังไม่ได้ตั้งค่า webhook'
         );
       },
       error: () => this.toast.emit('ทดสอบ SIEM ไม่สำเร็จ'),
@@ -134,12 +143,12 @@ export class SentinelCommandPanelComponent implements OnInit {
         this.loadEvents();
         this.overviewChanged.emit();
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.isScanning = false;
         this.lastScanResult = {
           accessGranted: false,
           decision: 'SCAN_ERROR',
-          message: err?.error?.detail || 'เกิดข้อผิดพลาดในการประมวลผลใบหน้า',
+          message: apiErrorMessage(err, 'เกิดข้อผิดพลาดในการประมวลผลใบหน้า'),
         };
       },
     });
@@ -176,12 +185,12 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   /** True when the incident is still actionable (not CLOSED). */
-  canActOnIncident(inc: any): boolean {
+  canActOnIncident(inc: SentinelIncident): boolean {
     const st = (inc?.status || 'OPEN').toUpperCase();
     return st !== 'CLOSED';
   }
 
-  isOverdue(inc: any): boolean {
+  isOverdue(inc: SentinelIncident): boolean {
     if (!inc?.slaDueAt) return false;
     const st = (inc?.status || 'OPEN').toUpperCase();
     if (st === 'CLOSED') return false;

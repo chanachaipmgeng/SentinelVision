@@ -30,12 +30,11 @@ let nextId = 0;
  * `YYYY-MM-DD` Bangkok calendar dates; convert with `bangkokRangeToInstants` for API calls.
  */
 @Component({
-  selector: 'app-date-range-filter',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, FlatpickrModule],
-  providers: [FlatpickrDefaults],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-date-range-filter',
+    imports: [CommonModule, FormsModule, TranslateModule, FlatpickrModule],
+    providers: [FlatpickrDefaults],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div class="dpu-drf" role="group" [attr.aria-label]="'listKit.dateRange.label' | translate">
       <div class="dpu-drf__presets" *ngIf="showPresets">
         <button
@@ -81,8 +80,8 @@ let nextId = 0;
       </div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
         min-width: 0;
@@ -164,7 +163,7 @@ let nextId = 0;
         }
       }
     `,
-  ],
+    ]
 })
 export class DateRangeFilterComponent implements OnInit, OnChanges {
   @Input() value: DateRangeValue | null = null;

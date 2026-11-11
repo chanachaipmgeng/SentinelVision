@@ -17,17 +17,17 @@ function emp(partial: Partial<EmployeeModel> & { email?: string; firstName?: str
   const m = new EmployeeModel();
   m.company_employeeId = partial.company_employeeId || 'ce-1';
   m.employeeId = partial.employeeId || 'E001';
-  (m as any).member = {
+  (m as unknown).member = {
     email: partial.email || 'a@b.com',
     firstName: partial.firstName || 'An',
     lastName: 'Bee',
     getPicture: () => '',
   };
-  (m as any).getFullname = () => `${(m as any).member.firstName} ${(m as any).member.lastName}`;
-  (m as any).getType = () => 'monthly';
-  (m as any).getRole = () => 'emp';
-  (m as any).position = { getName: () => 'Dev', thName: 'Dev', positionId: 'p1' };
-  (m as any).department = { getName: () => 'IT', thName: 'IT', departmentId: 'd1' };
+  (m as unknown).getFullname = () => `${(m as unknown).member.firstName} ${(m as unknown).member.lastName}`;
+  (m as unknown).getType = () => 'monthly';
+  (m as unknown).getRole = () => 'emp';
+  (m as unknown).position = { getName: () => 'Dev', thName: 'Dev', positionId: 'p1' };
+  (m as unknown).department = { getName: () => 'IT', thName: 'IT', departmentId: 'd1' };
   m.empType = 1;
   return m;
 }
@@ -41,9 +41,9 @@ describe('company-emp.helpers', () => {
   });
 
   it('filterEmployees ignores null rows and nullish fields', () => {
-    const list = [null as any, emp({ firstName: 'Ann' }), emp({ firstName: 'Bob' })];
-    (list[2] as any).getFullname = () => null;
-    (list[2] as any).member = { email: null, firstName: 'Bob', lastName: 'X' };
+    const list = [null as unknown, emp({ firstName: 'Ann' }), emp({ firstName: 'Bob' })];
+    (list[2] as unknown).getFullname = () => null;
+    (list[2] as unknown).member = { email: null, firstName: 'Bob', lastName: 'X' };
     expect(filterEmployees(list, 'ann').length).toBe(1);
     expect(filterEmployees(list, '').length).toBe(2);
   });

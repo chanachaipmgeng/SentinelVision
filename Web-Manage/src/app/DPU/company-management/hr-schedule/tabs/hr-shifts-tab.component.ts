@@ -5,20 +5,20 @@ import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HrScheduleApiService } from '../hr-schedule-api.service';
 import { defaultNewShift } from '../hr-schedule.helpers';
+import { HrDepartmentShiftRow, HrEmployeeShiftRow, HrShift } from '../hr-schedule.models';
 
 @Component({
-  selector: 'app-hr-shifts-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-shifts-tab.component.html',
+    selector: 'app-hr-shifts-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-shifts-tab.component.html'
 })
 export class HrShiftsTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  shifts: any[] = [];
-  departments: any[] = [];
-  employees: any[] = [];
+  shifts: HrShift[] = [];
+  departments: HrDepartmentShiftRow[] = [];
+  employees: HrEmployeeShiftRow[] = [];
   newShift = defaultNewShift();
 
   constructor(private api: HrScheduleApiService, private token: TokenService) {

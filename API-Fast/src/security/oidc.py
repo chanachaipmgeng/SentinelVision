@@ -171,9 +171,9 @@ def decode_transaction(token: str, expected_state: str) -> LoginTransaction:
     try:
         payload = pyjwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
     except pyjwt.ExpiredSignatureError:
-        raise OidcError("SSO login expired, please start again", 400)
+        raise OidcError("SSO login expired, please start again", 400) from None
     except Exception:
-        raise OidcError("Invalid SSO login transaction", 400)
+        raise OidcError("Invalid SSO login transaction", 400) from None
     if payload.get("typ") != TXN_TYP:
         raise OidcError("Invalid SSO login transaction", 400)
     state = payload.get("state") or ""
@@ -257,13 +257,13 @@ class OidcProvider:
             try:
                 resp = await client.get(url, headers={"Accept": "application/json"})
             except httpx.HTTPError as exc:
-                raise OidcError(f"OIDC provider unreachable: {exc.__class__.__name__}", 503)
+                raise OidcError(f"OIDC provider unreachable: {exc.__class__.__name__}", 503) from exc
         if resp.status_code != 200:
             raise OidcError(f"OIDC provider returned HTTP {resp.status_code} for {url}", 503)
         try:
             data = resp.json()
         except ValueError:
-            raise OidcError("OIDC provider returned invalid JSON", 503)
+            raise OidcError("OIDC provider returned invalid JSON", 503) from None
         if not isinstance(data, dict):
             raise OidcError("OIDC provider returned an unexpected document", 503)
         return data
@@ -297,7 +297,7 @@ class OidcProvider:
         try:
             key_set = JsonWebKey.import_key_set(data)
         except Exception:
-            raise OidcError("OIDC JWKS document is invalid", 503)
+            raise OidcError("OIDC JWKS document is invalid", 503) from None
         self._jwks = _Cached(value=key_set, fetched_at=time.monotonic())
         return key_set
 
@@ -325,7 +325,7 @@ class OidcProvider:
             padded = header_b64 + "=" * (-len(header_b64) % 4)
             header = json.loads(base64.urlsafe_b64decode(padded))
         except Exception:
-            raise OidcError("Malformed ID token", 401)
+            raise OidcError("Malformed ID token", 401) from None
         if not isinstance(header, dict):
             raise OidcError("Malformed ID token", 401)
         return header
@@ -379,12 +379,12 @@ class OidcProvider:
             code = getattr(exc, "error", None) or exc.__class__.__name__
             description = getattr(exc, "description", None)
             detail = f"Invalid ID token: {code}" + (f" ({description})" if description else "")
-            raise OidcError(detail, 401)
+            raise OidcError(detail, 401) from exc
         except OidcError:
             raise
         except Exception as exc:  # pragma: no cover - defensive
             logger.warning("oidc id_token verification failed: %s", exc.__class__.__name__)
-            raise OidcError("Invalid ID token", 401)
+            raise OidcError("Invalid ID token", 401) from exc
         if "nonce" not in claims:
             raise OidcError("Invalid ID token: missing_claim nonce", 401)
         return dict(claims)
@@ -443,14 +443,15 @@ class OidcProvider:
                 form["client_secret"] = self.client_secret
         async with self._client_factory() as client:
             try:
-                resp = await client.post(
-                    doc["token_endpoint"],
-                    data=form,
-                    auth=auth,
-                    headers={"Accept": "application/json"},
-                )
+                post_kwargs: dict[str, Any] = {
+                    "data": form,
+                    "headers": {"Accept": "application/json"},
+                }
+                if auth is not None:
+                    post_kwargs["auth"] = auth
+                resp = await client.post(doc["token_endpoint"], **post_kwargs)
             except httpx.HTTPError as exc:
-                raise OidcError(f"OIDC token endpoint unreachable: {exc.__class__.__name__}", 503)
+                raise OidcError(f"OIDC token endpoint unreachable: {exc.__class__.__name__}", 503) from exc
         try:
             body = resp.json()
         except ValueError:

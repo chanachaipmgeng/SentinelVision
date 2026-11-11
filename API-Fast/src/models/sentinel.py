@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 import uuid
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.sql import func
+from datetime import datetime
+from typing import Any
+
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from ..config.database import Base
 
@@ -17,34 +21,34 @@ class SentinelIdentity(Base):
 
     __tablename__ = "sentinel_identity"
 
-    identityId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    identityId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    identityType = Column("identity_type", String(30), nullable=False, default="VISITOR")
-    fullName = Column("full_name", String(160), nullable=False)
-    documentRef = Column("document_ref", String(100), nullable=True)
-    phoneNumber = Column("phone_number", String(50), nullable=True)
-    email = Column("email", String(150), nullable=True)
-    organization = Column("organization", String(150), nullable=True)
-    severity = Column("severity", String(20), nullable=False, default="LOW")
-    alertNote = Column("alert_note", Text, nullable=True)
-    visitPurpose = Column("visit_purpose", String(255), nullable=True)
-    hostMemberId = Column("host_member_id", UUID(as_uuid=True), nullable=True)
-    seatNumber = Column("seat_number", String(60), nullable=True)
-    eventId = Column("event_id", UUID(as_uuid=True), nullable=True)
-    allowedZoneIds = Column("allowed_zone_ids", JSONB, nullable=False, default=list)
-    pictureUrl = Column("picture_url", String(255), nullable=True)
-    embedding = Column(Vector(FACE_EMBEDDING_DIM), nullable=True)
-    validFrom = Column("valid_from", DateTime(timezone=True), server_default=func.now())
-    expiresAt = Column("expires_at", DateTime(timezone=True), nullable=True)
-    consentAcceptedAt = Column("consent_accepted_at", DateTime(timezone=True), nullable=True)
-    status = Column("status", String(20), nullable=False, default="ACTIVE")
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    identityType: Mapped[str] = mapped_column("identity_type", String(30), nullable=False, default="VISITOR")
+    fullName: Mapped[str] = mapped_column("full_name", String(160), nullable=False)
+    documentRef: Mapped[str | None] = mapped_column("document_ref", String(100), nullable=True)
+    phoneNumber: Mapped[str | None] = mapped_column("phone_number", String(50), nullable=True)
+    email: Mapped[str | None] = mapped_column("email", String(150), nullable=True)
+    organization: Mapped[str | None] = mapped_column("organization", String(150), nullable=True)
+    severity: Mapped[str] = mapped_column("severity", String(20), nullable=False, default="LOW")
+    alertNote: Mapped[str | None] = mapped_column("alert_note", Text, nullable=True)
+    visitPurpose: Mapped[str | None] = mapped_column("visit_purpose", String(255), nullable=True)
+    hostMemberId: Mapped[uuid.UUID | None] = mapped_column("host_member_id", UUID(as_uuid=True), nullable=True)
+    seatNumber: Mapped[str | None] = mapped_column("seat_number", String(60), nullable=True)
+    eventId: Mapped[uuid.UUID | None] = mapped_column("event_id", UUID(as_uuid=True), nullable=True)
+    allowedZoneIds: Mapped[Any] = mapped_column("allowed_zone_ids", JSONB, nullable=False, default=list)
+    pictureUrl: Mapped[str | None] = mapped_column("picture_url", String(255), nullable=True)
+    embedding: Mapped[Any | None] = mapped_column(Vector(FACE_EMBEDDING_DIM), nullable=True)
+    validFrom: Mapped[datetime] = mapped_column("valid_from", DateTime(timezone=True), server_default=func.now())
+    expiresAt: Mapped[datetime | None] = mapped_column("expires_at", DateTime(timezone=True), nullable=True)
+    consentAcceptedAt: Mapped[datetime | None] = mapped_column("consent_accepted_at", DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="ACTIVE")
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("sentinel_identity_company_type_idx", "companyId", "identity_type", "status"),
@@ -62,41 +66,40 @@ class SentinelAccessZone(Base):
 
     __tablename__ = "sentinel_access_zone"
 
-    zoneId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    zoneId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    name = Column(String(120), nullable=False)
-    code = Column(String(60), nullable=False, default="MAIN-GATE")
-    locationId = Column("location_id", UUID(as_uuid=True), nullable=True)
-    siteFloorId = Column(
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    code: Mapped[str] = mapped_column(String(60), nullable=False, default="MAIN-GATE")
+    locationId: Mapped[uuid.UUID | None] = mapped_column("location_id", UUID(as_uuid=True), nullable=True)
+    siteFloorId: Mapped[uuid.UUID | None] = mapped_column(
         "site_floor_id",
         UUID(as_uuid=True),
         ForeignKey("site_floor.siteFloorId", ondelete="SET NULL"),
         nullable=True,
     )
-    mapPosX = Column("map_pos_x", Float, nullable=True)
-    mapPosY = Column("map_pos_y", Float, nullable=True)
-    stationMode = Column("station_mode", String(30), nullable=False, default="ACCESS_CONTROL")
-    allowedDepartments = Column("allowed_departments", JSONB, nullable=False, default=list)
-    allowedIdentityTypes = Column(
+    mapPosX: Mapped[float | None] = mapped_column("map_pos_x", Float, nullable=True)
+    mapPosY: Mapped[float | None] = mapped_column("map_pos_y", Float, nullable=True)
+    stationMode: Mapped[str] = mapped_column("station_mode", String(30), nullable=False, default="ACCESS_CONTROL")
+    allowedDepartments: Mapped[Any] = mapped_column("allowed_departments", JSONB, nullable=False, default=list)
+    allowedIdentityTypes: Mapped[Any] = mapped_column(
         "allowed_identity_types",
         JSONB,
         nullable=False,
         default=lambda: ["EMPLOYEE", "VIP", "VISITOR"],
     )
-    scheduleStart = Column("schedule_start", String(10), nullable=False, default="00:00")
-    scheduleEnd = Column("schedule_end", String(10), nullable=False, default="23:59")
-    require2FA = Column("require_2fa", Boolean, nullable=False, default=False)
-    relayWebhookUrl = Column("relay_webhook_url", String(255), nullable=True)
-    # Widened for Fernet-sealed values (`fernet:` + token); see Alembic 0019.
-    relaySecret = Column("relay_secret", String(512), nullable=True)
-    isActive = Column("is_active", Boolean, nullable=False, default=True)
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    scheduleStart: Mapped[str] = mapped_column("schedule_start", String(10), nullable=False, default="00:00")
+    scheduleEnd: Mapped[str] = mapped_column("schedule_end", String(10), nullable=False, default="23:59")
+    require2FA: Mapped[bool] = mapped_column("require_2fa", Boolean, nullable=False, default=False)
+    relayWebhookUrl: Mapped[str | None] = mapped_column("relay_webhook_url", String(255), nullable=True)
+    relaySecret: Mapped[str | None] = mapped_column("relay_secret", String(512), nullable=True)
+    isActive: Mapped[bool] = mapped_column("is_active", Boolean, nullable=False, default=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("sentinel_access_zone_company_idx", "companyId", "is_active"),
@@ -114,23 +117,23 @@ class SentinelEvent(Base):
 
     __tablename__ = "sentinel_event"
 
-    eventId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    eventId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    name = Column(String(160), nullable=False)
-    locationName = Column("location_name", String(160), nullable=True)
-    startAt = Column("start_at", DateTime(timezone=True), nullable=False)
-    endAt = Column("end_at", DateTime(timezone=True), nullable=False)
-    welcomeMessage = Column("welcome_message", String(255), nullable=True)
-    capacity = Column("capacity", Integer, nullable=False, default=200)
-    autoExpireDays = Column("auto_expire_days", Integer, nullable=False, default=7)
-    status = Column("status", String(20), nullable=False, default="LIVE")
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column("updated_at", DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    locationName: Mapped[str | None] = mapped_column("location_name", String(160), nullable=True)
+    startAt: Mapped[datetime] = mapped_column("start_at", DateTime(timezone=True), nullable=False)
+    endAt: Mapped[datetime] = mapped_column("end_at", DateTime(timezone=True), nullable=False)
+    welcomeMessage: Mapped[str | None] = mapped_column("welcome_message", String(255), nullable=True)
+    capacity: Mapped[int] = mapped_column("capacity", Integer, nullable=False, default=200)
+    autoExpireDays: Mapped[int] = mapped_column("auto_expire_days", Integer, nullable=False, default=7)
+    status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="LIVE")
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("sentinel_event_company_idx", "companyId", "status", "start_at"),)
 
@@ -140,42 +143,41 @@ class SentinelIncidentLog(Base):
 
     __tablename__ = "sentinel_incident_log"
 
-    incidentId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    incidentId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    eventType = Column("event_type", String(40), nullable=False)
-    severity = Column("severity", String(20), nullable=False, default="INFO")
-    identityId = Column("identity_id", UUID(as_uuid=True), nullable=True)
-    memberId = Column("member_id", UUID(as_uuid=True), nullable=True)
-    subjectName = Column("subject_name", String(160), nullable=True)
-    identityType = Column("identity_type", String(30), nullable=True)
-    zoneId = Column("zone_id", UUID(as_uuid=True), nullable=True)
-    zoneName = Column("zone_name", String(120), nullable=True)
-    # Phase 6C: optional CCTV camera that produced the face/event (nullable for legacy rows).
-    cameraId = Column(
+    eventType: Mapped[str] = mapped_column("event_type", String(40), nullable=False)
+    severity: Mapped[str] = mapped_column("severity", String(20), nullable=False, default="INFO")
+    identityId: Mapped[uuid.UUID | None] = mapped_column("identity_id", UUID(as_uuid=True), nullable=True)
+    memberId: Mapped[uuid.UUID | None] = mapped_column("member_id", UUID(as_uuid=True), nullable=True)
+    subjectName: Mapped[str | None] = mapped_column("subject_name", String(160), nullable=True)
+    identityType: Mapped[str | None] = mapped_column("identity_type", String(30), nullable=True)
+    zoneId: Mapped[uuid.UUID | None] = mapped_column("zone_id", UUID(as_uuid=True), nullable=True)
+    zoneName: Mapped[str | None] = mapped_column("zone_name", String(120), nullable=True)
+    cameraId: Mapped[uuid.UUID | None] = mapped_column(
         "camera_id",
         UUID(as_uuid=True),
         ForeignKey("camera.cameraId", ondelete="SET NULL"),
         nullable=True,
     )
-    eventId = Column("event_id", UUID(as_uuid=True), nullable=True)
-    confidencePercent = Column("confidence_percent", Float, nullable=True)
-    distance = Column("distance", Float, nullable=True)
-    snapshotUrl = Column("snapshot_url", String(255), nullable=True)
-    actionTaken = Column("action_taken", String(255), nullable=True)
-    status = Column("status", String(20), nullable=False, default="OPEN", server_default="OPEN")
-    acknowledgedBy = Column("acknowledged_by", UUID(as_uuid=True), nullable=True)
-    acknowledgedAt = Column("acknowledged_at", DateTime(timezone=True), nullable=True)
-    assignedTo = Column("assigned_to", UUID(as_uuid=True), nullable=True)
-    assignedAt = Column("assigned_at", DateTime(timezone=True), nullable=True)
-    closedBy = Column("closed_by", UUID(as_uuid=True), nullable=True)
-    closedAt = Column("closed_at", DateTime(timezone=True), nullable=True)
-    dedupeKey = Column("dedupe_key", String(180), nullable=True)
-    slaDueAt = Column("sla_due_at", DateTime(timezone=True), nullable=True)
-    occurredAt = Column("occurred_at", DateTime(timezone=True), server_default=func.now())
+    eventId: Mapped[uuid.UUID | None] = mapped_column("event_id", UUID(as_uuid=True), nullable=True)
+    confidencePercent: Mapped[float | None] = mapped_column("confidence_percent", Float, nullable=True)
+    distance: Mapped[float | None] = mapped_column("distance", Float, nullable=True)
+    snapshotUrl: Mapped[str | None] = mapped_column("snapshot_url", String(255), nullable=True)
+    actionTaken: Mapped[str | None] = mapped_column("action_taken", String(255), nullable=True)
+    status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="OPEN", server_default="OPEN")
+    acknowledgedBy: Mapped[uuid.UUID | None] = mapped_column("acknowledged_by", UUID(as_uuid=True), nullable=True)
+    acknowledgedAt: Mapped[datetime | None] = mapped_column("acknowledged_at", DateTime(timezone=True), nullable=True)
+    assignedTo: Mapped[uuid.UUID | None] = mapped_column("assigned_to", UUID(as_uuid=True), nullable=True)
+    assignedAt: Mapped[datetime | None] = mapped_column("assigned_at", DateTime(timezone=True), nullable=True)
+    closedBy: Mapped[uuid.UUID | None] = mapped_column("closed_by", UUID(as_uuid=True), nullable=True)
+    closedAt: Mapped[datetime | None] = mapped_column("closed_at", DateTime(timezone=True), nullable=True)
+    dedupeKey: Mapped[str | None] = mapped_column("dedupe_key", String(180), nullable=True)
+    slaDueAt: Mapped[datetime | None] = mapped_column("sla_due_at", DateTime(timezone=True), nullable=True)
+    occurredAt: Mapped[datetime] = mapped_column("occurred_at", DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("sentinel_incident_company_occurred_idx", "companyId", occurredAt.desc()),
@@ -186,9 +188,7 @@ class SentinelIncidentLog(Base):
             "camera_id",
             occurredAt.desc(),
         ),
-        # Matches 0026_incident_camera — analytics hour/range scans (ASC, not DESC).
         Index("sentinel_incident_company_hour_idx", "companyId", "occurred_at"),
-        # Matches 0023_incident_sla — open-incident SLA sweep.
         Index(
             "sentinel_incident_sla_due_idx",
             "companyId",

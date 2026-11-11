@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 
 import { AuthService, RefreshedTokens, SsoStart } from './auth.service';
 import { TokenService } from './token.service';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -14,13 +15,15 @@ describe('AuthService', () => {
     sessionStorage.clear();
     localStorage.clear();
     TestBed.configureTestingModule({
-      imports: [HttpClientTestingModule],
-      providers: [
+    imports: [],
+    providers: [
         AuthService,
         TokenService,
         { provide: Router, useValue: { navigate: () => undefined } },
-      ],
-    });
+        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClientTesting(),
+    ]
+});
     service = TestBed.inject(AuthService);
     tokens = TestBed.inject(TokenService);
     http = TestBed.inject(HttpTestingController);
@@ -124,7 +127,7 @@ describe('AuthService', () => {
     });
 
     it('does not expose register()', () => {
-      expect((service as any).register).toBeUndefined();
+      expect((service as unknown).register).toBeUndefined();
     });
   });
 

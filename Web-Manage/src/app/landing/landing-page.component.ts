@@ -14,22 +14,21 @@ import { DpuHorizonGlowComponent } from './fx/dpu-horizon-glow.component';
 import { DpuMouseGlowComponent } from './fx/dpu-mouse-glow.component';
 
 @Component({
-  selector: 'app-landing-page',
-  standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    TranslateModule,
-    DpuRevealDirective,
-    DpuCountUpDirective,
-    DpuCardTiltDirective,
-    DpuHorizonGlowComponent,
-    DpuAuraFieldComponent,
-    DpuMouseGlowComponent,
-    DpuCursorDotComponent,
-  ],
-  templateUrl: './landing-page.component.html',
-  styleUrl: './landing-page.component.scss',
+    selector: 'app-landing-page',
+    imports: [
+        CommonModule,
+        RouterModule,
+        TranslateModule,
+        DpuRevealDirective,
+        DpuCountUpDirective,
+        DpuCardTiltDirective,
+        DpuHorizonGlowComponent,
+        DpuAuraFieldComponent,
+        DpuMouseGlowComponent,
+        DpuCursorDotComponent,
+    ],
+    templateUrl: './landing-page.component.html',
+    styleUrl: './landing-page.component.scss'
 })
 export class LandingPageComponent implements OnInit, OnDestroy {
   lang = 'th';

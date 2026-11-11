@@ -28,11 +28,10 @@ import {
  * current JSON-serialisable filter object in and applies whatever `apply` emits.
  */
 @Component({
-  selector: 'app-saved-views-bar',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  templateUrl: './saved-views-bar.component.html',
-  styleUrls: ['./saved-views-bar.component.css'],
+    selector: 'app-saved-views-bar',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    templateUrl: './saved-views-bar.component.html',
+    styleUrls: ['./saved-views-bar.component.css']
 })
 export class SavedViewsBarComponent implements OnInit, OnChanges {
   @Input({ required: true }) pageKey = '';
@@ -41,7 +40,7 @@ export class SavedViewsBarComponent implements OnInit, OnChanges {
   @Input() companyId?: string;
   /** Emit the default view's filters once after load (disable when the URL already pins filters). */
   @Input() autoApplyDefault = true;
-  @Output() apply = new EventEmitter<any>();
+  @Output() apply = new EventEmitter<unknown>();
 
   @ViewChild('nameInput') nameInput?: ElementRef<HTMLInputElement>;
 
@@ -146,7 +145,7 @@ export class SavedViewsBarComponent implements OnInit, OnChanges {
         this.translate.instant('listKit.common.cancel'),
         this.translate.instant('listKit.common.delete'),
       ],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.service.remove(this.scope, view.id).subscribe(() => this.load(false));
     });

@@ -11,10 +11,10 @@ export class DepartmentModel extends BaseModel{
     translateService? : TranslateService
   ) {
     super(data,translateService);
-    this.companyId = data?.companyId!;
-    this.departmentId = data?.departmentId!;
-    this.thName = data?.thName!;
-    this.engName = data?.engName!;
+    this.companyId = data?.companyId ?? '';
+    this.departmentId = data?.departmentId ?? '';
+    this.thName = data?.thName ?? '';
+    this.engName = data?.engName ?? '';
   }
 
   getName(): string {

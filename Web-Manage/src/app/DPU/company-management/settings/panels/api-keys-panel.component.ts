@@ -14,10 +14,9 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
 
 /** Tenant API keys CRUD — settings hub panel. Plaintext shown once on create. */
 @Component({
-  selector: 'app-api-keys-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  template: `
+    selector: 'app-api-keys-panel',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    template: `
     <div class="box modern-card glass mb-4">
       <div class="box-body space-y-4">
         <div>
@@ -117,7 +116,7 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
         </ul>
       </div>
     </div>
-  `,
+  `
 })
 export class ApiKeysPanelComponent implements OnInit {
   @Input() companyId = '';

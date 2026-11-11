@@ -152,6 +152,8 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
         map_raw = (await db.execute(stmt_map)).scalars().all()
         map_points = []
         for ts in map_raw:
+            if ts.latitude is None or ts.longitude is None:
+                continue
             try:
                 lat = float(ts.latitude)
                 lng = float(ts.longitude)
@@ -179,13 +181,16 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
                 continue
             if not (abs(lat) <= 90 and abs(lng) <= 180):
                 continue
-            loc_type = loc.locationType
-            if hasattr(loc_type, "value"):
-                loc_type = loc_type.value
-            try:
-                loc_type = int(loc_type)
-            except (TypeError, ValueError):
-                loc_type = 0
+            from ..models.company_location import LocationType
+
+            raw_loc_type = loc.locationType
+            if isinstance(raw_loc_type, LocationType):
+                loc_type = int(raw_loc_type.value)
+            else:
+                try:
+                    loc_type = int(raw_loc_type)  # type: ignore[arg-type]
+                except (TypeError, ValueError):
+                    loc_type = 0
             company_locations.append(
                 {
                     "locationId": str(loc.locationId),
@@ -250,4 +255,4 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch dashboard stats: {str(e)}",
-        )
+        ) from e

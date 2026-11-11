@@ -5,11 +5,10 @@ import { TranslateModule } from '@ngx-translate/core';
 export type SkeletonVariant = 'rows' | 'cards' | 'kpi';
 
 @Component({
-  selector: 'app-skeleton-loader',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-skeleton-loader',
+    imports: [CommonModule, TranslateModule],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <div
       class="dpu-skel"
       [ngClass]="'dpu-skel--' + variant"
@@ -48,8 +47,8 @@ export type SkeletonVariant = 'rows' | 'cards' | 'kpi';
       </ng-container>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
       }
@@ -161,7 +160,7 @@ export type SkeletonVariant = 'rows' | 'cards' | 'kpi';
         }
       }
     `,
-  ],
+    ]
 })
 export class SkeletonLoaderComponent {
   @Input() variant: SkeletonVariant = 'rows';

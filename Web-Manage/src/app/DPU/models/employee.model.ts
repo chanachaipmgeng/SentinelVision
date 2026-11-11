@@ -23,16 +23,16 @@ export class EmployeeModel extends BaseModel{
   ) {
     super(data, translateService);
     this.member = new UserProfileModel(data?.member, this.translateService)
-    this.companyId = data?.companyId!
+    this.companyId = data?.companyId ?? ''
     this.position = new PositionModel(data?.position, this.translateService)
     this.department = new DepartmentModel(data?.department, this.translateService)
-    this.employeeId = data?.employeeId!;
-    this.company_employeeId = data?.company_employeeId!;
-    this.bossId = data?.bossId!;
-    this.startDate = data?.startDate!
-    this.salary = data?.salary!
-    this.empType = data?.empType!
-    this.companyRoleType = data?.companyRoleType!
+    this.employeeId = data?.employeeId ?? '';
+    this.company_employeeId = data?.company_employeeId ?? '';
+    this.bossId = data?.bossId ?? '';
+    this.startDate = data?.startDate ?? ''
+    this.salary = data?.salary ?? 0;
+    this.empType = data?.empType ?? 0;
+    this.companyRoleType = data?.companyRoleType ?? 0;
   }
 
   getFullname(): string {

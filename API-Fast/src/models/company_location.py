@@ -1,25 +1,36 @@
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey , Enum
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
-from ..config.database import Base
-import uuid
+from __future__ import annotations
+
 import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+
+from ..config.database import Base
+
+
 class LocationType(enum.Enum):
     PERMANENT = 0
     TEMPORARY = 1
-    
-class CompanyLocation(Base):
-    __tablename__ = 'company_location'
 
-    locationId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(UUID(as_uuid=True), ForeignKey('company.companyId'), nullable=False)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
-    locationName = Column(String, nullable=False)
-    radius = Column(Float, nullable=False ,default=0.5)
-    locationType = Column(Enum(LocationType), nullable=False, default=LocationType.PERMANENT)
-    startDate = Column(DateTime(timezone=True), server_default=func.now())
-    endDate = Column(DateTime(timezone=True), server_default=func.now())
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
-    deletedAt = Column("deleted_at", DateTime(timezone=True), nullable=True)
+
+class CompanyLocation(Base):
+    __tablename__ = "company_location"
+
+    locationId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("company.companyId"), nullable=False)
+    latitude: Mapped[float] = mapped_column(Float, nullable=False)
+    longitude: Mapped[float] = mapped_column(Float, nullable=False)
+    locationName: Mapped[str] = mapped_column(String, nullable=False)
+    radius: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    locationType: Mapped[LocationType] = mapped_column(
+        Enum(LocationType), nullable=False, default=LocationType.PERMANENT
+    )
+    startDate: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    endDate: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)

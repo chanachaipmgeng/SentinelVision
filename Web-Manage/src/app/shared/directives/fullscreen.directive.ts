@@ -1,52 +1,58 @@
-import { Directive, ElementRef, HostListener, Inject } from '@angular/core';
-import { DOCUMENT } from "@angular/common";
+import { Directive, ElementRef, HostListener, Inject, OnInit } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+
+type FullscreenElement = HTMLElement & {
+  mozRequestFullScreen?: () => Promise<void>;
+  webkitRequestFullscreen?: () => Promise<void>;
+  msRequestFullscreen?: () => Promise<void>;
+};
+
+type FullscreenDocument = Document & {
+  mozCancelFullScreen?: () => Promise<void>;
+  webkitExitFullscreen?: () => Promise<void>;
+  msExitFullscreen?: () => Promise<void>;
+};
 
 @Directive({
-  selector: '[appFullscreen]'
+    selector: '[appFullscreen]',
+    standalone: false
 })
-export class FullscreenDirective {
+export class FullscreenDirective implements OnInit {
 
-// For simple code use below code
- public fullScreen = false;
-  public elem: any;
+  public fullScreen = false;
+  public elem!: FullscreenElement;
 
   constructor(
-    @Inject(DOCUMENT) private document: any,
-    private elementRef: ElementRef
+    @Inject(DOCUMENT) private document: FullscreenDocument,
+    private elementRef: ElementRef<HTMLElement>
   ) { }
 
-  ngOnInit(){
+  ngOnInit(): void {
     this.elem = this.elementRef.nativeElement.ownerDocument.documentElement;
   }
 
   @HostListener('click')
-  onClick(){
+  onClick(): void {
     this.fullScreen = !this.fullScreen;
     if (this.fullScreen) {
       if (this.elem.requestFullscreen) {
-        this.elem.requestFullscreen();
+        void this.elem.requestFullscreen();
       } else if (this.elem.mozRequestFullScreen) {
-        /* Firefox */
-        this.elem.mozRequestFullScreen();
+        void this.elem.mozRequestFullScreen();
       } else if (this.elem.webkitRequestFullscreen) {
-        /* Chrome, Safari and Opera */
-        this.elem.webkitRequestFullscreen();
+        void this.elem.webkitRequestFullscreen();
       } else if (this.elem.msRequestFullscreen) {
-        /* IE/Edge */
-        this.elem.msRequestFullscreen();
+        void this.elem.msRequestFullscreen();
       }
     } else {
-      if (!this.document.exitFullscreen) {
-        this.document.exitFullscreen();
+      if (this.document.exitFullscreen) {
+        void this.document.exitFullscreen();
       } else if (this.document.mozCancelFullScreen) {
-        /* Firefox */
-        this.document.mozCancelFullScreen();
+        void this.document.mozCancelFullScreen();
       } else if (this.document.webkitExitFullscreen) {
-        /* Chrome, Safari and Opera */
-        this.document.webkitExitFullscreen();
+        void this.document.webkitExitFullscreen();
       } else if (this.document.msExitFullscreen) {
-        /* IE/Edge */
-        this.document.msExitFullscreen();
+        void this.document.msExitFullscreen();
       }
     }
   }

@@ -31,12 +31,12 @@
           <p class="switcher-style-head">Theme Color Mode:</p>
           <div class="grid grid-cols-3 switcher-style">
             <div class="flex items-center">
-              <input type="radio" name="theme-style" class="ti-form-radio" id="switcher-light-theme"  (click)="themeChange('light','light','dark')" [checked]="localdata['ynex-theme-mode']!='dark'">
+              <input type="radio" name="theme-style" class="ti-form-radio" id="switcher-light-theme"  (click)="themeChange('light','light','dark')" [checked]="localdata['ynex-theme-mode']!=='dark'">
               <label for="switcher-light-theme"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Light</label>
             </div>
             <div class="flex items-center">
-              <input type="radio" name="theme-style" class="ti-form-radio" id="switcher-dark-theme" (click)="themeChange('dark','dark','dark')" [checked]="localdata['ynex-theme-mode']=='dark'">
+              <input type="radio" name="theme-style" class="ti-form-radio" id="switcher-dark-theme" (click)="themeChange('dark','dark','dark')" [checked]="localdata['ynex-theme-mode']==='dark'">
               <label for="switcher-dark-theme"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold" >Dark</label>
             </div>
@@ -47,12 +47,12 @@
           <div class="grid grid-cols-3  switcher-style">
             <div class="flex items-center">
               <input type="radio" name="direction" class="ti-form-radio" id="switcher-ltr"   (click)="DirectionsChange('ltr')"
-              [checked]="localdata['ynex-dir'] != 'rtl'">
+              [checked]="localdata['ynex-dir'] !== 'rtl'">
               <label for="switcher-ltr" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold" >LTR</label>
             </div>
             <div class="flex items-center">
               <input type="radio" name="direction" class="ti-form-radio" id="switcher-rtl" (click)="DirectionsChange('rtl')"
-              [checked]="localdata['ynex-dir'] == 'rtl'">
+              [checked]="localdata['ynex-dir'] === 'rtl'">
               <label for="switcher-rtl" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">RTL</label>
             </div>
           </div>
@@ -62,12 +62,12 @@
           <div class="grid grid-cols-3  switcher-style">
             <div class="flex items-center">
               <input type="radio" name="navigation-style" class="ti-form-radio" id="switcher-vertical"   (click)="NavigationChange('vertical')"
-              [checked]="localdata['ynex-nav-mode'] != 'horizontal'">
+              [checked]="localdata['ynex-nav-mode'] !== 'horizontal'">
               <label for="switcher-vertical"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Vertical</label>
             </div>
             <div class="flex items-center">
-              <input type="radio" name="navigation-style" class="ti-form-radio" id="switcher-horizontal"   [checked]="localdata['ynex-nav-mode'] == 'horizontal'"
+              <input type="radio" name="navigation-style" class="ti-form-radio" id="switcher-horizontal"   [checked]="localdata['ynex-nav-mode'] === 'horizontal'"
               (click)="NavigationChange('horizontal')">
               <label for="switcher-horizontal"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Horizontal</label>
@@ -80,25 +80,25 @@
             <div class="flex">
               <input type="radio" name="navigation-data-menu-styles" class="ti-form-radio" id="switcher-menu-click"
               (click)="Menus('menu-click-closed', 'menu-click')"
-              [checked]="localdata['ynex-menu-style'] == 'menu-click'">
+              [checked]="localdata['ynex-menu-style'] === 'menu-click'">
               <label for="switcher-menu-click" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Menu
                 Click</label>
             </div>
             <div class="flex">
               <input type="radio" name="navigation-data-menu-styles" class="ti-form-radio" id="switcher-menu-hover"    (click)="Menus('menu-hover-closed', 'menu-hover')"
-              [checked]="localdata['ynex-menu-style'] == 'menu-hover'">
+              [checked]="localdata['ynex-menu-style'] === 'menu-hover'">
               <label for="switcher-menu-hover" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Menu
                 Hover</label>
             </div>
             <div class="flex">
               <input type="radio" name="navigation-data-menu-styles" class="ti-form-radio" id="switcher-icon-click"    (click)="Menus('icon-click-closed', 'icon-click')"
-              [checked]="localdata['ynex-menu-style'] == 'icon-click'">
+              [checked]="localdata['ynex-menu-style'] === 'icon-click'">
               <label for="switcher-icon-click" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Icon
                 Click</label>
             </div>
             <div class="flex">
               <input type="radio" name="navigation-data-menu-styles" class="ti-form-radio" id="switcher-icon-hover"  (click)="Menus('icon-hover-closed', 'icon-hover')"
-              [checked]="localdata['ynex-menu-style'] == 'icon-hover'">
+              [checked]="localdata['ynex-menu-style'] === 'icon-hover'">
               <label for="switcher-icon-hover" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Icon
                 Hover</label>
             </div>
@@ -112,40 +112,40 @@
           <div class="grid grid-cols-2 gap-2 switcher-style">
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-default-menu"  (click)="SideMenus('', 'overlay')"
-              [checked]="localdata['ynex-sidemenu-styles']  == 'default-menu'|| !localdata['ynex-sidemenu-styles']&&!localdata['ynex-menu-style']" >
+              [checked]="localdata['ynex-sidemenu-styles']  === 'default-menu'|| !localdata['ynex-sidemenu-styles']&&!localdata['ynex-menu-style']" >
               <label for="switcher-default-menu"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold ">Default
                 Menu</label>
             </div>
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-closed-menu" (click)="SideMenus('close-menu-close', 'closed')"
-              [checked]="localdata['ynex-sidemenu-styles'] == 'closed-menu'" >
+              [checked]="localdata['ynex-sidemenu-styles'] === 'closed-menu'" >
               <label for="switcher-closed-menu" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold " >
                 Closed
                 Menu</label>
             </div>
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-icontext-menu" (click)="SideMenus('icon-text-close', 'icontext')"
-              [checked]="localdata['ynex-sidemenu-styles'] == 'icon-text'">
+              [checked]="localdata['ynex-sidemenu-styles'] === 'icon-text'">
               <label for="switcher-icontext-menu" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold ">Icon
                 Text</label>
 
             </div>
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-icon-overlay" (click)="SideMenus('icon-overlay-close', 'overlay')"
-              [checked]="localdata['ynex-sidemenu-styles'] == 'icon-overlay'">
+              [checked]="localdata['ynex-sidemenu-styles'] === 'icon-overlay'">
               <label for="switcher-icon-overlay" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold ">Icon
                 Overlay</label>
             </div>
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-detached" (click)="SideMenus('detached-close', 'detached')"
-              [checked]="localdata['ynex-sidemenu-styles'] == 'detached'">
+              [checked]="localdata['ynex-sidemenu-styles'] === 'detached'">
               <label for="switcher-detached"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold ">Detached</label>
             </div>
             <div class="flex">
               <input type="radio" name="sidemenu-layout-styles" class="ti-form-radio" id="switcher-double-menu" (click)="SideMenus('double-menu-open', 'doublemenu')"
-              [checked]="localdata['ynex-sidemenu-styles'] == 'double-menu'">
+              [checked]="localdata['ynex-sidemenu-styles'] === 'double-menu'">
               <label for="switcher-double-menu" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Double
                 Menu</label>
             </div>
@@ -158,19 +158,19 @@
           <div class="grid grid-cols-3  switcher-style">
             <div class="flex">
               <input type="radio" name="data-page-styles" class="ti-form-radio" id="switcher-regular"   (click)="PageChange('regular')"
-              [checked]="localdata['ynex-page-mode'] != 'classic'">
+              [checked]="localdata['ynex-page-mode'] !== 'classic'">
               <label for="switcher-regular"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Regular</label>
             </div>
             <div class="flex">
               <input type="radio" name="data-page-styles" class="ti-form-radio" id="switcher-classic" (click)="PageChange('classic')"
-              [checked]="localdata['ynex-page-mode'] == 'classic'">
+              [checked]="localdata['ynex-page-mode'] === 'classic'">
               <label for="switcher-classic"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Classic</label>
             </div>
             <div class="flex">
               <input type="radio" name="data-page-styles" class="ti-form-radio" id="switcher-modern" (click)="PageChange('modern')"
-              [checked]="localdata['ynex-page-mode'] == 'modern'">
+              [checked]="localdata['ynex-page-mode'] === 'modern'">
               <label for="switcher-modern"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold"> Modern</label>
             </div>
@@ -181,13 +181,13 @@
           <div class="grid grid-cols-3 switcher-style">
             <div class="flex">
               <input type="radio" name="layout-width" class="ti-form-radio" id="switcher-full-width"   (click)="WidthChange('full-width')"
-              [checked]="localdata['ynex-width-mode'] != 'boxed'">
+              [checked]="localdata['ynex-width-mode'] !== 'boxed'">
               <label for="switcher-full-width"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">FullWidth</label>
             </div>
             <div class="flex">
               <input type="radio" name="layout-width" class="ti-form-radio" id="switcher-boxed"   (click)="WidthChange('boxed')"
-              [checked]="localdata['ynex-width-mode'] == 'boxed'">
+              [checked]="localdata['ynex-width-mode'] === 'boxed'">
               <label for="switcher-boxed" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Boxed</label>
             </div>
           </div>
@@ -197,13 +197,13 @@
           <div class="grid grid-cols-3  switcher-style">
             <div class="flex">
               <input type="radio" name="data-menu-positions" class="ti-form-radio" id="switcher-menu-fixed"  (click)="MenuChange('fixed')"
-              [checked]="localdata['ynex-menu-mode'] != 'scrollable'">
+              [checked]="localdata['ynex-menu-mode'] !== 'scrollable'">
               <label for="switcher-menu-fixed"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Fixed</label>
             </div>
             <div class="flex">
               <input type="radio" name="data-menu-positions" class="ti-form-radio" id="switcher-menu-scroll"  (click)="MenuChange('scrollable')"
-              [checked]="localdata['ynex-menu-mode'] == 'scrollable'">
+              [checked]="localdata['ynex-menu-mode'] === 'scrollable'">
               <label for="switcher-menu-scroll"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Scrollable </label>
             </div>
@@ -214,13 +214,13 @@
           <div class="grid grid-cols-3 switcher-style">
             <div class="flex">
               <input type="radio" name="data-header-positions" class="ti-form-radio" id="switcher-header-fixed"  (click)="HeaderChange('fixed')"
-              [checked]="localdata['ynex-header-mode'] != 'scrollable'">
+              [checked]="localdata['ynex-header-mode'] !== 'scrollable'">
               <label for="switcher-header-fixed" class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">
                 Fixed</label>
             </div>
             <div class="flex">
               <input type="radio" name="data-header-positions" class="ti-form-radio" id="switcher-header-scroll" (click)="HeaderChange('scrollable')"
-              [checked]="localdata['ynex-header-mode'] == 'scrollable'">
+              [checked]="localdata['ynex-header-mode'] === 'scrollable'">
               <label for="switcher-header-scroll"
                 class="text-defaultsize text-defaulttextcolor dark:text-defaulttextcolor/70 ms-2  font-semibold">Scrollable
               </label>
@@ -236,7 +236,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-white" type="radio" name="menu-colors"
                 id="switcher-menu-light"  (click)="menuTheme('light')"
-                [checked]="localdata['ynex-menu-mode'] == 'light'">
+                [checked]="localdata['ynex-menu-mode'] === 'light'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -246,7 +246,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-dark" type="radio" name="menu-colors"
                 id="switcher-menu-dark" (click)="menuTheme('dark')"
-                [checked]="localdata['ynex-menu-mode'] == 'dark'">
+                [checked]="localdata['ynex-menu-mode'] === 'dark'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -256,7 +256,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-primary" type="radio" name="menu-colors"
                 id="switcher-menu-primary"   (click)="menuTheme('color')"
-                [checked]="localdata['ynex-menu-mode'] == 'color'">
+                [checked]="localdata['ynex-menu-mode'] === 'color'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -266,7 +266,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-gradient" type="radio" name="menu-colors"
                 id="switcher-menu-gradient"   (click)="menuTheme('gradient')"
-                [checked]="localdata['ynex-menu-mode'] == 'gradient'">
+                [checked]="localdata['ynex-menu-mode'] === 'gradient'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -276,7 +276,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-transparent" type="radio" name="menu-colors"
                 id="switcher-menu-transparent"  (click)="menuTheme('transparent')"
-                [checked]="localdata['ynex-menu-mode'] == 'transparent'">
+                [checked]="localdata['ynex-menu-mode'] === 'transparent'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -294,7 +294,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-white !border" type="radio" name="header-colors"
                 id="switcher-header-light"  (click)="headerTheme('light')"
-                [checked]="localdata['ynex-header-mode'] == 'light'">
+                [checked]="localdata['ynex-header-mode'] === 'light'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -304,7 +304,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-dark" type="radio" name="header-colors"
                 id="switcher-header-dark"  (click)="headerTheme('dark')"
-                [checked]="localdata['ynex-header-mode'] == 'dark'">
+                [checked]="localdata['ynex-header-mode'] === 'dark'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -314,7 +314,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-primary" type="radio" name="header-colors"
                 id="switcher-header-primary"    (click)="headerTheme('color')"
-                [checked]="localdata['ynex-header-mode'] == 'color'">
+                [checked]="localdata['ynex-header-mode'] === 'color'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -324,7 +324,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-gradient" type="radio" name="header-colors"
                 id="switcher-header-gradient"   (click)="headerTheme('gradient')"
-                [checked]="localdata['ynex-header-mode'] == 'gradient'">
+                [checked]="localdata['ynex-header-mode'] === 'gradient'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -334,7 +334,7 @@
             <div class="hs-tooltip ti-main-tooltip ti-form-radio switch-select ">
               <input class="hs-tooltip-toggle ti-form-radio color-input color-transparent" type="radio"
                 name="header-colors" id="switcher-header-transparent"        (click)="headerTheme('transparent')"
-                [checked]="localdata['ynex-header-mode'] == 'transparent'">
+                [checked]="localdata['ynex-header-mode'] === 'transparent'">
               <span
                 class="hs-tooltip-content ti-main-tooltip-content !py-1 !px-2 !bg-black text-xs font-medium !text-white shadow-sm dark:!bg-black"
                 role="tooltip">
@@ -357,22 +357,22 @@
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-primary-2" type="radio" name="theme-primary"
                 id="switcher-primary1"  (click)="primary('92 144 163')"
-                [checked]="localdata['ynex-primary-mode'] == '92 144 163'">
+                [checked]="localdata['ynex-primary-mode'] === '92 144 163'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-primary-3" type="radio" name="theme-primary"
                 id="switcher-primary2"  (click)="primary('161 90 223')"
-                [checked]="localdata['ynex-primary-mode'] == '161 90 223'">
+                [checked]="localdata['ynex-primary-mode'] === '161 90 223'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-primary-4" type="radio" name="theme-primary"
                 id="switcher-primary3"  (click)="primary('78 172 76')"
-                [checked]="localdata['ynex-primary-mode'] == '78 172 76'">
+                [checked]="localdata['ynex-primary-mode'] === '78 172 76'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-primary-5" type="radio" name="theme-primary"
                 id="switcher-primary4"     (click)="primary('223 90 90')"
-                [checked]="localdata['ynex-primary-mode'] == '223 90 90'">
+                [checked]="localdata['ynex-primary-mode'] === '223 90 90'">
             </div>
             <div class="ti-form-radio switch-select ps-0 mt-1 color-primary-light">
               <div class="theme-container-primary"></div>
@@ -408,7 +408,7 @@
                   'dark'
                 )
               "
-              [checked]="localdata['ynex-background-mode-dark'] == '50 62 93'">
+              [checked]="localdata['ynex-background-mode-dark'] === '50 62 93'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-bg-2" type="radio" name="theme-background"
@@ -419,7 +419,7 @@
                   'dark'
                 )
               "
-              [checked]="localdata['ynex-background-mode-dark'] == '81 93 50'">
+              [checked]="localdata['ynex-background-mode-dark'] === '81 93 50'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-bg-3" type="radio" name="theme-background"
@@ -430,7 +430,7 @@
                   'dark'
                 )
               "
-              [checked]="localdata['ynex-background-mode-dark'] == '79 50 93'">
+              [checked]="localdata['ynex-background-mode-dark'] === '79 50 93'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-bg-4" type="radio" name="theme-background"
@@ -440,7 +440,7 @@
                   'dark'
                 )
               "
-              [checked]="localdata['ynex-background-mode-dark'] == '50 87 93'">
+              [checked]="localdata['ynex-background-mode-dark'] === '50 87 93'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio color-input color-bg-5" type="radio" name="theme-background"
@@ -451,7 +451,7 @@
                   'dark'
                 )
               "
-              [checked]="localdata['ynex-background-mode-dark'] == '93 50 50'">
+              [checked]="localdata['ynex-background-mode-dark'] === '93 50 50'">
             </div>
             <div class="ti-form-radio switch-select ps-0 mt-1 color-bg-transparent">
               <div class="theme-container-background hidden"></div>
@@ -480,23 +480,23 @@
           <div class="flex switcher-style space-x-3 rtl:space-x-reverse flex-wrap gap-3">
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio bgimage-input bg-img1" type="radio" name="theme-images" id="switcher-bg-img"     (click)="ImageTheme('bgimg1')"
-              [checked]="localdata['ynex-image'] == 'bgimg1'">
+              [checked]="localdata['ynex-image'] === 'bgimg1'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio bgimage-input bg-img2" type="radio" name="theme-images" id="switcher-bg-img1"     (click)="ImageTheme('bgimg2')"
-              [checked]="localdata['ynex-image'] == 'bgimg2'">
+              [checked]="localdata['ynex-image'] === 'bgimg2'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio bgimage-input bg-img3" type="radio" name="theme-images" id="switcher-bg-img2"   (click)="ImageTheme('bgimg3')"
-              [checked]="localdata['ynex-image'] == 'bgimg3'">
+              [checked]="localdata['ynex-image'] === 'bgimg3'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio bgimage-input bg-img4" type="radio" name="theme-images" id="switcher-bg-img3"   (click)="ImageTheme('bgimg4')"
-              [checked]="localdata['ynex-image'] == 'bgimg4'">
+              [checked]="localdata['ynex-image'] === 'bgimg4'">
             </div>
             <div class="ti-form-radio switch-select">
               <input class="ti-form-radio bgimage-input bg-img5" type="radio" name="theme-images" id="switcher-bg-img4" (click)="ImageTheme('bgimg5')"
-              [checked]="localdata['ynex-image'] == 'bgimg5'">
+              [checked]="localdata['ynex-image'] === 'bgimg5'">
             </div>
           </div>
         </div>

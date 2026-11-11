@@ -18,28 +18,27 @@ import { environment } from '../../../../environments/environment';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-company-manage',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    NgSelectModule,
-    FormsModule,
-    FileUploadModule,
-    RouterModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    SimplePagerComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './company-manage.component.html',
-  styleUrls: [
-    '../../../shared/styles/dpu-list-page.css',
-    './company-manage.component.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-manage',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        NgSelectModule,
+        FormsModule,
+        FileUploadModule,
+        RouterModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        SimplePagerComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './company-manage.component.html',
+    styleUrls: [
+        '../../../shared/styles/dpu-list-page.css',
+        './company-manage.component.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class CompanyManageComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
@@ -228,7 +227,7 @@ export class CompanyManageComponent implements OnInit {
       text: item.companyName || '',
       icon: 'warning',
       buttons: ['ยกเลิก', 'ระงับ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.comService.suspend(item.companyId).subscribe({
         next: () => {
@@ -257,7 +256,7 @@ export class CompanyManageComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'Offboard'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.comService.offboard(item.companyId, true).subscribe({
         next: () => {
@@ -297,7 +296,7 @@ export class CompanyManageComponent implements OnInit {
       text: this.selectModel.companyName,
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       const req$ =
         this.action === 'edit'
@@ -321,7 +320,7 @@ export class CompanyManageComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.comService.delete(item).subscribe({
         next: () => {
@@ -363,7 +362,7 @@ export class CompanyManageComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((item) => {
@@ -392,7 +391,7 @@ export class CompanyManageComponent implements OnInit {
       text: targets.map((t) => t.companyName).join('\n'),
       icon: 'warning',
       buttons: ['ยกเลิก', 'ยืนยัน'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((item) => {

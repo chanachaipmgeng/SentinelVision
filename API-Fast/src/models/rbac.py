@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import enum
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -24,24 +25,24 @@ class RbacRoleCode(str, enum.Enum):
 class RbacPermission(Base):
     __tablename__ = "rbac_permission"
 
-    code = Column(String(64), primary_key=True)
-    description = Column(Text, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
+    code: Mapped[str] = mapped_column(String(64), primary_key=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class RbacRole(Base):
     __tablename__ = "rbac_role"
 
-    code = Column(String(32), primary_key=True)
-    description = Column(Text, nullable=True)
-    createdAt = Column(DateTime(timezone=True), server_default=func.now())
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    permissions = relationship(
+    permissions: Mapped[list[RbacRolePermission]] = relationship(
         "RbacRolePermission",
         back_populates="role",
         cascade="all, delete-orphan",
     )
-    assignments = relationship(
+    assignments: Mapped[list[MemberRoleAssignment]] = relationship(
         "MemberRoleAssignment",
         back_populates="role",
         cascade="all, delete-orphan",
@@ -51,21 +52,21 @@ class RbacRole(Base):
 class RbacRolePermission(Base):
     __tablename__ = "rbac_role_permission"
 
-    roleCode = Column(
+    roleCode: Mapped[str] = mapped_column(
         "role_code",
         String(32),
         ForeignKey("rbac_role.code", ondelete="CASCADE"),
         primary_key=True,
     )
-    permissionCode = Column(
+    permissionCode: Mapped[str] = mapped_column(
         "permission_code",
         String(64),
         ForeignKey("rbac_permission.code", ondelete="CASCADE"),
         primary_key=True,
     )
 
-    role = relationship("RbacRole", back_populates="permissions")
-    permission = relationship("RbacPermission")
+    role: Mapped[RbacRole] = relationship("RbacRole", back_populates="permissions")
+    permission: Mapped[RbacPermission] = relationship("RbacPermission")
 
 
 class MemberRoleAssignment(Base):
@@ -73,37 +74,37 @@ class MemberRoleAssignment(Base):
 
     __tablename__ = "member_role_assignment"
 
-    assignmentId = Column(
+    assignmentId: Mapped[uuid.UUID] = mapped_column(
         "assignment_id",
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
     )
-    memberId = Column(
+    memberId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("member.memberId", ondelete="CASCADE"),
         nullable=False,
     )
-    companyId = Column(
+    companyId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=True,
     )
-    roleCode = Column(
+    roleCode: Mapped[str] = mapped_column(
         "role_code",
         String(32),
         ForeignKey("rbac_role.code", ondelete="CASCADE"),
         nullable=False,
     )
-    departmentId = Column(
+    departmentId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("department.departmentId", ondelete="CASCADE"),
         nullable=True,
     )
-    createdAt = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updatedAt = Column(DateTime(timezone=True), onupdate=func.now())
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
-    role = relationship("RbacRole", back_populates="assignments")
+    role: Mapped[RbacRole] = relationship("RbacRole", back_populates="assignments")
 
     __table_args__ = (
         UniqueConstraint(

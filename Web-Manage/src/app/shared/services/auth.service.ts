@@ -4,6 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { UserModel } from '../user-auth.model';
 import { KioskSession, TokenService } from './token.service';
+import { isRecord, pickString } from '../utils/type-guards';
 
 export interface RefreshedTokens {
   accessToken: string;
@@ -38,24 +39,24 @@ export class AuthService {
   }
 
   login(username: string, password: string, totpCode?: string) {
-    const body: any = {
+    const body: Record<string, string> = {
       username: username,
       password: password,
     };
     if (totpCode && totpCode.trim()) {
-      body.totpCode = totpCode.trim();
+      body['totpCode'] = totpCode.trim();
     }
     return this.http.post<UserModel>(this.apiBaseUrl + '/login', body, { withCredentials: true }).pipe(
-      tap((res: any) => this.applyMemberSession(res)),
+      tap((res) => this.applyMemberSession(res)),
     );
   }
 
   /** Cookie-based refresh for member SPA sessions (requires CSRF double-submit). */
   refreshFromCookie(): Observable<RefreshedTokens> {
     return this.http
-      .post<any>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds())
+      .post<Record<string, unknown>>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds())
       .pipe(
-        map((res: any) => this.normalizeTokens(res)),
+        map((res) => this.normalizeTokens(res)),
         tap((tokens) => {
           this.tokenService.saveToken(tokens.accessToken);
           if (tokens.csrfToken) {
@@ -67,7 +68,7 @@ export class AuthService {
 
   refreshToken(token: string) {
     // Legacy body refresh (kiosk / API clients). Prefer refreshFromCookie for members.
-    return this.http.post<any>(
+    return this.http.post<Record<string, unknown>>(
       this.apiBaseUrl + '/refresh-token',
       { refreshToken: token },
       { withCredentials: true }
@@ -76,11 +77,11 @@ export class AuthService {
 
   /** Server-side logout: revokes bearer + refresh cookie/family and clears auth cookies. */
   logout(refreshToken: string | null) {
-    const body: any = {};
+    const body: { refreshToken?: string } = {};
     if (refreshToken) {
       body.refreshToken = refreshToken;
     }
-    return this.http.post<any>(this.apiBaseUrl + '/logout', body, this.withCreds());
+    return this.http.post<Record<string, unknown>>(this.apiBaseUrl + '/logout', body, this.withCreds());
   }
 
   /** Exchange a one-time pairing code for a device-scoped kiosk session. */
@@ -89,7 +90,7 @@ export class AuthService {
   }
 
   kioskRefresh(refreshToken: string) {
-    return this.http.post<any>(this.apiBaseUrl + '/kiosk/refresh', { refreshToken });
+    return this.http.post<Record<string, unknown>>(this.apiBaseUrl + '/kiosk/refresh', { refreshToken });
   }
 
   private inflightRefresh?: Observable<RefreshedTokens>;
@@ -104,7 +105,7 @@ export class AuthService {
     if (this.inflightRefresh) {
       return this.inflightRefresh;
     }
-    let call: Observable<any>;
+    let call: Observable<Record<string, unknown>>;
     if (kiosk) {
       if (!refreshToken) {
         return throwError(() => new Error('Kiosk refresh token required'));
@@ -113,10 +114,10 @@ export class AuthService {
     } else if (refreshToken) {
       call = this.refreshToken(refreshToken);
     } else {
-      call = this.http.post<any>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds());
+      call = this.http.post<Record<string, unknown>>(this.apiBaseUrl + '/refresh-token', {}, this.withCreds());
     }
     this.inflightRefresh = call.pipe(
-      map((res: any) => this.normalizeTokens(res)),
+      map((res) => this.normalizeTokens(res)),
       tap((tokens) => {
         this.tokenService.saveToken(tokens.accessToken);
         if (tokens.refreshToken) {
@@ -159,7 +160,7 @@ export class AuthService {
   }
 
   ssoStart(companyId?: string, returnTo?: string) {
-    const body: any = {};
+    const body: { companyId?: string; returnTo?: string } = {};
     if (companyId) body.companyId = companyId;
     if (returnTo) body.returnTo = returnTo;
     return this.http.post<SsoStart>(this.apiBaseUrl + '/sso/oidc/start', body);
@@ -172,7 +173,7 @@ export class AuthService {
         { code, state, txn },
         { withCredentials: true }
       )
-      .pipe(tap((res: any) => this.applyMemberSession(res)));
+      .pipe(tap((res) => this.applyMemberSession(res)));
   }
 
   saveSsoTransaction(start: SsoStart): void {
@@ -191,24 +192,37 @@ export class AuthService {
     }
   }
 
-  applyMemberSession(res: any): void {
+  applyMemberSession(res: UserModel | Record<string, unknown>): void {
     if (!res) return;
-    const access = res.accessToken || res.access_token || '';
+    const access = pickString(
+      isRecord(res) ? res : {},
+      'accessToken',
+      'access_token',
+    );
     if (access) {
       this.tokenService.saveToken(access);
     }
-    if (res.csrfToken) {
-      this.tokenService.saveCsrfToken(res.csrfToken);
+    const csrf = isRecord(res) ? res['csrfToken'] : undefined;
+    if (typeof csrf === 'string' && csrf) {
+      this.tokenService.saveCsrfToken(csrf);
     }
     // Refresh stays in httpOnly cookie — never write it to storage.
     this.tokenService.saveUser(res);
   }
 
-  private normalizeTokens(res: any): RefreshedTokens {
-    return {
-      accessToken: res?.deviceToken || res?.accessToken || res?.access_token || '',
-      refreshToken: res?.deviceRefreshToken || res?.refreshToken || res?.refresh_token || '',
-      csrfToken: res?.csrfToken || undefined,
+  private normalizeTokens(res: Record<string, unknown>): RefreshedTokens {
+    const accessToken = pickString(res, 'deviceToken', 'accessToken', 'access_token');
+    const refreshToken = pickString(
+      res,
+      'deviceRefreshToken',
+      'refreshToken',
+      'refresh_token',
+    );
+    const csrfRaw = res['csrfToken'];
+  return {
+      accessToken,
+      refreshToken,
+      csrfToken: typeof csrfRaw === 'string' ? csrfRaw : undefined,
     };
   }
 

@@ -1,4 +1,4 @@
-import { Component, ViewChild, ElementRef, Renderer2, HostListener, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ViewChild, ElementRef, Renderer2, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { Menu, NavService } from '../../services/nav.service';
 import { Subscription, fromEvent } from 'rxjs';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -9,13 +9,13 @@ import { PermissionService } from '../../services/permission.service';
 import { CompanyModel } from '../../../DPU/models/company.model';
 import { CompanyModuleConfigService } from '../../../DPU/services/company-module-config.service';
 @Component({
-  selector: 'app-sidebar',
-  templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.scss'
+    selector: 'app-sidebar',
+    templateUrl: './sidebar.component.html',
+    styleUrl: './sidebar.component.scss',
+    standalone: false
 })
 
-export class SidebarComponent {
-  localStorage: any;
+export class SidebarComponent implements OnInit, OnDestroy {
   // Addding sticky-pin
   scrolled = false;
   screenWidth: number;
@@ -37,8 +37,8 @@ export class SidebarComponent {
 
     sections.forEach((ele, i) => {
       const currLink = sections[i];
-      const val: any = currLink.getAttribute('value');
-      const refElement: any = document.querySelector('#' + val);
+      const val = currLink.getAttribute('value');
+      const refElement = val ? document.querySelector<HTMLElement>('#' + val) : null;
 
       // Add a null check here before accessing properties of refElement
       if (refElement !== null) {
@@ -86,9 +86,9 @@ export class SidebarComponent {
 
   ngOnInit() {
 
-    const bodyElement: any = document.querySelector('.main-content');
+    const bodyElement = document.querySelector<HTMLElement>('.main-content');
 
-    bodyElement.onclick = () => {
+    if (bodyElement) bodyElement.onclick = () => {
       if (
         localStorage.getItem('ynex-menu-style') == 'icon-click' ||
         localStorage.getItem('ynex-menu-style') == 'menu-click' ||
@@ -97,8 +97,8 @@ export class SidebarComponent {
       ) {
         document
           .querySelectorAll('.main-menu .slide-menu.child1')
-          .forEach((ele: any) => {
-            ele.style.display = 'none';
+          .forEach((ele) => {
+            (ele as HTMLElement).style.display = 'none';
           });
       }
     };
@@ -106,7 +106,7 @@ export class SidebarComponent {
     this.currentUrl = this.router.url
     this.isCommonRoute = this.currentUrl.includes('/admin');
     this.isInstallerRoute = this.currentUrl.includes('/company');
-    this.menuitemsSubscribe$ = this.navServices.items.subscribe((items) => {
+    this.menuitemsSubscribe$ = this.navServices.items.subscribe((_items) => {
       this.changeMenu()
     });
     this.ParentActive();
@@ -227,7 +227,7 @@ export class SidebarComponent {
 
 
   //Active Nav State
-  setNavActive(item: any) {
+  setNavActive(item: Menu) {
     this.menuItems?.filter((menuItem) => {
       if (menuItem !== item) {
         menuItem.active = false;
@@ -266,7 +266,7 @@ export class SidebarComponent {
   }
 
   // Toggle menu
-  toggleNavActive(item: any) {
+  toggleNavActive(item: Menu) {
     if (localStorage.getItem('ynex-sidemenu-styles') == 'icontext') {
       document.querySelector('html')?.setAttribute('icon-text', 'open')
     } else {
@@ -278,18 +278,18 @@ export class SidebarComponent {
 
 
     if (!item.active) {
-      this.menuItems?.forEach((a: any) => {
+      this.menuItems?.forEach((a) => {
         if (this.menuItems.includes(item)) {
           a.active = false;
         }
-        a?.children?.forEach((b: any) => {
-          if (a.children.includes(item)) {
+        a.children?.forEach((b) => {
+          if (a.children?.includes(item)) {
             b.active = false;
           } else {
             b.active = false;
           }
-          b?.children?.forEach((c: any) => {
-            if (b.children.includes(item)) {
+          b.children?.forEach((c) => {
+            if (b.children?.includes(item)) {
               c.active = false;
             }
           });
@@ -300,11 +300,11 @@ export class SidebarComponent {
   }
   // Close Nav menu
   closeNavActive() {
-    this.menuItems?.forEach((a: any) => {
+    this.menuItems?.forEach((a) => {
       if (this.menuItems) {
         a.active = false;
       }
-      a?.children?.forEach((b: any) => {
+      a.children?.forEach((b) => {
         if (a.children) {
           b.active = false;
         }
@@ -317,11 +317,11 @@ export class SidebarComponent {
       return;
     }
 
-    this.menuItems.map((element: any) => {
+    this.menuItems.map((element) => {
       if (element.children) {
         element.active = false;
         element.selected = false;
-        element.children.map((ele: any) => {
+        element.children.map((ele) => {
 
           if (ele.path == this.currentUrl) {
             element.active = true;
@@ -329,7 +329,7 @@ export class SidebarComponent {
           }
           if (ele.children) {
             ele.active = false;
-            ele.children.map((child1: any) => {
+            ele.children.map((child1) => {
               if (child1.path == this.currentUrl) {
                 element.active = true;
                 element.selected = true;
@@ -344,7 +344,7 @@ export class SidebarComponent {
   }
 
   @ViewChild('iconContainer', { static: true }) iconContainer!: ElementRef;
-  getSanitizedSVG(svgContent: string, menu: any): SafeHtml {
+  getSanitizedSVG(svgContent: string, menu: Menu): SafeHtml {
     const svg = this.renderer.createElement(
       'svg',
       'http://www.w3.org/2000/svg'
@@ -360,9 +360,10 @@ export class SidebarComponent {
   ngOnDestroy() {
     this.menuitemsSubscribe$.unsubscribe();
     this.windowSubscribe$.unsubscribe();
-    this.elementRef.nativeElement.ownerDocument.documentElement,
+    this.elementRef.nativeElement.ownerDocument.documentElement.setAttribute(
       'data-nav-layout',
-      'vertical';
+      'vertical',
+    );
     const WindowResize = fromEvent(window, 'resize');
     // subscribing the Observable
     if (WindowResize) {
@@ -385,27 +386,27 @@ export class SidebarComponent {
       });
     }
 
-    if (localStorage['Ynexverticalstyles'] === 'doublemenu' && this.getCurrentTheme().dataToggled !== 'double-menu-open') {
+    if (localStorage['Ynexverticalstyles'] === 'doublemenu' && this.getCurrentTheme()['dataToggled'] !== 'double-menu-open') {
       // Assuming you have a service or method to update the theme
       this.updateTheme({ ...this.getCurrentTheme(), dataToggled: 'double-menu-open' });
     }
   }
 
   // Replace this method with your actual method or service call to update the theme
-  updateTheme(updatedTheme: any) {
+  updateTheme(updatedTheme: Record<string, string>) {
     // Implement the logic to update the theme in your application
     // This might involve a service or a method that dispatches an action to update the theme state
     console.log('Update Theme:', updatedTheme);
   }
 
   // Replace this method with your actual method or service call to get the current theme
-  getCurrentTheme(): any {
+  getCurrentTheme(): Record<string, string> {
     // Implement the logic to get the current theme from your application state or service
     // Return the current theme object
     return {};
   }
   @HostListener('window:resize', ['$event'])
-  onResize(event: any): void {
+  onResize(_event: UIEvent): void {
     this.menuResizeFn();
 
     this.screenWidth = window.innerWidth;

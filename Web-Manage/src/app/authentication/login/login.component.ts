@@ -7,16 +7,14 @@ import { Router, RouterModule } from '@angular/router';
 import { TokenService } from '../../shared/services/token.service';
 import { AuthService } from '../../shared/services/auth.service';
 import { LoginModel } from '../../shared/user-auth.model';
-import { HttpClientModule } from '@angular/common/http';
 import { EmployeeService } from '../../DPU/services/employee.service';
 
 @Component({
-  selector: 'app-login',
-  standalone: true,
-  imports: [SharedModule, CommonModule, RouterModule, FormsModule, HttpClientModule, ReactiveFormsModule],
-  providers: [AuthService, { provide: ToastrService, useClass: ToastrService }],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+    selector: 'app-login',
+    imports: [SharedModule, CommonModule, RouterModule, FormsModule, ReactiveFormsModule],
+    providers: [AuthService, { provide: ToastrService, useClass: ToastrService }],
+    templateUrl: './login.component.html',
+    styleUrl: './login.component.scss'
 })
 export class LoginComponent implements OnInit, OnDestroy {
   username = '';
@@ -28,7 +26,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   errorMessage = '';
   showLoader = false;
   _error: { name: string; message: string } = { name: '', message: '' };
-  public error: any = '';
+  public error: unknown = '';
   public loginForm!: FormGroup;
 
   nowTime = '';

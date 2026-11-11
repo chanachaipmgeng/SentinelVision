@@ -1,26 +1,16 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
-import {
-  trigger,
-  state,
-  style,
-  animate,
-  transition,
-  // ...
-} from '@angular/animations';
-import { fromEvent } from 'rxjs';
 import { routeAnimations } from './shared/animations/route-animations';
 import { ThemeService } from './shared/services/theme.service';
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [CommonModule, RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
-  animations: [routeAnimations]
+    selector: 'app-root',
+    imports: [CommonModule, RouterOutlet],
+    templateUrl: './app.component.html',
+    styleUrl: './app.component.scss',
+    animations: [routeAnimations]
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   title = 'SentinelVision';
   public isSpinner = true;
 

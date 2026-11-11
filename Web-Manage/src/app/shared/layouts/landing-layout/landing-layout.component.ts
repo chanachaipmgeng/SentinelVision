@@ -1,10 +1,10 @@
-import { Component, ElementRef, Renderer2 } from '@angular/core';
-import { CommonModule, ViewportScroller } from '@angular/common';
+import { Component } from '@angular/core';
 
 @Component({
-  selector: 'app-landing-layout',
-  templateUrl: './landing-layout.component.html',
-  styleUrl: './landing-layout.component.scss'
+    selector: 'app-landing-layout',
+    templateUrl: './landing-layout.component.html',
+    styleUrl: './landing-layout.component.scss',
+    standalone: false
 })
 export class LandingLayoutComponent {
   

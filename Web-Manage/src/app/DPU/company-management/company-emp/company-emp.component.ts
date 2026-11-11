@@ -5,7 +5,7 @@ import {
   Component,
   ElementRef,
   OnDestroy,
-  ViewChild,
+  ViewChild, OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ import { FlatpickrDefaults, FlatpickrModule } from 'angularx-flatpickr';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FileItem, FileUploader, FileUploadModule, ParsedResponseHeaders } from 'ng2-file-upload';
 import swal from 'sweetalert';
+import { HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { MaterialModuleModule } from '../../../material-module/material-module.module';
 import { SharedModule } from '../../../shared/shared.module';
@@ -52,30 +53,29 @@ import { clampPageIndex } from '../../../shared/utils/data-table-query';
  * Pure filter/paging/validate helpers live in company-emp.helpers.ts.
  */
 @Component({
-  selector: 'app-company-emp',
-  standalone: true,
-  imports: [
-    SharedModule,
-    NgSelectModule,
-    RouterModule,
-    MaterialModuleModule,
-    TranslateModule,
-    FlatpickrModule,
-    MatDatepickerModule,
-    FormsModule,
-    CommonModule,
-    FileUploadModule,
-    FaceManagementComponent,
-    EmpListComponent,
-    EmpDetailModalComponent,
-    EmpImportOverlayComponent,
-    EmpFaceEnrollModalComponent,
-  ],
-  providers: [FlatpickrDefaults, EmpImportService],
-  templateUrl: './company-emp.component.html',
-  styleUrl: './company-emp.component.css',
+    selector: 'app-company-emp',
+    imports: [
+        SharedModule,
+        NgSelectModule,
+        RouterModule,
+        MaterialModuleModule,
+        TranslateModule,
+        FlatpickrModule,
+        MatDatepickerModule,
+        FormsModule,
+        CommonModule,
+        FileUploadModule,
+        FaceManagementComponent,
+        EmpListComponent,
+        EmpDetailModalComponent,
+        EmpImportOverlayComponent,
+        EmpFaceEnrollModalComponent,
+    ],
+    providers: [FlatpickrDefaults, EmpImportService],
+    templateUrl: './company-emp.component.html',
+    styleUrl: './company-emp.component.css'
 })
-export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
+export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
   @ViewChild('detailModal') detailModal?: EmpDetailModalComponent;
   @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
   @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
@@ -284,7 +284,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['Cancel', 'Yes,Delete it!'],
-    }).then((willDelete: any) => {
+    }).then((willDelete: unknown) => {
       if (willDelete) {
         this.employeeService.delete(this.companyId, item).subscribe(() => {
           swal('Save Success!!', 'บันทึกข้อมูลสำเร็จ', 'success');
@@ -309,14 +309,14 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     await this.faceEnrollModal?.openForEmployee(item);
   }
 
-  openFaceManagementModal(item: any): void {
-    if (item?.member?.memberId) {
+  openFaceManagementModal(item: EmployeeModel): void {
+    if (item.member?.memberId) {
       this.selectedMemberId = item.member.memberId;
-      const first = item.member.firstName || item.firstName || '';
-      const last = item.member.lastName || item.lastName || '';
+      const first = item.member.firstName || '';
+      const last = item.member.lastName || '';
       this.selectedMemberName =
         [first, last].filter(Boolean).join(' ').trim() ||
-        item.employeeCode ||
+        item.employeeId ||
         item.member.memberId;
     }
   }
@@ -369,8 +369,8 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
         cancel: { text: 'Cancel', value: null, visible: true },
         skip: { text: 'นำเข้าโดยไม่มีรูป', value: 'skip' },
         zip: { text: 'แนบ ZIP รูป', value: 'zip' },
-      } as any,
-    }).then((choice: any) => {
+      },
+    }).then((choice: string | null) => {
       if (!choice) {
         this.importService.setPendingExcel(null);
         return;
@@ -471,7 +471,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
       icon: 'warning',
       dangerMode: false,
       buttons: ['Cancel', 'Confirm'],
-    }).then((willSave: any) => {
+    }).then((willSave) => {
       if (!willSave) return;
       if (!this.isEdit) {
         if (this.selectModel.companyRoleType === undefined || this.selectModel.companyRoleType === null) {
@@ -498,16 +498,16 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit {
     });
   }
 
-  private showSaveError(err: any): void {
+  private showSaveError(err: HttpErrorResponse): void {
     swal({
-      title: saveErrorTitle(err?.status),
+      title: saveErrorTitle(err.status),
       text: formatApiError(err),
       icon: 'error',
     });
   }
 
-  private async resolveBlobError(err: any): Promise<string> {
-    if (err?.error instanceof Blob) {
+  private async resolveBlobError(err: HttpErrorResponse): Promise<string> {
+    if (err.error instanceof Blob) {
       try {
         const text = await err.error.text();
         const json = JSON.parse(text);

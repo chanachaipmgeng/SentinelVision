@@ -9,10 +9,9 @@ const PROBE_TIMEOUT_MS = 8_000;
 
 /** Connectivity banner: browser offline OR `/health` unreachable (polled only while the tab is visible). */
 @Component({
-  selector: 'app-offline-banner',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  template: `
+    selector: 'app-offline-banner',
+    imports: [CommonModule, TranslateModule],
+    template: `
     <div class="sv-offline" *ngIf="visible" role="status" aria-live="polite">
       <i class="ri-wifi-off-line" aria-hidden="true"></i>
       <span class="sv-offline__text">
@@ -26,8 +25,8 @@ const PROBE_TIMEOUT_MS = 8_000;
       </button>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       .sv-offline {
         position: sticky;
         top: 3.75rem;
@@ -67,7 +66,7 @@ const PROBE_TIMEOUT_MS = 8_000;
         line-height: 1;
       }
     `,
-  ],
+    ]
 })
 export class OfflineBannerComponent implements OnInit, OnDestroy {
   browserOffline = typeof navigator !== 'undefined' && navigator.onLine === false;

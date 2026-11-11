@@ -109,7 +109,7 @@ async def put_ai_settings(
         current["cctvCameraIntervalOverride"] = False
 
     # Persist only the override flags + values (defaults stay env-driven when flags off).
-    stored = {
+    stored: dict[str, bool | float | int] = {
         "faceMatchThresholdOverride": bool(current["faceMatchThresholdOverride"]),
         "cctvCameraIntervalOverride": bool(current["cctvCameraIntervalOverride"]),
     }

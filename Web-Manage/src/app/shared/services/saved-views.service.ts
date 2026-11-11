@@ -135,7 +135,7 @@ export class SavedViewsService {
   }
 
   private newId(): string {
-    const c = (globalThis as any).crypto;
+    const c = globalThis.crypto;
     if (c?.randomUUID) return c.randomUUID();
     return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }

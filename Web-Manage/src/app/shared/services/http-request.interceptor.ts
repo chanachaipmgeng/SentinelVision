@@ -1,6 +1,6 @@
 import { HTTP_INTERCEPTORS, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpHandler, HttpRequest } from '@angular/common/http';
+import { HttpHandler, HttpRequest } from '@angular/common/http';
 
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
@@ -25,10 +25,10 @@ const NO_REFRESH_PATHS = [
 @Injectable()
 export class HttpRequestInterceptor {
   private isRefreshing = false;
-  private refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject<any>(null);
+  private refreshTokenSubject: BehaviorSubject<unknown> = new BehaviorSubject<unknown>(null);
   constructor(private tokenService: TokenService, private authService: AuthService) { }
 
-  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+  intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (req.url.startsWith("./")) {
       return next.handle(req);
     } else {
@@ -62,7 +62,7 @@ export class HttpRequestInterceptor {
     return url.includes('/auth/');
   }
 
-  private handle401Error(request: HttpRequest<any>, next: HttpHandler, fullUrl: string) {
+  private handle401Error(request: HttpRequest<unknown>, next: HttpHandler, fullUrl: string) {
     if (!this.isRefreshing) {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
@@ -110,7 +110,7 @@ export class HttpRequestInterceptor {
 
 
 
-  private addTokenHeader(request: HttpRequest<any>, token: string, fullUrl: string) {
+  private addTokenHeader(request: HttpRequest<unknown>, token: string, fullUrl: string) {
     const value = token.startsWith('Bearer ') ? token : 'Bearer ' + token;
     const headers: Record<string, string> = { [TOKEN_HEADER_KEY]: value };
     const csrf = this.tokenService.getCsrfToken();

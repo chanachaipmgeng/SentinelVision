@@ -13,11 +13,10 @@ import { EmpListViewMode } from '../company-emp.helpers';
  * here so encapsulated selectors match this child template (table/cards chrome).
  */
 @Component({
-  selector: 'app-emp-list',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
-  templateUrl: './emp-list.component.html',
-  styleUrl: '../company-emp.component.css',
+    selector: 'app-emp-list',
+    imports: [CommonModule, RouterModule, TranslateModule],
+    templateUrl: './emp-list.component.html',
+    styleUrl: '../company-emp.component.css'
 })
 export class EmpListComponent {
   @Input() listViewMode: EmpListViewMode = 'cards';

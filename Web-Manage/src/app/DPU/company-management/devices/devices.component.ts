@@ -37,23 +37,22 @@ export interface KioskDeviceRow {
 }
 
 @Component({
-  selector: 'app-company-devices',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    SharedModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    SimplePagerComponent,
-    EmptyStateComponent,
-    KeyboardTableDirective,
-    LocaleDatePipe,
-  ],
-  templateUrl: './devices.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-devices',
+    imports: [
+        CommonModule,
+        FormsModule,
+        SharedModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        SimplePagerComponent,
+        EmptyStateComponent,
+        KeyboardTableDirective,
+        LocaleDatePipe,
+    ],
+    templateUrl: './devices.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class DevicesComponent implements OnInit {
   readonly pageSize = 10;
@@ -182,7 +181,7 @@ export class DevicesComponent implements OnInit {
       text: device.name,
       icon: 'warning',
       buttons: ['ยกเลิก', 'ยืนยัน'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.http.post<KioskDeviceRow>(this.api(`/${device.deviceId}/rotate`), {}).subscribe({
         next: (row) => {
@@ -202,7 +201,7 @@ export class DevicesComponent implements OnInit {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'เพิกถอน'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.http.delete(this.api(`/${device.deviceId}`)).subscribe({
         next: () => {

@@ -16,7 +16,6 @@ import { HoverEffectSidebarDirective } from './directives/hover-effect-sidebar.d
 import { FullscreenDirective } from './directives/fullscreen.directive';
 import { LandingSwitcherComponent } from './components/landing-switcher/landing-switcher.component';
 import { LandingLayoutComponent } from './layouts/landing-layout/landing-layout.component';
-import { NgxColorsModule } from 'ngx-colors';
 import { AuthService } from './services/auth.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { CommandPaletteComponent } from './components/command-palette/command-palette.component';

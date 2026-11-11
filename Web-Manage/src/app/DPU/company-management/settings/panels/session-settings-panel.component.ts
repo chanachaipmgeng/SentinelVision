@@ -13,10 +13,9 @@ type PanelStatus = 'idle' | 'saved' | 'error';
 
 /** Admin SPA idle logout minutes — settings hub panel. */
 @Component({
-  selector: 'app-session-settings-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  template: `
+    selector: 'app-session-settings-panel',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    template: `
     <div class="box modern-card glass">
       <div class="box-body space-y-4">
         <div>
@@ -61,7 +60,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
         </div>
       </div>
     </div>
-  `,
+  `
 })
 export class SessionSettingsPanelComponent implements OnInit {
   @Input() companyId = '';

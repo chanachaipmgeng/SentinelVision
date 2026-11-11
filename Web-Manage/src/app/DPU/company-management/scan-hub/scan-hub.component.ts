@@ -42,19 +42,18 @@ const STATION_MODES: StationMode[] = [
  * Uses Phase 2 `CompanyModuleConfigService` (GET/PUT module-config).
  */
 @Component({
-  selector: 'app-scan-hub',
-  standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    RouterModule,
-    SharedModule,
-    PageToolbarComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './scan-hub.component.html',
-  styleUrls: ['./scan-hub.component.scss'],
+    selector: 'app-scan-hub',
+    imports: [
+        CommonModule,
+        FormsModule,
+        RouterModule,
+        SharedModule,
+        PageToolbarComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './scan-hub.component.html',
+    styleUrls: ['./scan-hub.component.scss']
 })
 export class ScanHubComponent implements OnInit {
   companyId = '';
@@ -121,12 +120,28 @@ export class ScanHubComponent implements OnInit {
       },
     });
 
-    this.http.get<any[]>(`/sentinel/company/${this.companyId}/zones`).subscribe({
-      next: (rows) => (this.zones = rows || []),
+    this.http
+      .get<Array<{ zoneId: string; name?: string; thName?: string }>>(
+        `/sentinel/company/${this.companyId}/zones`,
+      )
+      .subscribe({
+      next: (rows) => {
+        this.zones = (rows || []).map((z) => ({
+          zoneId: z.zoneId,
+          name: String(z.name ?? z.thName ?? z.zoneId),
+        }));
+      },
       error: () => (this.zones = []),
     });
-    this.http.get<any[]>(`/sentinel/company/${this.companyId}/events`).subscribe({
-      next: (rows) => (this.events = rows || []),
+    this.http
+      .get<Array<{ eventId: string; name?: string }>>(`/sentinel/company/${this.companyId}/events`)
+      .subscribe({
+      next: (rows) => {
+        this.events = (rows || []).map((e) => ({
+          eventId: e.eventId,
+          name: String(e.name ?? e.eventId),
+        }));
+      },
       error: () => (this.events = []),
     });
   }

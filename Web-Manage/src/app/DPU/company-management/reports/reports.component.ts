@@ -9,12 +9,11 @@ import { EmployeeService } from '../../services/employee.service';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-company-reports',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent],
-  templateUrl: './reports.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-reports',
+    imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent],
+    templateUrl: './reports.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class ReportsComponent implements OnInit {
   companyId = '';
@@ -44,11 +43,20 @@ export class ReportsComponent implements OnInit {
     this.draft.endDate = this.isoDate(last);
     if (!this.companyId) return;
     this.employeesApi.getLists(this.companyId).subscribe({
-      next: (rows: any[]) => {
-        this.employees = (rows || []).map((e) => ({
-          company_employeeId: e.company_employeeId || e.companyEmployeeId,
-          label: `${e.employeeId || ''} — ${e.firstName || ''} ${e.lastName || ''}`.trim(),
-        }));
+      next: (rows: unknown[]) => {
+        this.employees = (rows || []).map((row) => {
+          const e = row as {
+            company_employeeId?: string;
+            companyEmployeeId?: string;
+            employeeId?: string;
+            firstName?: string;
+            lastName?: string;
+          };
+          return {
+            company_employeeId: e.company_employeeId || e.companyEmployeeId || '',
+            label: `${e.employeeId || ''} — ${e.firstName || ''} ${e.lastName || ''}`.trim(),
+          };
+        });
       },
       error: () => undefined,
     });

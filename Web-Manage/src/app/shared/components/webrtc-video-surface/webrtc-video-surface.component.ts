@@ -14,18 +14,17 @@ import { CommonModule } from '@angular/common';
  * Expects ``whepUrl`` like ``/mediamtx/{path}/whep``.
  */
 @Component({
-  selector: 'app-webrtc-video-surface',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-webrtc-video-surface',
+    imports: [CommonModule],
+    template: `
     <div class="sv-webrtc" [class.sv-webrtc--error]="!!error">
       <video #video playsinline autoplay muted [attr.aria-label]="label || 'Live camera'"></video>
       <div class="sv-webrtc__status" *ngIf="status && !error">{{ status }}</div>
       <div class="sv-webrtc__error" *ngIf="error" role="alert">{{ error }}</div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
         width: 100%;
@@ -57,7 +56,7 @@ import { CommonModule } from '@angular/common';
         color: #fecaca;
       }
     `,
-  ],
+    ]
 })
 export class WebrtcVideoSurfaceComponent implements OnChanges, OnDestroy {
   @Input() whepUrl = '';

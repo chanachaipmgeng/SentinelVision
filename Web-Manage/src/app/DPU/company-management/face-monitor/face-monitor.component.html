@@ -151,7 +151,7 @@
                   <td>
                     <span *ngIf="cam.lastPingAt">{{ cam.lastPingAt | date:'short' }}</span>
                     <span *ngIf="!cam.lastPingAt" class="text-dpu-muted">—</span>
-                    <span class="text-xs text-dpu-muted" *ngIf="cam.lastPingLatencyMs != null">
+                    <span class="text-xs text-dpu-muted" *ngIf="cam.lastPingLatencyMs !== null && cam.lastPingLatencyMs !== undefined">
                       · {{ cam.lastPingLatencyMs | number:'1.0-0' }} ms
                     </span>
                   </td>

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -44,7 +45,7 @@ async def test_create_requires_scopes():
     db.add = MagicMock()
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(HTTPException) as exc:
         await aks.create_api_key(db, COMPANY_ID, name="ops", scopes=[])
     assert getattr(exc.value, "status_code", None) == 400
 

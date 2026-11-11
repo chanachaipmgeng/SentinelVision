@@ -1,9 +1,8 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { TokenService } from '../../shared/services/token.service';
 import { UserProfileModel } from '../models/user.model';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 
@@ -17,7 +16,7 @@ export class UserService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<UserProfileModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new UserProfileModel(e, this.translateService)));
@@ -60,7 +59,7 @@ export class UserService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<UserProfileModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 
@@ -129,6 +128,6 @@ export class UserService {
       }),
       body: new UserProfileModel(body),
     };
-    return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.memberId);
+    return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.memberId, options);
   }
 }

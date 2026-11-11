@@ -11,11 +11,12 @@ import { IdleTimeoutService } from '../../services/idle-timeout.service';
 const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 
 @Component({
-  selector: 'app-content-layout',
-  templateUrl: './content-layout.component.html',
-  styleUrl: './content-layout.component.scss',
-  animations: [routeAnimations],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+    selector: 'app-content-layout',
+    templateUrl: './content-layout.component.html',
+    styleUrl: './content-layout.component.scss',
+    animations: [routeAnimations],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    standalone: false
 })
 export class ContentLayoutComponent implements OnDestroy {
   public menuItems!: Menu[];
@@ -33,7 +34,7 @@ export class ContentLayoutComponent implements OnDestroy {
     private idleTimeout: IdleTimeoutService,
   ) {
     this.themeService.setShellActive(true);
-    this.navServices.items.subscribe((menuItems: any) => {
+    this.navServices.items.subscribe((menuItems: Menu[]) => {
       this.menuItems = menuItems;
     });
     setInterval(() => {
@@ -99,14 +100,10 @@ export class ContentLayoutComponent implements OnDestroy {
     }
   }
   closeMenu() {
-    this.menuItems?.forEach((a: any) => {
-      if (this.menuItems) {
-        a.active = false;
-      }
-      a?.children?.forEach((b: any) => {
-        if (a.children) {
-          b.active = false;
-        }
+    this.menuItems?.forEach((a) => {
+      a.active = false;
+      a.children?.forEach((b) => {
+        b.active = false;
       });
     });
   }

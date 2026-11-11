@@ -5,19 +5,19 @@ import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HrScheduleApiService } from '../hr-schedule-api.service';
 import { defaultNotifySettings } from '../hr-schedule.helpers';
+import { HrObservabilitySummary, NotifyOutboxRow } from '../hr-schedule.models';
 
 @Component({
-  selector: 'app-hr-observability-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-observability-tab.component.html',
+    selector: 'app-hr-observability-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-observability-tab.component.html'
 })
 export class HrObservabilityTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  obsSummary: any = null;
-  outboxLogs: any[] = [];
+  obsSummary: HrObservabilitySummary | null = null;
+  outboxLogs: NotifyOutboxRow[] = [];
   notifySettings = defaultNotifySettings();
 
   constructor(private api: HrScheduleApiService, private token: TokenService) {

@@ -159,17 +159,19 @@ async def build_dsar_export(
     emp_ids = [e.company_employeeId for e in emp_rows]
     timestamps: list[EmployeeTimestamp] = []
     if emp_ids:
-        timestamps = (
-            await db.execute(
-                select(EmployeeTimestamp)
-                .where(
-                    EmployeeTimestamp.companyId == company_id,
-                    EmployeeTimestamp.company_employeeId.in_(emp_ids),
+        timestamps = list(
+            (
+                await db.execute(
+                    select(EmployeeTimestamp)
+                    .where(
+                        EmployeeTimestamp.companyId == company_id,
+                        EmployeeTimestamp.company_employeeId.in_(emp_ids),
+                    )
+                    .order_by(EmployeeTimestamp.timestamp.desc())
+                    .limit(5000)
                 )
-                .order_by(EmployeeTimestamp.timestamp.desc())
-                .limit(5000)
-            )
-        ).scalars().all()
+            ).scalars().all()
+        )
 
     encodings = (
         await db.execute(

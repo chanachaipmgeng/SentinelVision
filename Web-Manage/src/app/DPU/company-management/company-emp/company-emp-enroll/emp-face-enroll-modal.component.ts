@@ -9,7 +9,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 import { SharedModule } from '../../../../shared/shared.module';
 import { playCaptureBeep, unlockBeepAudio } from '../../../../shared/utils/beep';
 import { unlockSpeech } from '../../../../shared/utils/tts';
@@ -40,10 +41,9 @@ import {
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-emp-face-enroll-modal',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './emp-face-enroll-modal.component.html',
+    selector: 'app-emp-face-enroll-modal',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './emp-face-enroll-modal.component.html'
 })
 export class EmpFaceEnrollModalComponent implements OnDestroy {
   @ViewChild('closeModalFace') public childModalFace?: ElementRef;
@@ -231,9 +231,9 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       this.updateAngleStatus();
       this.cdr.detectChanges();
       setTimeout(() => this.detectFace(), 300);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      this.faceStatus = err?.message || 'เปิดกล้องไม่สำเร็จ';
+      this.faceStatus = err instanceof Error ? err.message : 'เปิดกล้องไม่สำเร็จ';
       this.cdr.detectChanges();
     }
   }
@@ -453,8 +453,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       this.clearUploads();
       this.childModalFace?.nativeElement.click();
       this.stopFaceCamera();
-    } catch (error: any) {
-      const detail = error?.error?.detail || 'บันทึกใบหน้าไม่สำเร็จ';
+    } catch (error: unknown) {
+      const detail = apiErrorMessage(error as HttpErrorResponse, 'บันทึกใบหน้าไม่สำเร็จ');
       this.uploadStatus = 'Error uploading face!';
       this.faceStatus = detail;
       speakEnroll(this.ttsSettings, this.selectModel, false);
@@ -490,8 +490,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       swal('Save Success!!', 'บันทึกใบหน้า 5 มุมสำเร็จ', 'success');
       this.childModalFace?.nativeElement.click();
       this.stopFaceCamera();
-    } catch (error: any) {
-      const detail = error?.error?.detail || 'บันทึกใบหน้าไม่สำเร็จ';
+    } catch (error: unknown) {
+      const detail = apiErrorMessage(error as HttpErrorResponse, 'บันทึกใบหน้าไม่สำเร็จ');
       this.uploadStatus = 'Error uploading face!';
       this.faceStatus = detail;
       speakEnroll(this.ttsSettings, this.selectModel, false);

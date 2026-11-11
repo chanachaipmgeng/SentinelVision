@@ -10,12 +10,11 @@ import { TimestampModel } from '../../models/timestamp.model';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-warning-timetamp',
-  templateUrl: './warning-timetamp.component.html',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule, LocationMapComponent],
-  styleUrls: ['./warning-timetamp.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-warning-timetamp',
+    templateUrl: './warning-timetamp.component.html',
+    imports: [CommonModule, FormsModule, SharedModule, LocationMapComponent],
+    styleUrls: ['./warning-timetamp.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class WarningTimetampComponent implements OnInit {
   companyId = '';
@@ -143,7 +142,7 @@ export class WarningTimetampComponent implements OnInit {
       text: item.employee?.getFullname?.() || '',
       icon: 'warning',
       buttons: ['ยกเลิก', 'อนุมัติ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.actionBusy = true;
       this.timestampService
@@ -169,12 +168,9 @@ export class WarningTimetampComponent implements OnInit {
     swal({
       title: 'ปฏิเสธการลงเวลา',
       text: 'กรอกเหตุผลที่ปฏิเสธ',
-      content: {
-        element: 'input',
-        attributes: { placeholder: 'เหตุผล' },
-      } as any,
+      content: { element: 'input', attributes: { placeholder: 'เหตุผล' } },
       buttons: ['ยกเลิก', 'ปฏิเสธ'],
-    }).then((reason: any) => {
+    }).then((reason: unknown) => {
       if (reason === null || reason === false) return;
       const rejectReason = String(reason || '').trim();
       if (!rejectReason) {

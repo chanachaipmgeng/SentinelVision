@@ -1,9 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../shared/services/auth.service';
+import { apiErrorMessage } from '../../shared/utils/http-error-body';
 import { TokenService } from '../../shared/services/token.service';
 import { EmployeeService } from '../../DPU/services/employee.service';
+import { UserModel } from '../../shared/user-auth.model';
 
 /**
  * OIDC redirect target (`OIDC_REDIRECT_URI` = `<origin>/auth/sso/callback`).
@@ -11,10 +14,9 @@ import { EmployeeService } from '../../DPU/services/employee.service';
  * stores tokens through TokenService exactly like the password login does.
  */
 @Component({
-  selector: 'app-sso-callback',
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
+    selector: 'app-sso-callback',
+    imports: [CommonModule, RouterModule],
+    template: `
     <div class="min-h-screen flex items-center justify-center p-6">
       <div class="box p-6 w-full max-w-md space-y-3 text-center">
         <h2 class="text-lg font-semibold">เข้าสู่ระบบด้วย SSO</h2>
@@ -26,7 +28,7 @@ import { EmployeeService } from '../../DPU/services/employee.service';
         }
       </div>
     </div>
-  `,
+  `
 })
 export class SsoCallbackComponent implements OnInit {
   error = '';
@@ -55,13 +57,13 @@ export class SsoCallbackComponent implements OnInit {
     }
     this.authService.ssoCallback(code, state, txn.txn).subscribe({
       next: (result) => this.completeLogin(result),
-      error: (err) => {
-        this.error = err?.error?.detail || 'เข้าสู่ระบบด้วย SSO ไม่สำเร็จ';
+      error: (err: HttpErrorResponse) => {
+        this.error = apiErrorMessage(err, 'เข้าสู่ระบบด้วย SSO ไม่สำเร็จ');
       },
     });
   }
 
-  private completeLogin(result: any): void {
+  private completeLogin(result: UserModel & { returnTo?: string }): void {
     this.authService.applyMemberSession(result);
     if (result.mustChangePassword || result.must_change_password) {
       this.router.navigate(['/auth/change-password']);

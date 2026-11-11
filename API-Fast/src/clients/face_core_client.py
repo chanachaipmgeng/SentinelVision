@@ -34,7 +34,7 @@ try:
     from face_core.client import FaceCoreClient as _SdkClient
     from face_core.client import FaceCoreError, IdentifyMode as _SdkIdentifyMode
 
-    IdentifyMode = _SdkIdentifyMode  # noqa: F811
+    IdentifyMode = _SdkIdentifyMode  # type: ignore[misc]  # noqa: F811
 except ImportError as _import_err:
     _SdkClient = None  # type: ignore[assignment,misc]
 

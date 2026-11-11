@@ -16,6 +16,7 @@ import {
 } from '../../../../shared/utils/beep';
 import { accessZoneScanRoute } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';
+import { CameraEventClip, SentinelIncident, SentinelZone } from '../sentinel.models';
 
 interface AccessLogsViewFilters {
   zoneId: string;
@@ -32,29 +33,28 @@ const POLL_MS = 15000;
  * plus inline event-clip playback in the detail drawer.
  */
 @Component({
-  selector: 'app-sentinel-access-logs-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SavedViewsBarComponent, SideDrawerComponent],
-  templateUrl: './sentinel-access-logs-panel.component.html',
-  styleUrls: [
-    './sentinel-access-logs-panel.component.css',
-    '../../../../shared/styles/dpu-filter-toolbar.css',
-  ],
+    selector: 'app-sentinel-access-logs-panel',
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SavedViewsBarComponent, SideDrawerComponent],
+    templateUrl: './sentinel-access-logs-panel.component.html',
+    styleUrls: [
+        './sentinel-access-logs-panel.component.css',
+        '../../../../shared/styles/dpu-filter-toolbar.css',
+    ]
 })
 export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  zones: any[] = [];
-  incidents: any[] = [];
+  zones: SentinelZone[] = [];
+  incidents: SentinelIncident[] = [];
   loading = false;
   bulkBusy = false;
   incidentFilterZoneId = '';
   incidentFilterStatus = '';
   incidentFilterSeverity = '';
   savedFilters: AccessLogsViewFilters = { zoneId: '', status: '', severity: '' };
-  selectedIncident: any = null;
+  selectedIncident: SentinelIncident | null = null;
   drawerOpen = false;
   incidentClipUrl = '';
   incidentClipTime = 0;
@@ -137,7 +137,8 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
       });
   }
 
-  applySavedView(filters: Partial<AccessLogsViewFilters> | null): void {
+  applySavedView(raw: unknown): void {
+    const filters = raw as Partial<AccessLogsViewFilters> | null;
     if (!filters) return;
     this.incidentFilterZoneId = filters.zoneId || '';
     this.incidentFilterStatus = filters.status || '';
@@ -145,7 +146,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     if (this.companyId) this.loadIncidents();
   }
 
-  openIncident(inc: any): void {
+  openIncident(inc: SentinelIncident): void {
     this.selectedIncident = inc;
     this.drawerOpen = true;
     this.loadIncidentClip(inc?.incidentId);
@@ -172,7 +173,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
 
   private fetchIncidentClip(incidentId: string): void {
     this.http
-      .get<any[]>(`/cameras/company/${this.companyId}/clips`, {
+      .get<CameraEventClip[]>(`/cameras/company/${this.companyId}/clips`, {
         params: { incidentId, kind: 'event', limit: '1' },
       })
       .subscribe({
@@ -218,11 +219,11 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     }
   }
 
-  isSelectedIncident(inc: any): boolean {
+  isSelectedIncident(inc: SentinelIncident): boolean {
     return this.drawerOpen && this.selectedIncident?.incidentId === inc?.incidentId;
   }
 
-  toggleRowSelect(inc: any, event: Event): void {
+  toggleRowSelect(inc: SentinelIncident, event: Event): void {
     event.stopPropagation();
     const id = inc?.incidentId;
     if (!id) return;
@@ -231,7 +232,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     this.selectedIds = new Set(this.selectedIds);
   }
 
-  isRowChecked(inc: any): boolean {
+  isRowChecked(inc: SentinelIncident): boolean {
     return this.selectedIds.has(inc?.incidentId);
   }
 
@@ -295,7 +296,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
   }
 
   /** Incident evidence is served from `/images/*`; fetch via Bearer → blob URL. */
-  snapshotSrc(inc: any): string {
+  snapshotSrc(inc: SentinelIncident): string {
     const raw: string = inc?.snapshotUrl || '';
     if (!raw) return '';
     if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
@@ -341,16 +342,17 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     });
   }
 
-  canActOnIncident(inc: any): boolean {
-    const st = (inc?.status || 'OPEN').toUpperCase();
+  canActOnIncident(inc: SentinelIncident | null): boolean {
+    if (!inc) return false;
+    const st = (inc.status || 'OPEN').toUpperCase();
     return st !== 'CLOSED';
   }
 
-  canAcknowledge(inc: any): boolean {
+  canAcknowledge(inc: SentinelIncident): boolean {
     return !inc?.acknowledgedAt && (inc?.severity === 'CRITICAL' || inc?.severity === 'WARNING');
   }
 
-  isOverdue(inc: any): boolean {
+  isOverdue(inc: SentinelIncident): boolean {
     if (!inc?.slaDueAt) return false;
     const st = (inc?.status || 'OPEN').toUpperCase();
     if (st === 'CLOSED') return false;
@@ -358,7 +360,7 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     return Number.isFinite(due) && due < Date.now();
   }
 
-  private detectNewIncidents(list: any[]): void {
+  private detectNewIncidents(list: SentinelIncident[]): void {
     const nextIds = new Set<string>(list.map((i) => i?.incidentId).filter(Boolean));
     if (!this.pollReady) {
       this.knownIds = nextIds;

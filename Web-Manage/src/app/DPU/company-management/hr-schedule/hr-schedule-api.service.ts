@@ -1,6 +1,22 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import {
+  HrEmployeeShiftRow,
+  HrHoliday,
+  HrKioskDevice,
+  HrLeave,
+  HrObservabilitySummary,
+  HrPdpaSummary,
+  HrShiftsResponse,
+  HrDepartmentShiftRow,
+  NotifyOutboxRow,
+} from './hr-schedule.models';
+import { defaultNotifySettings, defaultRetentionSettings } from './hr-schedule.helpers';
+
+type RetentionSettings = ReturnType<typeof defaultRetentionSettings>;
+type NotifySettings = ReturnType<typeof defaultNotifySettings>;
+type ConsentPolicy = ReturnType<typeof import('./hr-schedule.helpers').defaultConsentPolicy>;
 
 /** All HttpClient paths used by HR Schedule tabs. */
 @Injectable({ providedIn: 'root' })
@@ -8,153 +24,153 @@ export class HrScheduleApiService {
   constructor(private http: HttpClient) {}
 
   // --- Shifts ---
-  getShifts(companyId: string): Observable<any> {
-    return this.http.get<any>(`/hr/company/${companyId}/shifts`);
+  getShifts(companyId: string): Observable<HrShiftsResponse> {
+    return this.http.get<HrShiftsResponse>(`/hr/company/${companyId}/shifts`);
   }
 
-  createShift(companyId: string, body: unknown): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/shifts`, body);
+  createShift(companyId: string, body: Record<string, unknown>): Observable<HrShiftsResponse> {
+    return this.http.post<HrShiftsResponse>(`/hr/company/${companyId}/shifts`, body);
   }
 
-  deleteShift(companyId: string, shiftId: string): Observable<any> {
-    return this.http.delete(`/hr/company/${companyId}/shifts/${shiftId}`);
+  deleteShift(companyId: string, shiftId: string): Observable<Record<string, unknown>> {
+    return this.http.delete<Record<string, unknown>>(`/hr/company/${companyId}/shifts/${shiftId}`);
   }
 
   assignShift(
     companyId: string,
     body: { departmentId?: string; company_employeeId?: string; shiftId: string | null },
-  ): Observable<any> {
-    return this.http.put(`/hr/company/${companyId}/assign-shift`, body);
+  ): Observable<Record<string, unknown>> {
+    return this.http.put<Record<string, unknown>>(`/hr/company/${companyId}/assign-shift`, body);
   }
 
   // --- Lookups ---
-  getDepartments(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/departments/company/${companyId}`);
+  getDepartments(companyId: string): Observable<HrDepartmentShiftRow[]> {
+    return this.http.get<HrDepartmentShiftRow[]>(`/departments/company/${companyId}`);
   }
 
-  getEmployees(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/employees/company/${companyId}`);
+  getEmployees(companyId: string): Observable<HrEmployeeShiftRow[]> {
+    return this.http.get<HrEmployeeShiftRow[]>(`/employees/company/${companyId}`);
   }
 
   // --- Leaves ---
-  getLeaves(companyId: string): Observable<any> {
-    return this.http.get<any>(`/hr/company/${companyId}/leaves`);
+  getLeaves(companyId: string): Observable<HrLeave[] | { items?: HrLeave[] }> {
+    return this.http.get<HrLeave[] | { items?: HrLeave[] }>(`/hr/company/${companyId}/leaves`);
   }
 
-  createLeave(companyId: string, body: unknown): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/leaves`, body);
+  createLeave(companyId: string, body: Record<string, unknown>): Observable<HrLeave> {
+    return this.http.post<HrLeave>(`/hr/company/${companyId}/leaves`, body);
   }
 
-  approveLeave(companyId: string, leaveId: string, status: number): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/leaves/${leaveId}/approval`, { status });
+  approveLeave(companyId: string, leaveId: string, status: number): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/hr/company/${companyId}/leaves/${leaveId}/approval`, { status });
   }
 
   // --- Holidays ---
-  getHolidays(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/hr/company/${companyId}/holidays`);
+  getHolidays(companyId: string): Observable<HrHoliday[]> {
+    return this.http.get<HrHoliday[]>(`/hr/company/${companyId}/holidays`);
   }
 
-  createHoliday(companyId: string, body: unknown): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/holidays`, body);
+  createHoliday(companyId: string, body: Record<string, unknown>): Observable<HrHoliday> {
+    return this.http.post<HrHoliday>(`/hr/company/${companyId}/holidays`, body);
   }
 
-  deleteHoliday(companyId: string, holidayId: string): Observable<any> {
-    return this.http.delete(`/hr/company/${companyId}/holidays/${holidayId}`);
+  deleteHoliday(companyId: string, holidayId: string): Observable<Record<string, unknown>> {
+    return this.http.delete<Record<string, unknown>>(`/hr/company/${companyId}/holidays/${holidayId}`);
   }
 
-  applyThaiHolidayPreset(companyId: string, year: number): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/holidays/thai-preset`, { year });
+  applyThaiHolidayPreset(companyId: string, year: number): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/hr/company/${companyId}/holidays/thai-preset`, { year });
   }
 
-  importHolidays(companyId: string, form: FormData): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/holidays/import`, form);
+  importHolidays(companyId: string, form: FormData): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/hr/company/${companyId}/holidays/import`, form);
   }
 
   // --- PDPA ---
-  getPdpaSummary(companyId: string): Observable<any> {
-    return this.http.get<any>(`/hr/company/${companyId}/pdpa-summary`);
+  getPdpaSummary(companyId: string): Observable<HrPdpaSummary> {
+    return this.http.get<HrPdpaSummary>(`/hr/company/${companyId}/pdpa-summary`);
   }
 
-  getConsentPolicy(companyId: string): Observable<any> {
-    return this.http.get<any>(`/hr/company/${companyId}/pdpa/consent-policy`);
+  getConsentPolicy(companyId: string): Observable<ConsentPolicy> {
+    return this.http.get<ConsentPolicy>(`/hr/company/${companyId}/pdpa/consent-policy`);
   }
 
-  putConsentPolicy(companyId: string, body: unknown): Observable<any> {
-    return this.http.put(`/hr/company/${companyId}/pdpa/consent-policy`, body);
+  putConsentPolicy(companyId: string, body: ConsentPolicy): Observable<ConsentPolicy> {
+    return this.http.put<ConsentPolicy>(`/hr/company/${companyId}/pdpa/consent-policy`, body);
   }
 
-  getRetention(companyId: string): Observable<any> {
-    return this.http.get<any>(`/hr/company/${companyId}/pdpa/retention`);
+  getRetention(companyId: string): Observable<RetentionSettings> {
+    return this.http.get<RetentionSettings>(`/hr/company/${companyId}/pdpa/retention`);
   }
 
-  putRetention(companyId: string, body: unknown): Observable<any> {
-    return this.http.put(`/hr/company/${companyId}/pdpa/retention`, body);
+  putRetention(companyId: string, body: RetentionSettings): Observable<RetentionSettings> {
+    return this.http.put<RetentionSettings>(`/hr/company/${companyId}/pdpa/retention`, body);
   }
 
-  grantBiometricConsent(companyId: string, memberId: string): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/members/${memberId}/biometric-consent`, {});
+  grantBiometricConsent(companyId: string, memberId: string): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/hr/company/${companyId}/members/${memberId}/biometric-consent`, {});
   }
 
-  revokeBiometricConsent(companyId: string, memberId: string): Observable<any> {
-    return this.http.delete(`/hr/company/${companyId}/members/${memberId}/biometric-consent`);
+  revokeBiometricConsent(companyId: string, memberId: string): Observable<Record<string, unknown>> {
+    return this.http.delete<Record<string, unknown>>(`/hr/company/${companyId}/members/${memberId}/biometric-consent`);
   }
 
-  exportDsar(companyId: string, memberId: string): Observable<any> {
-    return this.http.get(`/hr/company/${companyId}/members/${memberId}/dsar-export`);
+  exportDsar(companyId: string, memberId: string): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`/hr/company/${companyId}/members/${memberId}/dsar-export`);
   }
 
   // --- Kiosk ---
-  getKioskDevices(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/hr/company/${companyId}/kiosk-devices`);
+  getKioskDevices(companyId: string): Observable<HrKioskDevice[]> {
+    return this.http.get<HrKioskDevice[]>(`/hr/company/${companyId}/kiosk-devices`);
   }
 
-  createKioskDevice(companyId: string, name: string): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/kiosk-devices`, { name });
+  createKioskDevice(companyId: string, name: string): Observable<HrKioskDevice> {
+    return this.http.post<HrKioskDevice>(`/hr/company/${companyId}/kiosk-devices`, { name });
   }
 
-  reissueKioskPairingCode(companyId: string, deviceId: string): Observable<any> {
-    return this.http.post(`/hr/company/${companyId}/kiosk-devices/${deviceId}/pairing-code`, {});
+  reissueKioskPairingCode(companyId: string, deviceId: string): Observable<HrKioskDevice> {
+    return this.http.post<HrKioskDevice>(`/hr/company/${companyId}/kiosk-devices/${deviceId}/pairing-code`, {});
   }
 
-  revokeKioskDevice(companyId: string, deviceId: string): Observable<any> {
-    return this.http.delete(`/hr/company/${companyId}/kiosk-devices/${deviceId}`);
+  revokeKioskDevice(companyId: string, deviceId: string): Observable<Record<string, unknown>> {
+    return this.http.delete<Record<string, unknown>>(`/hr/company/${companyId}/kiosk-devices/${deviceId}`);
   }
 
   // --- MFA ---
-  getMfaStatus(): Observable<any> {
-    return this.http.get<any>(`/auth/mfa/status`);
+  getMfaStatus(): Observable<{ username?: string; totpEnabled?: boolean }> {
+    return this.http.get<{ username?: string; totpEnabled?: boolean }>(`/auth/mfa/status`);
   }
 
-  setupMfa(): Observable<any> {
-    return this.http.post(`/auth/mfa/setup`, {});
+  setupMfa(): Observable<{ secret?: string; otpauthUri?: string }> {
+    return this.http.post<{ secret?: string; otpauthUri?: string }>(`/auth/mfa/setup`, {});
   }
 
-  enableMfa(code: string): Observable<any> {
-    return this.http.post(`/auth/mfa/enable`, { code });
+  enableMfa(code: string): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/auth/mfa/enable`, { code });
   }
 
-  disableMfa(): Observable<any> {
-    return this.http.post(`/auth/mfa/disable`, {});
+  disableMfa(): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/auth/mfa/disable`, {});
   }
 
   // --- Observability / webhooks ---
-  getObservabilitySummary(): Observable<any> {
-    return this.http.get<any>(`/system/observability-summary`);
+  getObservabilitySummary(): Observable<HrObservabilitySummary> {
+    return this.http.get<HrObservabilitySummary>(`/system/observability-summary`);
   }
 
-  getNotifySettings(companyId: string): Observable<any> {
-    return this.http.get<any>(`/notifications/company/${companyId}/settings`);
+  getNotifySettings(companyId: string): Observable<NotifySettings> {
+    return this.http.get<NotifySettings>(`/notifications/company/${companyId}/settings`);
   }
 
-  putNotifySettings(companyId: string, body: unknown): Observable<any> {
-    return this.http.put(`/notifications/company/${companyId}/settings`, body);
+  putNotifySettings(companyId: string, body: NotifySettings): Observable<NotifySettings> {
+    return this.http.put<NotifySettings>(`/notifications/company/${companyId}/settings`, body);
   }
 
-  getOutbox(companyId: string): Observable<any[]> {
-    return this.http.get<any[]>(`/notifications/company/${companyId}/outbox`);
+  getOutbox(companyId: string): Observable<NotifyOutboxRow[]> {
+    return this.http.get<NotifyOutboxRow[]>(`/notifications/company/${companyId}/outbox`);
   }
 
-  sendTestWebhook(companyId: string): Observable<any> {
-    return this.http.post(`/notifications/company/${companyId}/test`, {});
+  sendTestWebhook(companyId: string): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`/notifications/company/${companyId}/test`, {});
   }
 }

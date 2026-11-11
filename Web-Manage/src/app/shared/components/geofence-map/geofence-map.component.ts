@@ -25,10 +25,9 @@ export interface GeofencePosition {
  * Radius input is kilometres (same as company_location API); circle uses metres.
  */
 @Component({
-  selector: 'app-geofence-map',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-geofence-map',
+    imports: [CommonModule],
+    template: `
     <div class="dpu-geofence-map" [style.height]="height">
       <div #mapHost class="dpu-geofence-map__host"></div>
       <div *ngIf="editable" class="dpu-geofence-map__hint">
@@ -36,8 +35,8 @@ export interface GeofencePosition {
       </div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       .dpu-geofence-map {
         position: relative;
         width: 100%;
@@ -83,8 +82,8 @@ export interface GeofencePosition {
         cursor: crosshair;
       }
     `,
-  ],
-  encapsulation: ViewEncapsulation.None,
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class GeofenceMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapHost', { static: true }) mapHost!: ElementRef<HTMLDivElement>;

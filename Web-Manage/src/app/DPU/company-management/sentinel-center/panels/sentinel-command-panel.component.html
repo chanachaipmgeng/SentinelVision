@@ -168,7 +168,7 @@
                   <div *ngIf="lastScanResult.subjectName">
                     <strong>ชื่อ-นามสกุล:</strong> {{ lastScanResult.subjectName }} ({{ lastScanResult.identityType }})
                   </div>
-                  <div *ngIf="lastScanResult.confidencePercent != null">
+                  <div *ngIf="lastScanResult.confidencePercent !== null && lastScanResult.confidencePercent !== undefined">
                     <strong>ความแม่นยำ (Confidence):</strong> {{ lastScanResult.confidencePercent }}%
                   </div>
                   <div *ngIf="lastScanResult.seatNumber">
@@ -259,8 +259,8 @@
                       </td>
                       <td class="p-3">{{ inc.zoneName || '-' }}</td>
                       <td class="p-3">
-                        <span *ngIf="inc.confidencePercent != null">{{ inc.confidencePercent }}%</span>
-                        <span *ngIf="inc.confidencePercent == null" class="text-dpu-muted">-</span>
+                        <span *ngIf="inc.confidencePercent !== null && inc.confidencePercent !== undefined">{{ inc.confidencePercent }}%</span>
+                        <span *ngIf="inc.confidencePercent === null || inc.confidencePercent === undefined" class="text-dpu-muted">-</span>
                       </td>
                       <td class="p-3">{{ inc.occurredAt | date:'dd/MM HH:mm:ss' }}</td>
                       <td class="p-3 text-end">

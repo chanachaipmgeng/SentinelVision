@@ -12,7 +12,7 @@ Face check-in & HR attendance system: InsightFace `buffalo_l` (512-d) + pgvector
 | Path | Role |
 |------|------|
 | `API-Fast/` | FastAPI + InsightFace + GPU queue + Hybrid Check-In/Out + Shift Late/OT + Excel/CSV Export |
-| `Web-Manage/` | Angular 17 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
+| `Web-Manage/` | Angular 19 admin (kiosk at `/company/timestamp-face`; shared list UI under `src/app/shared/`) |
 | `docker/` | nginx gateway + DB init |
 | `docs/` | SETUP, ARCHITECTURE, API, RUNBOOK, BACKLOG, agent guide (`CURSOR-AGENT.md`) |
 | `API-Fast/src/security/` | JWT, authz middleware, tenancy deps (`assert_company_access`, `assert_member_company_access`, `assert_encoding_company_access`), passwords/lockout |

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { CompanyLocationModel } from '../models/company-location.model';
@@ -16,7 +16,7 @@ export class CompanyLocationService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<CompanyLocationModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new CompanyLocationModel(e, this.translateService)));
@@ -53,7 +53,7 @@ export class CompanyLocationService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<CompanyLocationModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 
@@ -86,8 +86,8 @@ export class CompanyLocationService {
 
   /** Strip UI-only fields; normalize dates for FastAPI datetime fields. */
   private toApiPayload(body: CompanyLocationModel): Record<string, unknown> {
-    const blank = (v: any) => v === '' || v === undefined || v === null;
-    const toDateTime = (v: any) => {
+    const blank = (v: unknown) => v === '' || v === undefined || v === null;
+    const toDateTime = (v: unknown) => {
       if (blank(v)) {
         return null;
       }

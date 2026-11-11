@@ -222,7 +222,7 @@
       </label>
       <span class="dpu-kiosk__chip" *ngIf="selectedEvent as ev">
         <i class="ri-group-line"></i>
-        {{ ev.checkedInCount || 0 }}{{ ev.capacity != null ? ' / ' + ev.capacity : '' }}
+        {{ ev.checkedInCount || 0 }}{{ ev.capacity !== null && ev.capacity !== undefined ? ' / ' + ev.capacity : '' }}
       </span>
       <span class="dpu-kiosk__chip is-ok" *ngIf="seatNumber">
         <i class="ri-armchair-line"></i>
@@ -391,7 +391,7 @@
           </p>
           <p class="dpu-kiosk__meta mb-0">
             <i class="ri-map-pin-line"></i> {{ latestResult.locationName }}
-            <span *ngIf="latestResult.confidencePercent != null">
+            <span *ngIf="latestResult.confidencePercent !== null && latestResult.confidencePercent !== undefined">
               · มั่นใจ {{ latestResult.confidencePercent | number:'1.0-1' }}%
             </span>
           </p>
@@ -497,7 +497,7 @@
               <dt>{{ 'Position' | translate }}</dt>
               <dd>{{ latestResult.position || '-' }}</dd>
             </div>
-            <div *ngIf="latestResult.confidencePercent != null">
+            <div *ngIf="latestResult.confidencePercent !== null && latestResult.confidencePercent !== undefined">
               <dt>ความมั่นใจ</dt>
               <dd>
                 {{ latestResult.confidencePercent | number:'1.1-1' }}%
@@ -547,7 +547,7 @@
             </p>
             <p class="dpu-kiosk__meta mb-0">
               {{ item.locationName }}
-              <span *ngIf="item.confidencePercent != null"> · {{ item.confidencePercent | number:'1.0-1' }}%</span>
+              <span *ngIf="item.confidencePercent !== null && item.confidencePercent !== undefined"> · {{ item.confidencePercent | number:'1.0-1' }}%</span>
             </p>
             <p *ngIf="item.statusKind === 'error'" class="dpu-kiosk__meta dpu-kiosk__meta--error mb-0">
               {{ item.message }}

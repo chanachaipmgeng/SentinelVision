@@ -2,19 +2,19 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
+import { SentinelEdgeManifest, SentinelMusterRollItem, SentinelOverview } from '../sentinel.models';
 
 @Component({
-  selector: 'app-sentinel-muster-panel',
-  standalone: true,
-  imports: [CommonModule],
-  templateUrl: './sentinel-muster-panel.component.html',
+    selector: 'app-sentinel-muster-panel',
+    imports: [CommonModule],
+    templateUrl: './sentinel-muster-panel.component.html'
 })
 export class SentinelMusterPanelComponent implements OnInit, OnChanges {
-  @Input() overview: any = null;
+  @Input() overview: SentinelOverview | null = null;
 
   companyId = '';
-  edgeManifest: any = null;
-  musterItems: any[] = [];
+  edgeManifest: SentinelEdgeManifest | null = null;
+  musterItems: SentinelMusterRollItem[] = [];
   musterTotal = 0;
   musterWorkDate: string | null = null;
   musterLoading = false;
@@ -38,7 +38,7 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
     }
   }
 
-  private applyOverviewMuster(ov: any): void {
+  private applyOverviewMuster(ov: SentinelOverview | null): void {
     if (!ov) return;
     if (Array.isArray(ov.musterRoll)) {
       this.musterItems = ov.musterRoll;

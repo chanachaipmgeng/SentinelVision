@@ -10,10 +10,9 @@ import type { KioskDeviceRow } from '../../devices/devices.component';
 
 /** Kiosk device counts + recent rows; pairing/rotate/revoke stay on `/company/devices`. */
 @Component({
-  selector: 'app-devices-summary-panel',
-  standalone: true,
-  imports: [CommonModule, TranslateModule, EmptyStateComponent, StatChipComponent, LocaleDatePipe],
-  template: `
+    selector: 'app-devices-summary-panel',
+    imports: [CommonModule, TranslateModule, EmptyStateComponent, StatChipComponent, LocaleDatePipe],
+    template: `
     <div class="box modern-card glass">
       <div class="box-header flex flex-wrap items-center gap-2">
         <h5 class="box-title !mb-0">{{ 'settingsHub.devices.title' | translate }}</h5>
@@ -41,7 +40,7 @@ import type { KioskDeviceRow } from '../../devices/devices.component';
         </ul>
       </div>
     </div>
-  `,
+  `
 })
 export class DevicesSummaryPanelComponent implements OnInit {
   loading = true;

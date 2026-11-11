@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Index, String
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from ..config.database import Base
@@ -20,29 +22,32 @@ class VideoClip(Base):
 
     __tablename__ = "video_clip"
 
-    clipId = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    companyId = Column(
+    clipId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("company.companyId", ondelete="CASCADE"),
         nullable=False,
     )
-    cameraId = Column(
+    cameraId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("camera.cameraId", ondelete="CASCADE"),
         nullable=False,
     )
-    incidentId = Column(
+    incidentId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("sentinel_incident_log.incidentId", ondelete="SET NULL"),
         nullable=True,
     )
-    startedAt = Column("started_at", DateTime(timezone=True), nullable=False)
-    endedAt = Column("ended_at", DateTime(timezone=True), nullable=False)
-    storageKey = Column("storage_key", String(512), nullable=False)
-    durationMs = Column("duration_ms", BigInteger, nullable=False, default=0, server_default="0")
-    # event | continuous_ref
-    kind = Column(String(32), nullable=False, default=CLIP_KIND_EVENT, server_default=CLIP_KIND_EVENT)
-    createdAt = Column("created_at", DateTime(timezone=True), server_default=func.now())
+    startedAt: Mapped[datetime] = mapped_column("started_at", DateTime(timezone=True), nullable=False)
+    endedAt: Mapped[datetime] = mapped_column("ended_at", DateTime(timezone=True), nullable=False)
+    storageKey: Mapped[str] = mapped_column("storage_key", String(512), nullable=False)
+    durationMs: Mapped[int] = mapped_column(
+        "duration_ms", BigInteger, nullable=False, default=0, server_default="0"
+    )
+    kind: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=CLIP_KIND_EVENT, server_default=CLIP_KIND_EVENT
+    )
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("video_clip_company_started_idx", "companyId", "started_at"),

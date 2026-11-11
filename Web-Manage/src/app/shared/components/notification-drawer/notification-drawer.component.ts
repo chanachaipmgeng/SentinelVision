@@ -18,11 +18,10 @@ export interface InboxNotification {
 const APPROVAL_EVENT = /^(attendance\.|approval|leave\.|ot\.)/i;
 
 @Component({
-  selector: 'app-notification-drawer',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
-  templateUrl: './notification-drawer.component.html',
-  styleUrl: './notification-drawer.component.css',
+    selector: 'app-notification-drawer',
+    imports: [CommonModule, RouterModule, TranslateModule],
+    templateUrl: './notification-drawer.component.html',
+    styleUrl: './notification-drawer.component.css'
 })
 export class NotificationDrawerComponent {
   items: InboxNotification[] = [];

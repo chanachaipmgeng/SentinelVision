@@ -14,25 +14,24 @@ import { TokenService } from '../../../../shared/services/token.service';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-position',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    FormsModule,
-    PageToolbarComponent,
-    PillSearchComponent,
-    StatChipComponent,
-    SimplePagerComponent,
-    EmptyStateComponent,
-  ],
-  templateUrl: './position.component.html',
-  styleUrls: [
-    '../../../../shared/styles/dpu-list-page.css',
-    './position.component.css',
-  ],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-position',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        FormsModule,
+        PageToolbarComponent,
+        PillSearchComponent,
+        StatChipComponent,
+        SimplePagerComponent,
+        EmptyStateComponent,
+    ],
+    templateUrl: './position.component.html',
+    styleUrls: [
+        '../../../../shared/styles/dpu-list-page.css',
+        './position.component.css',
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class PositionComponent {
   @ViewChild('closeModal') public childModal?: ElementRef;
@@ -132,7 +131,7 @@ export class PositionComponent {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.positionService.delete(item).subscribe({
         next: () => {
@@ -164,7 +163,7 @@ export class PositionComponent {
       text: this.selectModel.thName,
       icon: 'warning',
       buttons: ['ยกเลิก', 'บันทึก'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       this.selectModel.companyId = this.companyId;
       const req$ = this.isEdit
@@ -214,7 +213,7 @@ export class PositionComponent {
       icon: 'warning',
       dangerMode: true,
       buttons: ['ยกเลิก', 'ลบ'],
-    }).then((ok: any) => {
+    }).then((ok: unknown) => {
       if (!ok) return;
       let pending = targets.length;
       targets.forEach((item) => {

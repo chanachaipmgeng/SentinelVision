@@ -73,7 +73,7 @@ async def upload_image_base64(base64_image: str = Form(...)):
     try:
         content = base64.b64decode(raw)
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid base64 string")
+        raise HTTPException(status_code=400, detail="Invalid base64 string") from None
     return await _save_bytes(content)
 
 

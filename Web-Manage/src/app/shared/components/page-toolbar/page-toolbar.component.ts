@@ -3,10 +3,9 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-page-toolbar',
-  standalone: true,
-  imports: [CommonModule, TranslateModule],
-  template: `
+    selector: 'app-page-toolbar',
+    imports: [CommonModule, TranslateModule],
+    template: `
     <div class="box dpu-toolbar modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div class="box-header dpu-toolbar__header">
         <div class="dpu-toolbar__inner">
@@ -21,8 +20,8 @@ import { TranslateModule } from '@ngx-translate/core';
       </div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
       }
@@ -55,7 +54,7 @@ import { TranslateModule } from '@ngx-translate/core';
         min-width: 0;
       }
     `,
-  ],
+    ]
 })
 export class PageToolbarComponent {
   @Input() title = '';

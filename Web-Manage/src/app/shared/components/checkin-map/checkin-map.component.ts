@@ -32,10 +32,9 @@ export interface CompanyMapLocation {
 }
 
 @Component({
-  selector: 'app-checkin-map',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-checkin-map',
+    imports: [CommonModule],
+    template: `
     <div class="dpu-checkin-map" [style.height]="height">
       <div #mapHost class="dpu-checkin-map__host"></div>
       <div *ngIf="showEmpty" class="dpu-checkin-map__empty">
@@ -43,8 +42,8 @@ export interface CompanyMapLocation {
       </div>
     </div>
   `,
-  styles: [
-    `
+    styles: [
+        `
       .dpu-checkin-map {
         position: relative;
         width: 100%;
@@ -121,8 +120,8 @@ export interface CompanyMapLocation {
         background: #e2e8f0;
       }
     `,
-  ],
-  encapsulation: ViewEncapsulation.None,
+    ],
+    encapsulation: ViewEncapsulation.None
 })
 export class CheckinMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @ViewChild('mapHost', { static: true }) mapHost!: ElementRef<HTMLDivElement>;

@@ -9,18 +9,20 @@ import {
   holidayImportFormat,
   holidaySourceLabel,
 } from '../hr-schedule.helpers';
+import { HrHoliday } from '../hr-schedule.models';
+import { HttpErrorResponse } from '@angular/common/http';
+import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 
 @Component({
-  selector: 'app-hr-holidays-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-holidays-tab.component.html',
+    selector: 'app-hr-holidays-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-holidays-tab.component.html'
 })
 export class HrHolidaysTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  holidays: any[] = [];
+  holidays: HrHoliday[] = [];
   holidayBusy = false;
   holidayImportHint = '';
   holidayPresetYear = new Date().getFullYear();
@@ -68,15 +70,16 @@ export class HrHolidaysTabComponent implements OnInit {
     this.holidayBusy = true;
     this.holidayImportHint = '';
     this.api.applyThaiHolidayPreset(this.companyId, this.holidayPresetYear).subscribe({
-      next: (res: any) => {
+      next: (res) => {
         this.holidayBusy = false;
         this.loadHolidays();
-        const n = Number(res?.imported || 0);
-        this.flash(`โหลดวันหยุดราชการไทย ${res?.year || this.holidayPresetYear} แล้ว (${n} รายการ)`);
+        const record = res as { imported?: number; year?: number };
+        const n = Number(record.imported || 0);
+        this.flash(`โหลดวันหยุดราชการไทย ${record.year || this.holidayPresetYear} แล้ว (${n} รายการ)`);
       },
-      error: (err) => {
+      error: (err: HttpErrorResponse) => {
         this.holidayBusy = false;
-        this.holidayImportHint = err?.error?.detail || 'โหลด preset ไม่สำเร็จ';
+        this.holidayImportHint = apiErrorMessage(err, 'โหลด preset ไม่สำเร็จ');
       },
     });
   }
@@ -91,10 +94,11 @@ export class HrHolidaysTabComponent implements OnInit {
     form.append('file', file, file.name);
     form.append('format', holidayImportFormat(file.name));
     this.api.importHolidays(this.companyId, form).subscribe({
-      next: (res: any) => {
+      next: (res) => {
         this.holidayBusy = false;
         this.loadHolidays();
-        this.flash(`นำเข้าวันหยุดแล้ว (ใหม่ ${res?.created || 0} / อัปเดต ${res?.updated || 0})`);
+        const record = res as { created?: number; updated?: number };
+        this.flash(`นำเข้าวันหยุดแล้ว (ใหม่ ${record.created || 0} / อัปเดต ${record.updated || 0})`);
         if (input) input.value = '';
       },
       error: (err) => {

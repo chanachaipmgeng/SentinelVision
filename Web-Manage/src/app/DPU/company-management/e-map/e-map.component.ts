@@ -50,12 +50,11 @@ interface DirtyPin {
 }
 
 @Component({
-  selector: 'app-company-e-map',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule, PageToolbarComponent, EmptyStateComponent],
-  templateUrl: './e-map.component.html',
-  styleUrls: ['../../../shared/styles/dpu-list-page.css', './e-map.component.css'],
-  encapsulation: ViewEncapsulation.None,
+    selector: 'app-company-e-map',
+    imports: [CommonModule, FormsModule, TranslateModule, PageToolbarComponent, EmptyStateComponent],
+    templateUrl: './e-map.component.html',
+    styleUrls: ['../../../shared/styles/dpu-list-page.css', './e-map.component.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class EMapComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapHost', { static: false }) mapHost?: ElementRef<HTMLDivElement>;

@@ -24,11 +24,10 @@ export interface KpiItem {
 }
 
 @Component({
-  selector: 'app-kpi-grid',
-  standalone: true,
-  imports: [CommonModule, TranslateModule, SkeletonLoaderComponent],
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
+    selector: 'app-kpi-grid',
+    imports: [CommonModule, TranslateModule, SkeletonLoaderComponent],
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    template: `
     <app-skeleton-loader *ngIf="loading; else grid" variant="kpi" [count]="items.length || 4"></app-skeleton-loader>
     <ng-template #grid>
       <ul class="dpu-kpi" [style.--dpu-kpi-min]="minTileWidth">
@@ -57,9 +56,9 @@ export interface KpiItem {
       <span class="dpu-kpi__text">
         <span class="dpu-kpi__label">{{ k.label | translate }}</span>
         <span class="dpu-kpi__value">{{ k.value }}</span>
-        <span class="dpu-kpi__meta" *ngIf="k.delta != null || k.hint">
+        <span class="dpu-kpi__meta" *ngIf="(k.delta !== null && k.delta !== undefined) || k.hint">
           <span
-            *ngIf="k.delta != null"
+            *ngIf="k.delta !== null && k.delta !== undefined"
             class="dpu-kpi__delta"
             [attr.data-good]="isGood(k)">
             <i [ngClass]="trendIcon(k)" aria-hidden="true"></i>{{ k.delta }}
@@ -69,8 +68,8 @@ export interface KpiItem {
       </span>
     </ng-template>
   `,
-  styles: [
-    `
+    styles: [
+        `
       :host {
         display: block;
       }
@@ -188,7 +187,7 @@ export interface KpiItem {
         }
       }
     `,
-  ],
+    ]
 })
 export class KpiGridComponent {
   @Input() items: KpiItem[] = [];

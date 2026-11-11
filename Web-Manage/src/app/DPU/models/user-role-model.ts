@@ -39,19 +39,19 @@ export class UserRole extends BaseModel implements UserRoleModel {
     translateService?: TranslateService
   ) {
     super(data, translateService);
-    this.roleId = data?.roleId!;
-    this.thName = data?.thName!;
-    this.engName = data?.engName!;
-    this.level = data?.level!;
+    this.roleId = data?.roleId ?? '';
+    this.thName = data?.thName ?? '';
+    this.engName = data?.engName ?? '';
+    this.level = data?.level ?? '';
     this.status = data?.status ? data.status : 'U';
-    this.pwWrong = data?.pwWrong!;
-    this.pwWaitingTime = data?.pwWaitingTime!;
-    this.pwMax = data?.pwMax!;
-    this.pwMin = data?.pwMin!;
-    this.pwStr = data?.pwStr!;
-    this.pwStrSm = data?.pwStrSm!;
-    this.pwNumber = data?.pwNumber!;
-    this.pwSpecial = data?.pwSpecial!;
+    this.pwWrong = data?.pwWrong ?? 0;
+    this.pwWaitingTime = data?.pwWaitingTime ?? 0;
+    this.pwMax = data?.pwMax ?? 0;
+    this.pwMin = data?.pwMin ?? 0;
+    this.pwStr = data?.pwStr ?? 0;
+    this.pwStrSm = data?.pwStrSm ?? 0;
+    this.pwNumber = data?.pwNumber ?? 0;
+    this.pwSpecial = data?.pwSpecial ?? 0;
   }
 
   getName(): string {

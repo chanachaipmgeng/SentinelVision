@@ -552,7 +552,7 @@ async def run_cctv_analysis_tick(
         if isinstance(item, Exception):
             errors += 1
             results.append({"ok": False, "error": str(item)})
-        else:
+        elif isinstance(item, dict):
             results.append(item)
 
     return {

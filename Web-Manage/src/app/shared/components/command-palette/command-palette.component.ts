@@ -31,11 +31,10 @@ const CHORD_TIMEOUT_MS = 1200;
 const LANGS = ['th', 'en'] as const;
 
 @Component({
-  selector: 'app-command-palette',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  templateUrl: './command-palette.component.html',
-  styleUrl: './command-palette.component.css',
+    selector: 'app-command-palette',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    templateUrl: './command-palette.component.html',
+    styleUrl: './command-palette.component.css'
 })
 export class CommandPaletteComponent implements OnDestroy {
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;

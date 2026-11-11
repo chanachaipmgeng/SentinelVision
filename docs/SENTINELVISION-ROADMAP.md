@@ -2,7 +2,7 @@
 
 **Repository:** `https://github.com/chanachaipmgeng/SentinelVision.git`  
 **Release:** `v4.0.0` (Phase 1 – Phase 6 Implemented)  
-**Core Engine:** FastAPI (`API-Fast`) + InsightFace `buffalo_l` (512-d ArcFace) + PostgreSQL `pgvector` (Dual HNSW Indexes) + Angular 17 (`Web-Manage`)
+**Core Engine:** FastAPI (`API-Fast`) + InsightFace `buffalo_l` (512-d ArcFace) + PostgreSQL `pgvector` (Dual HNSW Indexes) + Angular 19 (`Web-Manage`)
 
 ---
 

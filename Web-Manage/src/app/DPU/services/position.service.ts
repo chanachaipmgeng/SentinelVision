@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { PositionModel } from '../models/position.model';
@@ -17,7 +17,7 @@ export class PositionService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<PositionModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new PositionModel(e, this.translateService)));
@@ -54,7 +54,7 @@ export class PositionService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<PositionModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 

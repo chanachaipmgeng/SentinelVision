@@ -20,19 +20,18 @@ interface QuickLink {
 }
 
 @Component({
-  selector: 'app-home-installer',
-  templateUrl: './home-installer.component.html',
-  standalone: true,
-  imports: [
-    CommonModule,
-    SharedModule,
-    TranslateModule,
-    RouterModule,
-    PageToolbarComponent,
-    StatChipComponent,
-    EmptyStateComponent,
-  ],
-  styleUrls: ['./home-installer.component.css'],
+    selector: 'app-home-installer',
+    templateUrl: './home-installer.component.html',
+    imports: [
+        CommonModule,
+        SharedModule,
+        TranslateModule,
+        RouterModule,
+        PageToolbarComponent,
+        StatChipComponent,
+        EmptyStateComponent,
+    ],
+    styleUrls: ['./home-installer.component.css']
 })
 export class HomeInstallerComponent implements OnInit {
   companyId = '';

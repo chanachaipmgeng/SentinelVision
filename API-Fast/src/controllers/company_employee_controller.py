@@ -387,7 +387,9 @@ async def update_company_employee(
     actor: Member | None = None,
 ):
     # ดึงข้อมูล CompanyEmployee
-    company_employee = await get_company_employee_by_id(company_employee_data.company_employeeId, companyId, db)
+    company_employee = await get_company_employee_by_id(
+        str(company_employee_data.company_employeeId), companyId, db
+    )
 
     # รับข้อมูลที่เกี่ยวข้อง
     member_info = company_employee_data.member

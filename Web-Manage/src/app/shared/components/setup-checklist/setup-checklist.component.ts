@@ -23,11 +23,10 @@ export interface SetupStep {
 export const SETUP_DISMISS_PREFIX = 'sv_setup_checklist_dismissed:';
 
 @Component({
-  selector: 'app-setup-checklist',
-  standalone: true,
-  imports: [CommonModule, RouterModule, TranslateModule],
-  templateUrl: './setup-checklist.component.html',
-  styleUrl: './setup-checklist.component.css',
+    selector: 'app-setup-checklist',
+    imports: [CommonModule, RouterModule, TranslateModule],
+    templateUrl: './setup-checklist.component.html',
+    styleUrl: './setup-checklist.component.css'
 })
 export class SetupChecklistComponent implements OnInit {
   @Input() companyId: string | null = null;

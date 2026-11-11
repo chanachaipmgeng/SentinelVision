@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-stage build: Angular 17 admin → unprivileged nginx static server (uid 101, port 8080).
+# Multi-stage build: Angular 19 admin → unprivileged nginx static server (uid 101, port 8080).
 
 FROM node:20.20.2-bookworm@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5 AS build
 WORKDIR /app
@@ -7,7 +7,7 @@ WORKDIR /app
 ENV NODE_OPTIONS=--max-old-space-size=8192
 
 COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps
+RUN npm ci
 
 COPY . .
 # assets/config.json is git-ignored; ship the placeholder so the asset exists. The runtime

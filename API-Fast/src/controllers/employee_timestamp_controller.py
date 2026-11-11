@@ -583,7 +583,7 @@ async def create_timestamp(data: dict, companyId: UUID, db: AsyncSession):
         import asyncio
         from ..services.notification_service import emit_company_webhook_event
 
-        ts_type_val = int(getattr(new_timestamp.timestampType, "value", new_timestamp.timestampType))
+        ts_type_val = int(new_timestamp.timestampType.value)
         if ts_type_val == TimestampType.CHECK_OUT.value:
             event_name = "attendance.checked_out"
         elif ts_type_val == TimestampType.WARNING.value:
@@ -706,7 +706,7 @@ async def approve_or_reject_timestamp(
                 detail="rejectReason is required when rejecting.",
             )
         timestamp.approvalStatus = ApprovalStatus.REJECTED.value
-        timestamp.rejectReason = action.rejectReason.strip()
+        timestamp.rejectReason = (action.rejectReason or "").strip()
         timestamp.timestampType = TimestampType.DISAPPROVE
 
     # Ignore client-supplied action.approvedBy — JWT only.
@@ -772,7 +772,7 @@ async def search_timestamps(
     end_date: Optional[datetime] = None,
     timestampType: Optional[int] = None,
     approvalStatus: Optional[str] = None,
-    db: AsyncSession = None,
+    db: AsyncSession | None = None,
     *,
     limit: int = 500,
     offset: int = 0,
@@ -781,6 +781,8 @@ async def search_timestamps(
     sort_dir: str = "desc",
     paged: bool = False,
 ):
+    if db is None:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database session is required")
     safe_limit = min(max(1, int(limit or 500)), 5000)
     safe_offset = max(0, int(offset or 0))
     query = select(EmployeeTimestamp).where(EmployeeTimestamp.companyId == companyId)

@@ -12,10 +12,9 @@ type PanelStatus = 'idle' | 'saved' | 'error';
 
 /** Company face-match threshold + CCTV analysis interval — settings hub panel. */
 @Component({
-  selector: 'app-ai-settings-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, TranslateModule],
-  template: `
+    selector: 'app-ai-settings-panel',
+    imports: [CommonModule, FormsModule, TranslateModule],
+    template: `
     <div class="box modern-card glass">
       <div class="box-body space-y-4">
         <div>
@@ -105,7 +104,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
         </ng-container>
       </div>
     </div>
-  `,
+  `
 })
 export class AiSettingsPanelComponent implements OnInit {
   @Input() companyId = '';

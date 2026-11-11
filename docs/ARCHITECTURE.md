@@ -21,7 +21,7 @@ Browser / Kiosk Tablet / IoT Door Controller
   │
   ▼
 nginx :80
-  ├─ /                              → admin (Web-Manage Angular 17 static)
+  ├─ /                              → admin (Web-Manage Angular 19 static)
   └─ /auth,/face,/hr,/sentinel,…    → api (FastAPI :8000)
                                          ├─ Postgres + pgvector :5432
                                          └─ Local Disk or S3 / MinIO Object Storage
@@ -37,7 +37,7 @@ On a dual-GPU host the GPU overlay runs **two API processes** (`dpu-api` on GPU0
 |-----------|------|------|
 | Gateway | `docker/nginx/` | Reverse proxy (`client_max_body_size 500m`; proxies `/auth`, `/members`, `/companys`, `/company-locations`, `/departments`, `/positions`, `/employees`, `/timestamp`, `/face`, `/hr`, `/sentinel`, `/notifications`, `/system`, `/dashboard`, `/api`, `/images`, `/enrolled_images`). |
 | API | `API-Fast/` | FastAPI v4.0.0: Auth (JWT + RFC 6238 TOTP 2FA + OIDC SSO + Scoped Kiosk Tokens), Unified 1:N Face Recognition + Passive Anti-Spoofing, Watchlist/Blacklist Silent Alarm, Smart Access Control + IoT Relay Webhook, Visitor Pass + Automated PDPA Expiry Sweeper, Smart Events Check-in, Emergency Muster Roll, Multi-Shift HR, and Signed Webhooks. |
-| Admin UI | `Web-Manage/` | Angular 17 company/admin console + 6-tab SentinelVision Security Center (`/company/sentinel-center`) + 6-tab HR/PDPA/Cloud console (`/company/hr-schedule`) + realtime face kiosk (`/company/timestamp-face`). |
+| Admin UI | `Web-Manage/` | Angular 19 company/admin console + 6-tab SentinelVision Security Center (`/company/sentinel-center`) + 6-tab HR/PDPA/Cloud console (`/company/hr-schedule`) + realtime face kiosk (`/company/timestamp-face`). |
 | Database | `pgvector/pgvector:pg16` | Relational data + `face_encoding.embedding vector(512)` & `sentinel_identity.embedding vector(512)` with HNSW cosine indexes. |
 
 ## Unified Biometric, Security & Attendance Pipeline

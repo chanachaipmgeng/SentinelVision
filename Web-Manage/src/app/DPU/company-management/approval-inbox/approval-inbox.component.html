@@ -109,7 +109,7 @@
       <div *ngIf="item.workDate"><dt>{{ 'Date' | translate }}</dt><dd>{{ item.workDate }}</dd></div>
       <div *ngIf="item.timestamp"><dt>{{ 'Time' | translate }}</dt><dd>{{ item.timestamp | date: 'medium' }}</dd></div>
       <div *ngIf="item.locationName"><dt>{{ 'Location' | translate }}</dt><dd>{{ item.locationName }}</dd></div>
-      <div *ngIf="item.otMinutes != null"><dt>{{ 'OT minutes' | translate }}</dt><dd>{{ item.otMinutes }}</dd></div>
+      <div *ngIf="item.otMinutes !== null && item.otMinutes !== undefined"><dt>{{ 'OT minutes' | translate }}</dt><dd>{{ item.otMinutes }}</dd></div>
       <div *ngIf="item.statusText"><dt>{{ 'listKit.common.status' | translate }}</dt><dd>{{ item.statusText }}</dd></div>
       <div *ngIf="item.createdAt"><dt>{{ 'listKit.approvalInbox.submittedAt' | translate }}</dt><dd>{{ item.createdAt | date: 'medium' }}</dd></div>
       <div *ngIf="item.reason || item.note">

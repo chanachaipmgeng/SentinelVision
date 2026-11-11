@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { EmployeeModel } from '../models/employee.model';
@@ -25,7 +25,7 @@ export class EmployeeService {
     private translateService: TranslateService
   ) { }
 
-  getById(id: Number) {
+  getById(id: number) {
     return this.http
       .get<EmployeeModel>(this.apiBaseUrl + "/" + id)
       .pipe(map((e) => new EmployeeModel(e, this.translateService)));
@@ -85,7 +85,7 @@ export class EmployeeService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<EmployeeModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 
@@ -126,8 +126,8 @@ export class EmployeeService {
 
   /** Strip empty optional fields that otherwise cause FastAPI 422 validation errors. */
   private toApiPayload(body: EmployeeModel): Record<string, unknown> {
-    const m = body?.member || ({} as any);
-    const blank = (v: any) => v === '' || v === undefined || v === null;
+    const m = body?.member || ({} as unknown);
+    const blank = (v: unknown) => v === '' || v === undefined || v === null;
     const member: Record<string, unknown> = {
       email: m.email,
       firstName: blank(m.firstName) ? null : m.firstName,

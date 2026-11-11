@@ -316,12 +316,12 @@ async def add_face(
         raise
     except ValueError as ve:
         await db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         if not file_moved and temp_file_path.exists():
             temp_file_path.unlink()
@@ -343,11 +343,11 @@ async def detect_faces_upload(image_file: UploadFile) -> dict:
             kind="detect",
         )
     except ValueError as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
 
 
 async def _search_face_pgvector(
@@ -571,11 +571,11 @@ async def check_face_emp(
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         _cleanup_paths(temp_image_paths)
 
@@ -632,11 +632,11 @@ async def identify_face(
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         _cleanup_paths(temp_image_paths)
 
@@ -762,7 +762,7 @@ async def _finalize_check_in(
             ttl_s=float(dedupe_seconds),
         )
         if cached is not None:
-            ts_type_value = int(getattr(cached.timestamp_type, "value", cached.timestamp_type))
+            ts_type_value = int(cached.timestamp_type.value)
             if not _should_bypass_dedupe_for_explicit_mode(punch_type, ts_type_value):
                 photo = cached.photo_timestamp
                 return {
@@ -804,7 +804,7 @@ async def _finalize_check_in(
         existing_ts = recent.scalar_one_or_none()
         if existing_ts:
             ts_type = existing_ts.timestampType
-            ts_type_value = int(getattr(ts_type, "value", ts_type))
+            ts_type_value = int(ts_type.value)
             if not _should_bypass_dedupe_for_explicit_mode(punch_type, ts_type_value):
                 photo = existing_ts.photoTimestamp
                 put_cached_check_in(
@@ -854,7 +854,7 @@ async def _finalize_check_in(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Latitude and Longitude are required for check-in.",
-        )
+        ) from None
     if abs(lat_f) < 1e-6 and abs(lon_f) < 1e-6:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -890,7 +890,7 @@ async def _finalize_check_in(
     )
 
     ts_type = timestamp.get("timestampType")
-    ts_type_value = int(getattr(ts_type, "value", ts_type))
+    ts_type_value = int(ts_type.value)
     is_warning = ts_type_value == 0
     is_checkout = ts_type_value == 2
     is_break_out = ts_type_value == 4
@@ -1010,11 +1010,11 @@ async def check_in_face(
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         _cleanup_paths(temp_image_paths)
 
@@ -1083,11 +1083,11 @@ async def check_in_face_walkby(
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         _cleanup_paths(temp_image_paths)
 
@@ -1184,19 +1184,19 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
             "faceEncodingIds": deleted_ids,
         }
 
-    result = await db.execute(
+    enc_result = await db.execute(
         select(FaceEncoding).where(FaceEncoding.memberId == memberId)
     )
-    encodings = list(result.scalars().all())
-    deleted_ids: List[str] = []
+    encodings = list(enc_result.scalars().all())
+    removed_ids: List[str] = []
     for enc in encodings:
-        deleted_ids.append(str(enc.faceEncodingId))
+        removed_ids.append(str(enc.faceEncodingId))
         await db.delete(enc)
     await db.commit()
 
     from ..services.storage_service import delete_stored_image
 
-    for enc_id in deleted_ids:
+    for enc_id in removed_ids:
         try:
             delete_stored_image("enrolled_images", f"{enc_id}.jpg")
         except Exception as e:
@@ -1204,8 +1204,8 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
 
     return {
         "message": "All face encodings cleared",
-        "deleted": len(deleted_ids),
-        "faceEncodingIds": deleted_ids,
+        "deleted": len(removed_ids),
+        "faceEncodingIds": removed_ids,
     }
 
 
@@ -1326,11 +1326,11 @@ async def verify_member_face(memberId: UUID, image_file: UploadFile, db: AsyncSe
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as ve:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve)) from ve
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
-        )
+        ) from e
     finally:
         _cleanup_paths(temp_image_paths)
 
@@ -1363,10 +1363,12 @@ def _ts_type_int(ts_type) -> int:
 async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
     """Today's checked-in roster only — no full-company / not-yet scan."""
     try:
+        from datetime import tzinfo
+
         try:
             from zoneinfo import ZoneInfo
 
-            tz = ZoneInfo("Asia/Bangkok")
+            tz: tzinfo = ZoneInfo("Asia/Bangkok")
         except Exception:
             tz = timezone(timedelta(hours=7))
 
@@ -1462,7 +1464,7 @@ async def get_kiosk_attendance(companyId: UUID, db: AsyncSession):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load kiosk attendance: {str(e)}",
-        )
+        ) from e
 
 
 async def proxy_enrolled_image(faceEncodingId: UUID, companyId: UUID):
@@ -1474,6 +1476,8 @@ async def proxy_enrolled_image(faceEncodingId: UUID, companyId: UUID):
         data = await client.fetch_face_image(
             _company_code(companyId), str(faceEncodingId)
         )
+        if data is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
         return Response(content=data, media_type="image/jpeg")
 
     from fastapi.responses import FileResponse, Response
@@ -1482,7 +1486,7 @@ async def proxy_enrolled_image(faceEncodingId: UUID, companyId: UUID):
     image_path = Path(f"enrolled_images/{faceEncodingId}.jpg")
     if image_path.exists():
         return FileResponse(image_path, media_type="image/jpeg")
-    data = read_image_bytes("enrolled_images", f"{faceEncodingId}.jpg")
-    if data is not None:
-        return Response(content=data, media_type="image/jpeg")
+    disk_bytes = read_image_bytes("enrolled_images", f"{faceEncodingId}.jpg")
+    if disk_bytes is not None:
+        return Response(content=disk_bytes, media_type="image/jpeg")
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")

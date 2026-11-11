@@ -9,19 +9,19 @@ import {
   defaultRetentionSettings,
   retentionFromPdpaSummary,
 } from '../hr-schedule.helpers';
+import { HrEmployeeShiftRow, HrPdpaSummary } from '../hr-schedule.models';
 
 @Component({
-  selector: 'app-hr-pdpa-tab',
-  standalone: true,
-  imports: [CommonModule, FormsModule, SharedModule],
-  templateUrl: './hr-pdpa-tab.component.html',
+    selector: 'app-hr-pdpa-tab',
+    imports: [CommonModule, FormsModule, SharedModule],
+    templateUrl: './hr-pdpa-tab.component.html'
 })
 export class HrPdpaTabComponent implements OnInit {
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
-  employees: any[] = [];
-  pdpaSummary: any = null;
+  employees: HrEmployeeShiftRow[] = [];
+  pdpaSummary: HrPdpaSummary | null = null;
   consentPolicy = defaultConsentPolicy();
   retentionSettings = defaultRetentionSettings();
 
@@ -93,7 +93,7 @@ export class HrPdpaTabComponent implements OnInit {
     });
   }
 
-  grantConsent(memberId: string): void {
+  grantConsent(memberId: string | undefined): void {
     if (!memberId) return;
     this.api.grantBiometricConsent(this.companyId, memberId).subscribe(() => {
       this.loadEmployees();
@@ -102,7 +102,7 @@ export class HrPdpaTabComponent implements OnInit {
     });
   }
 
-  revokeConsent(memberId: string): void {
+  revokeConsent(memberId: string | undefined): void {
     if (!memberId) return;
     this.api.revokeBiometricConsent(this.companyId, memberId).subscribe(() => {
       this.loadEmployees();

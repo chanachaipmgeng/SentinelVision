@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from fastapi import HTTPException
 from starlette.requests import Request
 
 import src.config.settings as settings_mod
@@ -53,7 +54,7 @@ def test_member_tokens_carry_jti_typ_and_shared_family():
     assert a["typ"] == "access" and r["typ"] == "refresh"
     assert len(a["jti"]) == 32 and len(r["jti"]) == 32 and a["jti"] != r["jti"]
     assert a["fam"] == r["fam"]
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException):
         decode_token(refresh, expected_typ="access")
 
 
@@ -66,7 +67,7 @@ def test_kiosk_token_pair_claims_and_short_ttl(monkeypatch):
     assert a["fam"] == r["fam"] and a["jti"] != r["jti"]
     ttl = a["exp"] - a["iat"]
     assert ttl <= 12 * 3600 + 5
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException):
         decode_token(refresh, expected_typ="kiosk")
 
 

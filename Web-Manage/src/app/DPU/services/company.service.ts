@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
-import { map, tap, switchMap, filter, reduce } from "rxjs/operators";
+import { map, switchMap } from "rxjs/operators";
 import { PageResponseModel, ResponseModel } from '../models/base.model';
 import { forkJoin, Observable } from 'rxjs';
 import { CompanyModel } from '../models/company.model';
+import { CompanyQuotasResponse } from '../models/company-quotas.model';
 
 
 @Injectable({
@@ -55,7 +56,7 @@ export class CompanyService {
         params: { page: 0, size: 1 },
       })
       .pipe(
-        switchMap((checkData: any) => {
+        switchMap((checkData: PageResponseModel<CompanyModel>) => {
           //console.log("checkData="+checkData)
           const size = 500;
 
@@ -102,24 +103,24 @@ export class CompanyService {
       }),
       body: new CompanyModel(body),
     };
-    return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.companyId);
+    return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.companyId, options);
   }
 
   /** D5 tenant lifecycle / quotas (system admin). */
   suspend(companyId: string) {
-    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/suspend`, {});
+    return this.http.post<unknown>(`${this.apiBaseUrl}/${companyId}/suspend`, {});
   }
 
   resume(companyId: string) {
-    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/resume`, {});
+    return this.http.post<unknown>(`${this.apiBaseUrl}/${companyId}/resume`, {});
   }
 
   offboard(companyId: string, purgeDevices = true) {
-    return this.http.post<any>(`${this.apiBaseUrl}/${companyId}/offboard`, { purgeDevices });
+    return this.http.post<unknown>(`${this.apiBaseUrl}/${companyId}/offboard`, { purgeDevices });
   }
 
   getQuotas(companyId: string) {
-    return this.http.get<any>(`${this.apiBaseUrl}/${companyId}/quotas`);
+    return this.http.get<CompanyQuotasResponse>(`${this.apiBaseUrl}/${companyId}/quotas`);
   }
 
   putQuotas(companyId: string, body: {
@@ -128,7 +129,7 @@ export class CompanyService {
     maxEmployees?: number | null;
     gpuPriority?: number;
   }) {
-    return this.http.put<any>(`${this.apiBaseUrl}/${companyId}/quotas`, body);
+    return this.http.put<unknown>(`${this.apiBaseUrl}/${companyId}/quotas`, body);
   }
 
 }

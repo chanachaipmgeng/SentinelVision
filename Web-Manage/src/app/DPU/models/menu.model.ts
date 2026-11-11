@@ -27,10 +27,10 @@ export class Menu extends BaseModel implements MenuModel {
     translateService? : TranslateService
   ) {
     super(data,translateService);
-    this.menuId = data?.menuId!;
-    this.thName = data?.thName!;
-    this.engName = data?.engName!;
-    this.url = data?.url!
+    this.menuId = data?.menuId ?? '';
+    this.thName = data?.thName ?? '';
+    this.engName = data?.engName ?? '';
+    this.url = data?.url ?? ''
     this.prev = data?.prev  ? new Menu(data?.prev, this.translateService) : undefined
     this.next = data?.next  ? new Menu(data?.next, this.translateService) : undefined
     this.group = new UserGroup(data?.group, this.translateService)
@@ -59,9 +59,9 @@ export class ModuleMenu extends BaseModel implements ModuleMenuModel {
     translateService? : TranslateService
   ) {
     super(data,translateService);
-    this.moduleId = data?.moduleId!;
-    this.thName = data?.thName!;
-    this.engName = data?.engName!;
+    this.moduleId = data?.moduleId ?? '';
+    this.thName = data?.thName ?? '';
+    this.engName = data?.engName ?? '';
   }
 
   getName(): string {

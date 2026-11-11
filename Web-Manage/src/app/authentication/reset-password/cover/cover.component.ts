@@ -7,11 +7,10 @@ import { AuthService } from '../../../shared/services/auth.service';
 import swal from 'sweetalert';
 
 @Component({
-  selector: 'app-cover',
-  standalone: true,
-  imports: [SharedModule, CommonModule, RouterModule, FormsModule],
-  templateUrl: './cover.component.html',
-  styleUrls: ['./cover.component.scss']
+    selector: 'app-cover',
+    imports: [SharedModule, CommonModule, RouterModule, FormsModule],
+    templateUrl: './cover.component.html',
+    styleUrls: ['./cover.component.scss']
 })
 export class CoverComponent implements OnInit {
   email = '';

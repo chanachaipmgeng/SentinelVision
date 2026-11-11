@@ -5,12 +5,12 @@ import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
 import { buildZoneAllowedIdentityTypes, defaultZoneForm } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';
+import { SentinelZone } from '../sentinel.models';
 
 @Component({
-  selector: 'app-sentinel-access-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
-  templateUrl: './sentinel-access-panel.component.html',
+    selector: 'app-sentinel-access-panel',
+    imports: [CommonModule, FormsModule, RouterModule],
+    templateUrl: './sentinel-access-panel.component.html'
 })
 export class SentinelAccessPanelComponent implements OnInit {
   /** `zones` = CRUD + Open scan; `settings` = IoT/2FA tips pointing back to zones. */
@@ -19,7 +19,7 @@ export class SentinelAccessPanelComponent implements OnInit {
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  zones: any[] = [];
+  zones: SentinelZone[] = [];
   zoneForm = defaultZoneForm();
   lastCreatedZoneId: string | null = null;
 

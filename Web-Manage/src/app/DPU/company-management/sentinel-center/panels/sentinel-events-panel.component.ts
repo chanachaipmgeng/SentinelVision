@@ -9,20 +9,20 @@ import {
   filterEventAttendeeItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
+import { SentinelEventRule, SentinelIdentity } from '../sentinel.models';
 
 @Component({
-  selector: 'app-sentinel-events-panel',
-  standalone: true,
-  imports: [CommonModule, FormsModule],
-  templateUrl: './sentinel-events-panel.component.html',
+    selector: 'app-sentinel-events-panel',
+    imports: [CommonModule, FormsModule],
+    templateUrl: './sentinel-events-panel.component.html'
 })
 export class SentinelEventsPanelComponent implements OnInit {
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
   companyId = '';
-  events: any[] = [];
-  identities: any[] = [];
+  events: SentinelEventRule[] = [];
+  identities: SentinelIdentity[] = [];
   selectedIdentityPhoto: File | null = null;
   eventForm = defaultEventForm();
   attendeeForm = defaultAttendeeForm();
@@ -37,7 +37,7 @@ export class SentinelEventsPanelComponent implements OnInit {
     this.loadIdentities();
   }
 
-  get eventAttendeeItems(): any[] {
+  get eventAttendeeItems(): SentinelIdentity[] {
     return filterEventAttendeeItems(this.identities);
   }
 
@@ -83,7 +83,7 @@ export class SentinelEventsPanelComponent implements OnInit {
     });
   }
 
-  createIdentityRecord(formObj: any): void {
+  createIdentityRecord(formObj: { fullName?: string; [key: string]: unknown }): void {
     if (!formObj.fullName || !String(formObj.fullName).trim()) {
       this.toast.emit('กรุณาระบุชื่อ-นามสกุล');
       return;

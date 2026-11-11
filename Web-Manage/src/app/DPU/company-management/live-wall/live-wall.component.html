@@ -9,9 +9,8 @@
         <button
           type="button"
           *ngFor="let l of layouts"
-          class="ti-btn ti-btn-sm"
-          [class.ti-btn-primary]="layout === l"
-          [class.ti-btn-light]="layout !== l"
+          class="sv-live-wall__layout-btn"
+          [class.is-active]="layout === l"
           (click)="setLayout(l)"
         >
           {{ l }}
@@ -22,13 +21,16 @@
         {{ 'cctv.liveWall.hlsFallback' | translate }}
       </label>
       <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="load()">
+        <i class="ri-refresh-line"></i>
         {{ 'Refresh' | translate }}
       </button>
     </ng-container>
   </app-page-toolbar>
   <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.liveWall.subtitle' | translate }}</p>
 
-  <div *ngIf="loading" class="text-muted py-8 text-center">{{ 'Loading...' | translate }}</div>
+  <div *ngIf="loading" class="text-muted py-8 text-center">
+    <app-empty-state [loading]="true" message="Loading CCTV streams..."></app-empty-state>
+  </div>
   <div *ngIf="error" class="alert alert-danger" role="alert">{{ error }}</div>
 
   <div
@@ -37,14 +39,29 @@
     [attr.data-layout]="layout"
   >
     <div class="sv-live-wall__empty" *ngIf="!slots.length">
-      {{ 'cctv.liveWall.empty' | translate }}
-      <a routerLink="/company/cameras">{{ 'cctv.cameras.add' | translate }}</a>
+      <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-2xl mb-2">
+        <i class="ri-vidicon-line"></i>
+      </div>
+      <h6 class="text-base font-bold text-slate-100 mb-1">{{ 'cctv.liveWall.empty' | translate }}</h6>
+      <p class="text-xs text-slate-400 mb-3">เชื่อมต่อกล้อง RTSP เพื่อเริ่มสตรีมและประมวลผล Face Recognition สด</p>
+      <a routerLink="/company/cameras" class="btn-vault px-4 py-2 text-xs">
+        <i class="ri-add-line me-1"></i>
+        {{ 'cctv.cameras.add' | translate }}
+      </a>
     </div>
 
     <div class="sv-live-wall__slot" *ngFor="let cam of slots">
       <div class="sv-live-wall__label">
-        <strong>{{ cam.name }}</strong>
-        <span>{{ cam.status || 'unknown' }}</span>
+        <div class="flex items-center gap-2">
+          <span class="sv-live-dot" [class.is-online]="cam.status === 'online'"></span>
+          <strong class="text-slate-100 font-semibold">{{ cam.name }}</strong>
+        </div>
+        <span
+          class="badge text-xs px-2 py-0.5 rounded-full"
+          [ngClass]="cam.status === 'online' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'"
+        >
+          {{ cam.status || 'unknown' }}
+        </span>
       </div>
       <div class="sv-live-wall__player">
         <app-webrtc-video-surface

@@ -34,7 +34,7 @@
         <i class="ri-grid-line" aria-hidden="true"></i>
         {{ 'cctv.liveWall.nav' | translate }}
       </a>
-      <button type="button" class="ti-btn ti-btn-primary modern-btn" (click)="showForm = !showForm">
+      <button type="button" class="btn-vault px-4 py-2 text-xs inline-flex items-center gap-1.5" (click)="showForm = !showForm">
         <i class="ri-add-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.add' | translate }}
       </button>
@@ -42,26 +42,26 @@
   </app-page-toolbar>
   <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.cameras.subtitle' | translate }}</p>
 
-  <div class="box modern-card glass mb-4" *ngIf="peopleMetrics?.totals as t">
-    <div class="box-header">
-      <h3 class="box-title">{{ 'cctv.people.metricsTitle' | translate }}</h3>
+  <div class="box modern-card glass card-surface mb-4" *ngIf="peopleMetrics?.totals as t">
+    <div class="box-header flex items-center justify-between">
+      <h3 class="box-title text-display-gradient font-bold !mb-0">{{ 'cctv.people.metricsTitle' | translate }}</h3>
     </div>
     <div class="box-body sv-people-metrics">
-      <div>
-        <span class="text-dpu-muted text-xs">{{ 'cctv.people.in' | translate }}</span>
-        <strong>{{ t.inCount }}</strong>
+      <div class="sv-people-metric-card">
+        <span class="text-slate-400 text-xs">{{ 'cctv.people.in' | translate }}</span>
+        <strong class="text-emerald-400">{{ t.inCount }}</strong>
       </div>
-      <div>
-        <span class="text-dpu-muted text-xs">{{ 'cctv.people.out' | translate }}</span>
-        <strong>{{ t.outCount }}</strong>
+      <div class="sv-people-metric-card">
+        <span class="text-slate-400 text-xs">{{ 'cctv.people.out' | translate }}</span>
+        <strong class="text-cyan-400">{{ t.outCount }}</strong>
       </div>
-      <div>
-        <span class="text-dpu-muted text-xs">{{ 'cctv.people.net' | translate }}</span>
-        <strong>{{ t.net }}</strong>
+      <div class="sv-people-metric-card">
+        <span class="text-slate-400 text-xs">{{ 'cctv.people.net' | translate }}</span>
+        <strong class="text-purple-400">{{ t.net }}</strong>
       </div>
-      <div>
-        <span class="text-dpu-muted text-xs">{{ 'cctv.people.peakZone' | translate }}</span>
-        <strong>{{ t.peakZoneOccupancy }}</strong>
+      <div class="sv-people-metric-card">
+        <span class="text-slate-400 text-xs">{{ 'cctv.people.peakZone' | translate }}</span>
+        <strong class="text-amber-400">{{ t.peakZoneOccupancy }}</strong>
       </div>
     </div>
   </div>
@@ -185,13 +185,21 @@
             </div>
           </div>
           <div class="sv-camera-row__actions">
+            <a
+              class="btn-vault text-xs px-3 py-1.5 inline-flex items-center gap-1"
+              [routerLink]="['/company/live-wall']"
+              [queryParams]="{ cameraId: cam.cameraId }"
+            >
+              <i class="ri-play-circle-line"></i>
+              {{ 'cctv.cameras.live' | translate }}
+            </a>
             <button
               type="button"
-              class="ti-btn"
-              [class.ti-btn-success]="cam.analysisEnabled"
-              [class.ti-btn-light]="!cam.analysisEnabled"
+              class="ti-btn text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 transition-all"
+              [ngClass]="cam.analysisEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-300 border border-white/10'"
               (click)="toggleAnalysis(cam)"
             >
+              <i class="ri-brain-line"></i>
               {{
                 (cam.analysisEnabled
                   ? 'cctv.cameras.analysisOn'
@@ -199,23 +207,20 @@
                 ) | translate
               }}
             </button>
-            <button type="button" class="ti-btn ti-btn-primary" (click)="openRoiEditor(cam)">
+            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="openRoiEditor(cam)">
+              <i class="ri-scan-line"></i>
               {{ 'cctv.cameras.roi' | translate }}
             </button>
-            <button type="button" class="ti-btn ti-btn-light" (click)="ping(cam)">
+            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="ping(cam)">
+              <i class="ri-pulse-line"></i>
               {{ 'cctv.cameras.ping' | translate }}
             </button>
-            <button type="button" class="ti-btn ti-btn-light" (click)="snapshot(cam)">
+            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="snapshot(cam)">
+              <i class="ri-camera-lens-line"></i>
               {{ 'cctv.cameras.snapshot' | translate }}
             </button>
-            <a
-              class="ti-btn ti-btn-primary"
-              [routerLink]="['/company/live-wall']"
-              [queryParams]="{ cameraId: cam.cameraId }"
-            >
-              {{ 'cctv.cameras.live' | translate }}
-            </a>
-            <button type="button" class="ti-btn ti-btn-danger" (click)="remove(cam)">
+            <button type="button" class="ti-btn bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="remove(cam)">
+              <i class="ri-delete-bin-line"></i>
               {{ 'Delete' | translate }}
             </button>
           </div>

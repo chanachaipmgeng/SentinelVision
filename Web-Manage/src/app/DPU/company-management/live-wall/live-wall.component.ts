@@ -6,6 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { WebrtcVideoSurfaceComponent } from '../../../shared/components/webrtc-video-surface/webrtc-video-surface.component';
+import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
 import type { CameraRow } from '../cameras/cameras.component';
 
@@ -20,6 +21,7 @@ type WallLayout = '1x1' | '2x2' | '3x3';
         TranslateModule,
         PageToolbarComponent,
         WebrtcVideoSurfaceComponent,
+        EmptyStateComponent,
     ],
     templateUrl: './live-wall.component.html',
     styleUrl: './live-wall.component.css',

@@ -28,3 +28,17 @@
 - **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.
 - **Nginx Gateway Prefix Sync:** Whenever a new top-level router prefix is added in `API-Fast/src/main.py` (e.g., `/sentinel`), add that prefix to the FastAPI regex location block in `docker/nginx/default.conf`, `default.dual-gpu.conf`, and `default.quad-gpu.conf`.
 - **Docker Rebuild Matrix:** Source code is baked into images. Rebuild `api` (and `api-gpu1` on dual-GPU), `admin`, and `nginx` as appropriate, then verify `/health` and `/ready`.
+
+## 5. Frontend Architecture & UI/UX Design System Guardrails
+- **VaultX Obsidian Glass & Theme Token Invariants**:
+  - Never style card surfaces (`.box`, `.card`, `.modern-card`) with hardcoded light `background: linear-gradient(180deg, rgba(255,255,255,...))` without an explicit dark-theme override (`html[data-theme="dark"]`, `html.dark`, `.dark`, `html[data-theme-mode="dark"]`).
+  - Dark surfaces must use the centralized `card-surface` utility (`#070d14` obsidian base, top-lit cyan/slate rim highlight `linear-gradient(180deg, rgba(255, 255, 255, 0.16)...)`).
+  - All form labels and body copy inside cards must bind to high-contrast semantic tokens (`#f1f5f9` / `#cbd5e1` / `#94a3b8`) — never rely on inherited body color that could result in light text on light cards.
+- **Desktop Shell Overlay Protection**:
+  - Modal backdrops intended for mobile navigation drawers (`#responsive-overlay`) MUST be suppressed on desktop screens (`@media (min-width: 992px) { #responsive-overlay { display: none !important; } }`) to prevent screen-blocking dimming.
+- **Fast Docker Static Asset Deployment**:
+  - For frontend-only changes in `Web-Manage`, build locally via `npm run build` and sync assets into the running container without rebuilding the Docker image:
+    `docker cp Web-Manage/dist/preview/browser/. sentinel-admin:/usr/share/nginx/html/`
+    `docker exec sentinel-admin nginx -s reload`
+- **File Editing Line Endings**:
+  - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.

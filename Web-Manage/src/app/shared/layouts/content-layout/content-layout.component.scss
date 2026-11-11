@@ -17,7 +17,16 @@
   min-height: calc(100dvh - 3.75rem);
 }
 
-/* Keep overlay clickable above page chrome on mobile */
+/* Keep overlay clickable above page chrome on mobile only; suppress on desktop */
 #responsive-overlay.active {
   z-index: 40;
+}
+
+@media (min-width: 992px) {
+  #responsive-overlay,
+  #responsive-overlay.active {
+    display: none !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
 }

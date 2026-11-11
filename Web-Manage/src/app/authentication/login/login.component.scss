@@ -4,27 +4,26 @@
 }
 
 .dpu-login {
-  --login-ink: rgba(240, 253, 250, 0.92);
-  --login-muted: rgba(204, 251, 241, 0.55);
-  --login-accent: #5eead4;
-  --login-deep: #042f2e;
-  --login-brand: #0f766e;
-}
+  --login-accent: #06b6d4;
+  --login-accent-glow: rgba(6, 182, 212, 0.5);
+  --login-ink: #f8fafc;
+  --login-muted: #94a3b8;
+  --login-dark: #020408;
 
-.dpu-login.dpu-auth {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
   background:
-    radial-gradient(ellipse 70% 55% at 12% 18%, rgba(45, 212, 191, 0.22), transparent 58%),
-    radial-gradient(ellipse 55% 45% at 88% 82%, rgba(15, 118, 110, 0.45), transparent 52%),
-    radial-gradient(circle at 50% 120%, rgba(8, 47, 45, 0.9), transparent 55%),
-    linear-gradient(155deg, #031716 0%, #0b3d3a 38%, #0f4f4a 72%, #134e4a 100%);
+    radial-gradient(ellipse 80% 50% at 20% 15%, rgba(6, 182, 212, 0.14), transparent 60%),
+    radial-gradient(ellipse 70% 60% at 85% 85%, rgba(14, 116, 144, 0.16), transparent 65%),
+    radial-gradient(circle at 50% 120%, rgba(6, 78, 59, 0.3), transparent 60%),
+    var(--login-dark) !important;
 }
 
-.dpu-login.dpu-auth::before,
-.dpu-login.dpu-auth::after {
-  display: none;
-}
-
-/* ---- Scene ---- */
+/* Background Atmospheric Canvas */
 .dpu-login__scene {
   position: absolute;
   inset: 0;
@@ -37,9 +36,9 @@
   position: absolute;
   inset: -10%;
   background-image:
-    linear-gradient(rgba(94, 234, 212, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(94, 234, 212, 0.05) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(6, 182, 212, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
   mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, #000 20%, transparent 75%);
   animation: dpu-login-mesh 28s linear infinite;
   opacity: 0.7;
@@ -48,281 +47,536 @@
 .dpu-login__orbit {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(94, 234, 212, 0.14);
+  border: 1px solid rgba(6, 182, 212, 0.12);
   top: 50%;
-  left: 18%;
+  left: 28%;
   transform: translate(-50%, -50%);
 }
 
 .dpu-login__orbit--a {
-  width: min(42vw, 28rem);
-  height: min(42vw, 28rem);
+  width: min(44vw, 32rem);
+  height: min(44vw, 32rem);
   animation: dpu-login-spin 48s linear infinite;
-  box-shadow: inset 0 0 40px rgba(45, 212, 191, 0.06);
+  box-shadow: inset 0 0 50px rgba(6, 182, 212, 0.05);
 }
 
 .dpu-login__orbit--b {
-  width: min(56vw, 38rem);
-  height: min(56vw, 38rem);
+  width: min(60vw, 44rem);
+  height: min(60vw, 44rem);
   border-style: dashed;
-  border-color: rgba(94, 234, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.08);
   animation: dpu-login-spin-rev 72s linear infinite;
 }
 
 .dpu-login__orbit--c {
-  width: min(70vw, 48rem);
-  height: min(70vw, 48rem);
-  border-color: rgba(255, 255, 255, 0.05);
+  width: min(78vw, 56rem);
+  height: min(78vw, 56rem);
+  border-color: rgba(255, 255, 255, 0.04);
   animation: dpu-login-spin 96s linear infinite;
 }
 
-.dpu-login__orbit--a::before,
-.dpu-login__orbit--b::before {
-  content: "";
-  position: absolute;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: var(--login-accent);
-  box-shadow: 0 0 16px rgba(94, 234, 212, 0.85);
-  top: 0;
-  left: 50%;
-  translate: -50% -50%;
+/* Main Layout Wrapper */
+.dpu-login__wrapper {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
 }
 
-/* ---- Face scan frame (hero) ---- */
-.dpu-login__scan {
-  position: absolute;
-  top: 50%;
-  left: 18%;
-  translate: -50% -50%;
-  width: min(17rem, 44vw);
-  height: min(20rem, 52vw);
+/* Top Action Bar */
+.dpu-login__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.dpu-login__back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.45rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s ease;
+
+  i {
+    font-size: 1.05rem;
+    transition: transform 0.25s ease;
+  }
+
+  &:hover {
+    color: #22d3ee;
+    background: rgba(6, 182, 212, 0.08);
+    border-color: rgba(6, 182, 212, 0.3);
+
+    i {
+      transform: translateX(-3px);
+    }
+  }
+}
+
+.dpu-login__lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+}
+
+.dpu-login__lang-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+
+  &.is-active {
+    color: #22d3ee;
+  }
+
+  &:hover:not(.is-active) {
+    color: #cbd5e1;
+  }
+}
+
+.dpu-login__lang-sep {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+/* Two-Column Grid */
+.dpu-login__grid {
   display: grid;
-  place-items: center;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+/* Left Column: Biometric HUD */
+.dpu-login__hud {
+  display: flex;
+  flex-direction: column;
+}
+
+.dpu-login__hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #22d3ee;
+  margin-bottom: 1.25rem;
+}
+
+.dpu-login__hud-pulse {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 10px #22d3ee;
+  animation: dpu-login-pulse 2s infinite ease-in-out;
+}
+
+.dpu-login__hud-title {
+  font-family: var(--dpu-landing-font-display, "Outfit", sans-serif);
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 1rem;
+}
+
+.dpu-login__hud-desc {
+  color: #94a3b8;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  max-width: 480px;
+  margin: 0 0 2rem;
+}
+
+/* Biometric Scanner Frame */
+.dpu-login__hud-scanner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background: rgba(8, 15, 24, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+  width: fit-content;
 }
 
 .dpu-login__scan-glow {
   position: absolute;
-  inset: -14%;
-  border-radius: 28%;
-  background: radial-gradient(ellipse at 50% 45%, rgba(45, 212, 191, 0.28), transparent 68%);
-  animation: dpu-login-pulse 5.5s ease-in-out infinite;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.3), transparent 70%);
+  top: 50%;
+  left: 80px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .dpu-login__scan-frame {
   position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 1.35rem;
-  background:
-    radial-gradient(ellipse at 50% 38%, rgba(15, 118, 110, 0.22), transparent 55%),
-    linear-gradient(165deg, rgba(4, 47, 46, 0.72), rgba(2, 20, 19, 0.88));
-  border: 1px solid rgba(94, 234, 212, 0.22);
-  box-shadow:
-    0 0 0 10px rgba(15, 118, 110, 0.07),
-    0 24px 60px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  width: 130px;
+  height: 155px;
+  border-radius: 16px;
+  border: 1px dashed rgba(6, 182, 212, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  animation: dpu-login-face-in 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: rgba(3, 7, 12, 0.7);
+  box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.08);
+  flex-shrink: 0;
 }
 
 .dpu-login__bracket {
   position: absolute;
-  width: 1.35rem;
-  height: 1.35rem;
-  border-color: var(--login-accent);
+  width: 14px;
+  height: 14px;
+  border-color: #22d3ee;
   border-style: solid;
   border-width: 0;
-  opacity: 0.95;
 }
 
-.dpu-login__bracket--tl {
-  top: 0.85rem;
-  left: 0.85rem;
-  border-top-width: 2px;
-  border-left-width: 2px;
-  border-top-left-radius: 4px;
-}
-
-.dpu-login__bracket--tr {
-  top: 0.85rem;
-  right: 0.85rem;
-  border-top-width: 2px;
-  border-right-width: 2px;
-  border-top-right-radius: 4px;
-}
-
-.dpu-login__bracket--bl {
-  bottom: 0.85rem;
-  left: 0.85rem;
-  border-bottom-width: 2px;
-  border-left-width: 2px;
-  border-bottom-left-radius: 4px;
-}
-
-.dpu-login__bracket--br {
-  bottom: 0.85rem;
-  right: 0.85rem;
-  border-bottom-width: 2px;
-  border-right-width: 2px;
-  border-bottom-right-radius: 4px;
-}
+.dpu-login__bracket--tl { top: 6px; left: 6px; border-top-width: 2px; border-left-width: 2px; }
+.dpu-login__bracket--tr { top: 6px; right: 6px; border-top-width: 2px; border-right-width: 2px; }
+.dpu-login__bracket--bl { bottom: 6px; left: 6px; border-bottom-width: 2px; border-left-width: 2px; }
+.dpu-login__bracket--br { bottom: 6px; right: 6px; border-bottom-width: 2px; border-right-width: 2px; }
 
 .dpu-login__face-silhouette {
-  position: absolute;
-  top: 22%;
-  left: 50%;
-  translate: -50% 0;
-  width: 42%;
-  height: 48%;
-  border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%;
-  background:
-    radial-gradient(circle at 50% 28%, rgba(204, 251, 241, 0.18), transparent 55%),
-    linear-gradient(180deg, rgba(94, 234, 212, 0.16), rgba(15, 118, 110, 0.08));
-  border: 1px solid rgba(94, 234, 212, 0.28);
-  box-shadow: inset 0 -18px 28px rgba(2, 20, 19, 0.35);
-}
+  width: 60px;
+  height: 80px;
+  border-radius: 45% 45% 50% 50%;
+  border: 1.5px solid rgba(6, 182, 212, 0.45);
+  position: relative;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.2);
 
-.dpu-login__face-silhouette::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -22%;
-  translate: -50% 0;
-  width: 68%;
-  height: 38%;
-  border-radius: 40% 40% 20% 20%;
-  background: linear-gradient(180deg, rgba(94, 234, 212, 0.12), transparent 80%);
-  border: 1px solid rgba(94, 234, 212, 0.16);
-  border-bottom: 0;
+  &::before {
+    content: "";
+    position: absolute;
+    width: 28px;
+    height: 1.5px;
+    background: rgba(6, 182, 212, 0.35);
+    top: 36%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 1.5px;
+    background: rgba(6, 182, 212, 0.35);
+    bottom: 26%;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 .dpu-login__lens-arc {
   position: absolute;
-  top: 12%;
-  right: 10%;
-  width: 2.4rem;
-  height: 2.4rem;
+  inset: 12px;
   border-radius: 50%;
-  border: 1.5px solid rgba(94, 234, 212, 0.35);
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-  opacity: 0.7;
-  transform: rotate(25deg);
-}
-
-.dpu-login__lens-arc::before {
-  content: "";
-  position: absolute;
-  inset: 22%;
-  border-radius: 50%;
-  background: rgba(94, 234, 212, 0.18);
-  box-shadow: 0 0 12px rgba(94, 234, 212, 0.35);
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  border-top-color: #22d3ee;
+  animation: dpu-login-spin 10s linear infinite;
 }
 
 .dpu-login__scan-line {
   position: absolute;
-  left: 8%;
-  right: 8%;
+  left: 0;
+  right: 0;
   height: 2px;
-  top: 18%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(94, 234, 212, 0.15),
-    rgba(94, 234, 212, 0.85),
-    rgba(94, 234, 212, 0.15),
-    transparent
-  );
-  box-shadow: 0 0 18px rgba(94, 234, 212, 0.45);
-  animation: dpu-login-scan 3.8s ease-in-out infinite;
-  opacity: 0.9;
+  background: linear-gradient(90deg, transparent, #22d3ee 50%, transparent);
+  box-shadow: 0 0 12px #22d3ee;
+  animation: dpu-login-scan 3.2s ease-in-out infinite;
 }
 
-/* ---- Compact live time chip (secondary) ---- */
-.dpu-login__time-chip {
-  position: absolute;
-  left: 18%;
-  top: calc(50% + min(11.5rem, 30vw));
-  translate: -50% 0;
+/* Telemetry Column beside Scanner */
+.dpu-login__hud-telemetry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.dpu-login__hud-chip {
   display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  i {
+    font-size: 0.95rem;
+  }
+}
+
+.dpu-login__time-chip {
+  display: flex;
   align-items: baseline;
-  gap: 0.55rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid rgba(94, 234, 212, 0.2);
-  background: rgba(4, 47, 46, 0.45);
-  backdrop-filter: blur(8px);
-  color: var(--login-ink);
-  font-family: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
-  animation: dpu-login-fade-up 0.9s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  background: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.18);
+  font-size: 0.82rem;
+  color: #22d3ee;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .dpu-login__time-chip-time {
-  font-size: 0.95rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
 }
 
 .dpu-login__time-chip-date {
-  font-size: 0.68rem;
-  color: var(--login-muted);
-  letter-spacing: 0.02em;
-  max-width: 11rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #94a3b8;
+  font-size: 0.75rem;
 }
 
-/* ---- Feature float chips ---- */
-.dpu-login__float {
-  position: absolute;
-  font-family: "Manrope", system-ui, sans-serif;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(204, 251, 241, 0.55);
-  border: 1px solid rgba(94, 234, 212, 0.18);
-  background: rgba(4, 47, 46, 0.35);
-  backdrop-filter: blur(8px);
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  animation: dpu-login-float 9s ease-in-out infinite;
-}
-
-.dpu-login__float--1 {
-  top: 14%;
-  left: 42%;
-  animation-delay: 0s;
-}
-
-.dpu-login__float--2 {
-  top: 28%;
-  left: 6%;
-  animation-delay: -2.5s;
-}
-
-.dpu-login__float--3 {
-  bottom: 18%;
-  left: 34%;
-  animation-delay: -5s;
-}
-
+/* Right Column: Obsidian Glass Login Card */
 .dpu-login__panel {
-  animation: dpu-login-panel-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
-  /* Keep face-scan atmosphere; strengthen glass panel over teal scene */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 253, 250, 0.88)) padding-box,
-    linear-gradient(180deg, rgba(94, 234, 212, 0.65), rgba(255, 255, 255, 0.25) 45%, rgba(255, 255, 255, 0.08))
-      border-box !important;
-  border: 1px solid transparent !important;
-  backdrop-filter: blur(20px) saturate(1.25);
-  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
+/* Error Alert Banner */
+.dpu-login__alert {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgba(136, 19, 55, 0.35);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #fecdd3;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  animation: dpu-login-alert-in 0.3s ease-out both;
+
+  i {
+    color: #fb7185;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+}
+
+.dpu-login__alert-text {
+  line-height: 1.4;
+}
+
+/* Form Fields */
+.dpu-login__form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.dpu-login__field {
+  display: flex;
+  flex-direction: column;
+}
+
+.dpu-login__label {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  margin-bottom: 0.45rem;
+}
+
+.dpu-login__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  .form-control {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    padding-right: 2.75rem;
+  }
+}
+
+.dpu-login__input-icon {
+  position: absolute;
+  right: 1rem;
+  color: #64748b;
+  font-size: 1.1rem;
+  pointer-events: none;
+}
+
+.dpu-login__password-input {
+  letter-spacing: 0.15em;
+}
+
+.dpu-login__toggle-pwd {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #cbd5e1;
+  }
+}
+
+.dpu-login__totp-input {
+  text-align: center;
+  font-size: 1.25rem;
+  letter-spacing: 0.3em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Remember me & Help */
+.dpu-login__options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  padding-top: 0.2rem;
+}
+
+.dpu-login__remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dpu-login__checkbox {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 18, 28, 0.8);
+  cursor: pointer;
+  position: relative;
+
+  &:checked {
+    background: #06b6d4;
+    border-color: #06b6d4;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 4px;
+      width: 4px;
+      height: 8px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+.dpu-login__help-link {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #22d3ee;
+  }
+}
+
+/* Submit Action Button */
+.dpu-login__action {
+  padding-top: 0.5rem;
+}
+
+.dpu-login__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.98rem;
+}
+
+.dpu-login__spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: dpu-login-spin 0.8s linear infinite;
+}
+
+/* Enterprise SSO Button */
+.dpu-login__sso-wrap {
+  padding-top: 0.25rem;
+}
+
+.dpu-login__sso-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.08);
+    border-color: rgba(6, 182, 212, 0.3);
+    color: #22d3ee;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* Keyframe Animations */
 @keyframes dpu-login-spin {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to { transform: translate(-50%, -50%) rotate(360deg); }
@@ -338,91 +592,72 @@
 }
 
 @keyframes dpu-login-pulse {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.06); }
-}
-
-@keyframes dpu-login-float {
-  0%, 100% { transform: translateY(0); opacity: 0.55; }
-  50% { transform: translateY(-10px); opacity: 0.9; }
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 @keyframes dpu-login-scan {
-  0%, 100% { top: 16%; opacity: 0.35; }
-  50% { top: 78%; opacity: 0.95; }
+  0%, 100% { top: 10%; opacity: 0.35; }
+  50% { top: 86%; opacity: 0.95; }
 }
 
-@keyframes dpu-login-face-in {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
+@keyframes dpu-login-alert-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-@keyframes dpu-login-fade-up {
-  from { opacity: 0; transform: translate(-50%, 12px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
-}
-
-@keyframes dpu-login-panel-in {
-  from { opacity: 0; transform: translateY(18px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@media (max-width: 991.98px) {
-  .dpu-login__scan,
-  .dpu-login__orbit,
-  .dpu-login__time-chip {
-    left: 50%;
+/* Responsive Media Queries */
+@media (max-width: 1023.98px) {
+  .dpu-login__grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
-  .dpu-login__scan {
-    top: 20%;
-    width: min(10rem, 38vw);
-    height: min(12rem, 46vw);
-    opacity: 0.55;
+  .dpu-login__hud {
+    text-align: center;
+    align-items: center;
+
+    .dpu-login__hud-desc {
+      margin: 0 auto 1.5rem;
+    }
   }
 
-  .dpu-login__orbit--a { width: 16rem; height: 16rem; top: 22%; opacity: 0.55; }
-  .dpu-login__orbit--b { width: 22rem; height: 22rem; top: 22%; opacity: 0.4; }
-  .dpu-login__orbit--c { width: 28rem; height: 28rem; top: 22%; opacity: 0.25; }
-
-  .dpu-login__time-chip {
-    top: calc(20% + 7.4rem);
-    opacity: 0.8;
+  .dpu-login__hud-scanner {
+    display: none;
   }
 
-  .dpu-login__float--1 { top: 8%; left: auto; right: 8%; }
-  .dpu-login__float--2 { top: auto; bottom: 12%; left: 8%; }
-  .dpu-login__float--3 { display: none; }
-
-  .dpu-login__panel {
-    margin-top: 8rem;
+  .dpu-login__orbit {
+    display: none;
   }
 }
 
 @media (max-width: 575.98px) {
-  .dpu-login__scan,
-  .dpu-login__orbit,
-  .dpu-login__time-chip {
-    opacity: 0.35;
+  .dpu-login__wrapper {
+    padding: 1rem;
   }
 
-  .dpu-login__panel {
-    margin-top: 5.5rem;
+  .dpu-login__hud-title {
+    font-size: 1.75rem;
+  }
+
+  .dpu-auth__panel {
+    padding: 1.75rem 1.25rem 1.5rem;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .dpu-login__mesh,
   .dpu-login__orbit,
-  .dpu-login__scan-glow,
+  .dpu-login__lens-arc,
   .dpu-login__scan-line,
-  .dpu-login__float {
+  .dpu-login__hud-pulse {
     animation: none !important;
     transition: none !important;
-  }
-
-  .dpu-login__scan-line {
-    top: 42%;
-    opacity: 0.55;
   }
 }

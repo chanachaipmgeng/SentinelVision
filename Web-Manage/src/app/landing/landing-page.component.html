@@ -23,11 +23,43 @@
           <button type="button" [class.is-active]="lang === 'th'" (click)="setLang('th')">TH</button>
           <button type="button" [class.is-active]="lang === 'en'" (click)="setLang('en')">EN</button>
         </div>
-        <a routerLink="/auth/login" class="dpu-btn-vault" style="padding:0.55rem 1.1rem;font-size:0.85rem">
+        <a routerLink="/auth/login" class="dpu-btn-vault hidden sm:inline-flex" style="padding:0.55rem 1.1rem;font-size:0.85rem">
           {{ 'landing.cta.signin' | translate }}
         </a>
+        <button
+          type="button"
+          class="dpu-landing__menu-toggle md:hidden"
+          (click)="menuOpen = !menuOpen"
+          [attr.aria-expanded]="menuOpen"
+          aria-label="Toggle navigation menu">
+          <i [class]="menuOpen ? 'ri-close-line' : 'ri-menu-line'"></i>
+        </button>
       </div>
     </header>
+
+    @if (menuOpen) {
+      <div class="dpu-landing__mobile-drawer card-surface" (click)="menuOpen = false">
+        <nav class="dpu-landing__mobile-nav" (click)="$event.stopPropagation()">
+          <a href="#values" (click)="scrollTo('values'); menuOpen = false; $event.preventDefault()">
+            <i class="ri-shield-star-line text-cyan-400 me-2"></i>{{ 'landing.nav.values' | translate }}
+          </a>
+          <a href="#features" (click)="scrollTo('features'); menuOpen = false; $event.preventDefault()">
+            <i class="ri-layout-grid-line text-cyan-400 me-2"></i>{{ 'landing.nav.features' | translate }}
+          </a>
+          <a href="#metrics" (click)="scrollTo('metrics'); menuOpen = false; $event.preventDefault()">
+            <i class="ri-bar-chart-box-line text-cyan-400 me-2"></i>{{ 'landing.nav.metrics' | translate }}
+          </a>
+          <div class="pt-3 border-t border-white/10 flex flex-col gap-2">
+            <a routerLink="/auth/login" class="dpu-btn-vault text-center w-full py-2.5 text-sm">
+              {{ 'landing.cta.signin' | translate }}
+            </a>
+            <a routerLink="/kiosk/pair" class="dpu-btn-ghost text-center w-full py-2 text-xs">
+              {{ 'landing.float.cta' | translate }}
+            </a>
+          </div>
+        </nav>
+      </div>
+    }
 
     <main class="dpu-landing__main">
       <!-- Hero -->

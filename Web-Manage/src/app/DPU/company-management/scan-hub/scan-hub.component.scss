@@ -5,7 +5,7 @@
 .dpu-scan-hub__lead {
   margin: 0 0 1rem;
   font-size: 0.9rem;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8;
 }
 
 .dpu-scan-hub__modules {
@@ -19,15 +19,17 @@
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: 0.85rem;
-  border: 1px solid var(--dpu-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
   cursor: pointer;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .dpu-scan-hub__module.is-on {
-  border-color: rgba(15, 118, 110, 0.4);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  border-color: rgba(6, 182, 212, 0.45);
+  background: rgba(6, 182, 212, 0.08);
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.15);
 }
 
 .dpu-scan-hub__module-icon {
@@ -37,8 +39,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--dpu-brand, #0f766e);
+  background: rgba(6, 182, 212, 0.12);
+  color: #22d3ee;
   font-size: 1.2rem;
   flex-shrink: 0;
 }
@@ -51,10 +53,14 @@
   flex: 1;
 }
 
+.dpu-scan-hub__module-text strong {
+  color: #f1f5f9;
+}
+
 .dpu-scan-hub__module-text em {
   font-style: normal;
   font-size: 0.75rem;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8;
 }
 
 .dpu-scan-hub__rules {
@@ -68,7 +74,18 @@
   align-items: flex-start;
   gap: 0.6rem;
   font-size: 0.9rem;
+  color: #cbd5e1 !important;
+  font-weight: 500;
   cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: #22d3ee !important;
+  }
+
+  span {
+    color: inherit;
+  }
 }
 
 .dpu-scan-hub__launches {
@@ -97,22 +114,23 @@
   position: relative;
   padding: 1rem 2.25rem 1rem 1rem;
   border-radius: 0.85rem;
-  border: 1px solid var(--dpu-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .dpu-scan-hub__launch:hover {
-  border-color: rgba(15, 118, 110, 0.4);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
+  border-color: rgba(6, 182, 212, 0.45);
+  background: rgba(6, 182, 212, 0.08);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
 }
 
 .dpu-scan-hub__launch strong {
   font-size: 0.95rem;
-  color: var(--dpu-brand-deep, #0b4f4a);
+  color: #ffffff;
 }
 
 .dpu-scan-hub__launch em {
@@ -120,7 +138,7 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--dpu-muted, #64748b);
+  color: #22d3ee;
 }
 
 .dpu-scan-hub__launch-meta {
@@ -128,7 +146,7 @@
   gap: 0.35rem;
   margin-top: 0.35rem;
   font-size: 0.7rem;
-  color: var(--dpu-brand, #0f766e);
+  color: #94a3b8;
 }
 
 .dpu-scan-hub__launch > i {
@@ -136,6 +154,6 @@
   right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: #22d3ee;
   font-size: 1.25rem;
 }

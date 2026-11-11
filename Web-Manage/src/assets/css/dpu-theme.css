@@ -496,6 +496,61 @@ html[data-toggled="dpu-sidebar-hidden"] .animated-arrow span {
     var(--dpu-shadow);
 }
 
+/* VaultX Obsidian Glass for Dark Mode */
+html[data-theme="dark"] .box.modern-card.glass,
+html[data-theme="dark"] .modern-card.glass,
+html.dark .box.modern-card.glass,
+html.dark .modern-card.glass,
+html[data-theme-mode="dark"] .box.modern-card.glass,
+html[data-theme-mode="dark"] .modern-card.glass,
+.dark .box.modern-card.glass,
+.dark .modern-card.glass {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(180deg, #070d14, #03060a) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 35%, transparent 70%) border-box !important;
+  backdrop-filter: blur(20px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.3) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .box.modern-card.glass:hover,
+html[data-theme="dark"] .modern-card.glass:hover,
+html.dark .box.modern-card.glass:hover,
+html.dark .modern-card.glass:hover,
+html[data-theme-mode="dark"] .box.modern-card.glass:hover,
+html[data-theme-mode="dark"] .modern-card.glass:hover,
+.dark .box.modern-card.glass:hover,
+.dark .modern-card.glass:hover {
+  box-shadow: 0 8px 32px rgba(6, 182, 212, 0.12), 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+html[data-theme="dark"] .box.modern-card.glass .box-header,
+html.dark .box.modern-card.glass .box-header,
+html[data-theme-mode="dark"] .box.modern-card.glass .box-header,
+.dark .box.modern-card.glass .box-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-theme="dark"] .box.modern-card.glass .box-title,
+html.dark .box.modern-card.glass .box-title,
+html[data-theme-mode="dark"] .box.modern-card.glass .box-title,
+.dark .box.modern-card.glass .box-title {
+  color: #ffffff !important;
+}
+
+/* Suppress mobile navigation overlay on desktop screens */
+@media (min-width: 992px) {
+  #responsive-overlay,
+  #responsive-overlay.active {
+    display: none !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+}
+
 .box.modern-card.glass:hover,
 .modern-card.glass:hover {
   border-color: transparent;
@@ -640,6 +695,81 @@ body.dpu-login-body {
   min-height: 100dvh;
 }
 
+/* VaultX-inspired Core Utilities */
+.card-surface {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(180deg, #070d14, #03060a) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 35%, transparent 70%) border-box !important;
+  border-radius: 20px;
+}
+
+.card-surface-cyan {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(180deg, #070f18, #03070c) padding-box,
+    linear-gradient(180deg, rgba(6, 182, 212, 0.45), rgba(255, 255, 255, 0.08) 35%, transparent 75%) border-box !important;
+  border-radius: 20px;
+}
+
+.text-display-gradient {
+  background-image: linear-gradient(180deg, #f8fafc 0%, #94a3b8 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.btn-vault {
+  background: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%) !important;
+  box-shadow:
+    0 4px 25px -2px rgba(6, 182, 212, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
+}
+
+.btn-vault:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 30px 0 rgba(6, 182, 212, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  background: linear-gradient(135deg, #0f766e 0%, #22d3ee 100%) !important;
+}
+
+.btn-vault:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-vault:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.vault-input {
+  background: rgba(10, 18, 28, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+  border-radius: 12px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.vault-input:focus {
+  outline: none !important;
+  border-color: rgba(6, 182, 212, 0.7) !important;
+  background: rgba(14, 25, 40, 0.95) !important;
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35) !important;
+}
+
+.vault-input::placeholder {
+  color: #64748b !important;
+}
+
 .dpu-auth {
   min-height: 100vh;
   display: flex;
@@ -649,9 +779,9 @@ body.dpu-login-body {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(94, 234, 212, 0.18), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 90% 80%, rgba(15, 118, 110, 0.35), transparent 50%),
-    linear-gradient(145deg, #0b3d3a 0%, #0f4f4a 45%, #134e4a 100%);
+    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(14, 116, 144, 0.32), transparent 58%),
+    radial-gradient(ellipse 55% 45% at 85% 85%, rgba(15, 118, 110, 0.25), transparent 52%),
+    #020408 !important;
 }
 
 .dpu-auth::before {
@@ -688,30 +818,31 @@ body.dpu-login-body {
 .dpu-auth__panel {
   position: relative;
   z-index: 1;
-  width: min(440px, 100%);
+  width: min(480px, 100%);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.9)) padding-box,
-    linear-gradient(180deg, rgba(94, 234, 212, 0.55), rgba(255, 255, 255, 0.35) 40%, rgba(255, 255, 255, 0.12))
-      border-box;
-  border: 1px solid transparent;
+    linear-gradient(180deg, rgba(8, 15, 24, 0.9), rgba(3, 7, 12, 0.95)) padding-box,
+    linear-gradient(180deg, rgba(6, 182, 212, 0.5), rgba(255, 255, 255, 0.12) 35%, transparent 75%) border-box !important;
+  border: 1px solid transparent !important;
   border-radius: 20px;
-  padding: 2.25rem 2rem 2rem;
+  padding: 2.25rem 2.25rem 2rem;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.55) inset,
-    0 24px 64px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    0 1px 0 rgba(255, 255, 255, 0.15) inset,
+    0 30px 80px rgba(0, 0, 0, 0.75),
+    0 0 50px -10px rgba(6, 182, 212, 0.18) !important;
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   animation: dpu-card-in 0.55s var(--dpu-ease) both;
+  color: #f1f5f9;
 }
 
 .dpu-auth__brand {
   text-align: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .dpu-auth__brand img {
-  max-height: 3rem;
-  margin: 0 auto 0.85rem;
+  max-height: 2.75rem;
+  margin: 0 auto 0.75rem;
   display: block;
   animation: dpu-logo-pop 0.6s var(--dpu-ease) both;
 }
@@ -728,26 +859,26 @@ body.dpu-login-body {
 }
 
 .dpu-auth__title {
-  font-family: var(--dpu-font-display);
-  font-size: 1.45rem;
-  font-weight: 700;
-  color: var(--dpu-ink);
-  letter-spacing: -0.03em;
+  font-family: var(--dpu-landing-font-display, "Outfit", sans-serif);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.02em;
   margin: 0 0 0.2rem;
 }
 
 .dpu-auth__byline {
   margin: 0 0 0.55rem;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--dpu-muted);
+  color: #22d3ee;
 }
 
 .dpu-auth__subtitle {
-  color: var(--dpu-muted);
-  font-size: 0.9rem;
+  color: #94a3b8;
+  font-size: 0.88rem;
   margin: 0;
 }
 
@@ -794,60 +925,77 @@ body.dpu-login-body {
 }
 
 .dpu-auth__panel .form-label {
-  font-weight: 600;
-  color: var(--dpu-ink);
+  font-weight: 500;
+  color: #cbd5e1;
   font-size: 0.85rem;
+  letter-spacing: 0.01em;
 }
 
 .dpu-auth__panel .form-control {
-  background: rgba(248, 250, 252, 0.92);
-  border-color: rgba(15, 118, 110, 0.18) !important;
+  background: rgba(10, 18, 28, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+  border-radius: 12px;
+  font-size: 0.95rem;
   transition:
     border-color 0.25s var(--dpu-ease),
     box-shadow 0.25s var(--dpu-ease),
     background 0.25s var(--dpu-ease);
 }
 
+.dpu-auth__panel .form-control::placeholder {
+  color: #64748b !important;
+}
+
 .dpu-auth__panel .form-control:focus {
-  border-color: rgba(15, 118, 110, 0.65) !important;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.16), 0 0 22px -6px rgba(15, 118, 110, 0.35);
+  border-color: rgba(6, 182, 212, 0.75) !important;
+  background: rgba(14, 25, 40, 0.95) !important;
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35) !important;
 }
 
 .dpu-auth__panel .input-group:focus-within {
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.16);
-  border-radius: 0.5rem;
+  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35) !important;
+  border-radius: 12px;
 }
 
 .dpu-auth__submit {
   width: 100%;
   margin-top: 0.5rem;
-  padding: 0.8rem 1rem !important;
-  border-radius: 999px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.01em;
-  color: #fff !important;
-  background: linear-gradient(135deg, #0f766e, #14b8a6) !important;
+  padding: 0.85rem 1rem !important;
+  border-radius: 9999px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%) !important;
   border-color: transparent !important;
   box-shadow:
-    0 4px 22px -2px rgba(15, 118, 110, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    0 4px 25px -2px rgba(6, 182, 212, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
   transition:
     transform 0.25s var(--dpu-ease),
     box-shadow 0.25s var(--dpu-ease),
     filter 0.25s ease !important;
+  cursor: pointer;
 }
 
 .dpu-auth__submit:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.05);
+  transform: translateY(-2px);
+  filter: brightness(1.08);
   box-shadow:
-    0 8px 28px -2px rgba(20, 184, 166, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    0 8px 30px 0 rgba(6, 182, 212, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+  background: linear-gradient(135deg, #0f766e 0%, #22d3ee 100%) !important;
 }
 
 .dpu-auth__submit:active:not(:disabled) {
   transform: translateY(0) scale(0.98);
+}
+
+.dpu-auth__submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* Landing body: neutralize Ynex page chrome while marketing is mounted */

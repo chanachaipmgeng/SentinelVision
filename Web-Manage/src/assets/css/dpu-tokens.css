@@ -24,16 +24,30 @@
   --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
   --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
 
-  /* VaultX-inspired surface utilities (teal family — never indigo #4f5ef7) */
-  --dpu-glass-border: rgba(255, 255, 255, 0.2);
-  --dpu-glass-bg: rgba(255, 255, 255, 0.4);
+  /* VaultX-inspired Obsidian & Cyber Spectrum tokens */
+  --dpu-canvas: #020308;
+  --dpu-canvas-deep: #05080f;
+  --dpu-obsidian-surface: #070d14;
+  --dpu-obsidian-glass: rgba(7, 13, 20, 0.85);
+  --dpu-obsidian-glass-elevated: rgba(12, 20, 31, 0.92);
+  --dpu-rim-light: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 35%, transparent 70%);
+  --dpu-cyber-teal: #06b6d4;
+  --dpu-cyber-teal-hover: #22d3ee;
+  --dpu-cyber-teal-glow: 0 0 25px -2px rgba(6, 182, 212, 0.45);
+  --dpu-cobalt: #3b82f6;
+  --dpu-cobalt-glow: 0 0 25px -2px rgba(59, 130, 246, 0.45);
+  --dpu-vault-input-bg: rgba(9, 15, 24, 0.85);
+  --dpu-vault-input-border: rgba(255, 255, 255, 0.09);
+
+  --dpu-glass-border: rgba(255, 255, 255, 0.12);
+  --dpu-glass-bg: rgba(7, 13, 20, 0.85);
   --dpu-card-surface-edge: linear-gradient(
     180deg,
-    rgba(15, 118, 110, 0.22),
-    rgba(255, 255, 255, 0.55) 28%,
-    rgba(226, 232, 240, 0.9) 70%
+    rgba(6, 182, 212, 0.45),
+    rgba(255, 255, 255, 0.18) 32%,
+    transparent 75%
   );
-  --dpu-cta-glow: 0 8px 28px rgba(15, 118, 110, 0.35);
+  --dpu-cta-glow: 0 8px 30px rgba(6, 182, 212, 0.4);
   --dpu-landing-font-display: "Outfit", "Manrope", "Noto Sans Thai", system-ui, sans-serif;
 
   /* SentinelVision Unified Security & Identity Palette */

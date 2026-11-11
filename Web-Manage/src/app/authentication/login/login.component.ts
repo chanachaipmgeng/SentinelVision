@@ -2,6 +2,7 @@ import { Component, Inject, OnDestroy, OnInit, Renderer2 } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
 import { CommonModule, DOCUMENT } from '@angular/common';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SharedModule } from '../../shared/shared.module';
 import { Router, RouterModule } from '@angular/router';
 import { TokenService } from '../../shared/services/token.service';
@@ -11,12 +12,13 @@ import { EmployeeService } from '../../DPU/services/employee.service';
 
 @Component({
     selector: 'app-login',
-    imports: [SharedModule, CommonModule, RouterModule, FormsModule, ReactiveFormsModule],
+    imports: [SharedModule, CommonModule, RouterModule, FormsModule, ReactiveFormsModule, TranslateModule],
     providers: [AuthService, { provide: ToastrService, useClass: ToastrService }],
     templateUrl: './login.component.html',
     styleUrl: './login.component.scss'
 })
 export class LoginComponent implements OnInit, OnDestroy {
+  lang = 'th';
   username = '';
   password = '';
   totpCode = '';
@@ -41,13 +43,15 @@ export class LoginComponent implements OnInit, OnDestroy {
     private routes: Router,
     private formBuilder: FormBuilder,
     public authService: AuthService,
-    private empServie: EmployeeService
+    private empServie: EmployeeService,
+    private translate: TranslateService
   ) {
     localStorage.clear();
     this.tokenService.clearKioskSession();
   }
 
   ngOnInit(): void {
+    this.lang = this.translate.currentLang || this.translate.defaultLang || localStorage.getItem('sv_lang') || 'th';
     this.loginForm = this.formBuilder.group({
       username: ['', Validators.required],
       password: ['', Validators.required],
@@ -60,6 +64,14 @@ export class LoginComponent implements OnInit, OnDestroy {
     });
     this.tickClock();
     this.clockTimer = setInterval(() => this.tickClock(), 1000);
+  }
+
+  setLang(code: string): void {
+    this.lang = code;
+    this.translate.use(code);
+    try {
+      localStorage.setItem('sv_lang', code);
+    } catch {}
   }
 
   ngOnDestroy(): void {

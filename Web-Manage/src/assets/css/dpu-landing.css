@@ -198,8 +198,51 @@
 }
 
 .dpu-landing__brand img {
-  height: 2rem;
+  height: 1.85rem;
   width: auto;
+}
+
+.dpu-landing__brand-lockup {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+  gap: 0.12rem;
+}
+
+.dpu-landing__brand-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.dpu-landing__brand-by {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(204, 251, 241, 0.78);
+}
+
+.dpu-landing__hero-by {
+  margin: -0.35rem 0 1rem;
+  font-family: var(--dpu-land-font-display);
+  font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(204, 251, 241, 0.82);
+}
+
+.dpu-landing__footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.dpu-landing__footer-brand img {
+  height: 1.35rem;
+  width: auto;
+  opacity: 0.85;
 }
 
 .dpu-landing__nav {

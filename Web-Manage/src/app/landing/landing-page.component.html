@@ -4,9 +4,12 @@
     <app-dpu-cursor-dot></app-dpu-cursor-dot>
 
     <header class="dpu-landing__header">
-      <a routerLink="/" class="dpu-landing__brand" aria-label="SentinelVision">
-        <img src="./assets/images/brand-logos/logo.png" alt="" />
-        <span>SentinelVision</span>
+      <a routerLink="/" class="dpu-landing__brand" aria-label="Sentinel by IVAP">
+        <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" />
+        <span class="dpu-landing__brand-lockup">
+          <span class="dpu-landing__brand-name">Sentinel</span>
+          <span class="dpu-landing__brand-by">by IVAP</span>
+        </span>
       </a>
 
       <nav class="dpu-landing__nav" aria-label="Landing">
@@ -41,8 +44,9 @@
           </div>
 
           <h1 id="landing-hero-title" class="dpu-text-display-gradient" dpuReveal="up" dpuRevealDelay="0.1s">
-            SentinelVision
+            Sentinel
           </h1>
+          <p class="dpu-landing__hero-by" dpuReveal="up" dpuRevealDelay="0.14s">by IVAP</p>
           <p class="dpu-landing__hero-lead" dpuReveal="up" dpuRevealDelay="0.2s">
             {{ 'landing.hero.lead' | translate }}
           </p>
@@ -212,7 +216,10 @@
     </main>
 
     <footer class="dpu-landing__footer">
-      <span>© {{ 2026 }} SentinelVision</span>
+      <span class="dpu-landing__footer-brand">
+        <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" />
+        <span>© {{ 2026 }} Sentinel by IVAP</span>
+      </span>
       <a routerLink="/auth/login">{{ 'landing.cta.signin' | translate }}</a>
     </footer>
   </div>

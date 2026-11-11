@@ -733,13 +733,64 @@ body.dpu-login-body {
   font-weight: 700;
   color: var(--dpu-ink);
   letter-spacing: -0.03em;
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.2rem;
+}
+
+.dpu-auth__byline {
+  margin: 0 0 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dpu-muted);
 }
 
 .dpu-auth__subtitle {
   color: var(--dpu-muted);
   font-size: 0.9rem;
   margin: 0;
+}
+
+.dpu-footer-ivap {
+  height: 1.15rem;
+  width: auto;
+  opacity: 0.9;
+}
+
+.dpu-sidebar-brand {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none !important;
+}
+
+.dpu-sidebar-brand .dpu-sidebar-logo {
+  height: 1.55rem !important;
+  width: auto !important;
+  max-width: 5.5rem;
+  object-fit: contain;
+}
+
+.dpu-sidebar-brand-text {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+  color: #fff;
+}
+
+.dpu-sidebar-brand-name {
+  font-family: var(--dpu-font-display, Outfit, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dpu-sidebar-brand-by {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(204, 251, 241, 0.75);
 }
 
 .dpu-auth__panel .form-label {

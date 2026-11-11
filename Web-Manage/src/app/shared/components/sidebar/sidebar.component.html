@@ -2,18 +2,22 @@
 
   <!-- Start::main-sidebar-header -->
   <div class="main-sidebar-header">
-    <a class="header-logo"
+    <a class="header-logo dpu-sidebar-brand"
       [routerLink]="isInstallerRoute ? '/company/dashboard' : '/admin/home'"
-      aria-label="SentinelVision Home">
+      aria-label="Sentinel by IVAP Home">
       <!-- desktop-dark = Ynex visible slot on dark menu; asset is the real brand mark -->
       <img
         class="desktop-dark dpu-sidebar-logo"
-        src="./assets/images/brand-logos/logo.png"
-        alt="SentinelVision">
+        src="./assets/images/brand-logos/ivap-logo-light.png"
+        alt="IVAP">
       <img
         class="toggle-white dpu-sidebar-logo"
-        src="./assets/images/brand-logos/logo.png"
-        alt="SentinelVision">
+        src="./assets/images/brand-logos/ivap-logo-light.png"
+        alt="IVAP">
+      <span class="dpu-sidebar-brand-text">
+        <span class="dpu-sidebar-brand-name">Sentinel</span>
+        <span class="dpu-sidebar-brand-by">by IVAP</span>
+      </span>
     </a>
   </div>
   <div>

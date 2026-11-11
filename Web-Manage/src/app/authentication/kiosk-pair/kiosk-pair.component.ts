@@ -17,7 +17,8 @@ import { CompanyModel } from '../../DPU/models/company.model';
     template: `
     <div class="dpu-pair">
       <div class="dpu-pair__card">
-        <img src="./assets/images/brand-logos/logo.png" alt="SentinelVision" class="dpu-pair__logo" />
+        <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="dpu-pair__logo" />
+        <p class="dpu-pair__byline">Sentinel by IVAP</p>
         <h1 class="dpu-pair__title">จับคู่ตู้ Kiosk</h1>
         <p class="dpu-pair__subtitle">
           กรอกรหัสจับคู่ 8 หลักที่ผู้ดูแลระบบสร้างจากเมนู HR &rarr; ความปลอดภัย &rarr; ตู้ Kiosk
@@ -90,7 +91,15 @@ import { CompanyModel } from '../../DPU/models/company.model';
           0 24px 60px rgba(0, 0, 0, 0.35);
         text-align: center;
       }
-      .dpu-pair__logo { height: 3.25rem; margin: 0 auto 1rem; }
+      .dpu-pair__logo { height: 2.4rem; margin: 0 auto 0.55rem; }
+      .dpu-pair__byline {
+        margin: 0 0 1rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(204, 251, 241, 0.82);
+      }
       .dpu-pair__title { margin: 0 0 0.5rem; font-size: 1.6rem; font-weight: 800; }
       .dpu-pair__subtitle { margin: 0 0 1.5rem; font-size: 0.9rem; color: rgba(236, 254, 255, 0.78); line-height: 1.5; }
       .dpu-pair__label { display: block; text-align: start; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.35rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(236, 254, 255, 0.7); }

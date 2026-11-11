@@ -462,3 +462,147 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   VaultX Obsidian Dark Theme Enhancements
+   ========================================================================== */
+:host-context(html[data-theme='dark']),
+:host-context(html.dark),
+:host-context([data-theme-mode='dark']) {
+  .emp-search-input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .emp-search-input:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+  }
+
+  .emp-stat-chip {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .emp-stat-chip--soft {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+  }
+
+  .emp-view-toggle {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .emp-view-btn {
+    color: #94a3b8;
+  }
+
+  .emp-view-btn:hover {
+    color: #22d3ee;
+    background: rgba(6, 182, 212, 0.1);
+  }
+
+  .emp-view-btn.active {
+    background: linear-gradient(135deg, #06b6d4, #0d9488);
+    color: #ffffff;
+    box-shadow: 0 0 14px rgba(6, 182, 212, 0.35);
+  }
+
+  /* Table styling */
+  .emp-table thead th {
+    background: rgba(7, 13, 20, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+  }
+
+  .emp-table tbody td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+  }
+
+  .emp-row:hover {
+    background: rgba(6, 182, 212, 0.05);
+  }
+
+  .emp-person p.font-semibold {
+    color: #f1f5f9;
+  }
+
+  .emp-code {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+    border: 1px solid rgba(6, 182, 212, 0.25);
+  }
+
+  .emp-avatar {
+    box-shadow: 0 0 0 2px #070d14, 0 0 0 3px rgba(6, 182, 212, 0.35);
+  }
+
+  /* Card Grid styling */
+  .emp-card {
+    background: linear-gradient(180deg, #0a111a 0%, #060a10 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+    position: relative;
+  }
+
+  .emp-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.4), transparent);
+    pointer-events: none;
+  }
+
+  .emp-card:hover {
+    border-color: rgba(6, 182, 212, 0.35);
+    box-shadow: 0 14px 32px -8px rgba(6, 182, 212, 0.15);
+    transform: translateY(-3px);
+  }
+
+  .emp-card-head p.font-semibold {
+    color: #f1f5f9;
+  }
+
+  .emp-card-meta {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .emp-meta-label {
+    color: #94a3b8;
+  }
+
+  .emp-meta-value {
+    color: #f1f5f9;
+  }
+
+  .emp-pager {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .emp-pager .page-link {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+
+  .emp-pager .page-link:hover {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  .emp-pager .page-item.active .page-link {
+    background: #06b6d4;
+    color: #ffffff;
+    border-color: #06b6d4;
+  }
+}
+

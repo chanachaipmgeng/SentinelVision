@@ -13,34 +13,34 @@ import { HR_SCHEDULE_TABS, HrScheduleTab } from './hr-schedule.helpers';
     imports: [CommonModule, RouterModule, SharedModule],
     template: `
     <app-page-header
-      [title]="'กะทำงาน / วันลา / วันหยุด / PDPA / Kiosk 2FA / Webhook & Observability'"
+      [title]="'นโยบายกะเวลา & ระบบองค์กร (HR Schedule)'"
       [activeTitle]="'จัดการข้อมูลการลงเวลา'"
-      [title1]="'กะงาน / วันลา / PDPA / Cloud'"
+      [title1]="'กะเวลา & นโยบาย'"
     ></app-page-header>
 
     <div class="grid grid-cols-12 gap-6">
       <div class="col-span-12">
-        <div class="box">
-          <div class="box-header flex flex-wrap items-center justify-between gap-2">
+        <div class="box modern-card glass card-surface-cyan">
+          <div class="box-header flex flex-wrap items-center justify-between gap-3 p-4 border-b border-white/10">
             <div class="flex flex-wrap gap-2">
               <a
                 *ngFor="let tab of tabs"
                 [routerLink]="['/company/hr-schedule', tab.id]"
-                routerLinkActive="ti-btn-primary-full"
+                routerLinkActive="!bg-gradient-to-r !from-cyan-500 !to-teal-500 !text-white !border-transparent !shadow-md !shadow-cyan-500/25"
                 [routerLinkActiveOptions]="{ exact: true }"
                 #rla="routerLinkActive"
-                class="ti-btn"
-                [class.ti-btn-light]="!rla.isActive"
+                class="ti-btn !rounded-full !px-4 !py-2 !text-xs !font-semibold transition-all duration-200"
+                [ngClass]="rla.isActive ? '' : '!bg-white/5 hover:!bg-white/10 !text-slate-300 !border !border-white/10'"
               >
-                <i [class]="tab.icon + ' me-1'"></i> {{ tab.label }}
+                <i [class]="tab.icon + ' me-1.5'"></i> {{ tab.label }}
               </a>
             </div>
-            <span *ngIf="statusMsg" class="badge bg-success/10 text-success px-3 py-1">
+            <span *ngIf="statusMsg" class="badge bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-semibold">
               {{ statusMsg }}
             </span>
           </div>
 
-          <div class="box-body space-y-6">
+          <div class="box-body p-5 space-y-6">
             <router-outlet (activate)="onActivate($event)"></router-outlet>
           </div>
         </div>

@@ -652,3 +652,99 @@
     justify-content: center;
   }
 }
+
+/* ==========================================================================
+   VaultX Obsidian Dark Theme Enhancements
+   ========================================================================== */
+:host-context(html[data-theme='dark']),
+:host-context(html.dark),
+:host-context([data-theme-mode='dark']) {
+  .ts-queue-item {
+    background: linear-gradient(180deg, #091018 0%, #060a10 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .ts-queue-item:hover {
+    background: rgba(6, 182, 212, 0.06);
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  .ts-queue-item.active {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(7, 13, 20, 0.95));
+    border-color: #22d3ee;
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  }
+
+  .ts-queue-name {
+    color: #f1f5f9;
+  }
+
+  .ts-queue-sub {
+    color: #94a3b8;
+  }
+
+  .ts-queue-face {
+    box-shadow: 0 0 0 2px #070d14, 0 0 0 3px rgba(6, 182, 212, 0.35);
+  }
+
+  .ts-page-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+
+  .ts-page-btn:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  .ts-page-label {
+    color: #cbd5e1;
+  }
+
+  .ts-pager {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .ts-emp-name {
+    color: #f1f5f9;
+  }
+
+  .ts-facts dt {
+    color: #94a3b8;
+  }
+
+  .ts-facts dd {
+    color: #f1f5f9;
+  }
+
+  .ts-stat-chip {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .ts-stat-chip--soft {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+  }
+
+  .ts-time-badge {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .ts-info-chip {
+    background: rgba(255, 255, 255, 0.05);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .ts-stamp-photo img,
+  .ts-profile-photo img {
+    border-color: #070d14;
+    background: #070d14;
+    box-shadow: 0 0 16px rgba(0, 0, 0, 0.6);
+  }
+}
+

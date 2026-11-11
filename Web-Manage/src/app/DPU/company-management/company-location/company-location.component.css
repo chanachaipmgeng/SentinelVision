@@ -563,3 +563,110 @@
     justify-content: flex-end;
   }
 }
+
+/* ==========================================================================
+   VaultX Obsidian Dark Theme Enhancements
+   ========================================================================== */
+:host-context(html[data-theme='dark']),
+:host-context(html.dark),
+:host-context([data-theme-mode='dark']) {
+  .loc-search-input {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .loc-search-input:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+  }
+
+  .loc-type-toggle {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .loc-type-btn {
+    color: #94a3b8;
+  }
+
+  .loc-type-btn:hover {
+    color: #22d3ee;
+  }
+
+  .loc-type-btn.active {
+    background: linear-gradient(135deg, #06b6d4, #0d9488);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.35);
+  }
+
+  .loc-queue-item {
+    background: linear-gradient(180deg, #091018 0%, #060a10 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .loc-queue-item:hover {
+    background: rgba(6, 182, 212, 0.06);
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  .loc-queue-item.active {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(7, 13, 20, 0.95));
+    border-color: #22d3ee;
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.25);
+  }
+
+  .loc-queue-name {
+    color: #f1f5f9;
+  }
+
+  .loc-queue-sub {
+    color: #94a3b8;
+  }
+
+  .loc-stat-chip {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .loc-stat-chip--soft {
+    background: rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+  }
+
+  .loc-fact-card,
+  .loc-facts-box {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .loc-fact-val {
+    color: #f1f5f9;
+  }
+
+  .loc-fact-lbl {
+    color: #94a3b8;
+  }
+
+  .loc-pager {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .loc-page-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+  }
+
+  .loc-page-btn:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.15);
+    color: #22d3ee;
+    border-color: rgba(6, 182, 212, 0.3);
+  }
+
+  .loc-page-label {
+    color: #cbd5e1;
+  }
+}
+

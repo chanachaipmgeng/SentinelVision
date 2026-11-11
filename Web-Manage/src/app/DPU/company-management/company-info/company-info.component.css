@@ -296,3 +296,72 @@
     display: none;
   }
 }
+
+/* ==========================================================================
+   VaultX Obsidian Dark Theme Enhancements
+   ========================================================================== */
+:host-context(html[data-theme='dark']),
+:host-context(html.dark),
+:host-context([data-theme-mode='dark']) {
+  .cinfo-hero {
+    background:
+      radial-gradient(circle at top right, rgba(6, 182, 212, 0.18), transparent 55%),
+      linear-gradient(135deg, #09121d 0%, #04080e 100%) !important;
+    border: 1px solid rgba(6, 182, 212, 0.25) !important;
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.6);
+  }
+
+  .cinfo-company-name {
+    color: #f1f5f9;
+  }
+
+  .cinfo-company-sub {
+    color: #94a3b8;
+  }
+
+  .cinfo-logo {
+    background: #070d14;
+    border: 2px solid rgba(6, 182, 212, 0.3);
+  }
+
+  .cinfo-logo-badge {
+    background: linear-gradient(135deg, #06b6d4, #0d9488);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+  }
+
+  .cinfo-stat-chip {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .cinfo-section + .cinfo-section {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .cinfo-section-head h3 {
+    color: #f1f5f9;
+  }
+
+  .cinfo-section-head i {
+    color: #22d3ee;
+  }
+
+  .cinfo-field .form-label {
+    color: #cbd5e1;
+  }
+
+  .cinfo-field .form-control,
+  .cinfo-coord-grid .form-control {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f1f5f9 !important;
+  }
+
+  .cinfo-field .form-control:focus,
+  .cinfo-coord-grid .form-control:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+  }
+}
+

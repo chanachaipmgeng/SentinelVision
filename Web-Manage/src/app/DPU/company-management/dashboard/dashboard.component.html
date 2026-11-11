@@ -24,17 +24,17 @@
           {{ 'Updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }}
         </span>
         <button type="button" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh" (click)="toggleLive()">
-          <i [ngClass]="liveOn ? 'ri-broadcast-line' : 'ri-pause-circle-line'"></i>
+          <i [ngClass]="liveOn ? 'ri-broadcast-line text-emerald-400' : 'ri-pause-circle-line text-slate-400'"></i>
           <span>{{ (liveOn ? 'Stop live' : 'Go live') | translate }}</span>
         </button>
-        <a routerLink="/company/sentinel-center" class="ti-btn ti-btn-primary-full modern-btn dpu-dash-refresh">
+        <a routerLink="/company/sentinel-center" class="btn-vault dpu-dash-refresh">
           <i class="ri-shield-flash-line"></i><span>Sentinel Center</span>
         </a>
         <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-checkbox-circle-line"></i><span>{{ 'Approve' | translate }}</span>
+          <i class="ri-checkbox-circle-line text-amber-400"></i><span>{{ 'Approve' | translate }}</span>
         </a>
         <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-camera-line"></i><span>Kiosk</span>
+          <i class="ri-camera-lens-line text-cyan-400"></i><span>Kiosk</span>
         </a>
         <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh"
           (click)="loadStats(false)" [disabled]="isLoading || isRefreshing">
@@ -68,35 +68,55 @@
   <ng-container *ngIf="stats && !isLoading">
     <!-- KPI row -->
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass">
+      <div class="box dpu-stat-card modern-card glass card-surface-cyan">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">{{ 'Punches today' | translate }}</p>
-          <div class="text-2xl font-semibold text-dpu-brand-deep">{{ stats.summary.checkInsToday }}</div>
+          <div class="dpu-stat-head">
+            <span class="dpu-stat-label">{{ 'Punches today' | translate }}</span>
+            <div class="dpu-stat-icon is-cyan">
+              <i class="ri-fingerprint-line"></i>
+            </div>
+          </div>
+          <div class="dpu-stat-value text-cyan-400">{{ stats.summary.checkInsToday }}</div>
         </div>
       </div>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass">
+      <div class="box dpu-stat-card modern-card glass card-surface">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">{{ 'In area today' | translate }}</p>
-          <div class="text-2xl font-semibold text-dpu-brand-deep">{{ inAreaToday }}</div>
+          <div class="dpu-stat-head">
+            <span class="dpu-stat-label">{{ 'In area today' | translate }}</span>
+            <div class="dpu-stat-icon is-emerald">
+              <i class="ri-map-pin-user-line"></i>
+            </div>
+          </div>
+          <div class="dpu-stat-value text-emerald-400">{{ inAreaToday }}</div>
         </div>
       </div>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass">
+      <div class="box dpu-stat-card modern-card glass card-surface">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">{{ 'Out of area today' | translate }}</p>
-          <div class="text-2xl font-semibold" [class.text-danger]="outsideToday > 0">{{ outsideToday }}</div>
+          <div class="dpu-stat-head">
+            <span class="dpu-stat-label">{{ 'Out of area today' | translate }}</span>
+            <div class="dpu-stat-icon is-rose">
+              <i class="ri-error-warning-line"></i>
+            </div>
+          </div>
+          <div class="dpu-stat-value" [ngClass]="outsideToday > 0 ? 'text-rose-400' : 'text-slate-200'">{{ outsideToday }}</div>
         </div>
       </div>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass">
+      <div class="box dpu-stat-card modern-card glass card-surface">
         <div class="box-body">
-          <p class="mb-0 text-dpu-muted">{{ 'Pending approval' | translate }}</p>
-          <div class="text-2xl font-semibold" [class.text-warning]="pendingApproval > 0">{{ pendingApproval }}</div>
-          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link">{{ 'Go to approval queue' | translate }}</a>
+          <div class="dpu-stat-head">
+            <span class="dpu-stat-label">{{ 'Pending approval' | translate }}</span>
+            <div class="dpu-stat-icon is-amber">
+              <i class="ri-time-line"></i>
+            </div>
+          </div>
+          <div class="dpu-stat-value" [ngClass]="pendingApproval > 0 ? 'text-amber-400' : 'text-slate-200'">{{ pendingApproval }}</div>
+          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link block mt-1">{{ 'Go to approval queue' | translate }}</a>
         </div>
       </div>
     </div>
@@ -104,8 +124,8 @@
     <!-- Charts -->
     <div class="xl:col-span-8 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
-        <div class="box-header">
-          <h5 class="box-title !mb-0">{{ '7-day trend' | translate }}</h5>
+        <div class="box-header flex items-center justify-between">
+          <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ '7-day trend' | translate }}</h5>
         </div>
         <div class="box-body">
           <div echarts [options]="trendChart" class="h-72"></div>
@@ -114,8 +134,8 @@
     </div>
     <div class="xl:col-span-4 col-span-12 sv-contain-region">
       <div class="box modern-card glass h-full">
-        <div class="box-header">
-          <h5 class="box-title !mb-0">{{ 'Today mix' | translate }}</h5>
+        <div class="box-header flex items-center justify-between">
+          <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Today mix' | translate }}</h5>
         </div>
         <div class="box-body">
           <div echarts [options]="mixChart" class="h-72"></div>
@@ -128,7 +148,7 @@
       <div class="box modern-card glass">
         <div class="box-header flex items-center justify-between gap-2">
           <div>
-            <h5 class="box-title !mb-0">{{ 'Today punch map' | translate }}</h5>
+            <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Today punch map' | translate }}</h5>
             <p class="mb-0 text-xs text-dpu-muted">
               {{ 'dashboard.mapHint' | translate }}
             </p>
@@ -150,7 +170,7 @@
         <div class="box-header flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             <span class="dpu-live-dot" [class.is-on]="liveOn"></span>
-            <h5 class="box-title !mb-0">{{ 'Latest punches (Realtime)' | translate }}</h5>
+            <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Latest punches (Realtime)' | translate }}</h5>
           </div>
           <a routerLink="/company/timestamp-log" class="dpu-dash-link">{{ 'View all' | translate }}</a>
         </div>

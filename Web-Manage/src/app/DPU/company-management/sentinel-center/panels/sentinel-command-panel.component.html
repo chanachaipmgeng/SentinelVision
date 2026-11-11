@@ -44,7 +44,7 @@
                 <div class="col-span-12 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    class="ti-btn ti-btn-primary-full font-semibold"
+                    class="btn-vault font-semibold px-4 py-2 text-xs"
                     [disabled]="siemSaving"
                     (click)="saveSiemSettings()"
                   >
@@ -124,7 +124,7 @@
                 <div class="col-span-12 flex flex-col gap-2">
                   <button
                     type="button"
-                    class="ti-btn ti-btn-primary-full w-full font-semibold"
+                    class="btn-vault w-full py-2.5 font-semibold text-sm"
                     [disabled]="!scanSelectedFile || isScanning"
                     (click)="runUnifiedScan()"
                   >
@@ -150,17 +150,17 @@
                 class="mt-4 p-4 rounded-xl border"
                 [ngClass]="
                   lastScanResult.decision === 'BLACKLIST_BLOCKED'
-                    ? 'bg-red-50 border-red-300 text-red-900'
+                    ? 'bg-red-500/15 border-red-500/40 text-red-200'
                     : lastScanResult.accessGranted
-                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
-                    : 'bg-amber-50 border-amber-300 text-amber-900'
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200'
+                    : 'bg-amber-500/15 border-amber-500/40 text-amber-200'
                 "
               >
                 <div class="flex items-center justify-between mb-1">
                   <span class="font-bold text-sm">
                     {{ lastScanResult.message }}
                   </span>
-                  <span class="badge bg-white/80 text-slate-800 px-2 py-0.5 text-xs">
+                  <span class="badge bg-slate-800/80 text-slate-200 border border-white/10 px-2 py-0.5 text-xs">
                     {{ lastScanResult.decision }}
                   </span>
                 </div>

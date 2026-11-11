@@ -68,16 +68,16 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         <div class="flex flex-wrap items-center gap-2">
           <a
             routerLink="/company/timestamp-face"
-            class="ti-btn bg-white text-slate-900 hover:bg-slate-100 font-semibold text-xs px-3.5 py-2 rounded-lg"
+            class="btn-vault text-xs px-4 py-2 inline-flex items-center gap-1.5"
           >
-            <i class="ri-camera-lens-line me-1"></i> เปิดหน้าจอ Kiosk สด
+            <i class="ri-camera-lens-line"></i> เปิดหน้าจอ Kiosk สด
           </a>
           <button
             type="button"
-            class="ti-btn bg-teal-500/20 border border-white/25 text-white hover:bg-teal-500/30 text-xs px-3.5 py-2 rounded-lg"
+            class="ti-btn bg-slate-800/80 border border-white/10 text-slate-200 hover:text-white hover:border-cyan-500/40 text-xs px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 transition-all"
             (click)="reloadOverview()"
           >
-            <i class="ri-refresh-line me-1" [class.animate-spin]="isLoading"></i> รีเฟรชข้อมูล
+            <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i> รีเฟรชข้อมูล
           </button>
         </div>
       </div>

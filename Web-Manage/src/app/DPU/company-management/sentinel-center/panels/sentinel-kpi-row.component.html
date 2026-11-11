@@ -1,83 +1,95 @@
 <div class="grid grid-cols-12 gap-4 sv-contain-region">
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>Blacklist / เฝ้าระวัง</span>
-              <i class="ri-alarm-warning-line text-danger text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-danger">
-              {{ overview?.summary?.blacklistAndPoiCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">แจ้งเตือนเงียบอัตโนมัติ</div>
-          </div>
-        </div>
-
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>บุคคลสำคัญ (VIP)</span>
-              <i class="ri-vip-crown-line text-purple-600 text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-purple-700">
-              {{ overview?.summary?.vipCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">ต้อนรับพิเศษที่จุดสแกน</div>
-          </div>
-        </div>
-
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>ผู้มาติดต่อ (Visitor)</span>
-              <i class="ri-pass-valid-line text-sky-600 text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-sky-700">
-              {{ overview?.summary?.activeVisitorCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">ลบใบหน้าอัตโนมัติตาม PDPA</div>
-          </div>
-        </div>
-
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>โซนประตู Access</span>
-              <i class="ri-door-lock-box-line text-teal-600 text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-dpu-brand-deep">
-              {{ overview?.summary?.activeZonesCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">รองรับ IoT Relay &amp; 2FA</div>
-          </div>
-        </div>
-
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>งานอีเวนต์ / สัมมนา</span>
-              <i class="ri-calendar-event-line text-amber-600 text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-amber-700">
-              {{ overview?.summary?.liveEventsCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">
-              ผู้ลงทะเบียน {{ overview?.summary?.eventAttendeeCount || 0 }} คน
-            </div>
-          </div>
-        </div>
-
-        <div class="col-span-6 md:col-span-4 xl:col-span-2">
-          <div class="sv-kpi-card">
-            <div class="flex items-center justify-between text-xs text-dpu-muted mb-1">
-              <span>คนในอาคารวันนี้</span>
-              <i class="ri-building-2-line text-emerald-600 text-base"></i>
-            </div>
-            <div class="text-2xl font-bold text-emerald-700">
-              {{ overview?.summary?.buildingOccupancyCount || 0 }}
-            </div>
-            <div class="text-[0.72rem] text-dpu-muted mt-1">
-              ค้างตรวจสอบ {{ overview?.summary?.unacknowledgedAlerts || 0 }} เหตุการณ์
-            </div>
-          </div>
-        </div>
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>Blacklist / เฝ้าระวัง</span>
+        <span class="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+          <i class="ri-alarm-warning-line text-sm"></i>
+        </span>
       </div>
+      <div class="text-3xl font-extrabold text-red-400 tracking-tight">
+        {{ overview?.summary?.blacklistAndPoiCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">แจ้งเตือนเงียบอัตโนมัติ</div>
+    </div>
+  </div>
+
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>บุคคลสำคัญ (VIP)</span>
+        <span class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+          <i class="ri-vip-crown-line text-sm"></i>
+        </span>
+      </div>
+      <div class="text-3xl font-extrabold text-purple-400 tracking-tight">
+        {{ overview?.summary?.vipCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">ต้อนรับพิเศษที่จุดสแกน</div>
+    </div>
+  </div>
+
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>ผู้มาติดต่อ (Visitor)</span>
+        <span class="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+          <i class="ri-pass-valid-line text-sm"></i>
+        </span>
+      </div>
+      <div class="text-3xl font-extrabold text-sky-400 tracking-tight">
+        {{ overview?.summary?.activeVisitorCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">ลบใบหน้าอัตโนมัติตาม PDPA</div>
+    </div>
+  </div>
+
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>โซนประตู Access</span>
+        <span class="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+          <i class="ri-door-lock-box-line text-sm"></i>
+        </span>
+      </div>
+      <div class="text-3xl font-extrabold text-teal-400 tracking-tight">
+        {{ overview?.summary?.activeZonesCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">รองรับ IoT Relay &amp; 2FA</div>
+    </div>
+  </div>
+
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>งานอีเวนต์ / สัมมนา</span>
+        <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <i class="ri-calendar-event-line text-sm"></i>
+        </span>
+      </div>
+      <div class="text-3xl font-extrabold text-amber-400 tracking-tight">
+        {{ overview?.summary?.liveEventsCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">
+        ผู้ลงทะเบียน {{ overview?.summary?.eventAttendeeCount || 0 }} คน
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-6 md:col-span-4 xl:col-span-2">
+    <div class="sv-kpi-card">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span>คนในอาคารวันนี้</span>
+        <span class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <i class="ri-building-2-line text-sm"></i>
+        </span>
+      </div>
+      <div class="text-3xl font-extrabold text-emerald-400 tracking-tight">
+        {{ overview?.summary?.buildingOccupancyCount || 0 }}
+      </div>
+      <div class="text-[0.72rem] text-slate-400 mt-1">
+        ค้างตรวจสอบ {{ overview?.summary?.unacknowledgedAlerts || 0 }} เหตุการณ์
+      </div>
+    </div>
+  </div>
+</div>

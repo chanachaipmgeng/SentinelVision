@@ -770,6 +770,90 @@ body.dpu-login-body {
   color: #64748b !important;
 }
 
+/* ---- SentinelVision Command Center & Panels (VaultX Obsidian Glass) ---- */
+.sv-command-banner {
+  border: 1px solid transparent !important;
+  background:
+    radial-gradient(ellipse 65% 100% at 90% 0%, rgba(6, 182, 212, 0.18), transparent 70%),
+    linear-gradient(180deg, #07111b, #03070d) padding-box,
+    linear-gradient(180deg, rgba(6, 182, 212, 0.45), rgba(255, 255, 255, 0.08) 35%, transparent 75%) border-box !important;
+  border-radius: 20px;
+  padding: 1.5rem 1.75rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.sv-kpi-card {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(180deg, #09121d, #04080e) padding-box,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 40%, transparent 80%) border-box !important;
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.sv-kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(6, 182, 212, 0.4) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 20px -3px rgba(6, 182, 212, 0.2);
+}
+
+.sv-nav-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  background: rgba(4, 9, 15, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.35rem;
+}
+
+.sv-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sv-nav-tab i {
+  font-size: 1rem;
+}
+
+.sv-nav-tab:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sv-nav-tab--active {
+  color: #22d3ee !important;
+  background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(6, 182, 212, 0.2)) !important;
+  border: 1px solid rgba(6, 182, 212, 0.45) !important;
+  box-shadow: 0 0 16px -2px rgba(6, 182, 212, 0.3) !important;
+}
+
+/* Sentinel Panel Cards in dark mode */
+html[data-theme="dark"] .bg-slate-50\/60,
+html.dark .bg-slate-50\/60,
+html[data-theme-mode="dark"] .bg-slate-50\/60,
+.sv-panel-card {
+  border: 1px solid transparent !important;
+  background:
+    linear-gradient(180deg, #070f18, #03070c) padding-box,
+    linear-gradient(180deg, rgba(6, 182, 212, 0.3), rgba(255, 255, 255, 0.05) 35%, transparent 75%) border-box !important;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
 .dpu-auth {
   min-height: 100vh;
   display: flex;

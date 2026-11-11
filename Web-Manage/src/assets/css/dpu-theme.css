@@ -2394,4 +2394,103 @@ html[data-theme-mode="dark"] .table tbody tr:hover {
   min-height: 150px !important;
 }
 
+/* Attendance & Timestamp Log Cards (VaultX Obsidian Glass) */
+.ts-queue-item,
+.warn-queue-item {
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left-width: 4px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+.ts-queue-item[data-tone='warning'] {
+  border-left-color: #f59e0b !important;
+}
+.ts-queue-item[data-tone='success'] {
+  border-left-color: #10b981 !important;
+}
+.ts-queue-item[data-tone='danger'] {
+  border-left-color: #ef4444 !important;
+}
+.warn-queue-item {
+  border-left-color: #f59e0b !important;
+}
+
+.ts-queue-item:hover,
+.warn-queue-item:hover {
+  background: linear-gradient(180deg, #0d1a29 0%, #060b14 100%) !important;
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  border-left-width: 4px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 14px rgba(6, 182, 212, 0.15) !important;
+}
+
+.ts-queue-name,
+.warn-queue-name {
+  color: #f1f5f9 !important;
+}
+
+.ts-queue-sub,
+.warn-queue-sub {
+  color: #94a3b8 !important;
+}
+
+.ts-time-badge,
+.warn-time-badge {
+  color: #22d3ee !important;
+  background: rgba(6, 182, 212, 0.14) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+}
+
+.ts-date-label,
+.warn-date-label {
+  color: #94a3b8 !important;
+}
+
+.ts-status-badge[data-tone='success'],
+.ts-status-pill[data-tone='success'] {
+  color: #34d399 !important;
+  background: rgba(16, 185, 129, 0.16) !important;
+  border: 1px solid rgba(16, 185, 129, 0.28) !important;
+}
+
+.ts-status-badge[data-tone='warning'],
+.ts-status-pill[data-tone='warning'],
+.warn-status-pill {
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.16) !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
+}
+
+.ts-status-badge[data-tone='danger'],
+.ts-status-pill[data-tone='danger'] {
+  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.16) !important;
+  border: 1px solid rgba(239, 68, 68, 0.28) !important;
+}
+
+.ts-page-btn {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #cbd5e1 !important;
+}
+
+.ts-page-label {
+  color: #cbd5e1 !important;
+}
+
+.inbox-card {
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+.inbox-card-body strong {
+  color: #f1f5f9 !important;
+}
+
+.inbox-muted {
+  color: #94a3b8 !important;
+}
+
+
 

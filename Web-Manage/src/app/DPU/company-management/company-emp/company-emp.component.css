@@ -94,17 +94,18 @@
   height: 2.4rem !important;
   padding: 0.45rem 0.85rem 0.45rem 2.25rem !important;
   border-radius: 999px !important;
-  border: 1px solid var(--dpu-border, #e2e8f0) !important;
-  background: #fff !important;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   transition:
     border-color 0.2s var(--dpu-ease, ease),
     box-shadow 0.2s var(--dpu-ease, ease);
 }
 
 .emp-search-input:focus {
-  border-color: var(--dpu-brand, #0f766e) !important;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
   outline: none;
 }
 
@@ -134,8 +135,8 @@
   align-items: center;
   padding: 0.2rem;
   border-radius: 10px;
-  background: rgba(238, 242, 246, 0.95);
-  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   gap: 0.15rem;
   flex-shrink: 0;
   height: 2.4rem;
@@ -165,8 +166,8 @@
 
 .emp-view-btn.active {
   color: #fff;
-  background: var(--dpu-brand, #0f766e);
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
+  background: linear-gradient(135deg, #06b6d4, #0d9488) !important;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.35) !important;
 }
 
 .emp-view-btn i {
@@ -222,17 +223,18 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8 !important;
   font-weight: 700;
-  background: rgba(238, 242, 246, 0.75);
-  border-bottom: 1px solid var(--dpu-border, #e2e8f0);
+  background: rgba(7, 13, 20, 0.95) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   padding: 0.85rem 1rem;
 }
 
 .emp-table tbody td {
   padding: 0.85rem 1rem;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  color: #f1f5f9 !important;
 }
 
 .emp-row {
@@ -241,7 +243,7 @@
 }
 
 .emp-row:hover {
-  background: rgba(15, 118, 110, 0.04);
+  background: rgba(6, 182, 212, 0.05) !important;
 }
 
 .emp-person {
@@ -253,7 +255,7 @@
 
 .emp-avatar {
   flex-shrink: 0;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(15, 118, 110, 0.25);
+  box-shadow: 0 0 0 2px #070d14, 0 0 0 3px rgba(6, 182, 212, 0.35) !important;
   transition: transform 0.25s var(--dpu-ease, ease);
 }
 
@@ -268,8 +270,9 @@
   font-size: 0.8rem;
   padding: 0.15rem 0.45rem;
   border-radius: 6px;
-  background: rgba(15, 23, 42, 0.05);
-  color: var(--dpu-ink, #0f172a);
+  background: rgba(6, 182, 212, 0.12) !important;
+  color: #22d3ee !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
 }
 
 .emp-actions {
@@ -292,8 +295,8 @@
 .emp-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  padding: 1rem !important;
+  gap: 1.25rem;
+  padding: 1.25rem !important;
 }
 
 @media (max-width: 1199.98px) {
@@ -311,12 +314,15 @@
 .emp-card {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   height: 100%;
-  border: 1px solid var(--dpu-border, #e2e8f0);
+  min-height: 310px;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: var(--dpu-radius, 14px);
-  background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
-  padding: 1.1rem 1rem 0.95rem;
-  box-shadow: var(--dpu-shadow, 0 1px 2px rgba(15, 23, 42, 0.05));
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  padding: 1.25rem 1.1rem 1rem;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6) !important;
+  position: relative;
   animation: emp-row-in 0.45s var(--dpu-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
   transition:
     transform 0.25s var(--dpu-ease, ease),
@@ -324,10 +330,21 @@
     border-color 0.2s ease;
 }
 
+.emp-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.4), transparent);
+  pointer-events: none;
+}
+
 .emp-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(15, 118, 110, 0.28);
-  box-shadow: var(--dpu-shadow-lg, 0 12px 40px rgba(15, 23, 42, 0.1));
+  border-color: rgba(6, 182, 212, 0.35) !important;
+  box-shadow: 0 14px 32px -8px rgba(6, 182, 212, 0.15) !important;
 }
 
 .emp-card-head {
@@ -342,6 +359,15 @@
   text-align: center;
   gap: 0.65rem;
   margin-bottom: 0.75rem;
+  min-height: 4.25rem;
+}
+
+.emp-card-head p.font-semibold {
+  color: #f1f5f9 !important;
+}
+
+.emp-card-head p.text-dpu-muted {
+  color: #94a3b8 !important;
 }
 
 .emp-card-meta {
@@ -351,14 +377,15 @@
   margin-bottom: 0.9rem;
   padding: 0.65rem 0.5rem;
   border-radius: var(--dpu-radius-sm, 10px);
-  background: rgba(238, 242, 246, 0.7);
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .emp-card-meta--stack {
   grid-template-columns: 1fr;
-  gap: 0.4rem;
+  gap: 0.45rem;
   margin-bottom: 0.85rem;
-  padding: 0.55rem 0.7rem;
+  padding: 0.65rem 0.8rem;
   flex-grow: 1;
 }
 
@@ -377,7 +404,7 @@
 .emp-actions--center {
   justify-content: center;
   margin-top: auto;
-  padding-top: 0.15rem;
+  padding-top: 0.35rem;
 }
 
 .emp-meta-label {
@@ -386,7 +413,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8 !important;
   margin-bottom: 0.15rem;
 }
 
@@ -394,7 +421,7 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--dpu-ink, #0f172a);
+  color: #f1f5f9 !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

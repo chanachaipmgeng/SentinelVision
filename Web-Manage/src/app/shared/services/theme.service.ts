@@ -16,7 +16,7 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  readonly theme = signal<ThemeMode>('light');
+  readonly theme = signal<ThemeMode>('dark');
   readonly density = signal<DensityMode>('comfortable');
 
   private shellActive = false;
@@ -30,7 +30,7 @@ export class ThemeService {
 
   /** Effective theme painted on <html> right now (may differ from the preference). */
   get effectiveTheme(): ThemeMode {
-    return this.theme() === 'dark' && this.shellActive && !this.kioskActive ? 'dark' : 'light';
+    return this.theme() === 'dark' || (this.shellActive && !this.kioskActive) ? 'dark' : 'light';
   }
 
   setTheme(mode: ThemeMode): void {
@@ -69,7 +69,7 @@ export class ThemeService {
     const html = this.document?.documentElement;
     if (!html) return;
     const kiosk = this.kioskActive || html.classList.contains(KIOSK_MODE_CLASS);
-    const dark = this.theme() === 'dark' && this.shellActive && !kiosk;
+    const dark = this.theme() === 'dark' && !kiosk;
 
     html.setAttribute('data-theme', dark ? 'dark' : 'light');
     html.setAttribute('data-theme-mode', dark ? 'dark' : 'light');
@@ -84,7 +84,7 @@ export class ThemeService {
   }
 
   private readTheme(): ThemeMode {
-    return this.read(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+    return this.read(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark';
   }
 
   private readDensity(): DensityMode {

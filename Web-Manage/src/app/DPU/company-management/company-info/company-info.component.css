@@ -85,14 +85,15 @@
 .cinfo-hero {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 1.25rem;
+  padding: 1.25rem;
   margin-bottom: 1.15rem;
   border-radius: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 45%),
-    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(236, 253, 245, 0.55));
-  border: 1px solid rgba(15, 118, 110, 0.12);
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.18), transparent 55%),
+    linear-gradient(135deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.6) !important;
 }
 
 .cinfo-logo-wrap {
@@ -107,8 +108,9 @@
   height: 100%;
   object-fit: cover;
   border-radius: 1.15rem;
-  background: #e2e8f0;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+  background: #070d14 !important;
+  border: 2px solid rgba(6, 182, 212, 0.3) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
 }
 
 .cinfo-logo-badge {
@@ -118,12 +120,12 @@
   width: 2.15rem;
   height: 2.15rem;
   border-radius: 999px;
-  background: var(--dpu-brand, #0f766e);
+  background: linear-gradient(135deg, #06b6d4, #0d9488) !important;
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.35);
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.4);
   cursor: pointer;
   overflow: hidden;
 }
@@ -132,7 +134,7 @@
   margin: 0 0 0.3rem;
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #f1f5f9 !important;
   letter-spacing: -0.015em;
 }
 
@@ -141,18 +143,18 @@
 .cinfo-map-tip,
 .cinfo-panel-sub {
   font-size: 0.78rem;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8 !important;
 }
 
 .cinfo-upload-hint {
-  color: #b45309;
+  color: #f59e0b !important;
   margin-top: 0.35rem;
 }
 
 .cinfo-section + .cinfo-section {
   margin-top: 1.25rem;
   padding-top: 1.15rem;
-  border-top: 1px solid var(--dpu-border, #e2e8f0);
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .cinfo-section-head {
@@ -163,7 +165,7 @@
 }
 
 .cinfo-section-head i {
-  color: var(--dpu-brand, #0f766e);
+  color: #22d3ee !important;
   font-size: 1.1rem;
 }
 
@@ -171,7 +173,7 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #f1f5f9 !important;
 }
 
 .cinfo-form-grid {
@@ -249,12 +251,13 @@
 }
 
 .cinfo-maps-hint {
-  padding: 0.7rem 0.85rem;
+  padding: 0.75rem 0.95rem;
   border-radius: 0.75rem;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #9a3412;
-  background: rgba(254, 243, 199, 0.95);
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
 }
 
 .cinfo-loading {

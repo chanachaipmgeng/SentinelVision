@@ -1,53 +1,97 @@
-<app-page-header [title]="'Reports'" [activeTitle]="'Attendance'" [title1]="'Reports'"></app-page-header>
+<app-page-header [title]="'รายงานสรุปการลงเวลา (Attendance Reports)'" [activeTitle]="'ข้อมูลเวลา & รายงาน'" [title1]="'รายงาน'"></app-page-header>
 
-<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
-  <div class="col-span-12">
-    <app-page-toolbar title="Attendance reports">
-      <ng-container controls>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" [disabled]="busy" (click)="export()">
-          <i class="ri-download-2-line"></i>
-          {{ 'Export' | translate }}
-        </button>
-      </ng-container>
-    </app-page-toolbar>
-    <p class="text-sm text-dpu-muted mb-3">{{ 'reports.blurb' | translate }}</p>
-  </div>
-
-  <div class="col-span-12 lg:col-span-6">
-    <div class="box modern-card glass">
-      <div class="box-header"><div class="box-title">{{ 'Filter' | translate }}</div></div>
-      <div class="box-body space-y-3">
-        <div class="grid grid-cols-2 gap-3">
+<div class="dpu-list-page grid grid-cols-12 gap-6">
+  <!-- Filter Card -->
+  <div class="col-span-12 lg:col-span-7">
+    <div class="box modern-card glass card-surface-cyan">
+      <div class="box-header flex items-center justify-between border-b border-white/10 p-4">
+        <div class="box-title flex items-center gap-2 text-slate-100 font-bold">
+          <i class="ri-filter-3-line text-cyan-400 text-lg"></i> {{ 'Filter' | translate }} & ขอบเขตข้อมูล
+        </div>
+        <span class="badge bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs px-2.5 py-1 rounded-full">
+          Sentinel Analytics
+        </span>
+      </div>
+      <div class="box-body p-5 space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="form-label">{{ 'From date' | translate }}</label>
-            <input type="date" class="form-control" [(ngModel)]="draft.startDate" />
+            <label class="form-label text-slate-300 text-xs font-semibold">{{ 'From date' | translate }}</label>
+            <input type="date" class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.startDate" />
           </div>
           <div>
-            <label class="form-label">{{ 'To date' | translate }}</label>
-            <input type="date" class="form-control" [(ngModel)]="draft.endDate" />
+            <label class="form-label text-slate-300 text-xs font-semibold">{{ 'To date' | translate }}</label>
+            <input type="date" class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.endDate" />
           </div>
         </div>
         <div>
-          <label class="form-label">{{ 'Employee (blank = whole company)' | translate }}</label>
-          <select class="form-control" [(ngModel)]="draft.company_employeeId">
-            <option value="">— {{ 'All' | translate }} —</option>
+          <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Employee (blank = whole company)' | translate }}</label>
+          <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.company_employeeId">
+            <option value="">— {{ 'All' | translate }} (พนักงานทั้งหมดของบริษัท) —</option>
             <option *ngFor="let e of employees" [value]="e.company_employeeId">{{ e.label }}</option>
           </select>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="form-label">{{ 'Mode' | translate }}</label>
-            <select class="form-control" [(ngModel)]="draft.mode">
-              <option value="raw">{{ 'Raw punches' | translate }}</option>
-              <option value="payroll">{{ 'Payroll summary' | translate }}</option>
+            <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Mode' | translate }}</label>
+            <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.mode">
+              <option value="raw">{{ 'Raw punches' | translate }} (บันทึกรายครั้ง)</option>
+              <option value="payroll">{{ 'Payroll summary' | translate }} (สรุปกะและโอที)</option>
             </select>
           </div>
           <div>
-            <label class="form-label">{{ 'Format' | translate }}</label>
-            <select class="form-control" [(ngModel)]="draft.format">
-              <option value="xlsx">Excel (.xlsx)</option>
-              <option value="csv">CSV</option>
+            <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Format' | translate }}</label>
+            <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.format">
+              <option value="xlsx">Excel Workbook (.xlsx)</option>
+              <option value="csv">Comma-Separated Values (.csv)</option>
             </select>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/10 flex items-center justify-between">
+          <p class="text-xs text-slate-400 mb-0">
+            <i class="ri-information-line text-cyan-400 me-1"></i> รองรับการส่งออกข้อมูลดิบและสรุปค่ากะพร้อมคำนวณสาย
+          </p>
+          <button type="button" class="btn-vault flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold" [disabled]="busy" (click)="export()">
+            <i *ngIf="!busy" class="ri-download-2-line"></i>
+            <span *ngIf="busy" class="ti-spinner animation-spin !w-4 !h-4" role="status"></span>
+            {{ (busy ? 'Exporting...' : 'Export') | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Info / Guide Card -->
+  <div class="col-span-12 lg:col-span-5">
+    <div class="box modern-card glass card-surface h-full">
+      <div class="box-header border-b border-white/10 p-4">
+        <div class="box-title text-slate-100 font-bold flex items-center gap-2">
+          <i class="ri-file-chart-line text-teal-400 text-lg"></i> ข้อมูลจำเพาะของรายงาน
+        </div>
+      </div>
+      <div class="box-body p-5 space-y-4">
+        <div class="p-3.5 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+          <div class="flex items-center gap-2 text-cyan-300 font-semibold text-sm mb-1">
+            <i class="ri-file-excel-2-line"></i> รูปแบบรายงานที่เลือก
+          </div>
+          <p class="text-xs text-slate-300 mb-0">
+            โหมด: <span class="text-cyan-400 font-mono font-bold">{{ draft.mode === 'raw' ? 'รายการลงเวลาดิบ (Raw)' : 'สรุปเงินเดือน (Payroll)' }}</span> · 
+            ไฟล์: <span class="text-teal-400 font-mono font-bold">.{{ draft.format }}</span>
+          </p>
+        </div>
+
+        <div class="space-y-2.5 text-xs text-slate-400">
+          <div class="flex items-start gap-2">
+            <i class="ri-check-line text-emerald-400 mt-0.5"></i>
+            <span><strong>Raw punches:</strong> แสดงพิกัด GPS, ผลตรวจใบหน้า AI, อุณหภูมิ และภาพบันทึกหน้ากล้อง</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="ri-check-line text-emerald-400 mt-0.5"></i>
+            <span><strong>Payroll summary:</strong> คำนวณสรุปเวลาทำงาน ชั่วโมงโอที เวลาสาย การลา ตามเงื่อนไขกะทำงาน</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="ri-shield-check-line text-cyan-400 mt-0.5"></i>
+            <span>สอดคล้องกับมาตรฐานความปลอดภัย <strong>PDPA & Multi-tenant isolation</strong></span>
           </div>
         </div>
       </div>

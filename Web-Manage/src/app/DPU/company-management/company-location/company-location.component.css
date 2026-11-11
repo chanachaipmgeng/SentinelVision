@@ -87,13 +87,14 @@
   height: 2.4rem !important;
   padding: 0.45rem 2.2rem 0.45rem 2.25rem !important;
   border-radius: 999px !important;
-  border: 1px solid var(--dpu-border, #e2e8f0) !important;
-  background: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
 }
 
 .loc-search-input:focus {
-  border-color: var(--dpu-brand, #0f766e) !important;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14) !important;
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
   outline: none;
 }
 
@@ -119,7 +120,8 @@
   align-items: center;
   padding: 0.2rem;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   gap: 0.15rem;
 }
 
@@ -130,14 +132,14 @@
   padding: 0.35rem 0.7rem;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8;
   cursor: pointer;
 }
 
 .loc-type-btn.active {
-  background: #fff;
-  color: var(--dpu-brand-deep, #0b4f4a);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(135deg, #06b6d4, #0d9488) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.35) !important;
 }
 
 .loc-tool-btn {
@@ -232,11 +234,11 @@
   grid-template-columns: auto auto 1fr auto;
   gap: 0.65rem;
   align-items: center;
-  border: 1px solid transparent;
-  border-left-width: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left-width: 3px !important;
   border-radius: 0.9rem;
   padding: 0.65rem 0.7rem;
-  background: rgba(248, 250, 252, 0.9);
+  background: linear-gradient(180deg, #09121d 0%, #05090f 100%) !important;
   cursor: pointer;
   transition:
     transform 0.18s ease,
@@ -247,24 +249,24 @@
 }
 
 .loc-queue-item[data-tone='ok'] {
-  border-left-color: #16a34a;
+  border-left-color: #16a34a !important;
 }
 
 .loc-queue-item[data-tone='temp'] {
-  border-left-color: #ea580c;
+  border-left-color: #ea580c !important;
 }
 
 .loc-queue-item:hover {
   transform: translateY(-1px);
-  border-color: rgba(15, 118, 110, 0.22);
-  border-left-width: 3px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  border-color: rgba(6, 182, 212, 0.3) !important;
+  border-left-width: 3px !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.4) !important;
 }
 
 .loc-queue-item.active {
-  border-color: rgba(15, 118, 110, 0.45);
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(255, 255, 255, 0.95));
-  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.12);
+  border-color: #22d3ee !important;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(7, 13, 20, 0.95)) !important;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.25) !important;
 }
 
 @keyframes loc-item-in {
@@ -308,7 +310,7 @@
 
 .loc-queue-name {
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9 !important;
   font-size: 0.92rem;
   white-space: nowrap;
   overflow: hidden;
@@ -318,7 +320,7 @@
 .loc-queue-sub {
   margin-top: 0.12rem;
   font-size: 0.74rem;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8 !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -392,12 +394,19 @@
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 1px solid var(--dpu-border, #e2e8f0);
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #cbd5e1 !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+.loc-page-btn:hover:not(:disabled) {
+  background: rgba(6, 182, 212, 0.15) !important;
+  color: #22d3ee !important;
+  border-color: rgba(6, 182, 212, 0.3) !important;
 }
 
 .loc-page-btn:disabled {
@@ -408,7 +417,7 @@
 .loc-page-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #0f172a;
+  color: #cbd5e1 !important;
 }
 
 /* ---- Detail ---- */
@@ -420,10 +429,10 @@
 }
 
 .loc-fact {
-  padding: 0.7rem 0.8rem;
+  padding: 0.75rem 0.85rem;
   border-radius: 0.85rem;
-  background: rgba(248, 250, 252, 0.95);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
 .loc-fact--wide {
@@ -434,14 +443,14 @@
   display: block;
   font-size: 0.72rem;
   font-weight: 700;
-  color: var(--dpu-muted, #64748b);
+  color: #94a3b8 !important;
   margin-bottom: 0.2rem;
 }
 
 .loc-fact-value {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9 !important;
   word-break: break-word;
 }
 

@@ -2252,3 +2252,146 @@ html[data-theme-mode="dark"] .main-header-dropdown {
   border-radius: 16px !important;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6) !important;
 }
+
+/* ==========================================================================
+   VaultX Universal Sub-Screen Form & Table Guardrails (Dark Mode)
+   ========================================================================== */
+html[data-theme="dark"] .form-control,
+html.dark .form-control,
+html[data-theme-mode="dark"] .form-control,
+html[data-theme="dark"] select.form-control,
+html.dark select.form-control,
+html[data-theme-mode="dark"] select.form-control {
+  background-color: rgba(4, 8, 14, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .form-control:focus,
+html.dark .form-control:focus,
+html[data-theme-mode="dark"] .form-control:focus {
+  background-color: rgba(6, 12, 20, 0.85) !important;
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.25) !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .form-label,
+html.dark .form-label,
+html[data-theme-mode="dark"] .form-label {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .table thead th,
+html.dark .table thead th,
+html[data-theme-mode="dark"] .table thead th {
+  background-color: rgba(7, 13, 20, 0.95) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .table tbody td,
+html.dark .table tbody td,
+html[data-theme-mode="dark"] .table tbody td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .table tbody tr:hover,
+html.dark .table tbody tr:hover,
+html[data-theme-mode="dark"] .table tbody tr:hover {
+  background-color: rgba(6, 182, 212, 0.04) !important;
+}
+
+/* ==========================================================================
+   VaultX Universal Sub-screen Card & Surface Hardening
+   ========================================================================== */
+.emp-card {
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  min-height: 310px !important;
+}
+
+.emp-card-head p.font-semibold {
+  color: #f1f5f9 !important;
+}
+
+.emp-card-head p.text-dpu-muted {
+  color: #94a3b8 !important;
+}
+
+.emp-card-meta {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.emp-card-meta .emp-meta-value {
+  color: #f1f5f9 !important;
+}
+
+.emp-card-meta .emp-meta-label {
+  color: #94a3b8 !important;
+}
+
+.loc-fact,
+.loc-fact-card {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+.loc-fact-value,
+.loc-fact-val {
+  color: #f1f5f9 !important;
+}
+
+.loc-fact-label,
+.loc-fact-lbl {
+  color: #94a3b8 !important;
+}
+
+.loc-queue-item {
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-left-width: 3px !important;
+  color: #f1f5f9 !important;
+}
+
+.loc-queue-name {
+  color: #f1f5f9 !important;
+}
+
+.loc-queue-sub {
+  color: #94a3b8 !important;
+}
+
+.cinfo-hero {
+  background:
+    radial-gradient(circle at top right, rgba(6, 182, 212, 0.18), transparent 55%),
+    linear-gradient(135deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.6) !important;
+}
+
+.cinfo-company-name {
+  color: #f1f5f9 !important;
+}
+
+.cinfo-company-sub {
+  color: #94a3b8 !important;
+}
+
+.cinfo-maps-hint {
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+
+.sv-kpi-card {
+  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  min-height: 150px !important;
+}
+
+

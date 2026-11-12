@@ -285,8 +285,17 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     this.stopFaceCamera(false);
     const stream = await openUserCamera(this.selectedDeviceId || null);
     this.videoStream = stream;
-    if (this.video?.nativeElement) {
-      this.video.nativeElement.srcObject = stream;
+    const videoEl = this.video?.nativeElement as HTMLVideoElement | undefined;
+    if (videoEl) {
+      videoEl.srcObject = stream;
+      videoEl.muted = true;
+      videoEl.setAttribute('playsinline', 'true');
+      videoEl.setAttribute('webkit-playsinline', 'true');
+      try {
+        await videoEl.play();
+      } catch {
+        /* autoplay may need a user gesture; detect loop waits for readyState */
+      }
     }
     await this.refreshVideoDevices(stream);
   }
@@ -327,12 +336,19 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       this.videoStream = null;
       const stream = await openUserCamera(deviceId);
       this.videoStream = stream;
-      if (this.video?.nativeElement) {
-        this.video.nativeElement.srcObject = stream;
+      const videoEl = this.video?.nativeElement as HTMLVideoElement | undefined;
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        videoEl.muted = true;
+        try {
+          await videoEl.play();
+        } catch {
+          /* ignore */
+        }
       }
       await this.refreshVideoDevices(stream);
       this.updateAngleStatus();
-      setTimeout(() => this.detectFace(), 200);
+      setTimeout(() => this.detectFace(), 280);
     } catch (err: unknown) {
       this.faceStatus = err instanceof Error ? err.message : 'เปลี่ยนกล้องไม่สำเร็จ';
     } finally {
@@ -402,8 +418,9 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
           this.canvas!.nativeElement.height = liveSize.height;
         }
 
-        // Overlay can use browser FaceDetector when available; auto-capture always
-        // waits for server enroll quality (ENROLL_* config).
+        // Overlay: browser FaceDetector when available; phones often lack it so
+        // we rely on server detect. Between server polls keep the last box —
+        // otherwise the frame blinks away every tick on mobile.
         let nextBox = await detectBrowserFaceBox(this.faceDetector, videoEl, liveSize);
         let enrollReady = this.enrollReady;
         let enrollMessage = this.enrollHint;
@@ -431,12 +448,18 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
             enrollMessage = this.friendlyEnrollHint(server.enrollMessage, server.faceRatio, server.minFaceRatio);
             if (server.box) {
               nextBox = server.box;
-            } else if (this.useServerFaceDetect) {
+            } else {
+              // Authoritative miss from server — clear sticky overlay.
               nextBox = null;
             }
+          } catch (detectErr) {
+            console.warn('enroll server detect failed', detectErr);
+            if (!nextBox) nextBox = this.smoothedBox;
           } finally {
             this.serverDetectInFlight = false;
           }
+        } else if (!nextBox) {
+          nextBox = this.smoothedBox;
         }
 
         const ctx = this.canvas!.nativeElement.getContext('2d') as CanvasRenderingContext2D;

@@ -74,23 +74,59 @@ export function createBrowserFaceDetector(): BrowserFaceDetector | null {
   }
 }
 
+/**
+ * Map a box in video-frame pixels onto the overlay element, matching
+ * CSS ``object-fit: contain`` (letterbox). Using plain client/frame ratios
+ * breaks on phones (portrait stream in a wide card) and the box disappears.
+ */
+export function mapFrameBoxToElement(
+  box: { x: number; y: number; width: number; height: number },
+  frameW: number,
+  frameH: number,
+  elementW: number,
+  elementH: number,
+  fit: 'contain' | 'cover' = 'contain',
+): SmoothBox {
+  const fw = Math.max(1, frameW);
+  const fh = Math.max(1, frameH);
+  const ew = Math.max(1, elementW);
+  const eh = Math.max(1, elementH);
+  const scale =
+    fit === 'cover' ? Math.max(ew / fw, eh / fh) : Math.min(ew / fw, eh / fh);
+  const dispW = fw * scale;
+  const dispH = fh * scale;
+  const ox = (ew - dispW) / 2;
+  const oy = (eh - dispH) / 2;
+  return {
+    x: box.x * scale + ox,
+    y: box.y * scale + oy,
+    width: box.width * scale,
+    height: box.height * scale,
+  };
+}
+
 export async function detectBrowserFaceBox(
   faceDetector: BrowserFaceDetector | null,
   videoEl: HTMLVideoElement,
   liveSize: { width: number; height: number },
 ): Promise<SmoothBox | null> {
   if (!faceDetector) return null;
-  const faces = await faceDetector.detect(videoEl);
-  const box = faces[0]?.boundingBox;
-  if (!box || box.width < 8 || box.height < 8) return null;
-  const sx = liveSize.width / (videoEl.videoWidth || liveSize.width);
-  const sy = liveSize.height / (videoEl.videoHeight || liveSize.height);
-  return {
-    x: box.x * sx,
-    y: box.y * sy,
-    width: box.width * sx,
-    height: box.height * sy,
-  };
+  try {
+    const faces = await faceDetector.detect(videoEl);
+    const box = faces[0]?.boundingBox;
+    if (!box || box.width < 8 || box.height < 8) return null;
+    return mapFrameBoxToElement(
+      box,
+      videoEl.videoWidth || liveSize.width,
+      videoEl.videoHeight || liveSize.height,
+      liveSize.width,
+      liveSize.height,
+      'contain',
+    );
+  } catch {
+    // Some mobile WebViews throw from FaceDetector on certain frames.
+    return null;
+  }
 }
 
 export type ServerEnrollDetectResult = {
@@ -162,15 +198,18 @@ export async function detectServerFaceBox(
   }
   const fw = res.frameWidth || w;
   const fh = res.frameHeight || h;
-  const sx = liveSize.width / fw;
-  const sy = liveSize.height / fh;
+  // Server boxes are in the downscaled JPEG we uploaded; map that space →
+  // full video frame first, then onto the on-screen element (object-fit contain).
+  const frameScaleX = vw / fw;
+  const frameScaleY = vh / fh;
+  const inVideo = {
+    x: face.x * frameScaleX,
+    y: face.y * frameScaleY,
+    width: face.width * frameScaleX,
+    height: face.height * frameScaleY,
+  };
   return {
-    box: {
-      x: face.x * sx,
-      y: face.y * sy,
-      width: face.width * sx,
-      height: face.height * sy,
-    },
+    box: mapFrameBoxToElement(inVideo, vw, vh, liveSize.width, liveSize.height, 'contain'),
     enrollReady: forEnrollment ? !!res?.enrollReady : true,
     enrollMessage: res?.enrollMessage || (res?.enrollReady ? 'ok' : 'Face not ready'),
     faceRatio: res?.enrollScores?.faceRatio ?? null,

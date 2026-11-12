@@ -11,8 +11,8 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 /**
  * Shell theme + density preferences.
  *
- * Dark mode only paints while the admin shell (content-layout) is mounted and
- * the kiosk is not active, so login / kiosk pairing / kiosk fullscreen stay light.
+ * Default is dark (obsidian). Kiosk fullscreen stays light so cameras / pairing
+ * remain high-contrast; density only applies while the admin shell is mounted.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -30,7 +30,7 @@ export class ThemeService {
 
   /** Effective theme painted on <html> right now (may differ from the preference). */
   get effectiveTheme(): ThemeMode {
-    return this.theme() === 'dark' || (this.shellActive && !this.kioskActive) ? 'dark' : 'light';
+    return this.theme() === 'dark' && !this.kioskActive ? 'dark' : 'light';
   }
 
   setTheme(mode: ThemeMode): void {

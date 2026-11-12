@@ -65,7 +65,9 @@ COPY --from=builder --chown=${APP_UID}:${APP_GID} /opt/model-home/.insightface /
 WORKDIR /app
 COPY --chown=${APP_UID}:${APP_GID} . .
 
-RUN mkdir -p enrolled_images uploaded_images temp_images import_jobs \
+# Include video_clips so a fresh named volume inherits uid 10001 ownership
+# (compose mounts api_video_clips → /app/video_clips; missing image dir = root volume).
+RUN mkdir -p enrolled_images uploaded_images temp_images import_jobs video_clips \
     && chown -R ${APP_UID}:${APP_GID} /app
 
 USER ${APP_UID}:${APP_GID}

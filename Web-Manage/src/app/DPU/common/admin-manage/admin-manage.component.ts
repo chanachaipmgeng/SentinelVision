@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FileItem, FileUploader, FileUploadModule } from 'ng2-file-upload';
+import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
@@ -12,8 +13,12 @@ import { SimplePagerComponent } from '../../../shared/components/simple-pager/si
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { UserService } from '../../services/user.service';
 import { UserProfileModel } from '../../models/user.model';
+import { EmployeeModel } from '../../models/employee.model';
 import { TokenService } from '../../../shared/services/token.service';
 import { environment } from '../../../../environments/environment';
+import { EmpFaceEnrollModalComponent } from '../../company-management/company-emp/company-emp-enroll/emp-face-enroll-modal.component';
+import { FaceManagementComponent } from '../../company-management/dialogs/face-management/face-management.component';
+import { apiErrorMessage } from '../../../shared/utils/http-error-body';
 import swal from 'sweetalert';
 
 @Component({
@@ -30,6 +35,8 @@ import swal from 'sweetalert';
         StatChipComponent,
         SimplePagerComponent,
         EmptyStateComponent,
+        EmpFaceEnrollModalComponent,
+        FaceManagementComponent,
     ],
     templateUrl: './admin-manage.component.html',
     styleUrls: [
@@ -40,6 +47,8 @@ import swal from 'sweetalert';
 })
 export class AdminManageComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
+  @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
+  @ViewChild('openFaceOverlay') openFaceOverlay?: ElementRef<HTMLButtonElement>;
 
   readonly pageSize = 10;
   readonly adminRole = 99;
@@ -51,6 +60,11 @@ export class AdminManageComponent implements OnInit {
   confirmPassword = '';
   pageIndex = 0;
   uploaderProfile?: FileUploader;
+  /** Empty companyId — system-admin enroll writes a local encoding only. */
+  faceEnrollCompanyId = '';
+  faceEnrollSelectModel: EmployeeModel = new EmployeeModel();
+  selectedMemberId = '';
+  selectedMemberName = '';
 
   itemsList: UserProfileModel[] = [];
   filteredSource: UserProfileModel[] = [];
@@ -177,6 +191,28 @@ export class AdminManageComponent implements OnInit {
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel(item);
     this.selectModel.role = this.adminRole;
+  }
+
+  async openFaceEnroll(item: UserProfileModel): Promise<void> {
+    if (!item?.memberId) return;
+    try {
+      await firstValueFrom(this.userService.grantBiometricConsent(item.memberId, 'th'));
+    } catch (err) {
+      swal('ไม่สามารถบันทึกความยินยอมได้', apiErrorMessage(err, 'Consent failed'), 'error');
+      return;
+    }
+    this.faceEnrollSelectModel = new EmployeeModel({
+      member: item,
+      companyId: '',
+    });
+    // Open Preline overlay only after consent succeeds, then start camera.
+    this.openFaceOverlay?.nativeElement?.click();
+    await this.faceEnrollModal?.openForEmployee(this.faceEnrollSelectModel);
+  }
+
+  openFaceManagementModal(item: UserProfileModel): void {
+    this.selectedMemberId = item?.memberId || '';
+    this.selectedMemberName = item?.getFullname?.() || item?.username || '';
   }
 
   save() {

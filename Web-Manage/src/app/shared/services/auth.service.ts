@@ -51,6 +51,20 @@ export class AuthService {
     );
   }
 
+  /** System-admin face login: multipart JPEG frames + optional TOTP. */
+  loginWithFace(frames: Blob[], totpCode?: string) {
+    const form = new FormData();
+    frames.forEach((blob, i) => {
+      form.append('frames', blob, `frame-${i}.jpg`);
+    });
+    if (totpCode && totpCode.trim()) {
+      form.append('totpCode', totpCode.trim());
+    }
+    return this.http
+      .post<UserModel>(this.apiBaseUrl + '/login/face', form, { withCredentials: true })
+      .pipe(tap((res) => this.applyMemberSession(res)));
+  }
+
   /** Cookie-based refresh for member SPA sessions (requires CSRF double-submit). */
   refreshFromCookie(): Observable<RefreshedTokens> {
     return this.http

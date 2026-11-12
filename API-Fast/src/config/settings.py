@@ -10,6 +10,10 @@ class Settings(BaseSettings):
 
     # Cosine distance threshold for InsightFace (lower = stricter). Match if distance < threshold.
     FACE_RECOGNITION_THRESHOLD: float = 0.40
+    # System-admin face login (stricter than attendance). Match if distance < threshold.
+    FACE_LOGIN_THRESHOLD: float = 0.32
+    # Reject when 2nd-nearest admin encoding is within this margin of the top hit.
+    FACE_LOGIN_AMBIGUITY_MARGIN: float = 0.08
 
     # Multi-frame liveness: max cosine distance between frame embeddings (same person)
     LIVENESS_SAME_PERSON_MAX_DISTANCE: float = 0.35
@@ -37,6 +41,7 @@ class Settings(BaseSettings):
     # D7 app rate limits (per IP / minute). 0 disables. Complements nginx limit_req.
     REDIS_URL: str = ""
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 20
+    RATE_LIMIT_FACE_LOGIN_PER_MINUTE: int = 8
     RATE_LIMIT_IDENTIFY_PER_MINUTE: int = 120
     RATE_LIMIT_IMPORT_PER_MINUTE: int = 10
     # D6 Idempotency-Key TTL for punch create + import-jobs.

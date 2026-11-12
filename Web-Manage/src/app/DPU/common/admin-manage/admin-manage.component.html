@@ -80,9 +80,24 @@
                       [class.bg-secondary]="item.status!==1">{{ item.getStatus() }}</span>
                   </td>
                   <td class="text-end">
-                    <div class="inline-flex gap-2">
-                      <button type="button" class="dpu-icon-btn" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
-                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
+                    <div class="inline-flex gap-2 flex-wrap justify-end">
+                      <button type="button" class="dpu-icon-btn" title="แก้ไข" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                      <button
+                        type="button"
+                        class="dpu-icon-btn"
+                        title="ลงทะเบียนใบหน้า"
+                        (click)="openFaceEnroll(item)">
+                        <i class="ri-account-circle-line"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="dpu-icon-btn"
+                        title="จัดการใบหน้า"
+                        data-hs-overlay="#modal-face-management"
+                        (click)="openFaceManagementModal(item)">
+                        <i class="ri-gallery-line"></i>
+                      </button>
+                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="ลบ" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
                     </div>
                   </td>
                 </tr>
@@ -157,6 +172,43 @@
       <div class="ti-modal-footer">
         <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">{{ 'Cancel' | translate }}</button>
         <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button #openFaceOverlay type="button" class="hidden" aria-hidden="true" data-hs-overlay="#modal-face"></button>
+
+<app-emp-face-enroll-modal
+  #faceEnrollModal
+  [companyId]="faceEnrollCompanyId"
+  [selectModel]="faceEnrollSelectModel">
+</app-emp-face-enroll-modal>
+
+<div id="modal-face-management" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-4xl">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <div>
+          <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">{{ 'Manage enrolled faces' | translate }}</h6>
+          <p class="mb-0 text-xs text-dpu-muted" *ngIf="selectedMemberName">{{ selectedMemberName }}</p>
+        </div>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
+          <span class="sr-only">Close</span>
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4 max-h-[75vh] overflow-y-auto">
+        <app-face-management
+          *ngIf="selectedMemberId"
+          [memberId]="selectedMemberId"
+          [memberName]="selectedMemberName">
+        </app-face-management>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">
+          {{ 'Close' | translate }}
+        </button>
       </div>
     </div>
   </div>

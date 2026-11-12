@@ -122,6 +122,14 @@ async def rate_limit_login(request: Request) -> None:
     )
 
 
+async def rate_limit_face_login(request: Request) -> None:
+    await enforce_rate_limit(
+        request,
+        "face_login",
+        limit=int(getattr(settings, "RATE_LIMIT_FACE_LOGIN_PER_MINUTE", 8) or 8),
+    )
+
+
 async def rate_limit_identify(request: Request) -> None:
     await enforce_rate_limit(
         request,

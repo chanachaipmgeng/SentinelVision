@@ -13,6 +13,7 @@ from typing import List, Optional
 from ..models.member import Member
 from ..models.face_encoding import FaceEncoding
 from ..models.company_employee import CompanyEmployee, CompanyRoleType
+from ..services.rbac_service import is_system_admin_member
 from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
 from ..utils.face_engine import (
     generate_face_encoding,
@@ -223,14 +224,26 @@ async def add_face(
     company_id: Optional[UUID] = None,
     actor: Optional[Member] = None,
 ):
-    """Create InsightFace embedding, store in pgvector, save enrolled image."""
+    """Create InsightFace embedding, store in pgvector, save enrolled image.
+
+    System admins (role 99) always get a local ``face_encoding`` row (companyId
+    may be null) so console face-login can search without a company gallery.
+    When Face Core is on and the member has companies, company galleries are
+    still updated; face login continues to read local rows only.
+    """
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    is_sys_admin = is_system_admin_member(member)
     owner_company_id: Optional[UUID] = None
-    if not face_core_enabled():
-        owner_company_id = await resolve_enroll_company_id(db, memberId, company_id, actor)
+    if not is_sys_admin:
+        if not face_core_enabled():
+            owner_company_id = await resolve_enroll_company_id(db, memberId, company_id, actor)
+    elif company_id is not None:
+        company_ids = await _member_company_ids(db, memberId)
+        if company_id in company_ids:
+            owner_company_id = company_id
 
     # D4: do not imply consent on enroll — kiosk/admin must POST biometric-consent
     # with the current policy version/text first. Legacy rows without a version are
@@ -250,66 +263,71 @@ async def add_face(
         with temp_file_path.open("wb") as buffer:
             shutil.copyfileobj(image_file.file, buffer)
 
+        face_core_face_id: Optional[str] = None
         if face_core_enabled():
             company_ids = await _member_company_ids(db, memberId)
-            if not company_ids:
+            if company_ids:
+                client = get_face_core_client()
+                subject_id = str(memberId)
+                for cid in company_ids:
+                    code = _company_code(cid)
+                    await client.ensure_company(code)
+                    enrolled = await client.enroll(code, subject_id, temp_file_path)
+                    if face_core_face_id is None:
+                        face_core_face_id = enrolled.get("faceId")
+            elif not is_sys_admin:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Member is not linked to any company; cannot enroll face.",
                 )
-            client = get_face_core_client()
-            subject_id = str(memberId)
-            first_face_id: Optional[str] = None
-            for company_id in company_ids:
-                code = _company_code(company_id)
-                await client.ensure_company(code)
-                enrolled = await client.enroll(code, subject_id, temp_file_path)
-                if first_face_id is None:
-                    first_face_id = enrolled.get("faceId")
+
+        # Local pgvector row: always for system admins (face login); otherwise
+        # only when Face Core is off (Face Core is the gallery of record).
+        if is_sys_admin or not face_core_enabled():
+            encoding = await run_on_face_gpu(
+                partial(generate_face_encoding, str(temp_file_path)),
+                kind="other",
+            )
+            if encoding is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No face detected in the image.",
+                )
+
+            from ..config.settings import settings as _settings
+            from ..models.face_encoding import DEFAULT_FACE_MODEL_VERSION
+
+            new_face_encoding = FaceEncoding(
+                memberId=member.memberId,
+                companyId=owner_company_id,
+                embedding=encoding,
+                modelVersion=(
+                    getattr(_settings, "FACE_MODEL_VERSION", None) or DEFAULT_FACE_MODEL_VERSION
+                ),
+            )
+            db.add(new_face_encoding)
             await db.commit()
+            await db.refresh(new_face_encoding)
+
+            from ..services.storage_service import store_image_file
+
+            store_image_file(
+                "enrolled_images",
+                f"{new_face_encoding.faceEncodingId}.jpg",
+                temp_file_path,
+                move=True,
+            )
+            file_moved = True
+
             return {
                 "message": "New face encoding added successfully",
-                "faceEncodingId": first_face_id,
+                "faceEncodingId": str(new_face_encoding.faceEncodingId),
             }
 
-        encoding = await run_on_face_gpu(
-            partial(generate_face_encoding, str(temp_file_path)),
-            kind="other",
-        )
-        if encoding is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No face detected in the image.",
-            )
-
-        from ..config.settings import settings as _settings
-        from ..models.face_encoding import DEFAULT_FACE_MODEL_VERSION
-
-        new_face_encoding = FaceEncoding(
-            memberId=member.memberId,
-            companyId=owner_company_id,
-            embedding=encoding,
-            modelVersion=(
-                getattr(_settings, "FACE_MODEL_VERSION", None) or DEFAULT_FACE_MODEL_VERSION
-            ),
-        )
-        db.add(new_face_encoding)
         await db.commit()
-        await db.refresh(new_face_encoding)
-
-        from ..services.storage_service import store_image_file
-
-        store_image_file(
-            "enrolled_images",
-            f"{new_face_encoding.faceEncodingId}.jpg",
-            temp_file_path,
-            move=True,
-        )
-        file_moved = True
-
         return {
             "message": "New face encoding added successfully",
-            "faceEncodingId": str(new_face_encoding.faceEncodingId),
+            "faceEncodingId": face_core_face_id,
         }
 
     except HTTPException:

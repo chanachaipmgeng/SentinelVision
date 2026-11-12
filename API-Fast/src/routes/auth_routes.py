@@ -1,9 +1,13 @@
 import logging
+import shutil
+import uuid as uuid_mod
 from datetime import datetime, timezone
-from typing import Optional
+from functools import partial
+from pathlib import Path
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,8 +55,11 @@ from ..security.passwords import assert_not_locked, hash_password, register_fail
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
 from ..services import token_revocation_service as revocation
-from ..services.rate_limit_service import rate_limit_login
+from ..services.face_match_service import search_system_admin_face_pgvector
+from ..services.rate_limit_service import rate_limit_face_login, rate_limit_login
 from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
+from ..utils.face_engine import verify_liveness_and_get_encoding
+from ..utils.face_gpu_queue import run_on_face_gpu
 
 router = APIRouter()
 logger = logging.getLogger("dpu.auth")
@@ -203,6 +210,123 @@ async def login(
     await db.refresh(member)
     await write_audit(actor=member, action="LOGIN_OK", path="/auth/login", status_code=200)
     return _attach_session_cookies(response, _tokens(member))
+
+
+_FACE_LOGIN_MIN_FRAMES = 4
+_FACE_LOGIN_MAX_FRAMES = 6
+
+
+def _face_login_fail() -> HTTPException:
+    return HTTPException(status_code=401, detail="Invalid credentials")
+
+
+async def _save_face_login_frames(files: List[UploadFile]) -> List[str]:
+    temp_dir = Path("temp_images")
+    temp_dir.mkdir(exist_ok=True)
+    paths: List[str] = []
+    for image_file in files:
+        image_path = temp_dir / f"{uuid_mod.uuid4()}.jpg"
+        with image_path.open("wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        paths.append(str(image_path))
+    return paths
+
+
+def _cleanup_face_login_paths(paths: List[str]) -> None:
+    for path in paths:
+        p = Path(path)
+        if p.exists():
+            p.unlink()
+
+
+@router.post("/login/face", response_model=Token)
+async def login_face(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_face_login),
+    frames: List[UploadFile] = File(...),
+    totpCode: Optional[str] = Form(None),
+):
+    """System-admin console face login (role 99 gallery only). Uniform 401 on failure."""
+    if not frames or len(frames) < _FACE_LOGIN_MIN_FRAMES or len(frames) > _FACE_LOGIN_MAX_FRAMES:
+        await write_audit(
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    temp_paths: List[str] = []
+    try:
+        temp_paths = await _save_face_login_frames(frames)
+        try:
+            encoding = await run_on_face_gpu(
+                partial(verify_liveness_and_get_encoding, list(temp_paths)),
+                kind="identify",
+            )
+        except (ValueError, RuntimeError):
+            await write_audit(
+                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail() from None
+
+        threshold = float(getattr(settings, "FACE_LOGIN_THRESHOLD", 0.32) or 0.32)
+        margin = float(getattr(settings, "FACE_LOGIN_AMBIGUITY_MARGIN", 0.08) or 0.08)
+        hit = await search_system_admin_face_pgvector(
+            db, encoding, threshold, ambiguity_margin=margin
+        )
+        if hit is None:
+            await write_audit(
+                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail()
+
+        _face_encoding_id, member_id, _distance = hit
+        member = await db.get(Member, member_id)
+        if member is None or getattr(member, "deletedAt", None) is not None:
+            await write_audit(
+                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail()
+
+        try:
+            assert_not_locked(member)
+        except HTTPException:
+            await write_audit(
+                actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail() from None
+
+        status_val = getattr(member.status, "value", member.status)
+        if status_val in (0, "DISABLED"):
+            await write_audit(
+                actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail()
+
+        totp_secret = member.totpSecret
+        if bool(member.totpEnabled) and totp_secret:
+            code = (totpCode or "").strip()
+            if not code:
+                raise HTTPException(status_code=401, detail="MFA_REQUIRED")
+            if not verify_totp(totp_secret, code):
+                register_failure(member)
+                await db.commit()
+                await write_audit(
+                    actor=member,
+                    action="LOGIN_MFA_FAIL",
+                    path="/auth/login/face",
+                    status_code=401,
+                )
+                raise HTTPException(status_code=401, detail="Invalid 2FA authenticator code")
+
+        register_success(member)
+        await db.commit()
+        await db.refresh(member)
+        await write_audit(
+            actor=member, action="LOGIN_FACE_OK", path="/auth/login/face", status_code=200
+        )
+        return _attach_session_cookies(response, _tokens(member))
+    finally:
+        _cleanup_face_login_paths(temp_paths)
 
 
 async def _assert_refresh_not_revoked(db: AsyncSession, payload: dict, *, refresh_ttl) -> None:

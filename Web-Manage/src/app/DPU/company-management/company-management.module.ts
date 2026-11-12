@@ -223,6 +223,11 @@ export const companyRoutes: Routes = [
       loadComponent: () =>
         import('./face-monitor/face-monitor.component').then((m) => m.FaceMonitorComponent),
     },
+    {
+      path: 'company/presence',
+      loadComponent: () =>
+        import('./presence/presence.component').then((m) => m.PresenceComponent),
+    },
     { path: 'company/settings', pathMatch: 'full', redirectTo: 'company/settings/notifications' },
     {
       path: 'company/settings/:section',

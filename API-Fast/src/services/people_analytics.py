@@ -212,6 +212,14 @@ def normalize_ai_config(raw: Optional[dict[str, Any]]) -> dict[str, Any]:
             modes.append("zone_count")
         if cfg.get("loiter_polygon") or cfg.get("loiterPolygon"):
             modes.append("loitering")
+    role = str(cfg.get("presenceRole") or cfg.get("presence_role") or "LOCATE").strip().upper()
+    if role not in ("LOCATE", "BOOTH", "OT_AREA"):
+        role = "LOCATE"
+    event_raw = cfg.get("eventId") or cfg.get("event_id")
+    event_id = str(event_raw).strip() if event_raw else None
+    if role == "BOOTH" and not event_id:
+        role = "LOCATE"
+
     return {
         **cfg,
         "peopleEnabled": enabled,
@@ -222,4 +230,6 @@ def normalize_ai_config(raw: Optional[dict[str, Any]]) -> dict[str, Any]:
         "loiter_min_seconds": float(
             cfg.get("loiter_min_seconds") or cfg.get("min_seconds") or 30
         ),
+        "presenceRole": role,
+        "eventId": event_id,
     }

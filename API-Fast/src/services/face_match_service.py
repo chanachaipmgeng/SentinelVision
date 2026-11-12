@@ -73,6 +73,68 @@ async def search_face_pgvector(
         )
 
 
+async def search_face_pgvector_presence(
+    db: AsyncSession,
+    target_encoding: List[float],
+    threshold: float,
+    *,
+    companyId: UUID,
+    ambiguity_margin: float,
+):
+    """Company-scoped 1:N for presence trail with top-2 ambiguity gate.
+
+    Does not change kiosk ``search_face_pgvector`` (limit 1). Returns
+    ``(face_encoding_id, member_id, distance)`` or ``None`` when the nearest
+    hit is too far or the runner-up is within ``ambiguity_margin``.
+    """
+    t0 = time.perf_counter()
+    accepted = False
+    top_distance: Optional[float] = None
+    matched_member_id: Optional[str] = None
+    try:
+        distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
+        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        stmt = (
+            select(
+                FaceEncoding.faceEncodingId,
+                FaceEncoding.memberId,
+                distance_expr.label("distance"),
+            )
+            .join(Member, Member.memberId == FaceEncoding.memberId)
+            .join(CompanyEmployee, CompanyEmployee.memberId == FaceEncoding.memberId)
+            .where(
+                Member.deletedAt.is_(None),
+                Member.status == StatusType.ENABLE,
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+            .order_by(distance_expr)
+            .limit(2)
+        )
+        rows = (await db.execute(stmt)).all()
+        if not rows:
+            return None
+        face_encoding_id, member_id, distance = rows[0]
+        top_distance = float(distance) if distance is not None else None
+        if distance is None or float(distance) >= threshold:
+            return None
+        if len(rows) > 1:
+            second = rows[1][2]
+            if second is not None and (float(second) - float(distance)) < ambiguity_margin:
+                return None
+        accepted = True
+        matched_member_id = str(member_id)
+        return face_encoding_id, member_id, float(distance)
+    finally:
+        observe_face_match("pgvector_presence", time.perf_counter() - t0)
+        observe_face_match_decision(
+            "pgvector_presence",
+            accepted=accepted,
+            distance=top_distance,
+            matched_member_id=matched_member_id,
+        )
+
+
 async def search_system_admin_face_pgvector(
     db: AsyncSession,
     target_encoding: List[float],

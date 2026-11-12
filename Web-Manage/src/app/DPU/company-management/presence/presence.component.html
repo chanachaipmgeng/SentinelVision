@@ -1,0 +1,149 @@
+<div class="dpu-list-page presence-page">
+  <app-page-toolbar title="presence.title">
+    <ng-container chips>
+      <app-stat-chip tone="ok" *ngIf="results.length">
+        {{ 'presence.kpi.hits' | translate }} {{ results.length }}
+      </app-stat-chip>
+      <app-stat-chip tone="ok" *ngIf="hereCount">
+        {{ 'presence.kpi.here' | translate }} {{ hereCount }}
+      </app-stat-chip>
+      <app-stat-chip tone="warn" *ngIf="otItems.length">
+        {{ 'presence.kpi.ot' | translate }} {{ otItems.length }}
+      </app-stat-chip>
+    </ng-container>
+    <ng-container controls>
+      <button
+        type="button"
+        class="ti-btn modern-btn"
+        [class.ti-btn-primary-full]="tab === 'locate'"
+        [class.ti-btn-light]="tab !== 'locate'"
+        (click)="tab = 'locate'">
+        {{ 'presence.tab.locate' | translate }}
+      </button>
+      <button
+        type="button"
+        class="ti-btn modern-btn"
+        [class.ti-btn-primary-full]="tab === 'ot'"
+        [class.ti-btn-light]="tab !== 'ot'"
+        (click)="loadOt()">
+        {{ 'presence.tab.ot' | translate }}
+      </button>
+    </ng-container>
+  </app-page-toolbar>
+
+  <p class="presence-sub text-dpu-muted">{{ 'presence.subtitle' | translate }}</p>
+
+  <div class="box modern-card glass" *ngIf="error">
+    <div class="box-body">
+      <app-empty-state message="presence.error" actionLabel="presence.retry" (action)="tab === 'ot' ? loadOt() : onSearch(query)">
+      </app-empty-state>
+    </div>
+  </div>
+
+  <ng-container *ngIf="tab === 'locate'">
+    <div class="box modern-card glass mb-3">
+      <div class="box-body">
+        <app-pill-search
+          [placeholder]="'presence.searchPlaceholder' | translate"
+          [value]="query"
+          (valueChange)="onSearch($event)">
+        </app-pill-search>
+      </div>
+    </div>
+
+    <div class="presence-grid">
+      <section class="box modern-card glass">
+        <div class="box-body">
+          <h3 class="presence-h">{{ 'presence.results' | translate }}</h3>
+          <app-empty-state *ngIf="searching" [loading]="true" message="presence.searching"></app-empty-state>
+          <app-empty-state *ngIf="!searching && !results.length" message="presence.empty"></app-empty-state>
+          <ul class="presence-list" *ngIf="!searching && results.length">
+            <li
+              *ngFor="let row of results"
+              class="presence-row"
+              [class.presence-row--active]="selected?.memberId === row.memberId"
+              (click)="selectMember(row)">
+              <div>
+                <div class="font-semibold">{{ row.fullName }}</div>
+                <div class="text-xs text-dpu-muted" *ngIf="row.cameraName">
+                  {{ row.cameraName }}
+                  <span *ngIf="row.lastSeenAt"> · {{ row.lastSeenAt | date:'short' }}</span>
+                </div>
+                <div class="text-xs text-dpu-muted" *ngIf="!row.cameraName">
+                  {{ 'presence.status.not_seen' | translate }}
+                </div>
+              </div>
+              <app-stat-chip [tone]="statusTone(row.status)">
+                {{ ('presence.status.' + row.status) | translate }}
+              </app-stat-chip>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="box modern-card glass">
+        <div class="box-body">
+          <h3 class="presence-h">{{ 'presence.trail' | translate }}</h3>
+          <app-empty-state *ngIf="!selected" message="presence.trailPick"></app-empty-state>
+          <app-empty-state *ngIf="selected && loadingTrail" [loading]="true" message="presence.loadingTrail"></app-empty-state>
+          <app-empty-state *ngIf="selected && !loadingTrail && !trail.length" message="presence.trailEmpty"></app-empty-state>
+          <ul class="presence-trail" *ngIf="selected && !loadingTrail && trail.length">
+            <li *ngFor="let s of trail" class="presence-trail-item">
+              <div class="font-semibold">{{ s.cameraName || s.cameraId }}</div>
+              <div class="text-xs text-dpu-muted">
+                {{ s.startedAt | date:'short' }}
+                <span *ngIf="s.endedAt"> → {{ s.endedAt | date:'short' }}</span>
+                <span *ngIf="s.open"> · {{ 'presence.open' | translate }}</span>
+              </div>
+              <div class="text-sm">{{ s.dwellMinutes }} {{ 'presence.minutes' | translate }} · {{ s.sampleCount }} samples</div>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="tab === 'ot'">
+    <div class="box modern-card glass mb-3">
+      <div class="box-body presence-ot-bar">
+        <label class="presence-ctrl">
+          <span>{{ 'presence.ot.workDate' | translate }}</span>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="workDate" (change)="loadOt()" />
+        </label>
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="loadOt()" [disabled]="loadingOt">
+          <i class="ri-refresh-line" [class.animate-spin]="loadingOt"></i>
+          {{ 'presence.refresh' | translate }}
+        </button>
+      </div>
+    </div>
+    <div class="box modern-card glass">
+      <div class="box-body">
+        <p class="text-sm text-dpu-muted mb-3">{{ 'presence.ot.hint' | translate }}</p>
+        <app-empty-state *ngIf="loadingOt" [loading]="true" message="presence.loadingOt"></app-empty-state>
+        <app-empty-state *ngIf="!loadingOt && !otItems.length" message="presence.ot.empty"></app-empty-state>
+        <table class="table presence-ot-table" *ngIf="!loadingOt && otItems.length">
+          <thead>
+            <tr>
+              <th>{{ 'presence.ot.col.name' | translate }}</th>
+              <th>{{ 'presence.ot.col.camera' | translate }}</th>
+              <th>{{ 'presence.ot.col.punch' | translate }}</th>
+              <th>{{ 'presence.ot.col.status' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of otItems">
+              <td>{{ row.fullName }}</td>
+              <td>{{ row.cameraOtMinutes }}</td>
+              <td>{{ row.punchedOtMinutes }}</td>
+              <td>
+                <app-stat-chip [tone]="otTone(row.status)">
+                  {{ ('presence.ot.status.' + row.status) | translate }}
+                </app-stat-chip>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

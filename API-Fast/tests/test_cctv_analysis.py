@@ -159,8 +159,13 @@ async def test_analyze_camera_sentinel_path_records_via_decision_engine(monkeypa
         cctv, "face_gpu_queue_stats", lambda: {"pending": 0, "pendingByKind": {}}
     )
     monkeypatch.setattr(cctv, "_grab_frame_jpeg", AsyncMock(return_value=b"jpeg-bytes"))
-    monkeypatch.setattr(cctv, "_embed_frame", AsyncMock(return_value=[0.1] * 512))
+    monkeypatch.setattr(cctv, "_embed_faces", AsyncMock(return_value=[[0.1] * 512]))
     monkeypatch.setattr(cctv, "_persist_snapshot", lambda _b: "/images/incident_x.jpg")
+    presence_writer = AsyncMock(return_value={"sightingId": "s1", "sessionCreated": True})
+    monkeypatch.setattr(
+        "src.services.presence_service.try_record_from_encoding",
+        presence_writer,
+    )
 
     decision = AsyncMock(
         return_value={
@@ -177,7 +182,9 @@ async def test_analyze_camera_sentinel_path_records_via_decision_engine(monkeypa
     assert out["faces"] == 1
     assert out["decision"] == "BLACKLIST_BLOCKED"
     assert out["matched"] is True
+    assert out["presenceHits"] == 1
     decision.assert_awaited_once()
+    presence_writer.assert_awaited_once()
     assert cam.lastAnalyzedAt is not None
 
 

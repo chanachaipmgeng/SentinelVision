@@ -71,6 +71,8 @@ export class EMapComponent implements AfterViewInit, OnDestroy {
   draft = { name: '', buildingLabel: '', floorLabel: '' };
   errorMessage = '';
   dirty = new Map<string, DirtyPin>();
+  /** cameraId → people currently open on that camera (from /presence/.../live). */
+  liveByCamera = new Map<string, string[]>();
 
   private map: L.Map | null = null;
   private imageLayer: L.ImageOverlay | null = null;
@@ -172,11 +174,40 @@ export class EMapComponent implements AfterViewInit, OnDestroy {
         ...(payload.unassigned?.zones || []),
         ...(payload.unassigned?.kiosks || []),
       ];
+      await this.loadLivePresence();
       await this.renderMap();
     } catch {
       this.errorMessage = 'emap.loadError';
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async loadLivePresence(): Promise<void> {
+    this.liveByCamera.clear();
+    if (!this.companyId) {
+      return;
+    }
+    try {
+      const live = await firstValueFrom(
+        this.http.get<{
+          items: { cameraId: string; fullName?: string | null; siteFloorId?: string | null }[];
+        }>(`/presence/company/${this.companyId}/live`)
+      );
+      for (const item of live?.items || []) {
+        if (this.selectedFloorId && item.siteFloorId && item.siteFloorId !== this.selectedFloorId) {
+          continue;
+        }
+        const name = (item.fullName || '').trim();
+        if (!name || !item.cameraId) {
+          continue;
+        }
+        const list = this.liveByCamera.get(item.cameraId) || [];
+        list.push(name);
+        this.liveByCamera.set(item.cameraId, list);
+      }
+    } catch {
+      // Presence is optional on the map — pins still render without live names.
     }
   }
 
@@ -368,11 +399,17 @@ export class EMapComponent implements AfterViewInit, OnDestroy {
       marker.setLatLng(latlng);
       return;
     }
+    const liveNames =
+      pin.kind === 'camera' ? this.liveByCamera.get(pin.id) || [] : [];
+    const label =
+      liveNames.length > 0
+        ? `${pin.name}: ${liveNames.slice(0, 3).join(', ')}`
+        : pin.name;
     const icon = L.divIcon({
-      className: `emap-pin emap-pin--${pin.kind}`,
-      html: `<span title="${this.escape(pin.name)}">${this.escape(pin.name.slice(0, 12))}</span>`,
-      iconSize: [88, 28],
-      iconAnchor: [44, 14],
+      className: `emap-pin emap-pin--${pin.kind}${liveNames.length ? ' emap-pin--live' : ''}`,
+      html: `<span title="${this.escape(label)}">${this.escape(label.slice(0, 18))}</span>`,
+      iconSize: [108, 28],
+      iconAnchor: [54, 14],
     });
     marker = L.marker(latlng, { draggable: true, icon }).addTo(this.map);
     marker.on('dragend', () => {

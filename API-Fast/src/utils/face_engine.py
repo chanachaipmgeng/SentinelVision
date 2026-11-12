@@ -277,6 +277,49 @@ def _embed_from_det(
     return face.normed_embedding.astype(np.float32)
 
 
+def extract_face_features_multi_bgr(
+    image: np.ndarray,
+    *,
+    max_faces: int = 8,
+    require_quality: bool = False,
+    blur_threshold: Optional[float] = None,
+) -> list[Tuple[List[float], np.ndarray]]:
+    """Detect up to ``max_faces`` faces (largest first) and return embeddings.
+
+    Used by CCTV presence (booth / locate). Faces beyond ``max_faces`` are skipped.
+    """
+    if image is None or not hasattr(image, "shape"):
+        raise ValueError("Could not decode frame")
+    cap = max(1, int(max_faces or 1))
+    det_app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
+    bboxes, kpss = det_app.det_model.detect(image, max_num=0, metric="default")
+    if bboxes is None or len(bboxes) == 0:
+        return []
+    areas = []
+    for i, box in enumerate(bboxes):
+        x1, y1, x2, y2 = (float(v) for v in box[:4])
+        areas.append((max(0.0, x2 - x1) * max(0.0, y2 - y1), i))
+    areas.sort(reverse=True)
+    out: list[Tuple[List[float], np.ndarray]] = []
+    for _area, idx in areas[:cap]:
+        box = np.asarray(bboxes[idx], dtype=np.float32)
+        bbox = box[:4]
+        score = float(box[4]) if box.shape[0] > 4 else 0.0
+        kps = None if kpss is None else np.asarray(kpss[idx], dtype=np.float32)
+        if require_quality:
+            is_good, message = check_image_quality_bgr(
+                image, bbox, blur_threshold=blur_threshold
+            )
+            if not is_good:
+                continue
+        embedding = _embed_from_det(image, bbox, kps, score)
+        if embedding is None:
+            continue
+        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        out.append((vec, bbox.astype(np.float32)))
+    return out
+
+
 def extract_face_features_bgr(
     image: np.ndarray,
     *,

@@ -28,6 +28,14 @@ def test_analytics_read_via_cameras_scope():
     assert not _is_api_key_path_allowed("GET", path, ["incidents.read"])
 
 
+def test_presence_read_via_cameras_scope():
+    path = f"/presence/company/{CID}/search"
+    assert _is_api_key_path_allowed("GET", path, ["cameras.read"])
+    assert _is_api_key_path_allowed("GET", f"/presence/company/{CID}/live", ["cameras.read"])
+    assert not _is_api_key_path_allowed("POST", path, ["cameras.read"])
+    assert not _is_api_key_path_allowed("GET", path, ["incidents.read"])
+
+
 def test_incidents_read_get_allowed():
     path = f"/sentinel/company/{CID}/incidents"
     assert _is_api_key_path_allowed("GET", path, ["incidents.read"])

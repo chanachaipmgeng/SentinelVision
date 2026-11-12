@@ -461,9 +461,20 @@ async def company_retention_tick(db: AsyncSession, company_id: UUID) -> dict[str
                 removed_clips += 1
             await db.delete(clip)
 
+    presence_stats = {"sightingsRemoved": 0, "sessionsRemoved": 0}
+    try:
+        from .presence_service import purge_presence_retention
+
+        presence_stats = await purge_presence_retention(db, company_id)
+    except Exception as exc:  # noqa: BLE001 — retention must not abort other kinds
+        logger = __import__("logging").getLogger("dpu.pdpa")
+        logger.warning("presence retention failed for %s: %s", company_id, exc)
+
     await db.commit()
     return {
         "punchPhotosRemoved": removed_photos,
         "incidentSnapshotsRemoved": removed_snaps,
         "videoClipsRemoved": removed_clips,
+        "presenceSightingsRemoved": presence_stats.get("sightingsRemoved", 0),
+        "presenceSessionsRemoved": presence_stats.get("sessionsRemoved", 0),
     }

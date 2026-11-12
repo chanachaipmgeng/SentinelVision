@@ -190,24 +190,39 @@ async def _resolve_station_mode(
 async def _embed_frame(
     jpeg: bytes, *, company_id: UUID
 ) -> Optional[list[float]]:
-    from ..utils.face_engine import decode_image_bytes, extract_face_features_bgr
+    """Largest-face embed (legacy single-face path / tests)."""
+    encodings = await _embed_faces(jpeg, company_id=company_id, max_faces=1)
+    return encodings[0] if encodings else None
+
+
+async def _embed_faces(
+    jpeg: bytes, *, company_id: UUID, max_faces: Optional[int] = None
+) -> list[list[float]]:
+    """Detect and embed up to ``max_faces`` faces (largest first) on the cctv GPU lane."""
+    from ..utils.face_engine import decode_image_bytes, extract_face_features_multi_bgr
 
     frame = await asyncio.to_thread(decode_image_bytes, jpeg)
     stale_ms = float(settings.WORKER_CCTV_STALE_MS)
+    cap = max(
+        1,
+        int(
+            max_faces
+            if max_faces is not None
+            else getattr(settings, "PRESENCE_MAX_FACES_PER_FRAME", 8) or 8
+        ),
+    )
 
-    def _work(img=frame):
-        features = extract_face_features_bgr(img, require_quality=False)
-        if features is None:
-            return None
-        encoding, _bbox = features
-        return encoding
+    def _work(img=frame, limit=cap):
+        features = extract_face_features_multi_bgr(img, max_faces=limit, require_quality=False)
+        return [enc for enc, _bbox in features]
 
-    return await run_on_face_gpu(
+    result = await run_on_face_gpu(
         _work,
         kind="cctv",
         company_id=company_id,
         stale_ms=stale_ms,
     )
+    return list(result or [])
 
 
 async def _handle_attendance_like(
@@ -406,17 +421,20 @@ async def analyze_camera(db: AsyncSession, cam: Camera) -> dict[str, Any]:
         return {"ok": False, "error": f"snapshot: {exc}"}
 
     try:
-        encoding = await _embed_frame(jpeg, company_id=company_id)
+        encodings = await _embed_faces(jpeg, company_id=company_id)
     except Exception as exc:  # noqa: BLE001
         logger.warning("CCTV embed failed cam=%s: %s", cam.cameraId, exc)
         return {"ok": False, "error": f"embed: {exc}"}
 
     cam.lastAnalyzedAt = _now()
 
-    if encoding is None:
+    if not encodings:
         return {"ok": True, "faces": 0, "stationMode": mode}
 
     snapshot_url = _persist_snapshot(jpeg)
+    # Incident / attendance still use the largest face (index 0) to avoid
+    # multi-punch storms; presence records every accepted face.
+    encoding = encodings[0]
 
     if attendance_like:
         outcome = await _handle_attendance_like(
@@ -440,7 +458,26 @@ async def analyze_camera(db: AsyncSession, cam: Camera) -> dict[str, Any]:
             module_cfg=module_cfg,
         )
 
-    return {"ok": True, "faces": 1, "stationMode": mode, **outcome}
+    presence_hits = 0
+    try:
+        from .presence_service import try_record_from_encoding
+
+        for enc in encodings:
+            recorded = await try_record_from_encoding(
+                db, company_id=company_id, camera=cam, encoding=enc
+            )
+            if recorded:
+                presence_hits += 1
+    except Exception as exc:  # noqa: BLE001 — presence must not fail the CCTV tick
+        logger.warning("CCTV presence write failed cam=%s: %s", cam.cameraId, exc)
+
+    return {
+        "ok": True,
+        "faces": len(encodings),
+        "presenceHits": presence_hits,
+        "stationMode": mode,
+        **outcome,
+    }
 
 
 async def list_due_cameras(

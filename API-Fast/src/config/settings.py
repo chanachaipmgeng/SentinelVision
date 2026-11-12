@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     FACE_LOGIN_THRESHOLD: float = 0.32
     # Reject when 2nd-nearest admin encoding is within this margin of the top hit.
     FACE_LOGIN_AMBIGUITY_MARGIN: float = 0.08
+    # Presence CCTV 1:N: reject when 2nd-nearest employee is within this margin.
+    FACE_PRESENCE_AMBIGUITY_MARGIN: float = 0.08
+    # Fold successive sightings of the same member on the same camera into one session.
+    PRESENCE_SESSION_GAP_SECONDS: int = 90
+    PRESENCE_SIGHTING_RETENTION_DAYS: int = 14
+    PRESENCE_SESSION_RETENTION_DAYS: int = 90
+    # Multi-face embed cap per CCTV frame (Phase 2 booth).
+    PRESENCE_MAX_FACES_PER_FRAME: int = 8
     # Greeting → blink challenge JWT TTL (seconds) after identify.
     FACE_LOGIN_CHALLENGE_SECONDS: int = 45
 

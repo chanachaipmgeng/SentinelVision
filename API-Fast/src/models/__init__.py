@@ -22,4 +22,5 @@ from . import (  # noqa: F401
     site_floor,
     company_api_key,
     people_count_bucket,
+    person_presence,
 )

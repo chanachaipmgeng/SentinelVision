@@ -414,6 +414,12 @@ export class NavService implements OnDestroy {
             type: 'link',
             permission: 'cameras.read',
           },
+          {
+            path: '/company/presence',
+            title: 'presence.nav',
+            type: 'link',
+            permission: 'cameras.read',
+          },
         ],
       },
 

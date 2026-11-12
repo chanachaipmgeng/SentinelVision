@@ -19,7 +19,7 @@ from passlib.context import CryptContext
 from ..config.database import get_db
 from ..config.settings import settings
 from ..models.hr_schedule import KioskDevice
-from ..models.member import Member
+from ..models.member import Member, RoleType
 from ..schemas.auth_schema import LoginRequest, Token
 from ..security.auth_cookies import (
     clear_auth_cookies,
@@ -391,10 +391,7 @@ async def login_face(
 
     # Face login is system-admin gallery only — reject if role drifted after identify.
     role_val = getattr(member.role, "value", member.role)
-    try:
-        role_ok = int(role_val) == 99
-    except (TypeError, ValueError):
-        role_ok = False
+    role_ok = member.role == RoleType.ADMIN_SYSTEM or role_val == RoleType.ADMIN_SYSTEM.value
     if not role_ok:
         await write_audit(
             actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401

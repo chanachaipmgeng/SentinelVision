@@ -11,9 +11,23 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, Index, Integer, String, Text, and_, delete, func, or_, select
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    Text,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    true,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import ColumnElement
 
 from ..config.database import Base, async_session
 from ..config.settings import settings
@@ -225,7 +239,7 @@ async def write_error_log(
                     and_(
                         ErrorLog.fingerprint == fingerprint,
                         ErrorLog.resolvedAt.is_(None),
-                        ErrorLog.lastSeenAt >= cutoff,
+                        ErrorLog.lastSeenAt >= cutoff,  # type: ignore[arg-type]
                     )
                 )
                 .order_by(ErrorLog.lastSeenAt.desc())
@@ -413,10 +427,12 @@ async def list_error_logs(
             )
         )
 
-    where = and_(*clauses) if clauses else True
-    total = int((await db.execute(select(func.count()).select_from(ErrorLog).where(where))).scalar_one() or 0)
+    where_clause: ColumnElement[bool] = and_(*clauses) if clauses else true()
+    total = int(
+        (await db.execute(select(func.count()).select_from(ErrorLog).where(where_clause))).scalar_one() or 0
+    )
 
-    sort_map = {
+    sort_map: dict[str, Any] = {
         "occurredAt": ErrorLog.occurredAt,
         "lastSeenAt": ErrorLog.lastSeenAt,
         "statusCode": ErrorLog.statusCode,
@@ -424,13 +440,15 @@ async def list_error_logs(
         "source": ErrorLog.source,
         "path": ErrorLog.path,
     }
-    col = sort_map.get((sort_by or "").strip() or "lastSeenAt", ErrorLog.lastSeenAt)
+    col: Any = sort_map.get((sort_by or "").strip() or "lastSeenAt", ErrorLog.lastSeenAt)
     order = col.asc() if (sort_dir or "desc").lower() == "asc" else col.desc()
 
     safe_limit = min(max(int(limit or 50), 1), 500)
     safe_offset = max(0, int(offset or 0))
     rows = (
-        await db.execute(select(ErrorLog).where(where).order_by(order).offset(safe_offset).limit(safe_limit))
+        await db.execute(
+            select(ErrorLog).where(where_clause).order_by(order).offset(safe_offset).limit(safe_limit)
+        )
     ).scalars().all()
     return list(rows), total
 
@@ -446,12 +464,14 @@ async def set_resolved(
     resolved: bool,
     actor_member_id: Optional[UUID],
 ) -> ErrorLog:
+    # Classic Column() descriptors type the attributes as Column[T], not T.
+    target: Any = row
     if resolved:
-        row.resolvedAt = datetime.now(timezone.utc)
-        row.resolvedBy = actor_member_id
+        target.resolvedAt = datetime.now(timezone.utc)
+        target.resolvedBy = actor_member_id
     else:
-        row.resolvedAt = None
-        row.resolvedBy = None
+        target.resolvedAt = None
+        target.resolvedBy = None
     await db.commit()
     await db.refresh(row)
     return row
@@ -464,6 +484,8 @@ async def purge_old_error_logs(*, retention_days: Optional[int] = None) -> int:
     days = max(1, int(days))
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     async with async_session() as db:
-        result = await db.execute(delete(ErrorLog).where(ErrorLog.occurredAt < cutoff))
+        result = await db.execute(
+            delete(ErrorLog).where(ErrorLog.occurredAt < cutoff)  # type: ignore[arg-type]
+        )
         await db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)

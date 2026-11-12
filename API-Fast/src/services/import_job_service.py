@@ -197,7 +197,7 @@ async def fail_stale_running_jobs(lease_seconds: Optional[int] = None) -> int:
             )
         )
         await db.commit()
-    n = int(result.rowcount or 0)
+    n = int(getattr(result, "rowcount", 0) or 0)
     if n:
         logger.warning("marked %s orphaned import job(s) as failed", n)
         import_jobs_total.labels(result="failed").inc(n)

@@ -48,11 +48,15 @@ with warnings.catch_warnings():
 
 # authlib 1.9 raises claim errors from joserfc while signature/decoding errors still
 # come from authlib.jose; treat both families as "invalid token".
-try:
-    from joserfc.errors import JoseError as JoserfcJoseError
-except Exception:  # pragma: no cover - older authlib without joserfc
-    JoserfcJoseError = AuthlibJoseError
-_JOSE_ERRORS: tuple[type[Exception], ...] = (AuthlibJoseError, JoserfcJoseError)
+def _joserfc_jose_error_type() -> type[Exception]:
+    try:
+        from joserfc.errors import JoseError as joserfc_jose_error
+    except Exception:  # pragma: no cover - older authlib without joserfc
+        return AuthlibJoseError
+    return joserfc_jose_error
+
+
+_JOSE_ERRORS: tuple[type[Exception], ...] = (AuthlibJoseError, _joserfc_jose_error_type())
 
 from ..config.settings import settings
 

@@ -10,7 +10,11 @@ from sqlalchemy import MetaData
 
 from .database import Base
 from .. import models  # noqa: F401  registers every model module
-from ..services import audit_service, notification_service  # noqa: F401  audit_log / outbox / import_job
+from ..services import (  # noqa: F401  audit_log / outbox / import_job / error_log
+    audit_service,
+    error_log_service,
+    notification_service,
+)
 
 metadata: MetaData = Base.metadata
 

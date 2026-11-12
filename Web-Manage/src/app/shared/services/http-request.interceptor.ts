@@ -6,6 +6,7 @@ import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { TokenService } from './token.service';
 import { AuthService, RefreshedTokens } from './auth.service';
+import { ClientErrorReporterService } from './client-error-reporter.service';
 import { environment } from '../../../environments/environment';
 
 
@@ -31,6 +32,7 @@ export class HttpRequestInterceptor {
   constructor(
     private tokenService: TokenService,
     private authService: AuthService,
+    private clientErrors: ClientErrorReporterService,
   ) { }
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -56,6 +58,9 @@ export class HttpRequestInterceptor {
           error.status === 401;
         if (refreshable && !NO_REFRESH_PATHS.some((p) => fullUrl.includes(p))) {
           return this.handle401Error(authReq, next, fullUrl);
+        }
+        if (error instanceof HttpErrorResponse) {
+          this.clientErrors.reportFromHttpError(error, authReq.method, fullUrl);
         }
         return throwError(() => error);
       }));

@@ -1,0 +1,53 @@
+/* Error-log list accents — readable on light and dark admin themes */
+.dpu-error-log-view {
+  min-width: 2.75rem;
+  padding-inline: 0.75rem !important;
+}
+
+.dpu-error-log-status {
+  display: inline-flex;
+  align-items: center;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--dpu-muted, #64748b) 16%, transparent);
+  color: var(--dpu-ink, #0f172a);
+}
+
+.dpu-error-log-status.is-4xx {
+  background: color-mix(in srgb, var(--dpu-warning, #b45309) 18%, transparent);
+  color: var(--dpu-warning, #b45309);
+}
+
+.dpu-error-log-status.is-5xx {
+  background: color-mix(in srgb, var(--dpu-danger, #b91c1c) 18%, transparent);
+  color: var(--dpu-danger, #b91c1c);
+}
+
+.dpu-error-log-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.dpu-error-log-state.is-open {
+  background: color-mix(in srgb, var(--dpu-warning, #b45309) 16%, transparent);
+  color: var(--dpu-warning, #b45309);
+}
+
+.dpu-error-log-state.is-done {
+  background: color-mix(in srgb, var(--dpu-success, #15803d) 16%, transparent);
+  color: var(--dpu-success, #15803d);
+}
+
+.dpu-error-log-detail pre {
+  background: color-mix(in srgb, var(--dpu-surface, #eef2f6) 80%, transparent);
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  color: var(--dpu-ink, #0f172a);
+}

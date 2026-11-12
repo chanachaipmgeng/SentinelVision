@@ -30,6 +30,11 @@ export const admin: Routes = [
       loadComponent: () =>
         import('./system-setting/system-setting.component').then((m) => m.SystemSettingComponent),
     },
+    {
+      path: 'error-logs',
+      loadComponent: () =>
+        import('./error-logs/error-logs.component').then((m) => m.ErrorLogsComponent),
+    },
     //////////////emp/////////////////
     {
       path: 'emp/department',

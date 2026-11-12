@@ -5,7 +5,8 @@
 .dpu-data-table {
   border: 1px solid var(--dpu-border, #e2e8f0);
   border-radius: 12px;
-  background: #fff;
+  background: var(--dpu-surface-elevated, #fff);
+  color: var(--dpu-ink, #0f172a);
   overflow: hidden;
 }
 
@@ -15,7 +16,11 @@
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--dpu-border, #e2e8f0);
-  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--dpu-surface-elevated, #fff) 88%, var(--dpu-brand, #0f766e) 12%) 0%,
+    var(--dpu-surface-elevated, #fff) 100%
+  );
 }
 
 .dpu-data-table__search {
@@ -27,8 +32,8 @@
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--dpu-border, #e2e8f0);
   border-radius: 999px;
-  background: #fff;
-  color: #64748b;
+  background: var(--dpu-surface-elevated, #fff);
+  color: var(--dpu-muted, #64748b);
 }
 
 .dpu-data-table__search input {
@@ -37,22 +42,14 @@
   width: 100%;
   background: transparent;
   font-size: 0.875rem;
-  color: #0f172a;
-}
-
-.dpu-data-table__scroll {
-  overflow-x: auto;
-}
-
-.dpu-data-table__scroll.is-loading {
-  opacity: 0.55;
-  pointer-events: none;
+  color: var(--dpu-ink, #0f172a);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
   min-width: 640px;
+  color: inherit;
 }
 
 th,
@@ -64,12 +61,16 @@ td {
   vertical-align: middle;
 }
 
+td {
+  color: var(--dpu-ink, #0f172a);
+}
+
 th {
   font-size: 0.75rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #64748b;
-  background: #f8fafc;
+  color: var(--dpu-muted, #64748b);
+  background: color-mix(in srgb, var(--dpu-surface-elevated, #fff) 82%, var(--dpu-surface, #eef2f6) 18%);
   white-space: nowrap;
   user-select: none;
 }
@@ -82,15 +83,28 @@ th.is-sortable:hover {
   color: var(--dpu-brand, #0f766e);
 }
 
+tbody tr:hover td {
+  background: color-mix(in srgb, var(--dpu-brand, #0f766e) 8%, transparent);
+}
+
+.dpu-data-table__scroll {
+  overflow-x: auto;
+}
+
+.dpu-data-table__scroll.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .dpu-data-table__empty {
   padding: 2rem 1rem;
   text-align: center;
-  color: #64748b;
+  color: var(--dpu-muted, #64748b);
 }
 
 .dpu-data-table__empty strong {
   display: block;
-  color: #0f172a;
+  color: var(--dpu-ink, #0f172a);
   margin-bottom: 0.25rem;
 }
 

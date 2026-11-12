@@ -36,10 +36,13 @@ async def run_retention_tick() -> Dict[str, Any]:
     from ..services.pdpa_service import company_retention_tick
     from ..services.storage_service import retention_tick
 
+    from ..services.error_log_service import purge_old_error_logs
+
     storage = await asyncio.to_thread(retention_tick)
     sentinel = await expire_sentinel_identities_tick()
     payloads = await purge_finished_import_payloads()
     stale = await fail_stale_running_jobs()
+    error_logs_removed = await purge_old_error_logs()
     pdpa_stats: list[dict] = []
     async with async_session() as db:
         company_ids = (
@@ -55,6 +58,7 @@ async def run_retention_tick() -> Dict[str, Any]:
         "sentinel": sentinel,
         "importPayloadsRemoved": payloads,
         "importJobsOrphaned": stale,
+        "errorLogsRemoved": error_logs_removed,
         "pdpa": pdpa_stats,
     }
 

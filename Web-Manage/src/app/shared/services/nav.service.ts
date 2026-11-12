@@ -137,6 +137,13 @@ export class NavService implements OnDestroy {
         type: 'link',
         permission: 'system.admin',
       },
+      {
+        icon: 'bug',
+        path: '/admin/error-logs',
+        title: 'Error logs',
+        type: 'link',
+        permission: 'system.admin',
+      },
     ];
   }
 

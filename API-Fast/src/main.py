@@ -87,9 +87,20 @@ async def http_error(request: Request, exc: HTTPException):
     message = sanitize_public_message(detail, status_code=exc.status_code)
     details = detail if isinstance(detail, (list, dict)) and exc.status_code < 500 else None
     headers = dict(exc.headers) if exc.headers else None
+    code = http_exception_code(exc.status_code, detail if isinstance(detail, str) else None)
+    from .services.error_log_service import schedule_api_error
+
+    schedule_api_error(
+        request,
+        status_code=exc.status_code,
+        message=message,
+        error_code=code,
+        exc=exc,
+        details=details,
+    )
     return JSONResponse(
         error_body(
-            code=http_exception_code(exc.status_code, detail if isinstance(detail, str) else None),
+            code=code,
             message=message,
             status_code=exc.status_code,
             request_id=_request_id(request),
@@ -102,6 +113,16 @@ async def http_error(request: Request, exc: HTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
+    from .services.error_log_service import schedule_api_error
+
+    schedule_api_error(
+        request,
+        status_code=422,
+        message="Validation failed",
+        error_code="validation_error",
+        exc=exc,
+        details=exc.errors(),
+    )
     return JSONResponse(
         error_body(
             code="validation_error",
@@ -117,6 +138,15 @@ async def validation_error(request: Request, exc: RequestValidationError):
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
     logger.exception("unhandled %s", request.url.path)
+    from .services.error_log_service import schedule_api_error
+
+    schedule_api_error(
+        request,
+        status_code=500,
+        message="Internal error",
+        error_code="internal_error",
+        exc=exc,
+    )
     return JSONResponse(
         error_body(
             code="internal_error",

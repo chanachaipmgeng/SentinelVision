@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_FACE_LOGIN_PER_MINUTE: int = 8
     RATE_LIMIT_IDENTIFY_PER_MINUTE: int = 120
     RATE_LIMIT_IMPORT_PER_MINUTE: int = 10
+    RATE_LIMIT_CLIENT_ERRORS_PER_MINUTE: int = 30
+    # System-admin error_log retention (API + client HTTP failures).
+    ERROR_LOG_RETENTION_DAYS: int = 30
     # D6 Idempotency-Key TTL for punch create + import-jobs.
     IDEMPOTENCY_TTL_SECONDS: int = 86400
 

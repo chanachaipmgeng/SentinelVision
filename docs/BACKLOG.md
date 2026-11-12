@@ -57,3 +57,6 @@
 - [x] **Lint debt (API-Fast):** cleared ruff `B904` / `B017` (kept intentional `B008`); models migrated to `Mapped[...]` / `mapped_column`; emptied `ignore_errors` mypy list (only `[misc]` suppressed on face GPU lambda call sites)
 - [x] **Angular 17 → 19+ upgrade (Web-Manage):** Angular 19.2 + Material/CDK/google-maps 19; peers (`@ng-select`, `ngx-echarts`, `ngx-toastr`, `@ngx-translate/*`) aligned; `legacy-peer-deps` removed from `.npmrc` and `Web-Manage/Dockerfile` (`npm ci`); Angular EOL CVE allow-list removed from `.trivyignore.yaml`
 - [x] **Dockerfiles non-root `USER` (B4 hardening):** kiosk `loadgen` runs as uid `10001`; Trivy `DS-0002` allow-list removed (product images were already non-root)
+
+## Completed — Person Presence (CCTV locate trail)
+- [x] **Locate / trail / live / booth dwell / OT evidence:** `person_sighting` + `person_presence_session` (`0030_person_presence`); CCTV multi-face embed (cap 8) writes ambiguity-gated presence without changing kiosk `search_face_pgvector`; APIs under `/presence/company/{companyId}/*` (`cameras.read`); admin UI `/company/presence`; E-Map live name labels; nginx gateway path `presence`

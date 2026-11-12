@@ -115,6 +115,18 @@ Postgres-first aggregates (no ClickHouse). Requires `cameras.read`. Admin UI: `/
 | GET | `/analytics/company/{companyId}/summary` | JWT | Bundle of KPIs + heatmap + occupancy + dwell + camera health. |
 | GET | `/analytics/company/{companyId}/export/pdf` | JWT | PDF attachment of the summary (reportlab, with minimal fallback). |
 
+## Person Presence (CCTV locate / booth dwell / OT evidence)
+
+Company-scoped trail from CCTV face matches (`person_sighting` → `person_presence_session`). Requires `cameras.read`. Admin UI: `/company/presence`. Camera roles live in `camera.aiConfig.presenceRole` (`LOCATE` \| `BOOTH` + `eventId` \| `OT_AREA`).
+
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/presence/company/{companyId}/search?q=` | JWT (`cameras.read`) | Name search; status `here` / `last_seen` / `not_seen` + last camera. Audited. |
+| GET | `/presence/company/{companyId}/members/{memberId}/trail` | JWT | Presence sessions in range (`start`, `end`); dwell minutes per camera. Audited. |
+| GET | `/presence/company/{companyId}/events/{eventId}/dwell` | JWT | Booth minutes per person for a `SentinelEvent` (`presenceRole=BOOTH`). |
+| GET | `/presence/company/{companyId}/ot-evidence?workDate=` | JWT | After shift-end minutes on `OT_AREA` cameras vs punched `overtimeMinutes` (`aligned` / `punch_without_camera` / `camera_without_punch`). Evidence only — no auto punch. |
+| GET | `/presence/company/{companyId}/live?cameraId=` | JWT | Open sessions “here now” (optional camera filter); used by E-Map pin labels. |
+
 ## System, Cloud Storage & Observability
 
 | Method | Path | Notes |

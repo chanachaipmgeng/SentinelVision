@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
@@ -24,7 +24,7 @@ from ..services.storage_service import delete_stored_image
 
 router = APIRouter()
 
-SYSTEM_CONSENT_POLICY_KEY = "system"
+SYSTEM_CONSENT_POLICY_KEY = pdpa_service.SYSTEM_CONSENT_POLICY_KEY
 
 
 async def _load_system_admin_member(db: AsyncSession, member_id: UUID) -> Member:
@@ -55,13 +55,51 @@ async def _clear_local_face_encodings(db: AsyncSession, member_id: UUID) -> int:
             pass
     return len(removed_ids)
 
+
+async def _system_gallery_encoding_counts(
+    db: AsyncSession, member_ids: list[UUID]
+) -> dict[UUID, int]:
+    """Count local system-gallery encodings (companyId IS NULL) per member."""
+    if not member_ids:
+        return {}
+    result = await db.execute(
+        select(FaceEncoding.memberId, func.count())
+        .where(
+            FaceEncoding.memberId.in_(member_ids),
+            FaceEncoding.companyId.is_(None),
+        )
+        .group_by(FaceEncoding.memberId)
+    )
+    return {row[0]: int(row[1]) for row in result.all()}
+
+
+def _member_response(member: Member, face_count: int = 0) -> MemberResponse:
+    return MemberResponse.model_validate(member).model_copy(
+        update={"faceEncodingCount": face_count}
+    )
+
+
 @router.get("", response_model=List[MemberResponse])
 async def get_members(
     includeDeleted: bool = False,
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    return await get_users(db, include_deleted=includeDeleted)
+    members = await get_users(db, include_deleted=includeDeleted)
+    counts = await _system_gallery_encoding_counts(
+        db, [m.memberId for m in members]
+    )
+    return [_member_response(m, counts.get(m.memberId, 0)) for m in members]
+
+
+@router.get("/pdpa/consent-policy")
+async def get_system_consent_policy(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(authenticate_jwt),
+):
+    """PDPA consent text for system-admin console face login (gallery key ``system``)."""
+    return await pdpa_service.ensure_consent_policy(db, SYSTEM_CONSENT_POLICY_KEY)
+
 
 @router.get("/{memberId}", response_model=MemberResponse)
 async def get_member(
@@ -72,14 +110,16 @@ async def get_member(
     member = await get_user_by_id(UUID(memberId), db)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
-    return member
+    counts = await _system_gallery_encoding_counts(db, [member.memberId])
+    return _member_response(member, counts.get(member.memberId, 0))
 
 @router.post("", response_model=MemberResponse)
 async def create_new_member(
     member: MemberCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    return await create_user(member, db)
+    created = await create_user(member, db)
+    return _member_response(created, 0)
 
 @router.put("/{memberId}", response_model=MemberResponse)
 async def update_existing_member(
@@ -88,7 +128,9 @@ async def update_existing_member(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(authenticate_jwt)  # Validate JWT token
 ):
-    return await update_user(UUID(memberId), member_update, db)
+    updated = await update_user(UUID(memberId), member_update, db)
+    counts = await _system_gallery_encoding_counts(db, [updated.memberId])
+    return _member_response(updated, counts.get(updated.memberId, 0))
 
 @router.delete("/{memberId}")
 async def delete_existing_member(

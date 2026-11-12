@@ -1,1 +1,5 @@
 :host { display: block; }
+
+.admin-consent-text {
+  color: var(--dpu-text, #0f766e);
+}

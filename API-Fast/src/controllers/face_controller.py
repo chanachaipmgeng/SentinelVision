@@ -1116,15 +1116,21 @@ async def check_in_face_walkby(
 
 
 async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
-    """List enrolled encodings for a member (metadata + image URL)."""
+    """List enrolled encodings for a member (metadata + image URL).
+
+    Role-99 console gallery uses local ``companyId IS NULL`` rows today and the
+    Face Core company_code ``system`` later — never return empty solely because
+    the member has no company_employee links.
+    """
+    member = await db.get(Member, memberId)
+    is_sys_admin = bool(member and is_system_admin_member(member))
+    rows: List[dict] = []
+    seen: set = set()
+
     if face_core_enabled():
-        company_ids = await _member_company_ids(db, memberId)
-        if not company_ids:
-            return []
         client = get_face_core_client()
         subject_id = str(memberId)
-        seen: set = set()
-        rows: List[dict] = []
+        company_ids = await _member_company_ids(db, memberId)
         for company_id in company_ids:
             code = _company_code(company_id)
             faces = await client.list_faces(code, subject_id)
@@ -1141,23 +1147,50 @@ async def get_encodings_for_member(memberId: UUID, db: AsyncSession):
                         "imageUrl": bff_enrolled_image_url(str(face_id), company_id),
                     }
                 )
-        return rows
+        if is_sys_admin:
+            try:
+                await client.ensure_company("system")
+                for face in await client.list_faces("system", subject_id):
+                    face_id = face.get("faceId")
+                    if not face_id or face_id in seen:
+                        continue
+                    seen.add(face_id)
+                    rows.append(
+                        {
+                            "faceEncodingId": face_id,
+                            "memberId": str(memberId),
+                            "companyId": None,
+                            "galleryKey": "system",
+                            "createdAt": face.get("createdAt"),
+                            "imageUrl": bff_enrolled_image_url(str(face_id), "system"),
+                        }
+                    )
+            except Exception:
+                pass
+        if not is_sys_admin:
+            return rows
 
+    # Local rows: always when Face Core is off; also for role 99 (face-login gallery).
     stmt = select(FaceEncoding).where(FaceEncoding.memberId == memberId)
+    if face_core_enabled() and is_sys_admin:
+        stmt = stmt.where(FaceEncoding.companyId.is_(None))
     result = await db.execute(stmt)
-    encodings = result.scalars().all()
-
-    return [
-        {
-            "faceEncodingId": str(enc.faceEncodingId),
-            "memberId": str(enc.memberId),
-            "companyId": str(enc.companyId) if enc.companyId else None,
-            "modelVersion": getattr(enc, "modelVersion", None),
-            "createdAt": enc.createdAt,
-            "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg",
-        }
-        for enc in encodings
-    ]
+    for enc in result.scalars().all():
+        enc_id = str(enc.faceEncodingId)
+        if enc_id in seen:
+            continue
+        seen.add(enc_id)
+        rows.append(
+            {
+                "faceEncodingId": enc_id,
+                "memberId": str(enc.memberId),
+                "companyId": str(enc.companyId) if enc.companyId else None,
+                "modelVersion": getattr(enc, "modelVersion", None),
+                "createdAt": enc.createdAt,
+                "imageUrl": f"/enrolled_images/{enc.faceEncodingId}.jpg",
+            }
+        )
+    return rows
 
 
 async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
@@ -1192,24 +1225,35 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    is_sys_admin = is_system_admin_member(member)
+    deleted_ids: List[str] = []
+
     if face_core_enabled():
         company_ids = await _member_company_ids(db, memberId)
         client = get_face_core_client()
         subject_id = str(memberId)
-        deleted_ids: List[str] = []
         for company_id in company_ids:
             code = _company_code(company_id)
             result = await client.clear_subject_faces(code, subject_id)
             deleted_ids.extend(result.get("faceIds") or [])
-        return {
-            "message": "All face encodings cleared",
-            "deleted": len(deleted_ids),
-            "faceEncodingIds": deleted_ids,
-        }
+        if is_sys_admin:
+            try:
+                await client.ensure_company("system")
+                result = await client.clear_subject_faces("system", subject_id)
+                deleted_ids.extend(result.get("faceIds") or [])
+            except Exception:
+                pass
+        if not is_sys_admin:
+            return {
+                "message": "All face encodings cleared",
+                "deleted": len(deleted_ids),
+                "faceEncodingIds": deleted_ids,
+            }
 
-    enc_result = await db.execute(
-        select(FaceEncoding).where(FaceEncoding.memberId == memberId)
-    )
+    enc_stmt = select(FaceEncoding).where(FaceEncoding.memberId == memberId)
+    if face_core_enabled() and is_sys_admin:
+        enc_stmt = enc_stmt.where(FaceEncoding.companyId.is_(None))
+    enc_result = await db.execute(enc_stmt)
     encodings = list(enc_result.scalars().all())
     removed_ids: List[str] = []
     for enc in encodings:
@@ -1225,10 +1269,11 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
         except Exception as e:
             print(f"Error deleting image file enrolled_images/{enc_id}.jpg: {e}")
 
+    all_ids = deleted_ids + removed_ids
     return {
         "message": "All face encodings cleared",
-        "deleted": len(removed_ids),
-        "faceEncodingIds": removed_ids,
+        "deleted": len(all_ids),
+        "faceEncodingIds": all_ids,
     }
 
 

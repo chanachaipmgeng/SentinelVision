@@ -52,3 +52,17 @@ On a dual-GPU host the GPU overlay runs **two API processes** (`sentinel-api` on
    - Displays event welcome message and `seat_number` for `EVENT_ATTENDEE`, checks in temporary `VISITOR` passes, or calculates shift Late/Overtime for `EMPLOYEE` punches.
 5. **Automated PDPA Biometric Expiry (`expire_sentinel_identities_tick`):**
    - Hourly `_retention_loop()` automatically transitions expired `SentinelIdentity` records (`expires_at < now()`) to `status='EXPIRED'` and nulls out their 512-d `embedding` vector.
+
+## System-admin face login gallery (`system`)
+
+Role-99 (platform system admin) console face login uses a dedicated gallery key **`system`**, separate from company attendance galleries:
+
+| Concern | Today (`FACE_CORE_ENABLED=false`) | Later (Face Core BFF) |
+|---|---|---|
+| Consent policy | `GET /members/pdpa/consent-policy` → `pdpa_consent:system` (console login copy, not attendance) | Same DPU endpoint; text still owned by DPU |
+| Consent record | `Member.biometricConsentAt` (+ version/text) | Unchanged |
+| Encodings | Local `face_encoding` rows with `companyId IS NULL` | Face Core `company_code=system` (+ keep local until identify migrates) |
+| List / manage | `/face/members/{id}/encodings` always includes local system-gallery rows for role 99 | Merge Face Core `system` + local; never empty solely because the admin has no `company_employee` |
+| Identify / login | `POST /auth/login/face` → `search_system_admin_face_pgvector` (local only) | Next cutover: Face Core identify on `system`; login threshold/ambiguity stay stricter than enroll |
+
+Admin Manage (`/admin/admin-manage`) shows PDPA consent dialog **before** grant (no silent auto-grant) and list badges for consent + face count.

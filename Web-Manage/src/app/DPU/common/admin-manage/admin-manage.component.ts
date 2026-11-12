@@ -21,6 +21,14 @@ import { FaceManagementComponent } from '../../company-management/dialogs/face-m
 import { apiErrorMessage } from '../../../shared/utils/http-error-body';
 import swal from 'sweetalert';
 
+type ConsentPolicy = {
+  version: string;
+  textTh: string;
+  textEn: string;
+  updatedAt?: string | null;
+  galleryKey?: string | null;
+};
+
 @Component({
     selector: 'app-admin-manage',
     imports: [
@@ -49,6 +57,8 @@ export class AdminManageComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
   @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
   @ViewChild('openFaceOverlay') openFaceOverlay?: ElementRef<HTMLButtonElement>;
+  @ViewChild('openConsentOverlay') openConsentOverlay?: ElementRef<HTMLButtonElement>;
+  @ViewChild('closeConsentOverlay') closeConsentOverlay?: ElementRef<HTMLButtonElement>;
 
   readonly pageSize = 10;
   readonly adminRole = 99;
@@ -65,6 +75,11 @@ export class AdminManageComponent implements OnInit {
   faceEnrollSelectModel: EmployeeModel = new EmployeeModel();
   selectedMemberId = '';
   selectedMemberName = '';
+
+  consentPolicy: ConsentPolicy | null = null;
+  consentLoading = false;
+  consentGranting = false;
+  pendingConsentMember: UserProfileModel | null = null;
 
   itemsList: UserProfileModel[] = [];
   filteredSource: UserProfileModel[] = [];
@@ -86,6 +101,12 @@ export class AdminManageComponent implements OnInit {
   }
   get activeCount(): number {
     return this.itemsList.filter((x) => x.status === 1).length;
+  }
+  get consentedCount(): number {
+    return this.itemsList.filter((x) => x.hasBiometricConsent()).length;
+  }
+  get faceEnrolledCount(): number {
+    return this.itemsList.filter((x) => x.hasFaceEnrolled()).length;
   }
 
   constructor(
@@ -193,19 +214,62 @@ export class AdminManageComponent implements OnInit {
     this.selectModel.role = this.adminRole;
   }
 
+  consentText(): string {
+    const locale = (this.translate.currentLang || 'th').toLowerCase();
+    if (!this.consentPolicy) return '';
+    return locale.startsWith('th')
+      ? this.consentPolicy.textTh
+      : this.consentPolicy.textEn || this.consentPolicy.textTh;
+  }
+
   async openFaceEnroll(item: UserProfileModel): Promise<void> {
     if (!item?.memberId) return;
-    try {
-      await firstValueFrom(this.userService.grantBiometricConsent(item.memberId, 'th'));
-    } catch (err) {
-      swal('ไม่สามารถบันทึกความยินยอมได้', apiErrorMessage(err, 'Consent failed'), 'error');
+    if (item.hasBiometricConsent()) {
+      await this.startFaceEnroll(item);
       return;
     }
+    this.pendingConsentMember = item;
+    this.consentLoading = true;
+    this.consentPolicy = null;
+    this.openConsentOverlay?.nativeElement?.click();
+    try {
+      this.consentPolicy = await firstValueFrom(this.userService.getSystemConsentPolicy());
+    } catch (err) {
+      this.closeConsentDialog();
+      swal('โหลดนโยบายไม่สำเร็จ', apiErrorMessage(err, 'Consent policy failed'), 'error');
+    } finally {
+      this.consentLoading = false;
+    }
+  }
+
+  closeConsentDialog(): void {
+    this.pendingConsentMember = null;
+    this.consentGranting = false;
+    this.closeConsentOverlay?.nativeElement?.click();
+  }
+
+  async acceptConsentAndEnroll(): Promise<void> {
+    const item = this.pendingConsentMember;
+    if (!item?.memberId || this.consentGranting) return;
+    this.consentGranting = true;
+    try {
+      await firstValueFrom(this.userService.grantBiometricConsent(item.memberId, 'th'));
+      item.biometricConsentAt = new Date().toISOString();
+      this.closeConsentDialog();
+      await this.startFaceEnroll(item);
+      this.load();
+    } catch (err) {
+      swal('ไม่สามารถบันทึกความยินยอมได้', apiErrorMessage(err, 'Consent failed'), 'error');
+    } finally {
+      this.consentGranting = false;
+    }
+  }
+
+  private async startFaceEnroll(item: UserProfileModel): Promise<void> {
     this.faceEnrollSelectModel = new EmployeeModel({
       member: item,
       companyId: '',
     });
-    // Open Preline overlay only after consent succeeds, then start camera.
     this.openFaceOverlay?.nativeElement?.click();
     await this.faceEnrollModal?.openForEmployee(this.faceEnrollSelectModel);
   }
@@ -213,6 +277,32 @@ export class AdminManageComponent implements OnInit {
   openFaceManagementModal(item: UserProfileModel): void {
     this.selectedMemberId = item?.memberId || '';
     this.selectedMemberName = item?.getFullname?.() || item?.username || '';
+  }
+
+  onFaceManagementClosed(): void {
+    this.selectedMemberId = '';
+    this.load();
+  }
+
+  revokeConsent(item: UserProfileModel): void {
+    if (!item?.memberId || !item.hasBiometricConsent()) return;
+    swal({
+      title: 'เพิกถอนความยินยอม PDPA?',
+      text: 'จะลบข้อมูลใบหน้าสำหรับเข้าสู่ระบบคอนโซลของผู้ดูแลรายนี้',
+      icon: 'warning',
+      dangerMode: true,
+      buttons: ['ยกเลิก', 'เพิกถอน'],
+    }).then((ok: unknown) => {
+      if (!ok) return;
+      this.userService.revokeBiometricConsent(item.memberId).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'เพิกถอนความยินยอมและลบใบหน้าแล้ว', 'success');
+          this.load();
+        },
+        error: (err) =>
+          swal('เพิกถอนไม่สำเร็จ', apiErrorMessage(err, 'Revoke failed'), 'error'),
+      });
+    });
   }
 
   save() {

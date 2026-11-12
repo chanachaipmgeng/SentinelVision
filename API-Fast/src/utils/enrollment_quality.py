@@ -63,7 +63,7 @@ def check_enrollment_quality_bgr(
     if bbox is None or len(bbox) < 4:
         return False, "Face bounding box required for enrollment quality gate.", scores
 
-    min_ratio = float(getattr(settings, "ENROLL_MIN_FACE_RATIO", 0.08) or 0.08)
+    min_ratio = float(getattr(settings, "ENROLL_MIN_FACE_RATIO", 0.07) or 0.07)
     ratio = _face_size_ratio(image, bbox)
     scores["faceRatio"] = ratio
     if ratio < min_ratio:

@@ -19,6 +19,8 @@ export class UserProfileModel extends BaseModel {
   emergencyContactPhone?: string;
   attachmentUrls?: string;
   biometricConsentAt?: string | null;
+  biometricConsentVersion?: string | null;
+  faceEncodingCount?: number;
   createdAt: string;
   updatedAt: string;
   constructor(
@@ -41,8 +43,19 @@ export class UserProfileModel extends BaseModel {
     this.emergencyContactName = data?.emergencyContactName || ""
     this.emergencyContactPhone = data?.emergencyContactPhone || ""
     this.attachmentUrls = data?.attachmentUrls || ""
+    this.biometricConsentAt = data?.biometricConsentAt ?? null;
+    this.biometricConsentVersion = data?.biometricConsentVersion ?? null;
+    this.faceEncodingCount = data?.faceEncodingCount ?? 0;
     this.createdAt = data?.createdAt ?? ''
     this.updatedAt = data?.updatedAt ?? ''
+  }
+
+  hasBiometricConsent(): boolean {
+    return !!this.biometricConsentAt;
+  }
+
+  hasFaceEnrolled(): boolean {
+    return (this.faceEncodingCount ?? 0) > 0;
   }
 
   getRole(): string {

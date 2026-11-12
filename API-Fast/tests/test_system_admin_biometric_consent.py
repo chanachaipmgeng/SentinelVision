@@ -129,3 +129,24 @@ async def test_revoke_clears_consent_and_local_encodings(monkeypatch):
     assert out["deletedEncodings"] == 2
     assert admin.biometricConsentAt is None
     db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_system_consent_policy_uses_console_login_copy(monkeypatch):
+    db = AsyncMock()
+    ensured = {
+        "version": "1.0",
+        "textTh": "console face login",
+        "textEn": "console face login",
+        "galleryKey": "system",
+    }
+
+    async def _ensure(db_, key):
+        ensured["key"] = key
+        return ensured
+
+    monkeypatch.setattr(member_routes.pdpa_service, "ensure_consent_policy", _ensure)
+    out = await member_routes.get_system_consent_policy(db=db, user={})
+    assert out["galleryKey"] == "system"
+    assert ensured["key"] == "system"
+    assert "console face login" in out["textTh"]

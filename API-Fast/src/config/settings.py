@@ -33,7 +33,9 @@ class Settings(BaseSettings):
     FACE_MODEL_VERSION: str = "buffalo_l"
     # Enrollment quality gate (face ratio / pose / sharpness) on add-face.
     ENROLL_QUALITY_GATE_ENABLED: bool = True
-    ENROLL_MIN_FACE_RATIO: float = 0.08
+    # Desk webcam enroll often lands ~0.07–0.10 of the frame; 0.08 was rejecting
+    # near-miss captures (e.g. ratio=0.078) that are still usable for buffalo_l.
+    ENROLL_MIN_FACE_RATIO: float = 0.07
     ENROLL_MAX_YAW_DEG: float = 25.0
     ENROLL_MAX_ROLL_DEG: float = 20.0
     ENROLL_MIN_SHARPNESS: float = 25.0

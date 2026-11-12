@@ -6,6 +6,8 @@
       <ng-container chips>
         <app-stat-chip>ทั้งหมด {{ itemsList.length }}</app-stat-chip>
         <app-stat-chip tone="ok">ใช้งาน {{ activeCount }}</app-stat-chip>
+        <app-stat-chip tone="soft">ยินยอม {{ consentedCount }}</app-stat-chip>
+        <app-stat-chip tone="soft">มีใบหน้า {{ faceEnrolledCount }}</app-stat-chip>
         <app-stat-chip tone="soft" *ngIf="searchTerm">พบ {{ totalFiltered }}</app-stat-chip>
       </ng-container>
       <ng-container controls>
@@ -52,6 +54,8 @@
                 <th>ผู้ดูแล</th>
                 <th>{{ 'Email' | translate }}</th>
                 <th>เบอร์</th>
+                <th>Consent</th>
+                <th>ใบหน้า</th>
                 <th>{{ 'Status' | translate }}</th>
                 <th class="text-end">{{ 'Manage' | translate }}</th>
               </tr>
@@ -76,6 +80,22 @@
                   <td>{{ item.email || '—' }}</td>
                   <td>{{ item.phoneNumber || '—' }}</td>
                   <td>
+                    <span *ngIf="item.hasBiometricConsent()" class="badge bg-success/10 text-success" [title]="item.biometricConsentAt || ''">
+                      {{ item.biometricConsentAt | date: 'dd/MM/yyyy HH:mm' }}
+                    </span>
+                    <span *ngIf="!item.hasBiometricConsent()" class="badge bg-gray-100 text-gray-600">
+                      ยังไม่ยินยอม
+                    </span>
+                  </td>
+                  <td>
+                    <span *ngIf="item.hasFaceEnrolled()" class="badge bg-primary/10 text-primary">
+                      {{ item.faceEncodingCount }} ใบหน้า
+                    </span>
+                    <span *ngIf="!item.hasFaceEnrolled()" class="badge bg-gray-100 text-gray-600">
+                      ยังไม่มี
+                    </span>
+                  </td>
+                  <td>
                     <span class="badge" [class.bg-success]="item.status===1" [class.text-white]="item.status===1"
                       [class.bg-secondary]="item.status!==1">{{ item.getStatus() }}</span>
                   </td>
@@ -96,6 +116,14 @@
                         data-hs-overlay="#modal-face-management"
                         (click)="openFaceManagementModal(item)">
                         <i class="ri-gallery-line"></i>
+                      </button>
+                      <button
+                        *ngIf="item.hasBiometricConsent()"
+                        type="button"
+                        class="dpu-icon-btn dpu-icon-btn--danger"
+                        title="เพิกถอนความยินยอม"
+                        (click)="revokeConsent(item)">
+                        <i class="ri-shield-keyhole-line"></i>
                       </button>
                       <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="ลบ" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
                     </div>
@@ -177,6 +205,54 @@
   </div>
 </div>
 
+<!-- PDPA consent before first face enroll (no silent auto-grant). -->
+<button #openConsentOverlay type="button" class="hidden" aria-hidden="true" data-hs-overlay="#modal-admin-consent"></button>
+<button #closeConsentOverlay type="button" class="hidden" aria-hidden="true" data-hs-overlay="#modal-admin-consent"></button>
+
+<div id="modal-admin-consent" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
+  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-xl">
+    <div class="ti-modal-content">
+      <div class="ti-modal-header">
+        <div>
+          <h6 class="modal-title text-[1rem] font-semibold !mb-0">ความยินยอมข้อมูลชีวมิติ (PDPA)</h6>
+          <p class="mb-0 text-xs text-dpu-muted" *ngIf="pendingConsentMember">
+            {{ pendingConsentMember.getFullname() || pendingConsentMember.username }}
+          </p>
+        </div>
+        <button type="button" class="hs-dropdown-toggle !text-[1rem]" (click)="closeConsentDialog()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="ti-modal-body px-4">
+        <p class="text-xs text-dpu-muted mb-2" *ngIf="consentPolicy?.version">
+          เวอร์ชันนโยบาย: {{ consentPolicy?.version }}
+        </p>
+        <app-empty-state *ngIf="consentLoading" [loading]="true" message="กำลังโหลดนโยบาย..."></app-empty-state>
+        <div
+          *ngIf="!consentLoading"
+          class="admin-consent-text rounded-md border border-defaultborder bg-white/60 p-3 max-h-[50vh] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">
+          {{ consentText() }}
+        </div>
+        <p class="text-[0.75rem] text-dpu-muted mt-3 mb-0">
+          ใช้สำหรับการเข้าสู่ระบบคอนโซลด้วยใบหน้าเท่านั้น ไม่ใช่การลงเวลาทำงาน
+        </p>
+      </div>
+      <div class="ti-modal-footer">
+        <button type="button" class="ti-btn ti-btn-light" (click)="closeConsentDialog()" [disabled]="consentGranting">
+          ยกเลิก
+        </button>
+        <button
+          type="button"
+          class="ti-btn bg-primary text-white !font-medium"
+          (click)="acceptConsentAndEnroll()"
+          [disabled]="consentLoading || consentGranting || !consentPolicy">
+          {{ consentGranting ? 'กำลังบันทึก...' : 'ยอมรับและลงทะเบียนใบหน้า' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <button #openFaceOverlay type="button" class="hidden" aria-hidden="true" data-hs-overlay="#modal-face"></button>
 
 <app-emp-face-enroll-modal
@@ -193,7 +269,11 @@
           <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">{{ 'Manage enrolled faces' | translate }}</h6>
           <p class="mb-0 text-xs text-dpu-muted" *ngIf="selectedMemberName">{{ selectedMemberName }}</p>
         </div>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
+        <button
+          type="button"
+          class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
+          data-hs-overlay="#modal-face-management"
+          (click)="onFaceManagementClosed()">
           <span class="sr-only">Close</span>
           <i class="ri-close-line"></i>
         </button>
@@ -206,7 +286,11 @@
         </app-face-management>
       </div>
       <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">
+        <button
+          type="button"
+          class="hs-dropdown-toggle ti-btn ti-btn-light align-middle"
+          data-hs-overlay="#modal-face-management"
+          (click)="onFaceManagementClosed()">
           {{ 'Close' | translate }}
         </button>
       </div>

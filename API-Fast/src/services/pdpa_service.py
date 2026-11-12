@@ -32,6 +32,20 @@ DEFAULT_CONSENT_TEXT_EN = (
     "for attendance and security purposes under the company privacy policy."
 )
 
+# Platform gallery key for role-99 console face login (Face Core company_code later).
+SYSTEM_CONSENT_POLICY_KEY = "system"
+DEFAULT_SYSTEM_CONSENT_TEXT_TH = (
+    "ข้าพเจ้ายินยอมให้ระบบเก็บและใช้ข้อมูลชีวภาพ (ใบหน้า) "
+    "เพื่อการเข้าสู่ระบบคอนโซลผู้ดูแล (console face login) เท่านั้น "
+    "ไม่ใช้สำหรับการลงเวลาทำงาน (check-in/out) "
+    "สามารถเพิกถอนความยินยอมได้ที่หน้าจัดการผู้ดูแลระบบ ซึ่งจะลบข้อมูลใบหน้าที่เกี่ยวข้อง"
+)
+DEFAULT_SYSTEM_CONSENT_TEXT_EN = (
+    "I consent to the system collecting and using my biometric (face) data "
+    "for console face login only, not for attendance check-in/out. "
+    "I may revoke consent in Admin Manage, which deletes related face encodings."
+)
+
 
 def _consent_key(company_id: str) -> str:
     return f"pdpa_consent:{company_id}"
@@ -39,6 +53,12 @@ def _consent_key(company_id: str) -> str:
 
 def _retention_key(company_id: str) -> str:
     return f"retention:{company_id}"
+
+
+def _default_consent_texts(company_id: str) -> tuple[str, str]:
+    if str(company_id) == SYSTEM_CONSENT_POLICY_KEY:
+        return DEFAULT_SYSTEM_CONSENT_TEXT_TH, DEFAULT_SYSTEM_CONSENT_TEXT_EN
+    return DEFAULT_CONSENT_TEXT_TH, DEFAULT_CONSENT_TEXT_EN
 
 
 def default_retention() -> dict[str, int]:
@@ -53,25 +73,49 @@ def default_retention() -> dict[str, int]:
 
 
 async def get_consent_policy(db: AsyncSession, company_id: UUID | str) -> dict[str, Any]:
-    row = await db.get(SystemSetting, _consent_key(str(company_id)))
+    cid = str(company_id)
+    text_th, text_en = _default_consent_texts(cid)
+    row = await db.get(SystemSetting, _consent_key(cid))
     val = row.value if (row and isinstance(row.value, dict)) else {}
     return {
         "version": str(val.get("version") or DEFAULT_CONSENT_VERSION),
-        "textTh": str(val.get("textTh") or DEFAULT_CONSENT_TEXT_TH),
-        "textEn": str(val.get("textEn") or DEFAULT_CONSENT_TEXT_EN),
+        "textTh": str(val.get("textTh") or text_th),
+        "textEn": str(val.get("textEn") or text_en),
         "updatedAt": val.get("updatedAt"),
+        "galleryKey": cid if cid == SYSTEM_CONSENT_POLICY_KEY else None,
     }
+
+
+async def ensure_consent_policy(db: AsyncSession, company_id: UUID | str) -> dict[str, Any]:
+    """Return consent policy, persisting defaults when the setting row is missing."""
+    cid = str(company_id)
+    key = _consent_key(cid)
+    row = await db.get(SystemSetting, key)
+    if row and isinstance(row.value, dict) and row.value.get("textTh"):
+        return await get_consent_policy(db, cid)
+    text_th, text_en = _default_consent_texts(cid)
+    return await put_consent_policy(
+        db,
+        cid,
+        {
+            "version": DEFAULT_CONSENT_VERSION,
+            "textTh": text_th,
+            "textEn": text_en,
+        },
+    )
 
 
 async def put_consent_policy(
     db: AsyncSession, company_id: UUID | str, body: dict[str, Any]
 ) -> dict[str, Any]:
-    key = _consent_key(str(company_id))
+    cid = str(company_id)
+    text_th, text_en = _default_consent_texts(cid)
+    key = _consent_key(cid)
     row = await db.get(SystemSetting, key)
     value = {
         "version": str((body or {}).get("version") or DEFAULT_CONSENT_VERSION).strip()[:40],
-        "textTh": str((body or {}).get("textTh") or DEFAULT_CONSENT_TEXT_TH),
-        "textEn": str((body or {}).get("textEn") or DEFAULT_CONSENT_TEXT_EN),
+        "textTh": str((body or {}).get("textTh") or text_th),
+        "textEn": str((body or {}).get("textEn") or text_en),
         "updatedAt": datetime.now(timezone.utc).isoformat(),
     }
     if row:
@@ -79,7 +123,10 @@ async def put_consent_policy(
     else:
         db.add(SystemSetting(key=key, value=value))
     await db.commit()
-    return value
+    out = dict(value)
+    if cid == SYSTEM_CONSENT_POLICY_KEY:
+        out["galleryKey"] = SYSTEM_CONSENT_POLICY_KEY
+    return out
 
 
 async def get_retention_settings(db: AsyncSession, company_id: UUID | str) -> dict[str, int]:

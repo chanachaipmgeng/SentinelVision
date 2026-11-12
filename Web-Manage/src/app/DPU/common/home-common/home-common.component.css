@@ -33,9 +33,9 @@
   padding: 0.9rem 1rem;
   border-radius: 0.85rem;
   border: 1px solid var(--dpu-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--dpu-surface-elevated, #fff);
   text-decoration: none;
-  color: inherit;
+  color: var(--dpu-ink, #0f172a);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 

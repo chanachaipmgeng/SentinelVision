@@ -24,7 +24,8 @@
 .face-mgmt__card {
   border: 1px solid var(--dpu-border, #e2e8f0);
   border-radius: 0.9rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--dpu-surface-elevated, #fff);
+  color: var(--dpu-ink, #0f172a);
   padding: 1rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
@@ -135,12 +136,19 @@
 .face-mgmt-actions .ti-btn {
   display: inline-flex !important;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   width: auto !important;
   height: auto !important;
-  min-height: 2.35rem;
+  min-height: 2.75rem;
   padding: 0.45rem 0.85rem !important;
   white-space: nowrap;
+}
+
+@media (max-width: 639.98px) {
+  .face-mgmt-actions .ti-btn {
+    flex: 1 1 calc(50% - 0.5rem);
+  }
 }
 
 .face-mgmt__result-col {
@@ -173,8 +181,8 @@
 }
 
 .face-mgmt__gauge--idle {
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
+  background: color-mix(in srgb, var(--dpu-surface, #eef2f6) 82%, var(--dpu-brand, #0f766e) 18%);
+  border: 1px dashed var(--dpu-border, #cbd5e1);
   color: var(--dpu-muted, #64748b);
 }
 
@@ -270,8 +278,8 @@
   position: relative;
   border-radius: 0.75rem;
   overflow: hidden;
-  border: 1px solid rgba(15, 118, 110, 0.12);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: var(--dpu-surface, #eef2f6);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

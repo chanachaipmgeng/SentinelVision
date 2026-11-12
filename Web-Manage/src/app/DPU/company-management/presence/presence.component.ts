@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
+import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { TokenService } from '../../../shared/services/token.service';
 
@@ -54,6 +55,7 @@ export interface OtEvidenceItem {
     PillSearchComponent,
     StatChipComponent,
     EmptyStateComponent,
+    SideDrawerComponent,
   ],
   templateUrl: './presence.component.html',
   styleUrls: ['../../../shared/styles/dpu-list-page.css', './presence.component.css'],
@@ -66,6 +68,7 @@ export class PresenceComponent implements OnInit {
   searching = false;
   loadingTrail = false;
   loadingOt = false;
+  detailOpen = false;
   error: string | null = null;
   results: PresenceSearchItem[] = [];
   selected: PresenceSearchItem | null = null;
@@ -131,6 +134,7 @@ export class PresenceComponent implements OnInit {
 
   async selectMember(item: PresenceSearchItem): Promise<void> {
     this.selected = item;
+    this.detailOpen = true;
     this.loadingTrail = true;
     this.trail = [];
     try {

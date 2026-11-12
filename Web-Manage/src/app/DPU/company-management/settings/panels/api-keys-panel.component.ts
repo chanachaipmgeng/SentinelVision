@@ -28,7 +28,7 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
 
         <div *ngIf="!loading" class="space-y-3">
           <label class="block">
-            <span class="text-xs font-semibold text-slate-700">
+            <span class="text-xs font-semibold text-dpu-ink">
               {{ 'settingsHub.apiKeys.name' | translate }}
             </span>
             <input
@@ -41,11 +41,11 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
           </label>
 
           <div>
-            <span class="text-xs font-semibold text-slate-700">
+            <span class="text-xs font-semibold text-dpu-ink">
               {{ 'settingsHub.apiKeys.scopes' | translate }}
             </span>
             <div class="mt-1 flex flex-wrap gap-3">
-              <label *ngFor="let s of allScopes" class="inline-flex items-center gap-1 text-xs">
+              <label *ngFor="let s of allScopes" class="inline-flex items-center gap-1 text-xs text-dpu-ink">
                 <input type="checkbox" [checked]="scopeOn(s)" (change)="toggleScope(s)" [disabled]="busy" />
                 <code>{{ s }}</code>
               </label>
@@ -55,26 +55,26 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              class="ti-btn ti-btn-primary-full font-semibold text-xs"
+              class="ti-btn ti-btn-primary-full font-semibold text-xs min-h-[2.75rem]"
               [disabled]="busy || !newName.trim() || !selectedScopes.length"
               (click)="create()"
             >
               {{ 'settingsHub.apiKeys.create' | translate }}
             </button>
-            <span class="text-xs font-semibold text-rose-700" *ngIf="status === 'error'">
+            <span class="text-xs font-semibold text-dpu-danger" *ngIf="status === 'error'">
               {{ 'settingsHub.apiKeys.error' | translate }}
             </span>
           </div>
 
           <div
             *ngIf="freshKey"
-            class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs"
+            class="rounded-md border border-dpu-warning bg-dpu-surface px-3 py-2 text-xs text-dpu-ink"
           >
-            <p class="font-semibold text-amber-900 mb-1">
+            <p class="font-semibold text-dpu-warning mb-1">
               {{ 'settingsHub.apiKeys.freshTitle' | translate }}
             </p>
-            <code class="break-all select-all">{{ freshKey }}</code>
-            <p class="text-amber-800 mt-1 mb-0">
+            <code class="break-all select-all text-dpu-ink">{{ freshKey }}</code>
+            <p class="text-dpu-muted mt-1 mb-0">
               {{ 'settingsHub.apiKeys.freshHelp' | translate }}
             </p>
           </div>
@@ -84,28 +84,28 @@ const ALL_SCOPES = ['cameras.read', 'incidents.read'] as const;
 
     <div class="box modern-card glass" *ngIf="!loading">
       <div class="box-body">
-        <h6 class="font-bold text-sm mb-3">{{ 'settingsHub.apiKeys.listTitle' | translate }}</h6>
+        <h6 class="font-bold text-sm mb-3 text-dpu-ink">{{ 'settingsHub.apiKeys.listTitle' | translate }}</h6>
         <p *ngIf="!rows.length" class="text-xs text-dpu-muted mb-0">
           {{ 'settingsHub.apiKeys.empty' | translate }}
         </p>
         <ul class="space-y-2 mb-0" *ngIf="rows.length">
           <li
             *ngFor="let row of rows"
-            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 last:border-0"
+            class="flex flex-wrap items-center justify-between gap-2 border-b border-dpu-border pb-2 last:border-0"
           >
             <div class="min-w-0">
-              <p class="mb-0 text-sm font-semibold">{{ row.name }}</p>
+              <p class="mb-0 text-sm font-semibold text-dpu-ink">{{ row.name }}</p>
               <p class="mb-0 text-[0.7rem] text-dpu-muted">
                 <code>{{ row.keyPrefix }}…</code>
                 · {{ (row.scopes || []).join(', ') }}
-                <span *ngIf="!row.active" class="text-rose-700 font-semibold">
+                <span *ngIf="!row.active" class="text-dpu-danger font-semibold">
                   · {{ 'settingsHub.apiKeys.revoked' | translate }}
                 </span>
               </p>
             </div>
             <button
               type="button"
-              class="ti-btn ti-btn-outline-danger font-semibold text-xs"
+              class="ti-btn ti-btn-outline-danger font-semibold text-xs min-h-[2.75rem]"
               *ngIf="row.active"
               [disabled]="busy"
               (click)="revoke(row)"

@@ -41,10 +41,12 @@
 
 .emap-create__grid input,
 .emap-floor-picker select {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--dpu-border, #cbd5e1);
   border-radius: 0.55rem;
   padding: 0.45rem 0.65rem;
-  background: #fff;
+  min-height: 2.75rem;
+  background: var(--dpu-surface-elevated, #fff);
+  color: var(--dpu-ink, #0f172a);
 }
 
 .emap-create__actions {

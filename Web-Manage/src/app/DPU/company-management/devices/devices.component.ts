@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { SimplePagerComponent } from '../../../shared/components/simple-pager/simple-pager.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { VALID_STATION_MODES } from '../../services/company-module-config.service';
 import { KeyboardTableDirective } from '../../../shared/directives/keyboard-table.directive';
@@ -41,12 +43,14 @@ export interface KioskDeviceRow {
     imports: [
         CommonModule,
         FormsModule,
+        RouterLink,
         SharedModule,
         PageToolbarComponent,
         PillSearchComponent,
         StatChipComponent,
         SimplePagerComponent,
         EmptyStateComponent,
+        SideDrawerComponent,
         KeyboardTableDirective,
         LocaleDatePipe,
     ],
@@ -65,6 +69,10 @@ export class DevicesComponent implements OnInit {
   pageItems: KioskDeviceRow[] = [];
   pageIndex = 0;
   private _searchTerm = '';
+
+  createOpen = false;
+  detailOpen = false;
+  selected: KioskDeviceRow | null = null;
 
   draft = {
     name: '',
@@ -143,6 +151,17 @@ export class DevicesComponent implements OnInit {
     this.searchTerm = '';
   }
 
+  openCreate(): void {
+    this.detailOpen = false;
+    this.createOpen = true;
+  }
+
+  openDetail(device: KioskDeviceRow): void {
+    this.createOpen = false;
+    this.selected = device;
+    this.detailOpen = true;
+  }
+
   create(): void {
     const name = (this.draft.name || '').trim();
     if (!name) {
@@ -161,6 +180,7 @@ export class DevicesComponent implements OnInit {
         next: (row) => {
           this.lastPairingCode = row.pairingCode || '';
           this.draft = { name: '', locationLabel: '', stationMode: 'ATTENDANCE', zoneId: '', appVersion: '' };
+          this.createOpen = false;
           swal(
             'สร้างอุปกรณ์แล้ว',
             this.lastPairingCode

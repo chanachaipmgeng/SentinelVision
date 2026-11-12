@@ -1,4 +1,4 @@
-<div class="dpu-list-page">
+<div class="dpu-list-page min-w-0 max-w-full">
   <app-page-toolbar [title]="'cctv.cameras.title' | translate">
     <ng-container chips>
       <app-stat-chip>{{ 'cctv.cameras.total' | translate }} {{ items.length }}</app-stat-chip>
@@ -34,7 +34,11 @@
         <i class="ri-grid-line" aria-hidden="true"></i>
         {{ 'cctv.liveWall.nav' | translate }}
       </a>
-      <button type="button" class="btn-vault px-4 py-2 text-xs inline-flex items-center gap-1.5" (click)="showForm = !showForm">
+      <a routerLink="/company/settings/ai" class="ti-btn ti-btn-light modern-btn">
+        <i class="ri-settings-3-line" aria-hidden="true"></i>
+        {{ 'settingsHub.navTitle' | translate }}
+      </a>
+      <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="openCreate()">
         <i class="ri-add-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.add' | translate }}
       </button>
@@ -44,103 +48,29 @@
 
   <div class="box modern-card glass card-surface mb-4" *ngIf="peopleMetrics?.totals as t">
     <div class="box-header flex items-center justify-between">
-      <h3 class="box-title text-display-gradient font-bold !mb-0">{{ 'cctv.people.metricsTitle' | translate }}</h3>
+      <h3 class="box-title text-dpu-ink font-bold !mb-0">{{ 'cctv.people.metricsTitle' | translate }}</h3>
     </div>
     <div class="box-body sv-people-metrics">
       <div class="sv-people-metric-card">
-        <span class="text-slate-400 text-xs">{{ 'cctv.people.in' | translate }}</span>
-        <strong class="text-emerald-400">{{ t.inCount }}</strong>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.in' | translate }}</span>
+        <strong class="text-dpu-success">{{ t.inCount }}</strong>
       </div>
       <div class="sv-people-metric-card">
-        <span class="text-slate-400 text-xs">{{ 'cctv.people.out' | translate }}</span>
-        <strong class="text-cyan-400">{{ t.outCount }}</strong>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.out' | translate }}</span>
+        <strong class="text-dpu-brand">{{ t.outCount }}</strong>
       </div>
       <div class="sv-people-metric-card">
-        <span class="text-slate-400 text-xs">{{ 'cctv.people.net' | translate }}</span>
-        <strong class="text-purple-400">{{ t.net }}</strong>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.net' | translate }}</span>
+        <strong class="text-dpu-ink">{{ t.net }}</strong>
       </div>
       <div class="sv-people-metric-card">
-        <span class="text-slate-400 text-xs">{{ 'cctv.people.peakZone' | translate }}</span>
-        <strong class="text-amber-400">{{ t.peakZoneOccupancy }}</strong>
+        <span class="text-dpu-muted text-xs">{{ 'cctv.people.peakZone' | translate }}</span>
+        <strong class="text-dpu-warning">{{ t.peakZoneOccupancy }}</strong>
       </div>
     </div>
   </div>
 
-  <div class="box modern-card glass mb-4" *ngIf="showForm">
-    <div class="box-header">
-      <h3 class="box-title">{{ 'cctv.cameras.add' | translate }}</h3>
-    </div>
-    <div class="box-body grid grid-cols-12 gap-3">
-      <div class="col-span-12 md:col-span-4">
-        <label class="form-label">{{ 'cctv.cameras.fields.name' | translate }}</label>
-        <input class="form-control" [(ngModel)]="draft.name" />
-      </div>
-      <div class="col-span-12 md:col-span-8">
-        <label class="form-label">{{ 'cctv.cameras.fields.streamUrl' | translate }}</label>
-        <input
-          class="form-control"
-          [(ngModel)]="draft.streamUrl"
-          placeholder="rtsp://192.168.1.10:554/stream1"
-        />
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.protocol' | translate }}</label>
-        <select class="form-control" [(ngModel)]="draft.protocol">
-          <option *ngFor="let p of protocols" [value]="p">{{ p }}</option>
-        </select>
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.recordMode' | translate }}</label>
-        <select class="form-control" [(ngModel)]="draft.recordMode">
-          <option *ngFor="let m of recordModes" [value]="m">{{ m }}</option>
-        </select>
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.stationMode' | translate }}</label>
-        <select class="form-control" [(ngModel)]="draft.stationMode">
-          <option value="">—</option>
-          <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
-        </select>
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.description' | translate }}</label>
-        <input class="form-control" [(ngModel)]="draft.description" />
-      </div>
-      <div class="col-span-12 md:col-span-6 flex items-end">
-        <label class="form-check flex items-center gap-2 m-0">
-          <input
-            class="form-check-input"
-            type="checkbox"
-            [(ngModel)]="draft.analysisEnabled"
-          />
-          <span>{{ 'cctv.cameras.fields.analysisEnabled' | translate }}</span>
-        </label>
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.username' | translate }}</label>
-        <input class="form-control" [(ngModel)]="draft.streamUsername" autocomplete="off" />
-      </div>
-      <div class="col-span-6 md:col-span-3">
-        <label class="form-label">{{ 'cctv.cameras.fields.password' | translate }}</label>
-        <input
-          class="form-control"
-          type="password"
-          [(ngModel)]="draft.streamPassword"
-          autocomplete="new-password"
-        />
-      </div>
-      <div class="col-span-12 flex gap-2 justify-end">
-        <button type="button" class="ti-btn ti-btn-light" (click)="showForm = false; resetDraft()">
-          {{ 'Cancel' | translate }}
-        </button>
-        <button type="button" class="ti-btn ti-btn-primary" (click)="create()">
-          {{ 'Save' | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="box modern-card glass">
+  <div class="box modern-card glass min-w-0">
     <div class="box-body">
       <app-empty-state
         *ngIf="loading"
@@ -152,14 +82,18 @@
         icon="ri-vidicon-line"
         message="{{ 'cctv.cameras.empty' | translate }}"
         [actionLabel]="'cctv.cameras.add' | translate"
-        (action)="showForm = true"
+        (action)="openCreate()"
       ></app-empty-state>
 
       <ul class="sv-camera-list list-none p-0 m-0" *ngIf="!loading && filtered.length">
-        <li *ngFor="let cam of filtered" class="sv-camera-row">
-          <div class="sv-camera-row__main">
+        <li
+          *ngFor="let cam of filtered"
+          class="sv-camera-row cursor-pointer"
+          (click)="openDetail(cam)"
+        >
+          <div class="sv-camera-row__main min-w-0">
             <div class="sv-camera-row__title">
-              <strong>{{ cam.name }}</strong>
+              <strong class="text-dpu-ink">{{ cam.name }}</strong>
               <span
                 class="sv-camera-badge"
                 [class.sv-camera-badge--online]="cam.status === 'online'"
@@ -175,54 +109,28 @@
                 {{ cameraPeopleLabel(cam) | translate }}
               </span>
             </div>
-            <div class="sv-camera-row__meta text-muted text-xs">
+            <div class="sv-camera-row__meta text-dpu-muted text-xs">
               {{ cam.protocol }} · {{ cam.recordMode }} ·
               <span *ngIf="cam.analysisEnabled">{{ 'cctv.cameras.analysisOn' | translate }} · </span>
               <code>{{ cam.mtxPath }}</code>
             </div>
-            <div class="sv-camera-row__url text-xs truncate" [title]="cam.streamUrl">
+            <div class="sv-camera-row__url text-xs truncate text-dpu-muted" [title]="cam.streamUrl">
               {{ cam.streamUrl }}
             </div>
           </div>
-          <div class="sv-camera-row__actions">
+          <div class="sv-camera-row__actions" (click)="$event.stopPropagation()">
+            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="openDetail(cam)">
+              <i class="ri-eye-line" aria-hidden="true"></i>
+              {{ 'Detail' | translate }}
+            </button>
             <a
-              class="btn-vault text-xs px-3 py-1.5 inline-flex items-center gap-1"
+              class="ti-btn ti-btn-light modern-btn text-xs"
               [routerLink]="['/company/live-wall']"
               [queryParams]="{ cameraId: cam.cameraId }"
             >
-              <i class="ri-play-circle-line"></i>
+              <i class="ri-play-circle-line" aria-hidden="true"></i>
               {{ 'cctv.cameras.live' | translate }}
             </a>
-            <button
-              type="button"
-              class="ti-btn text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1 transition-all"
-              [ngClass]="cam.analysisEnabled ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-300 border border-white/10'"
-              (click)="toggleAnalysis(cam)"
-            >
-              <i class="ri-brain-line"></i>
-              {{
-                (cam.analysisEnabled
-                  ? 'cctv.cameras.analysisOn'
-                  : 'cctv.cameras.analysisOff'
-                ) | translate
-              }}
-            </button>
-            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="openRoiEditor(cam)">
-              <i class="ri-scan-line"></i>
-              {{ 'cctv.cameras.roi' | translate }}
-            </button>
-            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="ping(cam)">
-              <i class="ri-pulse-line"></i>
-              {{ 'cctv.cameras.ping' | translate }}
-            </button>
-            <button type="button" class="ti-btn bg-slate-800 text-slate-200 border border-white/10 hover:border-cyan-500/40 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="snapshot(cam)">
-              <i class="ri-camera-lens-line"></i>
-              {{ 'cctv.cameras.snapshot' | translate }}
-            </button>
-            <button type="button" class="ti-btn bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1" (click)="remove(cam)">
-              <i class="ri-delete-bin-line"></i>
-              {{ 'Delete' | translate }}
-            </button>
           </div>
         </li>
       </ul>
@@ -231,8 +139,8 @@
 
   <div class="box modern-card glass mt-4" *ngIf="snapshotPreview">
     <div class="box-header flex justify-between items-center">
-      <h3 class="box-title">{{ 'cctv.cameras.snapshotPreview' | translate }}</h3>
-      <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="snapshotPreview = null">
+      <h3 class="box-title text-dpu-ink">{{ 'cctv.cameras.snapshotPreview' | translate }}</h3>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="snapshotPreview = null">
         {{ 'Close' | translate }}
       </button>
     </div>
@@ -245,10 +153,10 @@
   <div class="sv-roi-backdrop" *ngIf="roiCamera && roiSnapshot">
     <div class="sv-roi-panel box modern-card glass">
       <div class="box-header flex justify-between items-center flex-wrap gap-2">
-        <h3 class="box-title m-0">
+        <h3 class="box-title m-0 text-dpu-ink">
           {{ 'cctv.cameras.roiTitle' | translate }} — {{ roiCamera.name }}
         </h3>
-        <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="closeRoiEditor()">
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="closeRoiEditor()">
           {{ 'Close' | translate }}
         </button>
       </div>
@@ -257,18 +165,18 @@
         <div class="sv-roi-toolbar flex flex-wrap gap-2 mb-3">
           <button
             type="button"
-            class="ti-btn ti-btn-sm"
+            class="ti-btn modern-btn"
             *ngFor="let m of roiModes"
-            [class.ti-btn-primary]="roiMode === m"
+            [class.ti-btn-primary-full]="roiMode === m"
             [class.ti-btn-light]="roiMode !== m"
             (click)="setRoiMode(m)"
           >
             {{ ('cctv.cameras.roiMode.' + m) | translate }}
           </button>
-          <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="undoRoiPoint()">
+          <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="undoRoiPoint()">
             {{ 'cctv.cameras.roiUndo' | translate }}
           </button>
-          <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="clearRoiDraft()">
+          <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearRoiDraft()">
             {{ 'cctv.cameras.roiClear' | translate }}
           </button>
         </div>
@@ -298,12 +206,12 @@
             </label>
           </div>
           <div class="col-span-12 flex justify-end gap-2">
-            <button type="button" class="ti-btn ti-btn-light" (click)="closeRoiEditor()">
+            <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="closeRoiEditor()">
               {{ 'Cancel' | translate }}
             </button>
             <button
               type="button"
-              class="ti-btn ti-btn-primary"
+              class="ti-btn ti-btn-primary-full modern-btn"
               (click)="saveRoi()"
               [disabled]="roiSaving"
             >
@@ -315,3 +223,187 @@
     </div>
   </div>
 </div>
+
+<app-side-drawer
+  [(open)]="createOpen"
+  [title]="'cctv.cameras.add'"
+  [subtitle]="'cctv.cameras.subtitle'"
+  size="lg"
+  [showFooter]="true"
+>
+  <div class="grid grid-cols-12 gap-3">
+    <div class="col-span-12">
+      <label class="form-label">{{ 'cctv.cameras.fields.name' | translate }}</label>
+      <input class="form-control" [(ngModel)]="draft.name" />
+    </div>
+    <div class="col-span-12">
+      <label class="form-label">{{ 'cctv.cameras.fields.streamUrl' | translate }}</label>
+      <input
+        class="form-control"
+        [(ngModel)]="draft.streamUrl"
+        placeholder="rtsp://192.168.1.10:554/stream1"
+      />
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.protocol' | translate }}</label>
+      <select class="form-control" [(ngModel)]="draft.protocol">
+        <option *ngFor="let p of protocols" [value]="p">{{ p }}</option>
+      </select>
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.recordMode' | translate }}</label>
+      <select class="form-control" [(ngModel)]="draft.recordMode">
+        <option *ngFor="let m of recordModes" [value]="m">{{ m }}</option>
+      </select>
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.stationMode' | translate }}</label>
+      <select class="form-control" [(ngModel)]="draft.stationMode">
+        <option value="">—</option>
+        <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+      </select>
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.description' | translate }}</label>
+      <input class="form-control" [(ngModel)]="draft.description" />
+    </div>
+    <div class="col-span-12">
+      <label class="form-check flex items-center gap-2 m-0">
+        <input class="form-check-input" type="checkbox" [(ngModel)]="draft.analysisEnabled" />
+        <span>{{ 'cctv.cameras.fields.analysisEnabled' | translate }}</span>
+      </label>
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.username' | translate }}</label>
+      <input class="form-control" [(ngModel)]="draft.streamUsername" autocomplete="off" />
+    </div>
+    <div class="col-span-6">
+      <label class="form-label">{{ 'cctv.cameras.fields.password' | translate }}</label>
+      <input
+        class="form-control"
+        type="password"
+        [(ngModel)]="draft.streamPassword"
+        autocomplete="new-password"
+      />
+    </div>
+  </div>
+  <div drawerFooter class="flex flex-wrap gap-2 w-full justify-end">
+    <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="createOpen = false; resetDraft()">
+      {{ 'Cancel' | translate }}
+    </button>
+    <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="create()">
+      {{ 'Save' | translate }}
+    </button>
+  </div>
+</app-side-drawer>
+
+<app-side-drawer
+  [(open)]="detailOpen"
+  [title]="'Detail'"
+  [subtitle]="selected?.name || ''"
+  size="lg"
+  [showFooter]="true"
+>
+  <div class="space-y-3" *ngIf="selected as cam">
+    <div class="rounded-lg border border-dpu-border bg-dpu-surface p-3">
+      <div class="flex flex-wrap items-center gap-2">
+        <strong class="text-dpu-ink">{{ cam.name }}</strong>
+        <span
+          class="sv-camera-badge"
+          [class.sv-camera-badge--online]="cam.status === 'online'"
+          [class.sv-camera-badge--offline]="cam.status === 'offline'"
+        >
+          {{ cam.status || 'unknown' }}
+        </span>
+      </div>
+      <p class="text-xs text-dpu-muted mb-0 mt-1 truncate" [title]="cam.streamUrl">{{ cam.streamUrl }}</p>
+      <p class="text-xs text-dpu-muted mb-0 mt-1"><code>{{ cam.mtxPath }}</code></p>
+    </div>
+
+    <div>
+      <label class="form-label">{{ 'cctv.cameras.fields.name' | translate }}</label>
+      <input class="form-control" [(ngModel)]="editDraft.name" />
+    </div>
+    <div>
+      <label class="form-label">{{ 'cctv.cameras.fields.streamUrl' | translate }}</label>
+      <input class="form-control" [(ngModel)]="editDraft.streamUrl" />
+    </div>
+    <div class="grid grid-cols-12 gap-3">
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.protocol' | translate }}</label>
+        <select class="form-control" [(ngModel)]="editDraft.protocol">
+          <option *ngFor="let p of protocols" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.recordMode' | translate }}</label>
+        <select class="form-control" [(ngModel)]="editDraft.recordMode">
+          <option *ngFor="let m of recordModes" [value]="m">{{ m }}</option>
+        </select>
+      </div>
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.stationMode' | translate }}</label>
+        <select class="form-control" [(ngModel)]="editDraft.stationMode">
+          <option value="">—</option>
+          <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+        </select>
+      </div>
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.description' | translate }}</label>
+        <input class="form-control" [(ngModel)]="editDraft.description" />
+      </div>
+    </div>
+    <label class="form-check flex items-center gap-2 m-0">
+      <input class="form-check-input" type="checkbox" [(ngModel)]="editDraft.analysisEnabled" />
+      <span>{{ 'cctv.cameras.fields.analysisEnabled' | translate }}</span>
+    </label>
+    <div class="grid grid-cols-12 gap-3">
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.username' | translate }}</label>
+        <input class="form-control" [(ngModel)]="editDraft.streamUsername" autocomplete="off" />
+      </div>
+      <div class="col-span-6">
+        <label class="form-label">{{ 'cctv.cameras.fields.password' | translate }}</label>
+        <input
+          class="form-control"
+          type="password"
+          [(ngModel)]="editDraft.streamPassword"
+          autocomplete="new-password"
+        />
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 pt-1">
+      <a
+        class="ti-btn ti-btn-light modern-btn"
+        [routerLink]="['/company/live-wall']"
+        [queryParams]="{ cameraId: cam.cameraId }"
+      >
+        <i class="ri-play-circle-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.live' | translate }}
+      </a>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="openRoiEditor(cam)">
+        <i class="ri-scan-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.roi' | translate }}
+      </button>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="ping(cam)">
+        <i class="ri-pulse-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.ping' | translate }}
+      </button>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="snapshot(cam)">
+        <i class="ri-camera-lens-line" aria-hidden="true"></i>
+        {{ 'cctv.cameras.snapshot' | translate }}
+      </button>
+    </div>
+  </div>
+  <div drawerFooter class="flex flex-wrap gap-2 w-full justify-end" *ngIf="selected as cam">
+    <button type="button" class="ti-btn ti-btn-danger-full modern-btn" (click)="remove(cam)">
+      <i class="ri-delete-bin-line" aria-hidden="true"></i>
+      {{ 'Delete' | translate }}
+    </button>
+    <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="saveDetail()">
+      <i class="ri-save-line" aria-hidden="true"></i>
+      {{ 'Save' | translate }}
+    </button>
+  </div>
+</app-side-drawer>

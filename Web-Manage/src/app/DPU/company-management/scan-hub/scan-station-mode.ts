@@ -189,3 +189,227 @@ export function stationModeCaptureHint(mode: StationMode): string {
       return 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   }
 }
+
+/** Empty-feed hint under the camera — must not say ลงเวลา for non-attendance modes. */
+export function stationModeEmptyHint(mode: StationMode): string {
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return 'ให้พนักงานเดินผ่านกล้องเพื่อตรวจสิทธิ์ประตู';
+    case 'WATCHLIST_MONITOR':
+      return 'ให้เดินผ่านกล้องเพื่อคัดกรอง Blacklist / VIP';
+    case 'VISITOR_CHECKIN':
+      return 'ให้ผู้มาติดต่อเดินผ่านกล้องเพื่อยืนยันบัตร';
+    case 'EVENT_CHECKIN':
+      return 'ให้ผู้ร่วมงานเดินผ่านกล้องเพื่อเช็คอินงาน';
+    case 'UNIFIED_HYBRID':
+      return 'ให้พนักงานเดินผ่านกล้องเพื่อลงเวลาและเปิดประตู';
+    case 'ATTENDANCE':
+    default:
+      return 'ให้พนักงานเดินผ่านกล้องเพื่อลงเวลา';
+  }
+}
+
+export function stationModeDeniedLabel(mode: StationMode): string {
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return 'ปฏิเสธสิทธิ์โซน';
+    case 'WATCHLIST_MONITOR':
+      return 'พบรายการเฝ้าระวัง';
+    case 'VISITOR_CHECKIN':
+      return 'บัตรผู้มาติดต่อไม่ผ่าน';
+    case 'EVENT_CHECKIN':
+      return 'เช็คอินงานไม่สำเร็จ';
+    case 'UNIFIED_HYBRID':
+    case 'ATTENDANCE':
+    default:
+      return 'ไม่สามารถลงเวลาได้';
+  }
+}
+
+export function stationModeDeniedMessage(mode: StationMode): string {
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return 'ปฏิเสธสิทธิ์โซน — กรุณาติดต่อเจ้าหน้าที่';
+    case 'WATCHLIST_MONITOR':
+      return 'พบรายการเฝ้าระวัง — แจ้งเจ้าหน้าที่แล้ว';
+    case 'VISITOR_CHECKIN':
+      return 'บัตรผู้มาติดต่อไม่ผ่าน — กรุณาติดต่อโฮสต์';
+    case 'EVENT_CHECKIN':
+      return 'เช็คอินงานไม่สำเร็จ — ตรวจสอบรายชื่อผู้ร่วมงาน';
+    case 'UNIFIED_HYBRID':
+    case 'ATTENDANCE':
+    default:
+      return 'ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่';
+  }
+}
+
+/** Short verb for HUD / track overlay while a scan is in flight. */
+export function stationModeBusyLabel(mode: StationMode): string {
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return 'กำลังตรวจสิทธิ์';
+    case 'WATCHLIST_MONITOR':
+      return 'กำลังคัดกรอง';
+    case 'VISITOR_CHECKIN':
+      return 'กำลังเช็คอินผู้มาติดต่อ';
+    case 'EVENT_CHECKIN':
+      return 'กำลังเช็คอินงาน';
+    case 'UNIFIED_HYBRID':
+      return 'กำลังลงเวลา/เปิดประตู';
+    case 'ATTENDANCE':
+    default:
+      return 'กำลังลงเวลา';
+  }
+}
+
+export function stationModeBusyCountLabel(mode: StationMode, busyCount: number): string {
+  const n = Math.max(0, Math.floor(busyCount));
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return `กำลังตรวจสิทธิ์ ${n} คน`;
+    case 'WATCHLIST_MONITOR':
+      return `กำลังคัดกรอง ${n} คน`;
+    case 'VISITOR_CHECKIN':
+      return `กำลังเช็คอินผู้มาติดต่อ ${n} คน`;
+    case 'EVENT_CHECKIN':
+      return `กำลังเช็คอินงาน ${n} คน`;
+    case 'UNIFIED_HYBRID':
+      return `กำลังลงเวลา/เปิดประตู ${n} คน`;
+    case 'ATTENDANCE':
+    default:
+      return `กำลังลงเวลา ${n} คน`;
+  }
+}
+
+export type StationOutcomeKind = 'success' | 'duplicate' | 'denied' | 'warning';
+
+export interface StationOutcomeInput {
+  decision?: string | null;
+  accessGranted?: boolean | null;
+  identityType?: string | null;
+  welcomeMessage?: string | null;
+  seatNumber?: string | number | null;
+  /** Pre-built attendance punch label (เข้างาน / ออกงาน / …). */
+  attendanceLabel?: string | null;
+}
+
+/**
+ * Result badge / toast label for a completed scan.
+ * Non-attendance modes must never fall back to ลงเวลา* copy.
+ */
+export function stationModeOutcomeLabel(
+  mode: StationMode,
+  kind: StationOutcomeKind,
+  input: StationOutcomeInput = {},
+): string {
+  const decision = String(input.decision || '').toUpperCase();
+  const identity = String(input.identityType || '').toUpperCase();
+  const welcome = String(input.welcomeMessage || '').trim();
+  const seat =
+    input.seatNumber != null && input.seatNumber !== ''
+      ? String(input.seatNumber)
+      : '';
+
+  if (isAttendanceChrome(mode)) {
+    if (kind === 'denied') {
+      return stationModeDeniedLabel(mode);
+    }
+    if (input.attendanceLabel) {
+      return input.attendanceLabel;
+    }
+    if (kind === 'duplicate') {
+      return 'ลงเวลาไปแล้ว';
+    }
+    if (kind === 'warning') {
+      return 'Warning — นอกพื้นที่';
+    }
+    return mode === 'UNIFIED_HYBRID' ? 'ลงเวลา + เปิดประตู' : 'ลงเวลาเข้างาน';
+  }
+
+  switch (mode) {
+    case 'ACCESS_CONTROL': {
+      if (kind === 'denied' || decision === 'ACCESS_DENIED' || input.accessGranted === false) {
+        return 'ปฏิเสธสิทธิ์โซน';
+      }
+      if (kind === 'duplicate') {
+        return 'ผ่านโซนแล้ว';
+      }
+      if (decision === 'ACCESS_GRANTED' || input.accessGranted === true) {
+        return 'อนุญาตผ่าน / เปิดประตู';
+      }
+      return kind === 'warning' ? 'บันทึกแล้ว (เตือน)' : 'อนุญาตผ่าน';
+    }
+    case 'WATCHLIST_MONITOR': {
+      if (kind === 'denied' || decision === 'ACCESS_DENIED') {
+        return 'พบรายการเฝ้าระวัง';
+      }
+      if (identity === 'VIP' || decision === 'VIP_GREET') {
+        return welcome || 'VIP Arrival';
+      }
+      if (kind === 'duplicate') {
+        return 'ตรวจแล้ว';
+      }
+      return welcome || 'พบรายชื่อเฝ้าระวัง';
+    }
+    case 'VISITOR_CHECKIN': {
+      if (kind === 'denied') {
+        return 'บัตรผู้มาติดต่อไม่ผ่าน';
+      }
+      if (kind === 'duplicate') {
+        return 'เช็คอินผู้มาติดต่อแล้ว';
+      }
+      return welcome || 'เช็คอินผู้มาติดต่อ';
+    }
+    case 'EVENT_CHECKIN': {
+      if (kind === 'denied') {
+        return 'ไม่อยู่ในรายชื่องาน';
+      }
+      if (kind === 'duplicate') {
+        return 'เช็คอินงานแล้ว';
+      }
+      if (seat) {
+        return welcome ? `${welcome} · ที่นั่ง ${seat}` : `เช็คอินงาน · ที่นั่ง ${seat}`;
+      }
+      return welcome || 'เช็คอินงาน';
+    }
+    default:
+      return kind === 'duplicate' ? 'บันทึกแล้ว' : 'สำเร็จ';
+  }
+}
+
+/** TTS template key for station outcome (non-attendance keys avoid ลงเวลา defaults). */
+export type StationTtsKind = 'success' | 'warning' | 'duplicate';
+
+export function stationModeTtsKey(
+  mode: StationMode,
+  kind: StationTtsKind,
+):
+  | 'checkInSuccess'
+  | 'checkInWarning'
+  | 'checkInDuplicate'
+  | 'accessSuccess'
+  | 'accessDuplicate'
+  | 'watchlistSuccess'
+  | 'watchlistDuplicate'
+  | 'visitorSuccess'
+  | 'visitorDuplicate'
+  | 'eventSuccess'
+  | 'eventDuplicate' {
+  if (isAttendanceChrome(mode)) {
+    if (kind === 'warning') return 'checkInWarning';
+    if (kind === 'duplicate') return 'checkInDuplicate';
+    return 'checkInSuccess';
+  }
+  switch (mode) {
+    case 'ACCESS_CONTROL':
+      return kind === 'duplicate' ? 'accessDuplicate' : 'accessSuccess';
+    case 'WATCHLIST_MONITOR':
+      return kind === 'duplicate' ? 'watchlistDuplicate' : 'watchlistSuccess';
+    case 'VISITOR_CHECKIN':
+      return kind === 'duplicate' ? 'visitorDuplicate' : 'visitorSuccess';
+    case 'EVENT_CHECKIN':
+      return kind === 'duplicate' ? 'eventDuplicate' : 'eventSuccess';
+    default:
+      return kind === 'duplicate' ? 'checkInDuplicate' : 'checkInSuccess';
+  }
+}

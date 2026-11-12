@@ -657,8 +657,13 @@
     height: 220px;
   }
 
-  .ts-tool-btn span {
-    display: none;
+  .ts-toolbar-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .ts-tool-btn {
+    min-height: 2.75rem;
   }
 
   .ts-actions[drawerFooter] > .ts-action-btn {

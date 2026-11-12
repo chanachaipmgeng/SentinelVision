@@ -9,7 +9,7 @@
   padding: 0.75rem 1rem 1.25rem;
   font-family: var(--dpu-font, "Noto Sans Thai", system-ui, sans-serif);
   color: var(--kiosk-ink);
-  overflow: hidden;
+  overflow-x: clip;
   background:
     radial-gradient(ellipse 70% 55% at 12% 18%, rgba(45, 212, 191, 0.2), transparent 58%),
     radial-gradient(ellipse 55% 45% at 88% 82%, rgba(15, 118, 110, 0.42), transparent 52%),
@@ -346,23 +346,33 @@ html.dpu-kiosk-mode .dpu-kiosk {
 /* ---- Top ---- */
 .dpu-kiosk__top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
+.dpu-kiosk__brand {
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
 .dpu-kiosk__top-actions {
   display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 16rem;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .dpu-kiosk__home-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  min-height: 2.75rem;
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
   border: 1px solid rgba(94, 234, 212, 0.28);
@@ -386,6 +396,10 @@ html.dpu-kiosk-mode .dpu-kiosk {
 
 .dpu-kiosk__eyebrow {
   margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -446,7 +460,8 @@ html.dpu-kiosk-mode .dpu-kiosk {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.75rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
@@ -728,12 +743,12 @@ html.dpu-kiosk-mode .dpu-kiosk {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .dpu-kiosk__home-btn span {
-    display: none;
+  .dpu-kiosk__top-actions {
+    justify-content: flex-start;
   }
 
-  .dpu-kiosk__home-btn {
-    padding: 0.5rem;
+  .dpu-kiosk__clock {
+    margin-inline-start: auto;
   }
 }
 

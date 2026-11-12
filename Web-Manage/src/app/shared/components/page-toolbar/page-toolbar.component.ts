@@ -53,6 +53,17 @@ import { TranslateModule } from '@ngx-translate/core';
         justify-content: flex-end;
         min-width: 0;
       }
+      @media (max-width: 767.98px) {
+        .dpu-toolbar .box-header,
+        .dpu-toolbar__header {
+          padding: 0.75rem 0.85rem !important;
+        }
+        .dpu-toolbar__title,
+        .dpu-toolbar__controls {
+          flex: 1 1 100%;
+          justify-content: flex-start;
+        }
+      }
     `,
     ]
 })

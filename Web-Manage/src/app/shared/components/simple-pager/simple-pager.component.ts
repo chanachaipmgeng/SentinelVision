@@ -28,18 +28,21 @@ import { CommonModule } from '@angular/common';
       }
       .dpu-pager {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        gap: 0.75rem;
-        padding: 0.65rem 1rem;
+        gap: 0.65rem;
+        padding: 0.65rem 0.85rem;
         border-top: 1px solid var(--dpu-border, #e2e8f0);
       }
       .dpu-pager__btn {
-        width: 2rem;
-        height: 2rem;
+        width: 2.75rem;
+        height: 2.75rem;
+        flex-shrink: 0;
         border-radius: 999px;
         border: 1px solid var(--dpu-border, #e2e8f0);
-        background: #fff;
+        background: var(--dpu-surface-elevated, #fff);
+        color: var(--dpu-ink, #0f172a);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -50,9 +53,13 @@ import { CommonModule } from '@angular/common';
         cursor: not-allowed;
       }
       .dpu-pager__label {
+        flex: 1 1 8rem;
+        min-width: 0;
+        text-align: center;
         font-size: 0.8rem;
         font-weight: 600;
-        color: #0f172a;
+        line-height: 1.35;
+        color: var(--dpu-ink, #0f172a);
       }
     `,
     ]

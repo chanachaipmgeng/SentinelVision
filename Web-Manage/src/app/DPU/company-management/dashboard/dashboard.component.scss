@@ -229,4 +229,19 @@
       color: #67e8f9;
     }
   }
+
+  @media (max-width: 767.98px) {
+    .dpu-dash-updated {
+      flex: 1 1 100%;
+      margin-right: 0;
+    }
+
+    .dpu-dash-refresh {
+      min-height: 2.75rem;
+    }
+
+    .dpu-stat-value {
+      font-size: 1.65rem;
+    }
+  }
 }

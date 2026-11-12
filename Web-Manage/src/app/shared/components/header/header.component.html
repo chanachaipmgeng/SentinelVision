@@ -144,6 +144,18 @@
                   <i class="ti ti-keyboard text-[1.125rem] me-2 opacity-[0.7]"></i>{{ 'shell.shortcuts.title' | translate }}
                 </a>
               </li>
+              <li class="dpu-header-lang-mobile">
+                <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
+                  href="javascript:void(0);" (click)="changeLanguage('th')">
+                  <i class="ti ti-language text-[1.125rem] me-2 opacity-[0.7]"></i>ไทย
+                </a>
+              </li>
+              <li class="dpu-header-lang-mobile">
+                <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
+                  href="javascript:void(0);" (click)="changeLanguage('en')">
+                  <i class="ti ti-language text-[1.125rem] me-2 opacity-[0.7]"></i>English
+                </a>
+              </li>
               <li>
                 <a class="w-full ti-dropdown-item !text-[0.8125rem] !p-[0.65rem] !gap-x-0 !inline-flex"
                   (click)="logOut()">

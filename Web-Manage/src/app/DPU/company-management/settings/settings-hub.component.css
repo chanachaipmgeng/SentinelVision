@@ -228,7 +228,8 @@ html.dark .dpu-settings-rail__link.is-active {
   .dpu-settings-rail__link {
     flex-shrink: 0;
     border-radius: 999px;
-    padding: 0.45rem 0.9rem;
+    padding: 0.65rem 0.9rem;
+    min-height: 2.75rem;
     border: 1px solid var(--dpu-border, #e2e8f0);
     scroll-snap-align: start;
   }

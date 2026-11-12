@@ -176,6 +176,7 @@
   "Create and issue pairing code": "สร้าง + ออกโค้ดจับคู่",
   "Latest code": "โค้ดล่าสุด",
   "Device list": "รายการอุปกรณ์",
+  "Device detail": "รายละเอียดอุปกรณ์",
   "items": "รายการ",
   "Loading devices...": "กำลังโหลดอุปกรณ์...",
   "No devices found": "ไม่พบอุปกรณ์ตามคำค้น",

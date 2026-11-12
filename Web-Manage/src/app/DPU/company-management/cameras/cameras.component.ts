@@ -8,6 +8,7 @@ import swal from 'sweetalert';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
+import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { VALID_STATION_MODES } from '../../services/company-module-config.service';
@@ -77,6 +78,7 @@ type RoiMode = 'line' | 'zone' | 'loiter' | 'roi';
         PillSearchComponent,
         StatChipComponent,
         EmptyStateComponent,
+        SideDrawerComponent,
     ],
     templateUrl: './cameras.component.html',
     styleUrls: ['../../../shared/styles/dpu-list-page.css', './cameras.component.css'],
@@ -98,7 +100,9 @@ export class CamerasComponent implements OnInit {
   filtered: CameraRow[] = [];
   private _searchTerm = '';
   snapshotPreview: string | null = null;
-  showForm = false;
+  createOpen = false;
+  detailOpen = false;
+  selected: CameraRow | null = null;
   importing = false;
   peopleMetrics: PeopleMetrics | null = null;
 
@@ -113,6 +117,18 @@ export class CamerasComponent implements OnInit {
   roiPeopleEnabled = false;
 
   draft = {
+    name: '',
+    streamUrl: '',
+    protocol: 'rtsp',
+    description: '',
+    streamUsername: '',
+    streamPassword: '',
+    stationMode: '',
+    recordMode: 'event',
+    analysisEnabled: false,
+  };
+
+  editDraft = {
     name: '',
     streamUrl: '',
     protocol: 'rtsp',
@@ -197,6 +213,29 @@ export class CamerasComponent implements OnInit {
     this.searchTerm = '';
   }
 
+  openCreate(): void {
+    this.detailOpen = false;
+    this.resetDraft();
+    this.createOpen = true;
+  }
+
+  openDetail(cam: CameraRow): void {
+    this.createOpen = false;
+    this.selected = cam;
+    this.editDraft = {
+      name: cam.name || '',
+      streamUrl: cam.streamUrl || '',
+      protocol: cam.protocol || 'rtsp',
+      description: cam.description || '',
+      streamUsername: '',
+      streamPassword: '',
+      stationMode: cam.stationMode || '',
+      recordMode: cam.recordMode || 'event',
+      analysisEnabled: !!cam.analysisEnabled,
+    };
+    this.detailOpen = true;
+  }
+
   resetDraft(): void {
     this.draft = {
       name: '',
@@ -234,11 +273,43 @@ export class CamerasComponent implements OnInit {
     this.http.post<CameraRow>(this.api(), body).subscribe({
       next: () => {
         this.resetDraft();
-        this.showForm = false;
+        this.createOpen = false;
         swal('Saved', 'Camera created and MediaMTX path synced', 'success');
         this.load();
       },
       error: (err) => swal('Error', err?.error?.detail || 'Create failed', 'error'),
+    });
+  }
+
+  saveDetail(): void {
+    if (!this.selected) return;
+    const name = (this.editDraft.name || '').trim();
+    const streamUrl = (this.editDraft.streamUrl || '').trim();
+    if (!name || !streamUrl) {
+      swal('Incomplete', 'Name and stream URL are required', 'warning');
+      return;
+    }
+    const body: Record<string, unknown> = {
+      name,
+      streamUrl,
+      protocol: this.editDraft.protocol,
+      description: this.editDraft.description || null,
+      recordMode: this.editDraft.recordMode,
+      stationMode: this.editDraft.stationMode || null,
+      analysisEnabled: !!this.editDraft.analysisEnabled,
+    };
+    if (this.editDraft.streamUsername) {
+      body['streamUsername'] = this.editDraft.streamUsername;
+      body['streamPassword'] = this.editDraft.streamPassword || '';
+    }
+    this.http.patch<CameraRow>(this.api(`/${this.selected.cameraId}`), body).subscribe({
+      next: (row) => {
+        this.selected = row;
+        this.detailOpen = false;
+        swal('Saved', 'Camera connection updated', 'success');
+        this.load();
+      },
+      error: (err) => swal('Error', err?.error?.detail || 'Update failed', 'error'),
     });
   }
 
@@ -289,7 +360,11 @@ export class CamerasComponent implements OnInit {
     }).then((ok) => {
       if (!ok) return;
       this.http.delete(this.api(`/${cam.cameraId}`)).subscribe({
-        next: () => this.load(),
+        next: () => {
+          this.detailOpen = false;
+          this.selected = null;
+          this.load();
+        },
         error: (err) => swal('Error', err?.error?.detail || 'Delete failed', 'error'),
       });
     });

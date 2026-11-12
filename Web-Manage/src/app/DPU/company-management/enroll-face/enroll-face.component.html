@@ -519,7 +519,7 @@
       <div *ngIf="!latestResult" class="dpu-kiosk__empty">
         <i class="ri-walk-line"></i>
         <p>ยังไม่มีรายการ</p>
-        <span>ให้พนักงานเดินผ่านกล้องเพื่อลงเวลา</span>
+        <span>{{ emptyScanHint }}</span>
       </div>
 
       <div class="dpu-kiosk__feed-head" *ngIf="feed.length > 0">

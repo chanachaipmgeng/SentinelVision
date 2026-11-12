@@ -94,9 +94,9 @@
   height: 2.4rem !important;
   padding: 0.45rem 0.85rem 0.45rem 2.25rem !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #f1f5f9 !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
+  background: var(--dpu-surface-elevated, #fff) !important;
+  color: var(--dpu-ink, #0f172a) !important;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   transition:
     border-color 0.2s var(--dpu-ease, ease),
@@ -135,8 +135,8 @@
   align-items: center;
   padding: 0.2rem;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--dpu-surface, #eef2f6) !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
   gap: 0.15rem;
   flex-shrink: 0;
   height: 2.4rem;
@@ -172,17 +172,6 @@
 
 .emp-view-btn i {
   font-size: 1.05rem;
-}
-
-@media (max-width: 1199.98px) {
-  .emp-tool-label {
-    display: none;
-  }
-
-  .emp-tool-btn {
-    width: 2.4rem;
-    padding: 0 !important;
-  }
 }
 
 @media (max-width: 767.98px) {
@@ -223,18 +212,18 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #94a3b8 !important;
+  color: var(--dpu-muted, #64748b) !important;
   font-weight: 700;
-  background: rgba(7, 13, 20, 0.95) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: color-mix(in srgb, var(--dpu-surface-elevated, #fff) 86%, var(--dpu-brand, #0f766e) 14%) !important;
+  border-bottom: 1px solid var(--dpu-border, #e2e8f0) !important;
   padding: 0.85rem 1rem;
 }
 
 .emp-table tbody td {
   padding: 0.85rem 1rem;
   vertical-align: middle;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  color: #f1f5f9 !important;
+  border-bottom: 1px solid var(--dpu-border, #e2e8f0) !important;
+  color: var(--dpu-ink, #0f172a) !important;
 }
 
 .emp-row {
@@ -317,9 +306,9 @@
   justify-content: space-between;
   height: 100%;
   min-height: 310px;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
   border-radius: var(--dpu-radius, 14px);
-  background: linear-gradient(180deg, #09121d 0%, #04080e 100%) !important;
+  background: var(--dpu-surface-elevated, #fff) !important;
   padding: 1.25rem 1.1rem 1rem;
   box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6) !important;
   position: relative;
@@ -363,7 +352,7 @@
 }
 
 .emp-card-head p.font-semibold {
-  color: #f1f5f9 !important;
+  color: var(--dpu-ink, #0f172a) !important;
 }
 
 .emp-card-head p.text-dpu-muted {
@@ -377,8 +366,8 @@
   margin-bottom: 0.9rem;
   padding: 0.65rem 0.5rem;
   border-radius: var(--dpu-radius-sm, 10px);
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: color-mix(in srgb, var(--dpu-brand, #0f766e) 8%, var(--dpu-surface, #eef2f6)) !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
 }
 
 .emp-card-meta--stack {
@@ -421,7 +410,7 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #f1f5f9 !important;
+  color: var(--dpu-ink, #0f172a) !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

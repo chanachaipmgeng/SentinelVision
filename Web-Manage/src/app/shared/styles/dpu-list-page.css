@@ -91,8 +91,31 @@
   z-index: 1200 !important;
 }
 
-@media (max-width: 639.98px) {
-  .dpu-tool-btn span {
-    display: none;
+@media (max-width: 767.98px) {
+  .dpu-list-page,
+  .dpu-list-panel {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dpu-list-page .table-responsive,
+  .dpu-list-panel .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  .dpu-tool-btn {
+    min-height: 2.75rem;
+  }
+
+  .dpu-icon-btn {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .dpu-list-panel .box-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
   }
 }

@@ -173,7 +173,7 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 800;
-  color: #f1f5f9 !important;
+  color: var(--dpu-ink, #0f172a) !important;
 }
 
 .cinfo-form-grid {
@@ -295,8 +295,13 @@
     text-align: center;
   }
 
-  .cinfo-tool-btn span {
-    display: none;
+  .cinfo-toolbar-actions,
+  .cinfo-panel-header {
+    width: 100%;
+  }
+
+  .cinfo-tool-btn {
+    min-height: 2.75rem;
   }
 }
 

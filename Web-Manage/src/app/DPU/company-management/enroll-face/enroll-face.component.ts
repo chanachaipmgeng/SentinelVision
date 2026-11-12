@@ -71,9 +71,16 @@ import {
   isWatchlistChrome,
   resolveStationRouteContext,
   shouldEnableDoorRelay,
+  stationModeBusyCountLabel,
+  stationModeBusyLabel,
   stationModeCaptureHint,
+  stationModeDeniedLabel,
+  stationModeDeniedMessage,
+  stationModeEmptyHint,
+  stationModeOutcomeLabel,
   stationModeRequiresGps,
   stationModeTitle,
+  stationModeTtsKey,
 } from '../scan-hub/scan-station-mode';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
@@ -367,9 +374,6 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   private readonly retryFailMs = 900;
   /** Access denied (403, e.g. watchlist hit): back off longer so the kiosk does not hammer the alert path. */
   private readonly accessDeniedRetryMs = 10_000;
-  /** Public-screen copy for a 403; never echo the server detail for denied faces. */
-  private readonly accessDeniedMessage = 'ไม่สามารถลงเวลาได้ กรุณาติดต่อเจ้าหน้าที่';
-  private readonly accessDeniedLabel = 'ไม่สามารถลงเวลาได้';
   private readonly checkInEndpoint = '/face/members/check-in-walkby';
 
   constructor(
@@ -506,6 +510,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
 
   get showAttendancePanel(): boolean {
     return isAttendanceChrome(this.stationMode);
+  }
+
+  /** Empty feed hint — mode-specific (must not say ลงเวลา on door/visitor/event/watchlist). */
+  get emptyScanHint(): string {
+    return stationModeEmptyHint(this.stationMode);
   }
 
   get doorRelayEnabled(): boolean {
@@ -1374,7 +1383,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     if (this.gpsRequired && !this.hasValidLocation) {
       return this.errorMessage
         ? `รอ GPS: ${this.errorMessage}`
-        : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่ลงเวลาจนกว่าได้ GPS';
+        : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่สแกนจนกว่าได้ GPS';
     }
     if (this.tracks.length === 0) {
       const serverDetect = this.wsConnected && Date.now() >= this.serverDetectPausedUntil;
@@ -1395,7 +1404,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       parts.push(names.join(', '));
     }
     if (busy > 0) {
-      parts.push(`กำลังลงเวลา ${busy} คน`);
+      parts.push(stationModeBusyCountLabel(this.stationMode, busy));
     }
     if (this.queuePending > 0) {
       parts.push(`คิว GPU ${this.queuePending}`);
@@ -1622,10 +1631,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
    * keep a stale label, or retry immediately.
    */
   private applyAccessDenied(track: FaceTrack | undefined, showToast: boolean) {
+    const deniedLabel = stationModeDeniedLabel(this.stationMode);
     if (track) {
       track.memberId = null;
       track.confidence = null;
-      track.label = this.accessDeniedLabel;
+      track.label = deniedLabel;
       track.identifyInFlight = false;
       track.lastIdentifyAt = Date.now() + this.accessDeniedRetryMs;
       if (track.phase === 'capturing') {
@@ -1638,7 +1648,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       this.doorStatus = 'denied';
     }
     if (showToast) {
-      this.notify(this.accessDeniedMessage, 'error');
+      this.notify(stationModeDeniedMessage(this.stationMode), 'error');
     }
   }
 
@@ -1812,7 +1822,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       const onCooldown = track.memberId ? this.isMemberOnCooldown(track.memberId) : false;
       const label =
         track.phase === 'checking_in' || track.phase === 'capturing'
-          ? `${track.label || 'กำลังลงเวลา'}…`
+          ? `${track.label || stationModeBusyLabel(this.stationMode)}…`
           : onCooldown && track.label
             ? `${track.label} ✓`
             : track.label;
@@ -1991,7 +2001,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       track.phase = 'watching';
       track.captureFrames = [];
       track.retryAfter = Date.now() + this.retryFailMs;
-      this.notify('ยังไม่มีพิกัด GPS — รอเบราว์เซอร์อนุญาตตำแหน่งก่อนลงเวลา', 'warning');
+      this.notify('ยังไม่มีพิกัด GPS — รอเบราว์เซอร์อนุญาตตำแหน่งก่อนสแกน', 'warning');
       return;
     }
 
@@ -2181,7 +2191,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       track.confidence = Number.isFinite(confidencePercent) ? confidencePercent : track.confidence;
     }
 
-    let statusLabel = isWarning
+    const attendanceLabel = isWarning
       ? 'Warning — นอกพื้นที่'
       : isCheckOut
         ? overtimeMinutes > 0
@@ -2194,12 +2204,36 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
             : isLate && lateMinutes > 0
               ? `เข้างาน (สาย ${lateMinutes} นาที)`
               : 'ลงเวลาเข้างาน';
-    let statusKind: CheckInFeedItem['statusKind'] = isWarning || isLate ? 'warning' : 'success';
-    if (isBreakOut || isBreakIn) {
-      statusKind = 'info';
-    }
-    if (isDuplicate) {
-      statusLabel = isWarning ? 'บันทึกแล้ว (Warning)' : 'ลงเวลาไปแล้ว';
+
+    const outcomeKind = isDuplicate
+      ? 'duplicate'
+      : isWarning
+        ? 'warning'
+        : response.accessGranted === false ||
+            String(response.decision || '').toUpperCase() === 'ACCESS_DENIED'
+          ? 'denied'
+          : 'success';
+
+    const statusLabel = stationModeOutcomeLabel(this.stationMode, outcomeKind, {
+      decision: response.decision,
+      accessGranted: response.accessGranted,
+      identityType: response.identityType,
+      welcomeMessage: response.welcomeMessage,
+      seatNumber: response.seatNumber,
+      attendanceLabel: isDuplicate
+        ? isWarning
+          ? 'บันทึกแล้ว (Warning)'
+          : 'ลงเวลาไปแล้ว'
+        : attendanceLabel,
+    });
+
+    let statusKind: CheckInFeedItem['statusKind'] =
+      outcomeKind === 'denied'
+        ? 'error'
+        : isWarning || isLate
+          ? 'warning'
+          : 'success';
+    if (isBreakOut || isBreakIn || isDuplicate) {
       statusKind = 'info';
     }
 
@@ -2211,7 +2245,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       position: employee.position || '-',
       statusLabel,
       statusKind,
-      locationName: ts.locationName || (isWarning ? 'นอกพื้นที่ลงเวลา' : '-'),
+      locationName:
+        ts.locationName ||
+        (isWarning && this.showAttendancePanel ? 'นอกพื้นที่ลงเวลา' : '-'),
       timestamp: time,
       photoUrl,
       message: `${employeeName} · ${timeLabel}`,
@@ -2227,16 +2263,15 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     this.prependFeed(item);
     if (isDuplicate) {
       playDuplicateBeep();
-    } else if (isWarning) {
+    } else if (isWarning || outcomeKind === 'denied') {
       playWarningBeep();
     } else {
       playCheckInBeep();
     }
-    const speechKey: TtsTemplateKey = isDuplicate
-      ? 'checkInDuplicate'
-      : isWarning
-        ? 'checkInWarning'
-        : 'checkInSuccess';
+    const speechKey: TtsTemplateKey = stationModeTtsKey(
+      this.stationMode,
+      isDuplicate ? 'duplicate' : isWarning ? 'warning' : 'success',
+    );
     this.speakCheckIn(speechKey, {
       name: employeeName,
       firstName,
@@ -2244,11 +2279,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     });
     this.notify(
       isDuplicate
-        ? `${employeeName} ลงเวลาไปแล้ว (ไม่บันทึกซ้ำ)`
+        ? `${employeeName} ${statusLabel} (ไม่บันทึกซ้ำ)`
         : isWarning
           ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
           : `${statusLabel}: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
-      isDuplicate ? 'info' : isWarning ? 'warning' : 'success',
+      isDuplicate ? 'info' : isWarning || outcomeKind === 'denied' ? 'warning' : 'success',
     );
   }
 

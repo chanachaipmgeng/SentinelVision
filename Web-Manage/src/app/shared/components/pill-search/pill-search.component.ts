@@ -33,6 +33,13 @@ import { FormsModule } from '@angular/forms';
         min-width: 11rem;
         max-width: 26rem;
       }
+      @media (max-width: 767.98px) {
+        :host {
+          flex: 1 1 100%;
+          min-width: 0;
+          max-width: none;
+        }
+      }
       .dpu-pill-search {
         position: relative;
         width: 100%;
@@ -52,7 +59,8 @@ import { FormsModule } from '@angular/forms';
         padding: 0.45rem 2.2rem 0.45rem 2.25rem !important;
         border-radius: 999px !important;
         border: 1px solid var(--dpu-border, #e2e8f0) !important;
-        background: #fff !important;
+        background: var(--dpu-surface-elevated, #fff) !important;
+        color: var(--dpu-ink, #0f172a) !important;
       }
       .dpu-pill-search__input:focus {
         border-color: var(--dpu-brand, #0f766e) !important;

@@ -4,6 +4,14 @@ export type TtsTemplateKey =
   | 'checkInSuccess'
   | 'checkInWarning'
   | 'checkInDuplicate'
+  | 'accessSuccess'
+  | 'accessDuplicate'
+  | 'watchlistSuccess'
+  | 'watchlistDuplicate'
+  | 'visitorSuccess'
+  | 'visitorDuplicate'
+  | 'eventSuccess'
+  | 'eventDuplicate'
   | 'enrollSuccess'
   | 'enrollFailed';
 
@@ -25,6 +33,14 @@ export const DEFAULT_TTS_TEMPLATES: Record<TtsTemplateKey, string> = {
   checkInSuccess: 'ลงเวลาสำเร็จ คุณ{name}',
   checkInWarning: 'บันทึกนอกพื้นที่ คุณ{name}',
   checkInDuplicate: 'คุณ{name} ลงเวลาไปแล้ว',
+  accessSuccess: 'อนุญาตผ่าน คุณ{name}',
+  accessDuplicate: 'คุณ{name} ผ่านโซนแล้ว',
+  watchlistSuccess: 'พบรายชื่อ คุณ{name}',
+  watchlistDuplicate: 'คุณ{name} ตรวจแล้ว',
+  visitorSuccess: 'เช็คอินผู้มาติดต่อ คุณ{name}',
+  visitorDuplicate: 'คุณ{name} เช็คอินแล้ว',
+  eventSuccess: 'เช็คอินงาน คุณ{name}',
+  eventDuplicate: 'คุณ{name} เช็คอินงานแล้ว',
   enrollSuccess: 'บันทึกใบหน้าสำเร็จ คุณ{name}',
   enrollFailed: 'บันทึกใบหน้าไม่สำเร็จ กรุณาลองใหม่',
 };

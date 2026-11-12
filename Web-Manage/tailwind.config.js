@@ -96,6 +96,18 @@ module.exports = {
         github:"rgb(var(--github))",
         google:"rgb(var(--google))",
         youtube:"rgb(var(--youtube))",
+        /* DPU product tokens — follow --dpu-* (light/dark) instead of fixed hex */
+        dpu: {
+          brand: "var(--dpu-brand)",
+          ink: "var(--dpu-ink)",
+          muted: "var(--dpu-muted)",
+          surface: "var(--dpu-surface)",
+          elevated: "var(--dpu-surface-elevated)",
+          border: "var(--dpu-border)",
+          danger: "var(--dpu-danger)",
+          success: "var(--dpu-success)",
+          warning: "var(--dpu-warning)",
+        },
       },
       gradientColorStops: {
         primary: 'rgb(var(--primary))',

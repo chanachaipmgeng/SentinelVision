@@ -8,9 +8,14 @@ import {
   parseStationModeParam,
   resolveStationRouteContext,
   shouldEnableDoorRelay,
+  stationModeBusyCountLabel,
+  stationModeDeniedLabel,
+  stationModeEmptyHint,
+  stationModeOutcomeLabel,
   stationModeRequiresGps,
   stationModeTitle,
   stationModeToSlug,
+  stationModeTtsKey,
 } from './scan-station-mode';
 
 describe('scan-station-mode', () => {
@@ -126,6 +131,56 @@ describe('scan-station-mode', () => {
       expect(shouldEnableDoorRelay('ATTENDANCE', false)).toBeFalse();
       expect(shouldEnableDoorRelay('ATTENDANCE', true)).toBeTrue();
       expect(shouldEnableDoorRelay('WATCHLIST_MONITOR', true)).toBeFalse();
+    });
+  });
+
+  describe('mode-aware scan copy (no forced ลงเวลา)', () => {
+    const nonAttendance = [
+      'ACCESS_CONTROL',
+      'WATCHLIST_MONITOR',
+      'VISITOR_CHECKIN',
+      'EVENT_CHECKIN',
+    ] as const;
+
+    it('empty / denied / busy labels avoid ลงเวลา outside attendance', () => {
+      for (const mode of nonAttendance) {
+        expect(stationModeEmptyHint(mode)).not.toContain('ลงเวลา');
+        expect(stationModeDeniedLabel(mode)).not.toContain('ลงเวลา');
+        expect(stationModeBusyCountLabel(mode, 2)).not.toContain('ลงเวลา');
+      }
+      expect(stationModeEmptyHint('ATTENDANCE')).toContain('ลงเวลา');
+      expect(stationModeDeniedLabel('ATTENDANCE')).toContain('ลงเวลา');
+    });
+
+    it('outcome labels follow station mode', () => {
+      expect(
+        stationModeOutcomeLabel('ACCESS_CONTROL', 'success', { accessGranted: true }),
+      ).toContain('เปิดประตู');
+      expect(stationModeOutcomeLabel('ACCESS_CONTROL', 'denied')).toContain('ปฏิเสธ');
+      expect(
+        stationModeOutcomeLabel('WATCHLIST_MONITOR', 'success', { identityType: 'VIP' }),
+      ).toContain('VIP');
+      expect(stationModeOutcomeLabel('VISITOR_CHECKIN', 'success')).toContain('ผู้มาติดต่อ');
+      expect(
+        stationModeOutcomeLabel('EVENT_CHECKIN', 'success', { seatNumber: 'A12' }),
+      ).toContain('A12');
+      for (const mode of nonAttendance) {
+        expect(stationModeOutcomeLabel(mode, 'success')).not.toContain('ลงเวลา');
+        expect(stationModeOutcomeLabel(mode, 'duplicate')).not.toContain('ลงเวลา');
+      }
+      expect(
+        stationModeOutcomeLabel('ATTENDANCE', 'success', {
+          attendanceLabel: 'ลงเวลาเข้างาน',
+        }),
+      ).toBe('ลงเวลาเข้างาน');
+    });
+
+    it('TTS keys map non-attendance away from checkInSuccess', () => {
+      expect(stationModeTtsKey('ATTENDANCE', 'success')).toBe('checkInSuccess');
+      expect(stationModeTtsKey('ACCESS_CONTROL', 'success')).toBe('accessSuccess');
+      expect(stationModeTtsKey('WATCHLIST_MONITOR', 'duplicate')).toBe('watchlistDuplicate');
+      expect(stationModeTtsKey('VISITOR_CHECKIN', 'success')).toBe('visitorSuccess');
+      expect(stationModeTtsKey('EVENT_CHECKIN', 'duplicate')).toBe('eventDuplicate');
     });
   });
 });

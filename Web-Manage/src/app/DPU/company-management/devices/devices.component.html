@@ -1,133 +1,227 @@
 <app-page-header [title]="'Kiosk devices'" [activeTitle]="'Governance'" [title1]="'Devices'"></app-page-header>
 
-<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
-  <div class="col-span-12">
-    <app-page-toolbar title="Kiosk devices">
-      <ng-container chips>
-        <app-stat-chip>{{ 'All' | translate }} {{ items.length }}</app-stat-chip>
-        <app-stat-chip tone="ok">{{ 'Enabled' | translate }} {{ activeCount }}</app-stat-chip>
-        <app-stat-chip tone="soft">{{ 'Paired' | translate }} {{ pairedCount }}</app-stat-chip>
-      </ng-container>
-      <ng-container controls>
-        <app-pill-search [(value)]="searchTerm" placeholder="{{ 'Search devices' | translate }}" ariaLabel="a11y.search"></app-pill-search>
-      </ng-container>
-    </app-page-toolbar>
-    <p class="text-sm text-dpu-muted mb-1">จับคู่แท็บเล็ตด้วยโค้ดครั้งเดียว · ตั้ง stationMode / zone · revoke ได้ทันที</p>
-  </div>
+<div class="dpu-list-page min-w-0 max-w-full">
+  <app-page-toolbar title="Kiosk devices">
+    <ng-container chips>
+      <app-stat-chip>{{ 'All' | translate }} {{ items.length }}</app-stat-chip>
+      <app-stat-chip tone="ok">{{ 'Enabled' | translate }} {{ activeCount }}</app-stat-chip>
+      <app-stat-chip tone="soft">{{ 'Paired' | translate }} {{ pairedCount }}</app-stat-chip>
+    </ng-container>
+    <ng-container controls>
+      <app-pill-search
+        [(value)]="searchTerm"
+        placeholder="{{ 'Search devices' | translate }}"
+        ariaLabel="a11y.search"
+      ></app-pill-search>
+      <a routerLink="/company/settings/devices" class="ti-btn ti-btn-light modern-btn">
+        <i class="ri-settings-3-line" aria-hidden="true"></i>
+        <span>{{ 'settingsHub.navTitle' | translate }}</span>
+      </a>
+      <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="openCreate()">
+        <i class="ri-add-line" aria-hidden="true"></i>
+        <span>{{ 'Add device' | translate }}</span>
+      </button>
+    </ng-container>
+  </app-page-toolbar>
+  <p class="text-sm text-dpu-muted mb-3">
+    จับคู่แท็บเล็ตด้วยโค้ดครั้งเดียว · ตั้ง stationMode / zone ในแผงรายละเอียด · revoke ได้ทันที
+  </p>
 
-  <div class="col-span-12 xl:col-span-4">
-    <div class="box dpu-list-panel modern-card glass">
-      <div class="box-header"><div class="box-title">{{ 'Add device' | translate }}</div></div>
-      <div class="box-body space-y-3">
-        <div>
-          <label class="form-label">{{ 'Device name' | translate }}</label>
-          <input class="form-control" [(ngModel)]="draft.name" placeholder="Gate A / Lobby" />
-        </div>
-        <div>
-          <label class="form-label">{{ 'Location label' | translate }}</label>
-          <input class="form-control" [(ngModel)]="draft.locationLabel" placeholder="ชั้น 1 โถงทางเข้า" />
-        </div>
-        <div>
-          <label class="form-label">stationMode</label>
-          <select class="form-control" [(ngModel)]="draft.stationMode">
-            <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
-          </select>
-        </div>
-        <div>
-          <label class="form-label">zoneId (ถ้ามี)</label>
-          <input class="form-control" [(ngModel)]="draft.zoneId" placeholder="UUID โซนประตู" />
-        </div>
-        <div>
-          <label class="form-label">App version</label>
-          <input class="form-control" [(ngModel)]="draft.appVersion" placeholder="1.0.0" />
-        </div>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="create()">
-          <i class="ri-add-line"></i><span>{{ 'Create and issue pairing code' | translate }}</span>
-        </button>
-        <p class="text-[0.75rem] text-dpu-muted" *ngIf="lastPairingCode">
-          {{ 'Latest code' | translate }}: <strong>{{ lastPairingCode }}</strong> — /kiosk/pair
-        </p>
-      </div>
+  <div class="box dpu-list-panel modern-card glass min-w-0">
+    <div class="box-header">
+      <div class="box-title">{{ 'Device list' | translate }}</div>
+      <span class="dpu-muted-count" *ngIf="filtered.length">{{ filtered.length }} {{ 'items' | translate }}</span>
     </div>
-  </div>
-
-  <div class="col-span-12 xl:col-span-8">
-    <div class="box dpu-list-panel modern-card glass">
-      <div class="box-header">
-        <div class="box-title">{{ 'Device list' | translate }}</div>
-        <span class="dpu-muted-count" *ngIf="filtered.length">{{ filtered.length }} {{ 'items' | translate }}</span>
-      </div>
-      <div class="box-body dpu-list-body">
-        <app-empty-state *ngIf="loading" [loading]="true" message="{{ 'Loading devices...' | translate }}"></app-empty-state>
-        <app-empty-state
-          *ngIf="!loading && pageItems.length === 0"
-          icon="ri-tablet-line"
-          [message]="searchTerm ? ('No devices found' | translate) : ('No devices yet' | translate)"
-          [actionLabel]="searchTerm ? ('Clear search' | translate) : ''"
-          (action)="clearSearch()">
-        </app-empty-state>
-        <div class="table-responsive" *ngIf="!loading && pageItems.length">
-          <table
-            class="table whitespace-nowrap min-w-full dpu-list-table mb-0"
-            appKeyboardTable
-            role="grid"
-            [attr.aria-label]="'Device list' | translate"
-            [attr.aria-describedby]="'devices-table-hint'">
-            <caption id="devices-table-hint" class="sr-only">{{ 'table.keyboardHint' | translate }}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{{ 'Name' | translate }}</th>
-                <th scope="col">{{ 'Mode / zone' | translate }}</th>
-                <th scope="col">{{ 'Heartbeat' | translate }}</th>
-                <th scope="col">{{ 'Status' | translate }}</th>
-                <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
+    <div class="box-body dpu-list-body">
+      <app-empty-state *ngIf="loading" [loading]="true" message="{{ 'Loading devices...' | translate }}"></app-empty-state>
+      <app-empty-state
+        *ngIf="!loading && pageItems.length === 0"
+        icon="ri-tablet-line"
+        [message]="searchTerm ? ('No devices found' | translate) : ('No devices yet' | translate)"
+        [actionLabel]="searchTerm ? ('Clear search' | translate) : ('Add device' | translate)"
+        (action)="searchTerm ? clearSearch() : openCreate()">
+      </app-empty-state>
+      <div class="table-responsive" *ngIf="!loading && pageItems.length">
+        <table
+          class="table whitespace-nowrap min-w-full dpu-list-table mb-0"
+          appKeyboardTable
+          role="grid"
+          [attr.aria-label]="'Device list' | translate"
+          [attr.aria-describedby]="'devices-table-hint'">
+          <caption id="devices-table-hint" class="sr-only">{{ 'table.keyboardHint' | translate }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'Name' | translate }}</th>
+              <th scope="col">{{ 'Mode / zone' | translate }}</th>
+              <th scope="col">{{ 'Heartbeat' | translate }}</th>
+              <th scope="col">{{ 'Status' | translate }}</th>
+              <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of pageItems; track d.deviceId; let i = $index) {
+              <tr
+                tabindex="0"
+                [attr.data-row-index]="i"
+                class="cursor-pointer"
+                (click)="openDetail(d)"
+                (keydown.enter)="openDetail(d)">
+                <td>
+                  <div class="font-semibold text-dpu-ink">{{ d.name }}</div>
+                  <div class="text-[0.75rem] text-dpu-muted">{{ d.locationLabel || '—' }}</div>
+                  <div class="text-[0.7rem] text-dpu-muted truncate max-w-[180px]">
+                    {{ d.appVersion || '' }} {{ d.fingerprint || '' }}
+                  </div>
+                </td>
+                <td>
+                  <div class="text-sm text-dpu-ink">{{ d.stationMode || '—' }}</div>
+                  <div class="text-[0.75rem] text-dpu-muted truncate max-w-[140px]">{{ d.zoneId || '—' }}</div>
+                </td>
+                <td>
+                  <div class="text-[0.8rem] text-dpu-ink">{{ (d.heartbeatAt || d.lastSeenAt) | localeDate:'datetime' }}</div>
+                </td>
+                <td>
+                  <span
+                    class="badge text-white"
+                    [class.bg-success]="statusLabel(d)==='PAIRED'"
+                    [class.bg-warning]="statusLabel(d)==='PENDING' || statusLabel(d)==='NEW'"
+                    [class.bg-danger]="statusLabel(d)==='REVOKED'">{{ statusLabel(d) }}</span>
+                </td>
+                <td class="text-end" (click)="$event.stopPropagation()">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-light modern-btn"
+                    (click)="openDetail(d)">
+                    <i class="ri-eye-line" aria-hidden="true"></i>
+                    <span>{{ 'Detail' | translate }}</span>
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              @for (d of pageItems; track d.deviceId; let i = $index) {
-                <tr tabindex="0" [attr.data-row-index]="i">
-                  <td>
-                    <div class="font-semibold">{{ d.name }}</div>
-                    <div class="text-[0.75rem] text-dpu-muted">{{ d.locationLabel || '—' }}</div>
-                    <div class="text-[0.7rem] text-dpu-muted truncate max-w-[180px]">{{ d.appVersion || '' }} {{ d.fingerprint || '' }}</div>
-                  </td>
-                  <td>
-                    <select class="form-control form-control-sm mb-1" [(ngModel)]="d.stationMode" [attr.aria-label]="'stationMode' | translate">
-                      <option [ngValue]="null">—</option>
-                      <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
-                    </select>
-                    <input class="form-control form-control-sm" [(ngModel)]="d.zoneId" [attr.placeholder]="'zoneId' | translate" [attr.aria-label]="'zoneId' | translate" />
-                  </td>
-                  <td>
-                    <div class="text-[0.8rem]">{{ (d.heartbeatAt || d.lastSeenAt) | localeDate:'datetime' }}</div>
-                  </td>
-                  <td>
-                    <span class="badge"
-                      [class.bg-success]="statusLabel(d)==='PAIRED'"
-                      [class.bg-warning]="statusLabel(d)==='PENDING' || statusLabel(d)==='NEW'"
-                      [class.bg-danger]="statusLabel(d)==='REVOKED'"
-                      [class.text-white]="true">{{ statusLabel(d) }}</span>
-                  </td>
-                  <td class="text-end">
-                    <div class="inline-flex gap-2 flex-wrap justify-end">
-                      <button type="button" class="dpu-icon-btn" [attr.title]="'Save' | translate" [attr.aria-label]="'Save' | translate" (click)="saveBinding(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-save-line" aria-hidden="true"></i>
-                      </button>
-                      <button type="button" class="dpu-icon-btn" [attr.title]="'Refresh' | translate" [attr.aria-label]="'Pairing code' | translate" (click)="rotate(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-refresh-line" aria-hidden="true"></i>
-                      </button>
-                      <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" [attr.title]="'Revoke' | translate" [attr.aria-label]="'Revoke' | translate" (click)="revoke(d)" [disabled]="!!d.revokedAt">
-                        <i class="ri-forbid-line" aria-hidden="true"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+            }
+          </tbody>
+        </table>
       </div>
-      <app-simple-pager [pageIndex]="pageIndex" [pageSize]="pageSize" [total]="filtered.length" (pageIndexChange)="onPageChange($event)"></app-simple-pager>
     </div>
+    <app-simple-pager
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      [total]="filtered.length"
+      (pageIndexChange)="onPageChange($event)"
+    ></app-simple-pager>
   </div>
 </div>
+
+<app-side-drawer
+  [(open)]="createOpen"
+  title="Add device"
+  subtitle="Create and issue pairing code"
+  [showFooter]="true">
+  <div class="space-y-3">
+    <div>
+      <label class="form-label">{{ 'Device name' | translate }}</label>
+      <input class="form-control" [(ngModel)]="draft.name" placeholder="Gate A / Lobby" />
+    </div>
+    <div>
+      <label class="form-label">{{ 'Location label' | translate }}</label>
+      <input class="form-control" [(ngModel)]="draft.locationLabel" placeholder="ชั้น 1 โถงทางเข้า" />
+    </div>
+    <div>
+      <label class="form-label">stationMode</label>
+      <select class="form-control" [(ngModel)]="draft.stationMode">
+        <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">zoneId (ถ้ามี)</label>
+      <input class="form-control" [(ngModel)]="draft.zoneId" placeholder="UUID โซนประตู" />
+    </div>
+    <div>
+      <label class="form-label">App version</label>
+      <input class="form-control" [(ngModel)]="draft.appVersion" placeholder="1.0.0" />
+    </div>
+    <p class="text-xs text-dpu-muted mb-0" *ngIf="lastPairingCode">
+      {{ 'Latest code' | translate }}: <strong class="text-dpu-ink">{{ lastPairingCode }}</strong> — /kiosk/pair
+    </p>
+  </div>
+  <div drawerFooter class="flex flex-wrap gap-2 w-full justify-end">
+    <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="createOpen = false">
+      {{ 'Cancel' | translate }}
+    </button>
+    <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="create()">
+      <i class="ri-add-line" aria-hidden="true"></i>
+      <span>{{ 'Create and issue pairing code' | translate }}</span>
+    </button>
+  </div>
+</app-side-drawer>
+
+<app-side-drawer
+  [(open)]="detailOpen"
+  title="Device detail"
+  [subtitle]="selected?.name || ''"
+  size="lg"
+  [showFooter]="true">
+  <div class="space-y-3" *ngIf="selected as d">
+    <div class="rounded-lg border border-dpu-border bg-dpu-surface p-3 text-sm">
+      <div class="font-semibold text-dpu-ink">{{ d.name }}</div>
+      <div class="text-dpu-muted text-xs mt-1">{{ d.deviceId }}</div>
+      <div class="mt-2">
+        <span
+          class="badge text-white"
+          [class.bg-success]="statusLabel(d)==='PAIRED'"
+          [class.bg-warning]="statusLabel(d)==='PENDING' || statusLabel(d)==='NEW'"
+          [class.bg-danger]="statusLabel(d)==='REVOKED'">{{ statusLabel(d) }}</span>
+      </div>
+      <div class="text-xs text-dpu-muted mt-2">
+        {{ 'Heartbeat' | translate }}: {{ (d.heartbeatAt || d.lastSeenAt) | localeDate:'datetime' }}
+      </div>
+    </div>
+    <div>
+      <label class="form-label">{{ 'Device name' | translate }}</label>
+      <input class="form-control" [(ngModel)]="d.name" [disabled]="!!d.revokedAt" />
+    </div>
+    <div>
+      <label class="form-label">{{ 'Location label' | translate }}</label>
+      <input class="form-control" [(ngModel)]="d.locationLabel" [disabled]="!!d.revokedAt" />
+    </div>
+    <div>
+      <label class="form-label">stationMode</label>
+      <select class="form-control" [(ngModel)]="d.stationMode" [disabled]="!!d.revokedAt">
+        <option [ngValue]="null">—</option>
+        <option *ngFor="let m of stationModes" [value]="m">{{ m }}</option>
+      </select>
+    </div>
+    <div>
+      <label class="form-label">zoneId</label>
+      <input class="form-control" [(ngModel)]="d.zoneId" [disabled]="!!d.revokedAt" />
+    </div>
+    <p class="text-xs text-dpu-muted mb-0" *ngIf="lastPairingCode">
+      {{ 'Latest code' | translate }}: <strong class="text-dpu-ink">{{ lastPairingCode }}</strong>
+    </p>
+  </div>
+  <div drawerFooter class="flex flex-wrap gap-2 w-full justify-end" *ngIf="selected as d">
+    <button
+      type="button"
+      class="ti-btn ti-btn-light modern-btn"
+      (click)="rotate(d)"
+      [disabled]="!!d.revokedAt">
+      <i class="ri-refresh-line" aria-hidden="true"></i>
+      <span>{{ 'Pairing code' | translate }}</span>
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-danger-full modern-btn"
+      (click)="revoke(d)"
+      [disabled]="!!d.revokedAt">
+      <i class="ri-forbid-line" aria-hidden="true"></i>
+      <span>{{ 'Revoke' | translate }}</span>
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-primary-full modern-btn"
+      (click)="saveBinding(d)"
+      [disabled]="!!d.revokedAt">
+      <i class="ri-save-line" aria-hidden="true"></i>
+      <span>{{ 'Save' | translate }}</span>
+    </button>
+  </div>
+</app-side-drawer>

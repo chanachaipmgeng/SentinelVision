@@ -87,9 +87,9 @@
   height: 2.4rem !important;
   padding: 0.45rem 2.2rem 0.45rem 2.25rem !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  color: #f1f5f9 !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
+  background: var(--dpu-surface-elevated, #fff) !important;
+  color: var(--dpu-ink, #0f172a) !important;
 }
 
 .loc-search-input:focus {
@@ -120,8 +120,8 @@
   align-items: center;
   padding: 0.2rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--dpu-surface, #eef2f6) !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
   gap: 0.15rem;
 }
 
@@ -391,12 +391,12 @@
 }
 
 .loc-page-btn {
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #cbd5e1 !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
+  background: var(--dpu-surface-elevated, #fff) !important;
+  color: var(--dpu-ink, #0f172a) !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -417,7 +417,8 @@
 .loc-page-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #cbd5e1 !important;
+  color: var(--dpu-ink, #0f172a) !important;
+  text-align: center;
 }
 
 /* ---- Detail ---- */
@@ -431,8 +432,8 @@
 .loc-fact {
   padding: 0.75rem 0.85rem;
   border-radius: 0.85rem;
-  background: rgba(255, 255, 255, 0.03) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: color-mix(in srgb, var(--dpu-brand, #0f766e) 8%, var(--dpu-surface-elevated, #fff)) !important;
+  border: 1px solid var(--dpu-border, #e2e8f0) !important;
 }
 
 .loc-fact--wide {
@@ -443,14 +444,14 @@
   display: block;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #94a3b8 !important;
+  color: var(--dpu-muted, #64748b) !important;
   margin-bottom: 0.2rem;
 }
 
 .loc-fact-value {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #f1f5f9 !important;
+  color: var(--dpu-ink, #0f172a) !important;
   word-break: break-word;
 }
 
@@ -557,10 +558,6 @@
   .loc-search {
     max-width: none;
     flex-basis: 100%;
-  }
-
-  .loc-tool-btn span {
-    display: none;
   }
 
   .loc-queue-item {

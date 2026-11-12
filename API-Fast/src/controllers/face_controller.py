@@ -346,8 +346,14 @@ async def add_face(
             temp_file_path.unlink()
 
 
-async def detect_faces_upload(image_file: UploadFile) -> dict:
-    """Lightweight detection for admin enroll preview (no embedding)."""
+async def detect_faces_upload(
+    image_file: UploadFile, *, for_enrollment: bool = False
+) -> dict:
+    """Lightweight detection for admin enroll preview (no embedding).
+
+    When ``for_enrollment`` is true, response includes ``enrollReady`` using the
+    same ENROLL_* quality gate as add-face (auto-capture should wait for true).
+    """
     content = await image_file.read()
     if not content:
         raise HTTPException(
@@ -355,10 +361,26 @@ async def detect_faces_upload(image_file: UploadFile) -> dict:
         )
     if face_core_enabled():
         client = get_face_core_client()
-        return await client.detect(content)
+        result = await client.detect(content)
+        if for_enrollment:
+            from ..utils.enrollment_quality import enrich_detect_with_enroll_quality
+            from ..utils.face_engine import decode_image_bytes
+
+            try:
+                image = decode_image_bytes(content, for_detect=True)
+                return enrich_detect_with_enroll_quality(image, result)
+            except Exception:
+                out = dict(result or {})
+                out.setdefault("enrollReady", bool((out.get("faces") or [])))
+                out.setdefault(
+                    "enrollMessage",
+                    "Face detected" if out.get("enrollReady") else "No face detected",
+                )
+                return out
+        return result
     try:
         return await run_on_face_gpu(
-            partial(detect_faces_bytes, content),
+            partial(detect_faces_bytes, content, for_enrollment=for_enrollment),
             kind="detect",
         )
     except ValueError as ve:

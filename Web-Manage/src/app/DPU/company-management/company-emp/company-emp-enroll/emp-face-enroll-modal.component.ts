@@ -20,10 +20,12 @@ import { SystemSettingService } from '../../../services/system-setting.service';
 import { SmoothBox } from '../company-emp.helpers';
 import {
   BrowserFaceDetector,
+  VideoInputDevice,
   createBrowserFaceDetector,
   detectBrowserFaceBox,
   detectServerFaceBox,
   drawSmoothOverlay,
+  listVideoInputDevices,
   openUserCamera,
   smoothFaceBox,
   stopMediaStream,
@@ -65,6 +67,11 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
   uploadProgressLabel = '';
   capturedImage: string | null = null;
   uploadStatus = '';
+  videoDevices: VideoInputDevice[] = [];
+  selectedDeviceId = '';
+  switchingCamera = false;
+  enrollReady = false;
+  enrollHint = '';
 
   private ttsSettings: TtsSettings = resolveTtsSettings(null);
   private faceDetector: BrowserFaceDetector | null = null;
@@ -81,8 +88,10 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
   private capturingAngle = false;
   private modelsLoaded = false;
   private readonly boxLerp = 0.35;
-  private readonly poseHoldMs = 450;
+  /** Hold a quality-ok face before auto-capture (ms). */
+  private readonly poseHoldMs = 500;
   private readonly captureCooldownMs = 850;
+  private readonly serverDetectMinMs = 320;
 
   constructor(
     private http: HttpClient,
@@ -116,6 +125,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     this.faceEnrollMode = 'camera';
     this.checkMatch = false;
     this.isFaceDetected = false;
+    this.enrollReady = false;
+    this.enrollHint = '';
     this.capturingAngle = false;
     this.smoothedBox = null;
     this.poseHoldStartedAt = 0;
@@ -198,11 +209,32 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       void this.uploadAllAngles();
       return;
     }
-    if (!this.isFaceDetected) {
-      swal('ยังไม่พร้อม', 'กรุณาวางใบหน้าให้อยู่ในกรอบก่อน', 'info');
+    if (!this.isFaceDetected || !this.enrollReady) {
+      swal(
+        'ยังไม่พร้อม',
+        this.enrollHint || 'กรุณาวางใบหน้าให้อยู่ในกรอบและผ่านเกณฑ์คุณภาพก่อน',
+        'info',
+      );
       return;
     }
     this.captureCurrentAngle();
+  }
+
+  async onCameraDeviceChange(deviceId: string): Promise<void> {
+    if (!deviceId || deviceId === this.selectedDeviceId || this.switchingCamera) return;
+    this.selectedDeviceId = deviceId;
+    await this.switchCamera(deviceId);
+  }
+
+  async cycleCamera(): Promise<void> {
+    if (this.videoDevices.length < 2 || this.switchingCamera) return;
+    const idx = Math.max(
+      0,
+      this.videoDevices.findIndex((d) => d.deviceId === this.selectedDeviceId),
+    );
+    const next = this.videoDevices[(idx + 1) % this.videoDevices.length];
+    this.selectedDeviceId = next.deviceId;
+    await this.switchCamera(next.deviceId);
   }
 
   private loadTtsSettings(): void {
@@ -250,15 +282,66 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
   }
 
   private async startVideo(): Promise<void> {
-    this.stopFaceCamera();
-    const stream = await openUserCamera();
+    this.stopFaceCamera(false);
+    const stream = await openUserCamera(this.selectedDeviceId || null);
     this.videoStream = stream;
     if (this.video?.nativeElement) {
       this.video.nativeElement.srcObject = stream;
     }
+    await this.refreshVideoDevices(stream);
   }
 
-  stopFaceCamera(): void {
+  private async refreshVideoDevices(stream?: MediaStream | null): Promise<void> {
+    try {
+      const devices = await listVideoInputDevices();
+      this.videoDevices = devices;
+      const activeId =
+        stream?.getVideoTracks()?.[0]?.getSettings?.()?.deviceId ||
+        this.selectedDeviceId ||
+        '';
+      if (activeId && devices.some((d) => d.deviceId === activeId)) {
+        this.selectedDeviceId = activeId;
+      } else if (!this.selectedDeviceId && devices.length) {
+        this.selectedDeviceId = devices[0].deviceId;
+      }
+    } catch {
+      /* ignore — camera still works without the picker */
+    }
+    this.cdr.detectChanges();
+  }
+
+  private async switchCamera(deviceId: string): Promise<void> {
+    this.switchingCamera = true;
+    this.faceStatus = 'กำลังเปลี่ยนกล้อง...';
+    this.enrollReady = false;
+    this.isFaceDetected = false;
+    this.poseHoldStartedAt = 0;
+    this.smoothedBox = null;
+    this.cdr.detectChanges();
+    try {
+      if (this.faceDetectionInterval) {
+        clearInterval(this.faceDetectionInterval);
+        this.faceDetectionInterval = null;
+      }
+      stopMediaStream(this.videoStream, this.video?.nativeElement);
+      this.videoStream = null;
+      const stream = await openUserCamera(deviceId);
+      this.videoStream = stream;
+      if (this.video?.nativeElement) {
+        this.video.nativeElement.srcObject = stream;
+      }
+      await this.refreshVideoDevices(stream);
+      this.updateAngleStatus();
+      setTimeout(() => this.detectFace(), 200);
+    } catch (err: unknown) {
+      this.faceStatus = err instanceof Error ? err.message : 'เปลี่ยนกล้องไม่สำเร็จ';
+    } finally {
+      this.switchingCamera = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  stopFaceCamera(resetDevices = true): void {
     if (this.faceDetectionInterval) {
       clearInterval(this.faceDetectionInterval);
       this.faceDetectionInterval = null;
@@ -266,6 +349,10 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     stopMediaStream(this.videoStream, this.video?.nativeElement);
     this.videoStream = null;
     this.smoothedBox = null;
+    this.enrollReady = false;
+    if (resetDevices) {
+      this.videoDevices = [];
+    }
   }
 
   private updateAngleStatus(): void {
@@ -296,7 +383,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
         videoEl.readyState < 2 ||
         this.isUploadingFace ||
         this.faceDetectBusy ||
-        this.faceEnrollMode !== 'camera'
+        this.faceEnrollMode !== 'camera' ||
+        this.switchingCamera
       ) {
         return;
       }
@@ -314,27 +402,40 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
           this.canvas!.nativeElement.height = liveSize.height;
         }
 
+        // Overlay can use browser FaceDetector when available; auto-capture always
+        // waits for server enroll quality (ENROLL_* config).
         let nextBox = await detectBrowserFaceBox(this.faceDetector, videoEl, liveSize);
-        if (!nextBox && this.useServerFaceDetect) {
-          const now = Date.now();
-          if (!this.serverDetectInFlight && now - this.lastServerDetectAt >= 280) {
-            this.serverDetectInFlight = true;
-            this.lastServerDetectAt = now;
-            try {
-              if (!this.enrollDetectCanvas) {
-                this.enrollDetectCanvas = document.createElement('canvas');
-              }
-              nextBox = await detectServerFaceBox(
-                this.http,
-                videoEl,
-                liveSize,
-                this.enrollDetectCanvas,
-              );
-            } finally {
-              this.serverDetectInFlight = false;
+        let enrollReady = this.enrollReady;
+        let enrollMessage = this.enrollHint;
+
+        const now = Date.now();
+        const shouldPollServer =
+          !this.serverDetectInFlight &&
+          (this.useServerFaceDetect || now - this.lastServerDetectAt >= this.serverDetectMinMs);
+
+        if (shouldPollServer) {
+          this.serverDetectInFlight = true;
+          this.lastServerDetectAt = now;
+          try {
+            if (!this.enrollDetectCanvas) {
+              this.enrollDetectCanvas = document.createElement('canvas');
             }
-          } else {
-            nextBox = this.smoothedBox;
+            const server = await detectServerFaceBox(
+              this.http,
+              videoEl,
+              liveSize,
+              this.enrollDetectCanvas,
+              true,
+            );
+            enrollReady = server.enrollReady;
+            enrollMessage = this.friendlyEnrollHint(server.enrollMessage, server.faceRatio, server.minFaceRatio);
+            if (server.box) {
+              nextBox = server.box;
+            } else if (this.useServerFaceDetect) {
+              nextBox = null;
+            }
+          } finally {
+            this.serverDetectInFlight = false;
           }
         }
 
@@ -345,14 +446,27 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
           this.smoothedBox = smoothFaceBox(this.smoothedBox, nextBox, this.boxLerp);
           const step = this.currentAngle;
           const inCooldown = Date.now() < this.captureCooldownUntil;
-          const ready = !!step && !inCooldown;
-          const label = step ? (ready ? `${step.label} ✓` : step.label) : 'ครบ 5 มุม';
-          drawSmoothOverlay(ctx, this.smoothedBox, label, ready, this.capturingAngle);
+          const qualityOk = enrollReady && !!step && !inCooldown;
+          const label = step
+            ? qualityOk
+              ? `${step.label} ✓`
+              : step.label
+            : 'ครบ 5 มุม';
+          drawSmoothOverlay(ctx, this.smoothedBox, label, qualityOk, this.capturingAngle);
 
           this.ngZone.run(() => {
             this.isFaceDetected = true;
-            this.checkMatch = true;
-            if (step && !step.captured && !this.capturingAngle && !this.allAnglesCaptured && !inCooldown) {
+            this.enrollReady = enrollReady;
+            this.enrollHint = enrollMessage;
+            this.checkMatch = enrollReady;
+            if (
+              step &&
+              !step.captured &&
+              !this.capturingAngle &&
+              !this.allAnglesCaptured &&
+              !inCooldown &&
+              enrollReady
+            ) {
               if (!this.poseHoldStartedAt) {
                 this.poseHoldStartedAt = Date.now();
               } else if (Date.now() - this.poseHoldStartedAt >= this.poseHoldMs) {
@@ -362,8 +476,11 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
                   0,
                   (this.poseHoldMs - (Date.now() - this.poseHoldStartedAt)) / 1000,
                 );
-                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint} ค้างไว้… ${leftSec.toFixed(1)}s`;
+                this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — คุณภาพผ่าน แล้วค้างไว้… ${leftSec.toFixed(1)}s`;
               }
+            } else if (step && !step.captured && !enrollReady) {
+              this.poseHoldStartedAt = 0;
+              this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${enrollMessage || step.hint}`;
             } else if (step && !step.captured) {
               this.faceStatus = `มุม ${this.currentAngleIndex + 1}/5 — ${step.hint}`;
             } else if (this.allAnglesCaptured) {
@@ -376,6 +493,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
           this.poseHoldStartedAt = 0;
           this.ngZone.run(() => {
             this.isFaceDetected = false;
+            this.enrollReady = false;
+            this.enrollHint = '';
             this.checkMatch = false;
             const step = this.currentAngle;
             this.faceStatus = step
@@ -390,6 +509,44 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
         this.faceDetectBusy = false;
       }
     }, 160);
+  }
+
+  private friendlyEnrollHint(
+    message: string,
+    faceRatio?: number | null,
+    minFaceRatio?: number | null,
+  ): string {
+    const raw = (message || '').trim();
+    if (!raw || /passed|ok/i.test(raw)) {
+      return 'คุณภาพใบหน้าผ่านเกณฑ์';
+    }
+    if (/too small|move closer/i.test(raw)) {
+      if (
+        typeof faceRatio === 'number' &&
+        typeof minFaceRatio === 'number' &&
+        Number.isFinite(faceRatio) &&
+        Number.isFinite(minFaceRatio)
+      ) {
+        return `ใบหน้าเล็กเกินไป — เข้าใกล้กล้อง (${faceRatio.toFixed(3)} < ${minFaceRatio.toFixed(2)})`;
+      }
+      return 'ใบหน้าเล็กเกินไป — เข้าใกล้กล้อง';
+    }
+    if (/yaw|angled|pose/i.test(raw)) {
+      return 'หันหน้าตรงขึ้น — มุมใบหน้าเยอะเกินไป';
+    }
+    if (/roll|tilt/i.test(raw)) {
+      return 'อย่าเอียงศีรษะ — ตั้งหน้าให้ตรง';
+    }
+    if (/sharp|blur/i.test(raw)) {
+      return 'ภาพเบลอ — นิ่งกว่านี้หรือปรับโฟกัส';
+    }
+    if (/bright|dark|quality/i.test(raw)) {
+      return 'แสงไม่พอหรือสว่างเกินไป';
+    }
+    if (/no face/i.test(raw)) {
+      return 'ไม่พบใบหน้า';
+    }
+    return raw;
   }
 
   private captureCurrentAngle(): void {

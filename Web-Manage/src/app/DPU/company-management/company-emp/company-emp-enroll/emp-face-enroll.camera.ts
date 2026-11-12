@@ -9,13 +9,46 @@ export type BrowserFaceDetector = {
   ) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>>;
 };
 
-export async function openUserCamera(): Promise<MediaStream> {
+export type VideoInputDevice = {
+  deviceId: string;
+  label: string;
+};
+
+export async function listVideoInputDevices(): Promise<VideoInputDevice[]> {
+  if (!navigator.mediaDevices?.enumerateDevices) return [];
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices
+    .filter((d) => d.kind === 'videoinput' && d.deviceId)
+    .map((d, i) => ({
+      deviceId: d.deviceId,
+      label: (d.label || '').trim() || `Camera ${i + 1}`,
+    }));
+}
+
+export async function openUserCamera(deviceId?: string | null): Promise<MediaStream> {
   try {
-    return await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-    });
+    const video: MediaTrackConstraints = {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    };
+    if (deviceId) {
+      video.deviceId = { exact: deviceId };
+    } else {
+      video.facingMode = 'user';
+    }
+    return await navigator.mediaDevices.getUserMedia({ video });
   } catch (err) {
     console.error('Error accessing camera: ', err);
+    // Exact deviceId can fail if the device disappeared — retry with default.
+    if (deviceId) {
+      try {
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch {
+        /* fall through */
+      }
+    }
     throw new Error('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้กล้องในเบราว์เซอร์');
   }
 }
@@ -60,12 +93,26 @@ export async function detectBrowserFaceBox(
   };
 }
 
+export type ServerEnrollDetectResult = {
+  box: SmoothBox | null;
+  enrollReady: boolean;
+  enrollMessage: string;
+  faceRatio?: number | null;
+  minFaceRatio?: number | null;
+};
+
 export async function detectServerFaceBox(
   http: HttpClient,
   videoEl: HTMLVideoElement,
   liveSize: { width: number; height: number },
   enrollDetectCanvas: HTMLCanvasElement,
-): Promise<SmoothBox | null> {
+  forEnrollment = false,
+): Promise<ServerEnrollDetectResult> {
+  const empty: ServerEnrollDetectResult = {
+    box: null,
+    enrollReady: false,
+    enrollMessage: 'No face detected',
+  };
   const vw = videoEl.videoWidth || 640;
   const vh = videoEl.videoHeight || 480;
   const targetW = 480;
@@ -77,32 +124,57 @@ export async function detectServerFaceBox(
     enrollDetectCanvas.height = h;
   }
   const ctx = enrollDetectCanvas.getContext('2d');
-  if (!ctx) return null;
+  if (!ctx) return empty;
   ctx.drawImage(videoEl, 0, 0, w, h);
   const blob = await new Promise<Blob | null>((resolve) =>
     enrollDetectCanvas.toBlob((b) => resolve(b), 'image/jpeg', 0.7),
   );
-  if (!blob) return null;
+  if (!blob) return empty;
   const form = new FormData();
   form.append('file', blob, 'enroll-detect.jpg');
+  if (forEnrollment) {
+    form.append('forEnrollment', 'true');
+  }
   const res = await firstValueFrom(
     http.post<{
       faces?: Array<{ x: number; y: number; width: number; height: number; score?: number }>;
       frameWidth?: number;
       frameHeight?: number;
+      enrollReady?: boolean;
+      enrollMessage?: string;
+      enrollScores?: { faceRatio?: number };
+      minFaceRatio?: number;
     }>(environment.baseUrl + '/face/detect', form),
   );
-  const face = res?.faces?.[0];
-  if (!face || face.width < 8 || face.height < 8) return null;
+  const faces = res?.faces || [];
+  const face =
+    faces.length <= 1
+      ? faces[0]
+      : faces.reduce((a, b) =>
+          a.width * a.height >= b.width * b.height ? a : b,
+        );
+  if (!face || face.width < 8 || face.height < 8) {
+    return {
+      ...empty,
+      enrollMessage: res?.enrollMessage || 'No face detected',
+      minFaceRatio: res?.minFaceRatio ?? null,
+    };
+  }
   const fw = res.frameWidth || w;
   const fh = res.frameHeight || h;
   const sx = liveSize.width / fw;
   const sy = liveSize.height / fh;
   return {
-    x: face.x * sx,
-    y: face.y * sy,
-    width: face.width * sx,
-    height: face.height * sy,
+    box: {
+      x: face.x * sx,
+      y: face.y * sy,
+      width: face.width * sx,
+      height: face.height * sy,
+    },
+    enrollReady: forEnrollment ? !!res?.enrollReady : true,
+    enrollMessage: res?.enrollMessage || (res?.enrollReady ? 'ok' : 'Face not ready'),
+    faceRatio: res?.enrollScores?.faceRatio ?? null,
+    minFaceRatio: res?.minFaceRatio ?? null,
   };
 }
 

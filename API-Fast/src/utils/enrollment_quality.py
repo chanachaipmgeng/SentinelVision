@@ -109,3 +109,49 @@ def check_enrollment_quality_bgr(
         )
 
     return True, "Enrollment quality gate passed.", scores
+
+
+def enrich_detect_with_enroll_quality(
+    image: np.ndarray,
+    detect_result: dict,
+    kps_list: Optional[list] = None,
+) -> dict:
+    """Attach ``enrollReady`` / message / scores for admin auto-capture gating.
+
+    Uses the same ENROLL_* settings as add-face. Pose checks run only when
+    landmark sets are provided (local InsightFace detect); Face Core detect
+    still gates on size / blur / sharpness.
+    """
+    out = dict(detect_result or {})
+    faces = list(out.get("faces") or [])
+    out["enrollReady"] = False
+    out["enrollMessage"] = "No face detected"
+    out["enrollScores"] = {}
+    out["minFaceRatio"] = float(getattr(settings, "ENROLL_MIN_FACE_RATIO", 0.07) or 0.07)
+    if not faces:
+        return out
+
+    best_i = max(
+        range(len(faces)),
+        key=lambda i: float(faces[i].get("width") or 0) * float(faces[i].get("height") or 0),
+    )
+    face = faces[best_i]
+    x = float(face.get("x") or 0)
+    y = float(face.get("y") or 0)
+    w = float(face.get("width") or 0)
+    h = float(face.get("height") or 0)
+    bbox = [x, y, x + w, y + h]
+    kps = None
+    if kps_list is not None and 0 <= best_i < len(kps_list):
+        kps = kps_list[best_i]
+
+    if not bool(getattr(settings, "ENROLL_QUALITY_GATE_ENABLED", True)):
+        out["enrollReady"] = True
+        out["enrollMessage"] = "Enrollment quality gate disabled."
+        return out
+
+    ok, message, scores = check_enrollment_quality_bgr(image, bbox, kps)
+    out["enrollReady"] = bool(ok)
+    out["enrollMessage"] = message
+    out["enrollScores"] = scores
+    return out

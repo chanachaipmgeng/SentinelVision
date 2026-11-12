@@ -52,6 +52,28 @@
                 </div>
               }
             </div>
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-3" *ngIf="videoDevices.length">
+              <label class="text-xs text-textmuted mb-0" for="enroll-camera-select">กล้อง</label>
+              <select
+                id="enroll-camera-select"
+                class="form-control form-control-sm max-w-xs"
+                [ngModel]="selectedDeviceId"
+                [disabled]="isUploadingFace || switchingCamera || videoDevices.length < 2"
+                (ngModelChange)="onCameraDeviceChange($event)">
+                @for (cam of videoDevices; track cam.deviceId) {
+                  <option [value]="cam.deviceId">{{ cam.label }}</option>
+                }
+              </select>
+              <button
+                type="button"
+                class="ti-btn ti-btn-light !mb-0 ti-btn-sm"
+                title="สลับกล้อง"
+                [disabled]="isUploadingFace || switchingCamera || videoDevices.length < 2"
+                (click)="cycleCamera()">
+                <i class="ri-camera-switch-line align-middle"></i>
+                สลับกล้อง
+              </button>
+            </div>
             <div class="relative w-full overflow-hidden rounded">
               <video #video width="640" height="480" playsinline autoplay muted
                 style="width: 100%; height: auto; object-fit: cover; display: block;">
@@ -61,7 +83,9 @@
               </canvas>
             </div>
             <p class="mt-3 mb-0 text-center text-sm text-defaulttextcolor">{{ faceStatus }}</p>
-            <p class="mt-1 mb-0 text-center text-xs text-textmuted">{{ capturedAngleCount }}/5 มุม · ระบบถ่ายอัตโนมัติเมื่อท่าถูกต้อง</p>
+            <p class="mt-1 mb-0 text-center text-xs text-textmuted">
+              {{ capturedAngleCount }}/5 มุม · ถ่ายอัตโนมัติเมื่อตรวจพบใบหน้าและผ่านเกณฑ์คุณภาพ (ENROLL_*)
+            </p>
           </div>
 
           <div [class.hidden]="faceEnrollMode !== 'upload'">
@@ -105,7 +129,7 @@
           ยกเลิก
         </button>
         <button type="button" class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="isUploadingFace || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !isFaceDetected) : !uploadFaceItems.length)"
+          [disabled]="isUploadingFace || switchingCamera || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !(isFaceDetected && enrollReady)) : !uploadFaceItems.length)"
           (click)="captureImage()">
           @if (isUploadingFace) {
             {{ uploadProgressLabel || 'กำลังบันทึก...' }}

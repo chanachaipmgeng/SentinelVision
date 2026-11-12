@@ -165,29 +165,12 @@ def _admin_member(*, totp: bool = False):
 @pytest.mark.asyncio
 async def test_login_face_success_issues_tokens(monkeypatch):
     admin = _admin_member()
-    frames = [_fake_upload() for _ in range(5)]
     response = MagicMock()
     db = AsyncMock()
     db.get = AsyncMock(return_value=admin)
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
 
-    monkeypatch.setattr(
-        auth_routes,
-        "_save_face_login_frames",
-        AsyncMock(return_value=["/tmp/a.jpg"] * 5),
-    )
-    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
-    monkeypatch.setattr(
-        auth_routes,
-        "run_on_face_gpu",
-        AsyncMock(return_value=[0.01] * 512),
-    )
-    monkeypatch.setattr(
-        auth_routes,
-        "search_system_admin_face_pgvector",
-        AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
-    )
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
     monkeypatch.setattr(
         auth_routes,
@@ -218,7 +201,6 @@ async def test_login_face_success_issues_tokens(monkeypatch):
         response=response,
         db=db,
         _rl=None,
-        frames=frames,
         challengeToken="chal",
         totpCode=None,
     )
@@ -231,38 +213,19 @@ async def test_login_face_success_issues_tokens(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_login_face_rejects_member_mismatch(monkeypatch):
-    admin = _admin_member()
-    other = uuid.uuid4()
-    frames = [_fake_upload() for _ in range(5)]
+async def test_login_face_rejects_missing_member(monkeypatch):
     db = AsyncMock()
-    db.get = AsyncMock(return_value=admin)
-
-    monkeypatch.setattr(
-        auth_routes,
-        "_save_face_login_frames",
-        AsyncMock(return_value=["/tmp/a.jpg"] * 5),
-    )
-    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
-    monkeypatch.setattr(
-        auth_routes,
-        "run_on_face_gpu",
-        AsyncMock(return_value=[0.01] * 512),
-    )
-    monkeypatch.setattr(
-        auth_routes,
-        "search_system_admin_face_pgvector",
-        AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
-    )
+    db.get = AsyncMock(return_value=None)
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
-    monkeypatch.setattr(auth_routes, "_parse_face_login_challenge", lambda token: other)
+    monkeypatch.setattr(
+        auth_routes, "_parse_face_login_challenge", lambda token: uuid.uuid4()
+    )
 
     with pytest.raises(HTTPException) as exc:
         await auth_routes.login_face(
             response=MagicMock(),
             db=db,
             _rl=None,
-            frames=frames,
             challengeToken="chal",
             totpCode=None,
         )
@@ -310,55 +273,21 @@ async def test_login_face_identify_returns_challenge(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_login_face_no_match_uniform_401_no_password_lockout(monkeypatch):
-    frames = [_fake_upload() for _ in range(5)]
-    failures_before = []
-
-    monkeypatch.setattr(
-        auth_routes,
-        "_save_face_login_frames",
-        AsyncMock(return_value=["/tmp/a.jpg"] * 5),
-    )
-    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
-    monkeypatch.setattr(
-        auth_routes,
-        "run_on_face_gpu",
-        AsyncMock(return_value=[0.01] * 512),
-    )
-    monkeypatch.setattr(
-        auth_routes,
-        "search_system_admin_face_pgvector",
-        AsyncMock(return_value=None),
-    )
+async def test_login_face_rejects_non_system_admin(monkeypatch):
+    member = _admin_member()
+    member.role = RoleType.MEMBER
+    db = AsyncMock()
+    db.get = AsyncMock(return_value=member)
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
-    monkeypatch.setattr(auth_routes, "register_failure", lambda m: failures_before.append(m))
-
     monkeypatch.setattr(
-        auth_routes, "_parse_face_login_challenge", lambda token: uuid.uuid4()
+        auth_routes, "_parse_face_login_challenge", lambda token: member.memberId
     )
+
     with pytest.raises(HTTPException) as exc:
         await auth_routes.login_face(
             response=MagicMock(),
-            db=AsyncMock(),
+            db=db,
             _rl=None,
-            frames=frames,
-            challengeToken="chal",
-            totpCode=None,
-        )
-    assert exc.value.status_code == 401
-    assert exc.value.detail == "Invalid credentials"
-    assert failures_before == []
-
-
-@pytest.mark.asyncio
-async def test_login_face_too_few_frames_401(monkeypatch):
-    monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
-    with pytest.raises(HTTPException) as exc:
-        await auth_routes.login_face(
-            response=MagicMock(),
-            db=AsyncMock(),
-            _rl=None,
-            frames=[_fake_upload(), _fake_upload()],
             challengeToken="chal",
             totpCode=None,
         )
@@ -369,26 +298,9 @@ async def test_login_face_too_few_frames_401(monkeypatch):
 @pytest.mark.asyncio
 async def test_login_face_mfa_required_when_totp_enabled(monkeypatch):
     admin = _admin_member(totp=True)
-    frames = [_fake_upload() for _ in range(5)]
     db = AsyncMock()
     db.get = AsyncMock(return_value=admin)
 
-    monkeypatch.setattr(
-        auth_routes,
-        "_save_face_login_frames",
-        AsyncMock(return_value=["/tmp/a.jpg"] * 5),
-    )
-    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
-    monkeypatch.setattr(
-        auth_routes,
-        "run_on_face_gpu",
-        AsyncMock(return_value=[0.01] * 512),
-    )
-    monkeypatch.setattr(
-        auth_routes,
-        "search_system_admin_face_pgvector",
-        AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
-    )
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
     monkeypatch.setattr(
         auth_routes, "_parse_face_login_challenge", lambda token: admin.memberId
@@ -399,7 +311,6 @@ async def test_login_face_mfa_required_when_totp_enabled(monkeypatch):
             response=MagicMock(),
             db=db,
             _rl=None,
-            frames=frames,
             challengeToken="chal",
             totpCode=None,
         )

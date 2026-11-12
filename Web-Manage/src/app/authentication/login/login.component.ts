@@ -91,7 +91,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     private empServie: EmployeeService,
     private translate: TranslateService,
   ) {
-    localStorage.clear();
+    // Drop member session leftovers without wiping unrelated prefs (lang, UI).
+    this.tokenService.clearSession();
     this.tokenService.clearKioskSession();
   }
 
@@ -247,8 +248,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.error = '';
     this.errorMessage = '';
 
-    if (this.mfaRequired && this.faceChallengeToken && this.pendingFaceFrames?.length) {
-      this.submitFaceFrames(this.pendingFaceFrames);
+    if (this.mfaRequired && this.faceChallengeToken) {
+      this.submitFaceChallenge();
       return;
     }
 
@@ -356,7 +357,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     );
   }
 
-  private submitFaceFrames(frames: Blob[]): void {
+  private submitFaceChallenge(): void {
     if (!this.faceChallengeToken) {
       this.facePhase = 'camera';
       this.showLoader = false;
@@ -371,7 +372,7 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.faceHint =
       this.lang === 'th' ? 'กำลังเข้าสู่ระบบ…' : 'Signing you in…';
     const totpVal = this.loginForm.controls['totpCode']?.value || '';
-    this.authService.loginWithFace(frames, totpVal, this.faceChallengeToken).subscribe({
+    this.authService.loginWithFace(totpVal, this.faceChallengeToken).subscribe({
       next: (result) => {
         this.pendingFaceFrames = null;
         this.clearFaceChallenge();
@@ -387,7 +388,6 @@ export class LoginComponent implements OnInit, OnDestroy {
           this.routes.navigate(['/admin/member-manage']);
           return;
         }
-        // Session already applied — route by role when shape differs from legacy ints.
         if (role === 99) {
           this.routes.navigate(['/admin/member-manage']);
           return;
@@ -404,7 +404,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         const detail = err?.error?.detail || '';
         if (detail === 'MFA_REQUIRED') {
           this.mfaRequired = true;
-          this.pendingFaceFrames = frames;
           this.facePhase = 'camera';
           this.error =
             this.lang === 'th'
@@ -416,7 +415,6 @@ export class LoginComponent implements OnInit, OnDestroy {
               : 'Enter 2FA then confirm again';
         } else if (detail === 'Invalid 2FA authenticator code') {
           this.mfaRequired = true;
-          this.pendingFaceFrames = frames;
           this.facePhase = 'camera';
           this.error =
             this.lang === 'th'
@@ -549,22 +547,8 @@ export class LoginComponent implements OnInit, OnDestroy {
       this.lang === 'th' ? 'ตรวจพบการกระพริบ — กำลังเข้าสู่ระบบ…' : 'Blink detected — signing in…';
     this.faceHint =
       this.lang === 'th' ? 'กำลังเข้าสู่ระบบ…' : 'Signing you in…';
-    try {
-      // Let eyes fully reopen before capture so rematch succeeds.
-      await new Promise((r) => setTimeout(r, 350));
-      if (!this.faceChallengeToken || this.loginMode !== 'face') return;
-      const frames = await this.captureFrames(5);
-      this.pendingFaceFrames = frames;
-      this.submitFaceFrames(frames);
-    } catch {
-      this.blinkConfirming = false;
-      this.clearFaceChallenge();
-      this.facePhase = 'camera';
-      this.error =
-        this.lang === 'th'
-          ? 'จับภาพหลังกระพริบไม่สำเร็จ กรุณาลองใหม่'
-          : 'Could not capture after blink. Try again.';
-    }
+    // No second face capture/GPU match — challenge from identify is enough after blink.
+    this.submitFaceChallenge();
   }
 
   /**

@@ -214,8 +214,6 @@ async def login(
     return _attach_session_cookies(response, _tokens(member))
 
 
-_FACE_LOGIN_MIN_FRAMES = 4
-_FACE_LOGIN_MAX_FRAMES = 6
 _FACE_IDENTIFY_MIN_FRAMES = 2
 _FACE_IDENTIFY_MAX_FRAMES = 3
 
@@ -368,21 +366,14 @@ async def login_face(
     response: Response,
     db: AsyncSession = Depends(get_db),
     _rl=Depends(rate_limit_face_login),
-    frames: List[UploadFile] = File(...),
-    challengeToken: Optional[str] = Form(None),
+    challengeToken: str = Form(...),
     totpCode: Optional[str] = Form(None),
 ):
-    """Confirm face login after identify+blink: rematch challenge member, then issue session.
+    """Confirm face login after identify+blink using the challenge only (no second GPU match).
 
-    Client blink is the interactive liveness gate; encoding uses walk-by (same as
-    identify) so a still kiosk face is not rejected by multi-frame motion checks.
+    Face was already matched on ``/login/face/identify``; the client blink is the
+    interactive gate. Requiring a short-lived challenge JWT avoids a redundant rematch.
     """
-    if not frames or len(frames) < _FACE_LOGIN_MIN_FRAMES or len(frames) > _FACE_LOGIN_MAX_FRAMES:
-        await write_audit(
-            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-        )
-        raise _face_login_fail()
-
     try:
         challenge_member_id = _parse_face_login_challenge(challengeToken)
     except HTTPException:
@@ -391,85 +382,63 @@ async def login_face(
         )
         raise
 
-    temp_paths: List[str] = []
-    try:
-        temp_paths = await _save_face_login_frames(frames)
-        try:
-            encoding = await run_on_face_gpu(
-                partial(get_walkby_encoding, list(temp_paths)),
-                kind="identify",
-            )
-        except (ValueError, RuntimeError):
-            await write_audit(
-                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail() from None
-
-        threshold = float(getattr(settings, "FACE_LOGIN_THRESHOLD", 0.32) or 0.32)
-        margin = float(getattr(settings, "FACE_LOGIN_AMBIGUITY_MARGIN", 0.08) or 0.08)
-        hit = await search_system_admin_face_pgvector(
-            db, encoding, threshold, ambiguity_margin=margin
-        )
-        if hit is None:
-            await write_audit(
-                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail()
-
-        _face_encoding_id, member_id, _distance = hit
-        if member_id != challenge_member_id:
-            await write_audit(
-                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail()
-
-        member = await db.get(Member, member_id)
-        if member is None or getattr(member, "deletedAt", None) is not None:
-            await write_audit(
-                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail()
-
-        try:
-            assert_not_locked(member)
-        except HTTPException:
-            await write_audit(
-                actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail() from None
-
-        status_val = getattr(member.status, "value", member.status)
-        if status_val in (0, "DISABLED"):
-            await write_audit(
-                actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
-            )
-            raise _face_login_fail()
-
-        totp_secret = member.totpSecret
-        if bool(member.totpEnabled) and totp_secret:
-            code = (totpCode or "").strip()
-            if not code:
-                raise HTTPException(status_code=401, detail="MFA_REQUIRED")
-            if not verify_totp(totp_secret, code):
-                register_failure(member)
-                await db.commit()
-                await write_audit(
-                    actor=member,
-                    action="LOGIN_MFA_FAIL",
-                    path="/auth/login/face",
-                    status_code=401,
-                )
-                raise HTTPException(status_code=401, detail="Invalid 2FA authenticator code")
-
-        register_success(member)
-        await db.commit()
-        await db.refresh(member)
+    member = await db.get(Member, challenge_member_id)
+    if member is None or getattr(member, "deletedAt", None) is not None:
         await write_audit(
-            actor=member, action="LOGIN_FACE_OK", path="/auth/login/face", status_code=200
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
         )
-        return _attach_session_cookies(response, _tokens(member))
-    finally:
-        _cleanup_face_login_paths(temp_paths)
+        raise _face_login_fail()
+
+    # Face login is system-admin gallery only — reject if role drifted after identify.
+    role_val = getattr(member.role, "value", member.role)
+    try:
+        role_ok = int(role_val) == 99
+    except (TypeError, ValueError):
+        role_ok = False
+    if not role_ok:
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    try:
+        assert_not_locked(member)
+    except HTTPException:
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail() from None
+
+    status_val = getattr(member.status, "value", member.status)
+    if status_val in (0, "DISABLED"):
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    totp_secret = member.totpSecret
+    if bool(member.totpEnabled) and totp_secret:
+        code = (totpCode or "").strip()
+        if not code:
+            raise HTTPException(status_code=401, detail="MFA_REQUIRED")
+        if not verify_totp(totp_secret, code):
+            register_failure(member)
+            await db.commit()
+            await write_audit(
+                actor=member,
+                action="LOGIN_MFA_FAIL",
+                path="/auth/login/face",
+                status_code=401,
+            )
+            raise HTTPException(status_code=401, detail="Invalid 2FA authenticator code")
+
+    register_success(member)
+    await db.commit()
+    await db.refresh(member)
+    await write_audit(
+        actor=member, action="LOGIN_FACE_OK", path="/auth/login/face", status_code=200
+    )
+    return _attach_session_cookies(response, _tokens(member))
 
 
 async def _assert_refresh_not_revoked(db: AsyncSession, payload: dict, *, refresh_ttl) -> None:

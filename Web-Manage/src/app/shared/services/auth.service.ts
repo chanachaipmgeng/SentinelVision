@@ -64,12 +64,9 @@ export class AuthService {
     }>(this.apiBaseUrl + '/login/face/identify', form, { withCredentials: true });
   }
 
-  /** Confirm face login after blink: challengeToken + frames + optional TOTP. */
-  loginWithFace(frames: Blob[], totpCode?: string, challengeToken?: string) {
+  /** Confirm face login after blink: challengeToken only (no second face match) + optional TOTP. */
+  loginWithFace(totpCode?: string, challengeToken?: string) {
     const form = new FormData();
-    frames.forEach((blob, i) => {
-      form.append('frames', blob, `frame-${i}.jpg`);
-    });
     if (challengeToken && challengeToken.trim()) {
       form.append('challengeToken', challengeToken.trim());
     }

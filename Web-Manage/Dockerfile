@@ -11,7 +11,7 @@ RUN npm ci
 
 COPY . .
 # assets/config.json is git-ignored; ship the placeholder so the asset exists. The runtime
-# entrypoint serves the real one from GOOGLE_MAPS_API_KEY / GOOGLE_MAPS_MAP_ID on container start.
+# entrypoint rewrites it with an empty Maps key and GOOGLE_MAPS_MAP_ID on container start.
 RUN [ -f src/assets/config.json ] || cp src/assets/config.example.json src/assets/config.json
 RUN npx ng build --configuration=production
 

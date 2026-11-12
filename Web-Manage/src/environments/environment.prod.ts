@@ -2,9 +2,9 @@
 //
 // SECRETS POLICY
 // - Never commit real API keys here. This file is public in the built bundle AND in git history.
-// - Per-deployment values (Google Maps API key, Map ID) are read at runtime from
-//   `assets/config.json`, written by the nginx entrypoint from GOOGLE_MAPS_API_KEY /
-//   GOOGLE_MAPS_MAP_ID (see Web-Manage/docker/40-runtime-config.sh and docs/SECRETS-REMEDIATION.md).
+// - Map ID is read at runtime from `assets/config.json`, written by the nginx entrypoint
+//   from GOOGLE_MAPS_MAP_ID. The Maps browser key is always empty
+//   (see Web-Manage/docker/40-runtime-config.sh and docs/SECRETS-REMEDIATION.md).
 // - Firebase is NOT used by the app (`@angular/fire` was removed). The block below is kept only as a
 //   schema placeholder. If Firebase is ever re-enabled, inject the values per environment at build time
 //   (CI `fileReplacements` with a generated file, or `envsubst` over a template) — do not paste them here.

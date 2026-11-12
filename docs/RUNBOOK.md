@@ -70,7 +70,7 @@ docker exec sentinel-api id        # uid=10001(app)
 Other changes to apply on upgrade: `admin` and `nginx` listen on **8080** inside the network (`HTTP_PORT` on the host is unchanged); Postgres is published on `127.0.0.1:${POSTGRES_PORT}` only (none with the prod overlay); `/metrics` and `/docs` answer only to `INTERNAL_ALLOW_CIDRS`; `/auth/login` is rate limited (20/min per IP, burst 10) — raise the zones in `docker/nginx/00-dpu-http.conf` if a NAT hides many admins behind one address.
 
 ## Leaked secrets / PII in git
-`API-Fast/.env`, 811 face images, a scratch `.xlsx` and a load-test dump were tracked until roadmap A2. They are untracked now but still in history. Follow `docs/SECRETS-REMEDIATION.md` for the `git filter-repo` purge, the key-rotation checklist (`SECRET_KEY`, `POSTGRES_PASSWORD`, Google Maps, Firebase) and the re-clone notice. The Google Maps key is injected at runtime via `GOOGLE_MAPS_API_KEY` → `assets/config.json`; change it with `docker compose up -d admin`, no rebuild.
+`API-Fast/.env`, 811 face images, a scratch `.xlsx` and a load-test dump were tracked until roadmap A2. They are untracked now but still in history. Follow `docs/SECRETS-REMEDIATION.md` for the `git filter-repo` purge, the key-rotation checklist (`SECRET_KEY`, `POSTGRES_PASSWORD`, Google Maps, Firebase) and the re-clone notice. The Maps browser key is not injected. `docker-compose.yml` forces it empty and admin maps use OSM.
 
 ## Kiosk pairing (provision a tablet)
 Kiosk tablets no longer receive a token in a URL. Each device is paired once with a short-lived code:

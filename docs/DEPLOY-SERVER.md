@@ -81,7 +81,7 @@ nano .env
 | `POSTGRES_DB` | `dpu` | ชื่อฐานข้อมูล |
 | `HTTP_PORT` | `80` | พอร์ต nginx ฝั่งโฮสต์ |
 | `SECRET_KEY` | สตริงสุ่มยาว | ใช้ใน production ต้องเปลี่ยน |
-| `GOOGLE_MAPS_API_KEY` | คีย์จาก Google Cloud (จำกัด HTTP referrer) | Web-Manage เขียนลง `assets/config.json` ตอน container start; ว่าง = ใช้แผนที่ OSM แทน |
+| `GOOGLE_MAPS_API_KEY` | ไม่ใช้ | Compose บังคับค่าว่าง แผนที่ใน admin ใช้ OSM |
 | `GOOGLE_MAPS_MAP_ID` | `DEMO_MAP_ID` | Map ID สำหรับ AdvancedMarkerElement |
 | `FACE_DEVICE` | `cuda:0` หรือ `cpu` | อุปกรณ์รัน InsightFace (การ์ดใบเดียว) |
 | `FACE_DEVICES` | `cuda:0` | ในแต่ละ API process (dual-GPU overlay ตั้งให้อัตโนมัติ) |
@@ -102,7 +102,6 @@ POSTGRES_PASSWORD=ใส่รหัสแข็งแรง
 POSTGRES_DB=dpu
 HTTP_PORT=80
 SECRET_KEY=ใส่ค่าสุ่มยาวอย่างน้อย-32-ตัวอักษร
-GOOGLE_MAPS_API_KEY=ใส่คีย์-Google-Maps-ที่จำกัด-referrer
 FACE_DEVICE=cuda:0
 FACE_DEVICES=cuda:0
 FACE_GPU_WORKERS=3

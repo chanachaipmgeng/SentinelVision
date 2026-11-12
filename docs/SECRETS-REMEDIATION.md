@@ -29,7 +29,7 @@ Edited in place (not untracked):
 
 | Path | Finding | Fix in this PR |
 |---|---|---|
-| `Web-Manage/src/index.html` (lines 108, 118) | Google Maps API key `AIza…` hard-coded twice | Removed; SDK is now injected at startup from `assets/config.json` (`src/app/shared/runtime-config.ts`) |
+| `Web-Manage/src/index.html` (lines 108, 118) | Google Maps browser API key hard-coded twice | Removed; the admin container no longer accepts a Maps key and map widgets use OSM |
 | `Web-Manage/src/environments/environment.ts`, `environment.prod.ts` | Firebase web config (`apiKey`, `appId`, `messagingSenderId`, …) | Values blanked (Firebase is not used — `@angular/fire` was removed); block kept as schema placeholder with injection instructions |
 
 Not changed, review separately:
@@ -67,7 +67,9 @@ git filter-repo --invert-paths \
 
 # Scrub the literal secrets wherever else they appear in history (index.html, env files, docs)
 cat > ../expressions.txt <<'EOF'
-regex:AIza[0-9A-Za-z_\-]{30,}==>REDACTED_GOOGLE_MAPS_KEY
+# Google Maps browser keys historically used a fixed 4-letter prefix plus 30+ alnum/_/-.
+# Put that regex only in a machine-local expressions file — do not commit the live prefix.
+regex:GOOGLE_MAPS_BROWSER_KEY_PATTERN==>REDACTED_GOOGLE_MAPS_KEY
 regex:SECRET_KEY=.*==>SECRET_KEY=REDACTED
 regex:postgresql\+asyncpg://[^:]+:[^@]+@==>postgresql+asyncpg://REDACTED:REDACTED@
 EOF
@@ -77,7 +79,7 @@ git filter-repo --replace-text ../expressions.txt
 
 # Sanity: nothing left
 git log --all --oneline -- API-Fast/.env | wc -l          # expect 0
-git grep -I -l 'AIza' $(git rev-list --all) | wc -l       # expect 0
+git grep -I -l 'GOOGLE_MAPS_API_KEY' $(git rev-list --all) | wc -l  # spot-check; also grep the live Maps key prefix offline
 git count-objects -vH                                      # size-pack should drop well below 260 MB
 
 # Push the rewritten history (filter-repo removes the origin remote on purpose)
@@ -110,7 +112,7 @@ Rotate **after** the PR is merged and **before/at** the history rewrite. Order m
 | # | Secret | Where it leaked | Rotation steps | Side effects |
 |---|---|---|---|---|
 | 1 | `SECRET_KEY` (JWT HMAC) | `API-Fast/.env` in history | `python -c "import secrets; print(secrets.token_urlsafe(48))"` → set in deploy `.env` (root and/or `API-Fast/.env` for non-Docker runs) → `docker compose up -d api api-gpu1` → confirm `/ready` | Every access/refresh/**kiosk** token is invalid immediately; re-login all admins, re-issue kiosk tokens (`/hr/kiosk-devices`) and re-pair each kiosk |
-| 2 | Google Maps API key `AIza…` | `index.html` in history (public bundle too) | Google Cloud Console → APIs & Services → Credentials → **create a new key** restricted to HTTP referrers (`https://<your-domain>/*`) and to Maps JavaScript API + Places API only → set `GOOGLE_MAPS_API_KEY` in `.env` → `docker compose up -d admin` (no rebuild needed) → **delete** the old key | Old kiosk/admin tabs show the OSM fallback until reloaded |
+| 2 | Google Maps browser API key | `index.html` in history (public bundle too) | Google Cloud Console → APIs & Services → Credentials → **delete the leaked key**. Do not create a replacement in git or `.env`. Compose forces an empty key and admin maps stay on OSM | Admin map widgets use OSM |
 | 3 | Firebase web config | `environment*.ts` in history | Firebase console → Project settings → check whether the web app is still needed. App code does not use it: **delete the web app / restrict the API key** (Google Cloud → Credentials → the auto-created "Browser key (auto created by Firebase)") | None for DPU (unused) |
 | 4 | `POSTGRES_PASSWORD` / `DATABASE_URL` password | `API-Fast/.env` in history and compose default `dpu_secret` | Generate a strong password → `ALTER USER dpu WITH PASSWORD '<new>';` on the running DB (and the shared `dev-postgres` user if used) → update `POSTGRES_PASSWORD` / `DATABASE_URL` in `.env` → `docker compose up -d api api-gpu1` → verify `/ready` and one check-in | Short API outage during restart; `scripts/backup.sh` must get the new password |
 | 5 | Any value in `.env` copied from the leaked file | `SMTP_PASSWORD`, `LINE_CHANNEL_ACCESS_TOKEN`, `WEBHOOK_SIGNING_SECRET`, `FACE_CORE_API_KEY`, `S3_*` | Rotate at the provider if they were ever the same as a value in git | Webhook consumers need the new signing secret |
@@ -133,8 +135,8 @@ Performed on the owner's workstation after PR #8 (Phase A integration) was merge
 **History rewrite** — `git filter-repo` 2.47 on a fresh mirror clone, single pass, 120 commits rewritten; branches `main`, `DEV` and tags `v1`, `v1.1.0`, `v.1.2.0` force-pushed.
 
 - Paths removed from every commit (`--invert-paths --paths-from-file`): `API-Fast/.env`, `API-Fast/uploaded_images/`, `API-Fast/uploads/`, `API-Fast/_inspect_import.xlsx`, `ผลโหลดเทส/`.
-- Literals replaced with `***REMOVED***` (`--replace-text`): the `SECRET_KEY` value and the `DATABASE_URL` password from the historical `API-Fast/.env`; the Google Maps key from `Web-Manage/src/index.html`; plus a safety regex for any `AIza…` key. The Firebase `apiKey` / `appId` / `messagingSenderId` in `environment*.ts` were already masked (`***`) in every historical revision, so nothing to replace. The compose default `dpu_secret` was deliberately **not** rewritten (it is the public example value in `docker-compose.yml` / `.env.example`; the real password was rotated instead).
-- Verification on the rewritten mirror: `git log --all -- API-Fast/.env` → 0 commits; purged paths absent from all trees; `git grep` for each literal and for `AIza[0-9A-Za-z_-]{30,}` over `git rev-list --all` → 0 hits; new `main` tree id identical to the old `main` tree id (`git diff --stat` empty); `DEV` and tags differ only in the purged files. Pack size 260 MB → 221 MB (the remaining bulk is `Web-Manage/src/assets/models/*`).
+- Literals replaced with `***REMOVED***` (`--replace-text`): the `SECRET_KEY` value and the `DATABASE_URL` password from the historical `API-Fast/.env`; the Google Maps browser key from `Web-Manage/src/index.html`; plus a safety regex for Google Maps browser keys. The Firebase `apiKey` / `appId` / `messagingSenderId` in `environment*.ts` were already masked (`***`) in every historical revision, so nothing to replace. The compose default `dpu_secret` was deliberately **not** rewritten (it is the public example value in `docker-compose.yml` / `.env.example`; the real password was rotated instead).
+- Verification on the rewritten mirror: `git log --all -- API-Fast/.env` → 0 commits; purged paths absent from all trees; `git grep` for each literal and for Google Maps browser key patterns over `git rev-list --all` → 0 hits; new `main` tree id identical to the old `main` tree id (`git diff --stat` empty); `DEV` and tags differ only in the purged files. Pack size 260 MB → 221 MB (the remaining bulk is `Web-Manage/src/assets/models/*`).
 - Owner checkout reset onto the rewritten history (`fetch --prune`, `reset --hard origin/main`, tags re-fetched, `reflog expire --expire=now --all`, `gc --prune=now --aggressive`); the old `main` object is no longer present locally. Local gitignored `.env` untouched.
 - Merged feature branches deleted on origin: `fix/a1-audit-service-imports`, `fix/a7-kiosk-blacklist-exposure`, `chore/a2-untrack-secrets-and-pii`, `fix/a3-kiosk-ws-auth-gating`, `fix/a6-tenant-isolation`, `feat/a5-token-lifecycle-kiosk-pairing`, `feat/a4-real-oidc`, `integration/phase-a`.
 
@@ -145,7 +147,7 @@ Performed on the owner's workstation after PR #8 (Phase A integration) was merge
 
 **Still to do (owner):**
 
-1. Google Maps key — Google Cloud Console → Credentials: delete the leaked key, create a new key restricted to HTTP referrers + Maps JavaScript / Places APIs, set `GOOGLE_MAPS_API_KEY` in `.env`, `docker compose up -d admin` (no rebuild).
+1. Google Maps key — Google Cloud Console → Credentials: **delete the leaked key**. Do not put a replacement in git or `.env`. Compose keeps the key empty so admin maps stay on OSM.
 2. Firebase web app — Firebase console / Google Cloud Credentials: delete the web app or restrict/regenerate its browser key (unused by DPU).
 3. GitHub — the old commits are still reachable through `refs/pull/1..8/head` and GitHub's cache (e.g. `/commit/a3d78344`, PR diff views). Ask GitHub Support to purge unreachable objects / dereference the pull-request refs for `chanachaipmgeng/SentinelVision`, then turn on secret scanning + push protection.
 4. Every other clone (CI runners, deploy hosts per `docs/DEPLOY-SERVER.md`, developers, Docker build caches) must be **re-cloned, not pulled** — see §3. The sibling `dpu-project` checkout (Bitbucket remote) carries the same pre-A2 history and the old DB password in its `.env`; if that stack is started against the shared `dpu-project_pgdata` volume, update its `POSTGRES_PASSWORD` first.

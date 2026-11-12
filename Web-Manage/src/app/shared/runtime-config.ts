@@ -3,8 +3,7 @@
  *
  * The file is NOT committed (see `.gitignore`); `assets/config.example.json` is the
  * template. In Docker the nginx entrypoint (`Web-Manage/docker/40-runtime-config.sh`)
- * writes it from `GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_MAP_ID` on every container start,
- * so one image can be deployed to many environments without rebuilding.
+ * rewrites it on every container start with an empty Maps key and `GOOGLE_MAPS_MAP_ID`.
  */
 export interface RuntimeConfig {
   /** Google Maps JavaScript API key. Empty → Maps script is not loaded, pages use OSM fallback. */

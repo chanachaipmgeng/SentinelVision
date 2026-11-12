@@ -123,7 +123,7 @@ Host URL: `postgresql+asyncpg://localdev:localdev_secret@localhost:54320/localde
 | `FACE_CORE_ENABLED` | `false` | when `true`, `/face/*` BFF proxies vision to Face Core |
 | `FACE_CORE_URL` | `http://host.docker.internal:8081` | Face Core base URL |
 | `FACE_CORE_API_KEY` | (empty) | Bearer key for Face Core tenant |
-| `GOOGLE_MAPS_API_KEY` | (empty) | Web-Manage Google Maps JS key; written to `assets/config.json` by the `admin` container entrypoint. Empty = OSM fallback |
+| `GOOGLE_MAPS_API_KEY` | (unused) | Not read. `docker-compose.yml` forces an empty Maps key; admin maps use OSM |
 | `GOOGLE_MAPS_MAP_ID` | `DEMO_MAP_ID` | Map ID for AdvancedMarkerElement |
 
 Frontends in Docker use `baseUrl: ''` (same origin through nginx).
@@ -155,10 +155,10 @@ Add `-f docker-compose.backup.yml` to run the `backup` sidecar (daily `pg_dump -
 
 ### Web-Manage runtime config (no keys in the bundle)
 
-The SPA reads `assets/config.json` at startup (`src/app/shared/runtime-config.ts`) and injects the Google Maps SDK `<script>` from it. The file is git-ignored; `assets/config.example.json` is the template.
+The SPA reads `assets/config.json` at startup (`src/app/shared/runtime-config.ts`). The file is git-ignored; `assets/config.example.json` is the template. The Maps browser key in that file stays empty, so map widgets use OSM.
 
-- **Docker:** nothing to do — `Web-Manage/docker/40-runtime-config.sh` writes the file from `GOOGLE_MAPS_API_KEY` / `GOOGLE_MAPS_MAP_ID` on each start.
-- **Local `ng serve`:** `cp Web-Manage/src/assets/config.example.json Web-Manage/src/assets/config.json` and fill in your own key. Never commit it.
+- **Docker:** `Web-Manage/docker/40-runtime-config.sh` writes `googleMapsApiKey` as an empty string on each start. `GOOGLE_MAPS_MAP_ID` is still copied through.
+- **Local `ng serve`:** `cp Web-Manage/src/assets/config.example.json Web-Manage/src/assets/config.json`. Leave `googleMapsApiKey` empty. Never commit the file.
 - `src/environments/environment*.ts` must not contain real keys (Firebase block is an unused placeholder). See `docs/SECRETS-REMEDIATION.md`.
 
 ## Enterprise SSO (OIDC, optional)
@@ -243,7 +243,7 @@ ports:
   - "8000:8000"
 ```
 
-Then `ng serve` with `environment.ts` → `http://localhost:8000`. For Google Maps locally, create `src/assets/config.json` from `config.example.json` (git-ignored).
+Then `ng serve` with `environment.ts` → `http://localhost:8000`. For local maps, copy `src/assets/config.example.json` to `src/assets/config.json` (git-ignored) and leave `googleMapsApiKey` empty so the page uses OSM.
 
 ## Demo seed + smoke tests
 

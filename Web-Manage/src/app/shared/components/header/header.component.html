@@ -5,13 +5,17 @@
       <div class="header-content-left">
         <div class="header-element">
           <div class="horizontal-logo">
-            <a routerLink="/admin/home" class="header-logo" aria-label="Sentinel by IVAP Home">
-              <img src="./assets/images/brand-logos/ivap-logo-dark.png" alt="IVAP" class="desktop-logo">
-              <img src="./assets/images/brand-logos/ivap-logo-dark.png" alt="IVAP" class="toggle-logo">
-              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="desktop-dark">
-              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="toggle-dark">
-              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="desktop-white">
-              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="toggle-white">
+            <a routerLink="/admin/home" class="header-logo dpu-header-brand" aria-label="Sentinel by IVAP Home">
+              <img src="./assets/images/brand-logos/ivap-logo-dark.png" alt="" class="desktop-logo">
+              <img src="./assets/images/brand-logos/ivap-logo-dark.png" alt="" class="toggle-logo">
+              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" class="desktop-dark">
+              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" class="toggle-dark">
+              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" class="desktop-white">
+              <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="" class="toggle-white">
+              <span class="dpu-header-brand__lockup">
+                <span class="dpu-header-brand__name">Sentinel</span>
+                <span class="dpu-header-brand__by">by IVAP</span>
+              </span>
             </a>
           </div>
         </div>
@@ -33,32 +37,11 @@
           </button>
         </div>
 
-        <!-- Language -->
-        <div
-          class="header-element py-[1rem] md:px-[0.5rem] px-2 header-country hs-dropdown ti-dropdown hidden sm:block [--placement:bottom-left]">
-          <button id="dropdown-flag" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 flex-shrink-0 !border-0 !rounded-full !shadow-none"
-            [attr.aria-label]="'a11y.languageSwitcher' | translate">
-            <img src="./assets/images/flags/{{selectedLanguage}}.png" alt=""
-              class="h-[1.25rem] w-[1.25rem] rounded-full">
-          </button>
-          <div class="hs-dropdown-menu ti-dropdown-menu min-w-[10rem] hidden !-mt-3" aria-labelledby="dropdown-flag">
-            <div class="ti-dropdown-divider divide-y divide-gray-200 dark:divide-white/10">
-              <div class="py-2 first:pt-0 last:pb-0">
-                <div class="ti-dropdown-item !p-[0.65rem]" (click)="changeLanguage('en')">
-                  <div class="flex items-center space-x-2 rtl:space-x-reverse w-full">
-                    <img src="./assets/images/flags/en.png" alt="" class="h-[1rem] w-[1rem] rounded-full">
-                    <p class="!text-[0.8125rem] font-medium mb-0">English</p>
-                  </div>
-                </div>
-                <div class="ti-dropdown-item !p-[0.65rem]" (click)="changeLanguage('th')">
-                  <div class="flex items-center space-x-2 rtl:space-x-reverse w-full">
-                    <img src="./assets/images/flags/th.png" alt="" class="h-[1rem] w-[1rem] rounded-full">
-                    <p class="!text-[0.8125rem] font-medium mb-0">ไทย</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <!-- Language (landing-style TH / EN) -->
+        <div class="header-element py-[1rem] md:px-[0.5rem] px-2 hidden sm:flex">
+          <div class="dpu-header-lang" role="group" [attr.aria-label]="'a11y.languageSwitcher' | translate">
+            <button type="button" [class.is-active]="selectedLanguage === 'th'" (click)="changeLanguage('th')">TH</button>
+            <button type="button" [class.is-active]="selectedLanguage === 'en'" (click)="changeLanguage('en')">EN</button>
           </div>
         </div>
 
@@ -66,7 +49,7 @@
         <div *ngIf="adminRole"
           class="header-element header-apps py-[1rem] md:px-[0.5rem] px-2 hs-dropdown ti-dropdown md:!block !hidden [--placement:bottom-left]">
           <button aria-label="สิทธิ์การใช้งาน" id="dropdown-apps" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !p-0 !border-0 flex-shrink-0 !rounded-full !shadow-none text-xs">
+            class="hs-dropdown-toggle ti-dropdown-toggle sv-header-btn !p-0 !border-0 flex-shrink-0 !rounded-full !shadow-none text-xs">
             <i class="bx bx-grid-alt header-link-icon text-[1.125rem]"></i>
           </button>
           <div class="p-3 main-header-dropdown !-mt-3 hs-dropdown-menu ti-dropdown-menu !w-[14rem] border-0 hidden"
@@ -101,7 +84,7 @@
         <!-- Fullscreen -->
         <div class="header-element header-fullscreen py-[1rem] md:px-[0.5rem] px-2">
           <a aria-label="Fullscreen" appFullscreen (click)="toggleFullScreen()"
-            class="inline-flex flex-shrink-0 justify-center items-center gap-2 !rounded-full">
+            class="sv-header-btn inline-flex flex-shrink-0 justify-center items-center gap-2 !rounded-full">
             <i class="bx bx-fullscreen full-screen-open header-link-icon" [hidden]="!fullScreenIconVisible"></i>
             <i class="bx bx-exit-fullscreen full-screen-close header-link-icon"
               [hidden]="!exitFullScreenIconVisible"></i>
@@ -111,8 +94,8 @@
         <!-- Profile -->
         <div class="header-element md:!px-[0.5rem] px-2 hs-dropdown !items-center ti-dropdown [--placement:bottom-left]">
           <button id="dropdown-profile" type="button"
-            class="hs-dropdown-toggle ti-dropdown-toggle !gap-2 !p-0 flex-shrink-0 sm:me-2 me-0 !rounded-full !shadow-none text-xs align-middle !border-0">
-            <img class="inline-block rounded-full" [src]="userModel.getPicture()" width="32" height="32" alt="">
+            class="hs-dropdown-toggle ti-dropdown-toggle dpu-header-profile-toggle !gap-2 !p-0 flex-shrink-0 sm:me-2 me-0 !rounded-full !shadow-none text-xs align-middle !border-0">
+            <img class="inline-block rounded-full dpu-header-avatar" [src]="userModel.getPicture()" width="32" height="32" alt="">
           </button>
           <div class="md:block hidden dropdown-profile">
             <p class="font-semibold mb-0 leading-none text-[#536485] text-[0.813rem]">

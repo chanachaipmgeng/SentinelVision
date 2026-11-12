@@ -3,51 +3,54 @@
  */
 :root {
   --dpu-brand: #0f766e;
-  --dpu-brand-hover: #0d9488;
+  --dpu-brand-hover: #14b8a6;
   --dpu-brand-deep: #0b4f4a;
   --dpu-brand-soft: rgba(15, 118, 110, 0.12);
+  --dpu-glow: rgba(15, 118, 110, 0.45);
+  --dpu-glow-soft: rgba(45, 212, 191, 0.22);
+  --dpu-lilac: #99f6e4;
   --dpu-ink: #0f172a;
   --dpu-muted: #64748b;
-  --dpu-surface: #eef2f6;
+  --dpu-surface: #e8eef2;
   --dpu-surface-elevated: #ffffff;
   --dpu-card: #ffffff;
-  --dpu-border: #e2e8f0;
+  --dpu-border: #d7e2e6;
   --dpu-danger: #b91c1c;
   --dpu-success: #15803d;
   --dpu-warning: #b45309;
-  --dpu-radius: 14px;
+  --dpu-radius: 16px;
   --dpu-radius-sm: 10px;
-  --dpu-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 23, 42, 0.04);
-  --dpu-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.1);
+  --dpu-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px rgba(15, 118, 110, 0.06);
+  --dpu-shadow-lg: 0 12px 40px rgba(15, 118, 110, 0.12);
   --dpu-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dpu-duration: 0.35s;
   --dpu-font: "Noto Sans Thai", "Manrope", system-ui, sans-serif;
-  --dpu-font-display: "Manrope", "Noto Sans Thai", system-ui, sans-serif;
+  --dpu-font-display: "Outfit", "Manrope", "Noto Sans Thai", system-ui, sans-serif;
 
-  /* VaultX-inspired Obsidian & Cyber Spectrum tokens */
-  --dpu-canvas: #020308;
-  --dpu-canvas-deep: #05080f;
-  --dpu-obsidian-surface: #070d14;
-  --dpu-obsidian-glass: rgba(7, 13, 20, 0.85);
-  --dpu-obsidian-glass-elevated: rgba(12, 20, 31, 0.92);
-  --dpu-rim-light: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 35%, transparent 70%);
-  --dpu-cyber-teal: #06b6d4;
-  --dpu-cyber-teal-hover: #22d3ee;
-  --dpu-cyber-teal-glow: 0 0 25px -2px rgba(6, 182, 212, 0.45);
-  --dpu-cobalt: #3b82f6;
-  --dpu-cobalt-glow: 0 0 25px -2px rgba(59, 130, 246, 0.45);
-  --dpu-vault-input-bg: rgba(9, 15, 24, 0.85);
+  /* Landing / VaultX teal canvas */
+  --dpu-canvas: #020808;
+  --dpu-canvas-deep: #031716;
+  --dpu-obsidian-surface: #061514;
+  --dpu-obsidian-glass: rgba(2, 8, 8, 0.85);
+  --dpu-obsidian-glass-elevated: rgba(6, 21, 20, 0.92);
+  --dpu-rim-light: linear-gradient(180deg, rgba(45, 212, 191, 0.28) 0%, rgba(255, 255, 255, 0.08) 35%, transparent 70%);
+  --dpu-cyber-teal: #14b8a6;
+  --dpu-cyber-teal-hover: #2dd4bf;
+  --dpu-cyber-teal-glow: 0 0 25px -2px rgba(20, 184, 166, 0.45);
+  --dpu-cobalt: #0d9488;
+  --dpu-cobalt-glow: 0 0 25px -2px rgba(13, 148, 136, 0.45);
+  --dpu-vault-input-bg: rgba(4, 16, 15, 0.85);
   --dpu-vault-input-border: rgba(255, 255, 255, 0.09);
 
-  --dpu-glass-border: rgba(255, 255, 255, 0.12);
-  --dpu-glass-bg: rgba(7, 13, 20, 0.85);
+  --dpu-glass-border: rgba(255, 255, 255, 0.1);
+  --dpu-glass-bg: rgba(6, 21, 20, 0.85);
   --dpu-card-surface-edge: linear-gradient(
     180deg,
-    rgba(6, 182, 212, 0.45),
-    rgba(255, 255, 255, 0.18) 32%,
+    rgba(45, 212, 191, 0.4),
+    rgba(255, 255, 255, 0.14) 32%,
     transparent 75%
   );
-  --dpu-cta-glow: 0 8px 30px rgba(6, 182, 212, 0.4);
+  --dpu-cta-glow: 0 8px 30px rgba(20, 184, 166, 0.45);
   --dpu-landing-font-display: "Outfit", "Manrope", "Noto Sans Thai", system-ui, sans-serif;
 
   /* SentinelVision Unified Security & Identity Palette */

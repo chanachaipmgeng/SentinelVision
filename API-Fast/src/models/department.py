@@ -27,7 +27,7 @@ class Department(Base):
     )
     shiftId: Mapped[uuid.UUID | None] = mapped_column("shift_id", UUID(as_uuid=True), nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     company: Mapped["Company"] = relationship("Company", back_populates="departments")

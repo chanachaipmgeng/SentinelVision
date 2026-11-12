@@ -55,7 +55,7 @@ class CompanyEmployee(Base):
     salary: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     bossId: Mapped[str | None] = mapped_column(String, nullable=True, default="")
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     member: Mapped["Member"] = relationship("Member", back_populates="companyEmployees")

@@ -28,7 +28,7 @@ class NotificationTemplate(Base):
     subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
     bodyTemplate: Mapped[str] = mapped_column(Text, nullable=False)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index("notification_template_company_idx", "companyId", "eventKey"),
@@ -64,7 +64,7 @@ class NotificationPreference(Base):
     mutedEvents: Mapped[Any] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
     locale: Mapped[str] = mapped_column(String(10), nullable=False, default="th")
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index(

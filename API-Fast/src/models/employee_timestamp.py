@@ -45,7 +45,7 @@ class EmployeeTimestamp(Base):
         Enum(TimestampType), nullable=False, default=TimestampType.CHECK_IN
     )
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     locationName: Mapped[str | None] = mapped_column(String, nullable=True, default="")
     latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)

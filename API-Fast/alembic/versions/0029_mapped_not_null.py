@@ -92,11 +92,17 @@ def upgrade() -> None:
         t = _qi(table)
         c = _qi(column)
         op.execute(f"UPDATE {t} SET {c} = {fill} WHERE {c} IS NULL")
+        # updatedAt columns need a DB default aligned with model server_default
+        # so ORM/SQL inserts that omit the column still satisfy NOT NULL.
+        if column in ("updatedAt", "updated_at") and fill == "now()":
+            op.execute(f"ALTER TABLE {t} ALTER COLUMN {c} SET DEFAULT now()")
         op.execute(f"ALTER TABLE {t} ALTER COLUMN {c} SET NOT NULL")
 
 
 def downgrade() -> None:
-    for table, column, _fill in reversed(_NOT_NULL_COLUMNS):
+    for table, column, fill in reversed(_NOT_NULL_COLUMNS):
         t = _qi(table)
         c = _qi(column)
         op.execute(f"ALTER TABLE {t} ALTER COLUMN {c} DROP NOT NULL")
+        if column in ("updatedAt", "updated_at") and fill == "now()":
+            op.execute(f"ALTER TABLE {t} ALTER COLUMN {c} DROP DEFAULT")

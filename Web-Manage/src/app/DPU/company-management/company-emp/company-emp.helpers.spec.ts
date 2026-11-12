@@ -13,23 +13,34 @@ import {
 } from './company-emp.helpers';
 import { EmployeeModel } from '../../models/employee.model';
 
-function emp(partial: Partial<EmployeeModel> & { email?: string; firstName?: string }): EmployeeModel {
-  const m = new EmployeeModel();
-  m.company_employeeId = partial.company_employeeId || 'ce-1';
-  m.employeeId = partial.employeeId || 'E001';
-  (m as unknown).member = {
-    email: partial.email || 'a@b.com',
-    firstName: partial.firstName || 'An',
-    lastName: 'Bee',
-    getPicture: () => '',
-  };
-  (m as unknown).getFullname = () => `${(m as unknown).member.firstName} ${(m as unknown).member.lastName}`;
-  (m as unknown).getType = () => 'monthly';
-  (m as unknown).getRole = () => 'emp';
-  (m as unknown).position = { getName: () => 'Dev', thName: 'Dev', positionId: 'p1' };
-  (m as unknown).department = { getName: () => 'IT', thName: 'IT', departmentId: 'd1' };
-  m.empType = 1;
-  return m;
+/** Minimal employee stub — fields only as needed by helpers under test. */
+function emp(partial: {
+  company_employeeId?: string;
+  employeeId?: string;
+  email?: string | null;
+  firstName?: string;
+  fullname?: string | null;
+}): EmployeeModel {
+  const m = Object.assign(new EmployeeModel(), {
+    company_employeeId: partial.company_employeeId || 'ce-1',
+    employeeId: partial.employeeId || 'E001',
+    empType: 1,
+    member: {
+      email: partial.email === undefined ? 'a@b.com' : partial.email,
+      firstName: partial.firstName || 'An',
+      lastName: 'Bee',
+      getPicture: () => '',
+    },
+    getFullname: () =>
+      partial.fullname === undefined
+        ? `${partial.firstName || 'An'} Bee`
+        : partial.fullname,
+    getType: () => 'monthly',
+    getRole: () => 'emp',
+    position: { getName: () => 'Dev', thName: 'Dev', positionId: 'p1' },
+    department: { getName: () => 'IT', thName: 'IT', departmentId: 'd1' },
+  });
+  return m as EmployeeModel;
 }
 
 describe('company-emp.helpers', () => {
@@ -41,9 +52,7 @@ describe('company-emp.helpers', () => {
   });
 
   it('filterEmployees ignores null rows and nullish fields', () => {
-    const list = [null as unknown, emp({ firstName: 'Ann' }), emp({ firstName: 'Bob' })];
-    (list[2] as unknown).getFullname = () => null;
-    (list[2] as unknown).member = { email: null, firstName: 'Bob', lastName: 'X' };
+    const list = [null as unknown as EmployeeModel, emp({ firstName: 'Ann' }), emp({ firstName: 'Bob', fullname: null, email: null })];
     expect(filterEmployees(list, 'ann').length).toBe(1);
     expect(filterEmployees(list, '').length).toBe(2);
   });

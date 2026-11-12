@@ -55,7 +55,7 @@ class Camera(Base):
     lastAnalyzedAt: Mapped[datetime | None] = mapped_column("last_analyzed_at", DateTime(timezone=True), nullable=True)
     aiConfig: Mapped[Any | None] = mapped_column("ai_config", JSONB, nullable=True)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (

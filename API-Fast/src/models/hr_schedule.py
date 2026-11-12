@@ -32,7 +32,7 @@ class WorkShift(Base):
     isCrossMidnight: Mapped[bool] = mapped_column("is_cross_midnight", Boolean, nullable=False, default=False)
     isDefault: Mapped[bool] = mapped_column("is_default", Boolean, nullable=False, default=False)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("work_shift_company_idx", "companyId"),)
@@ -79,7 +79,7 @@ class LeaveRequest(Base):
     approvedAt: Mapped[datetime | None] = mapped_column("approved_at", DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column("reject_reason", String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index("leave_request_company_dates_idx", "companyId", "start_date", "end_date", "status"),

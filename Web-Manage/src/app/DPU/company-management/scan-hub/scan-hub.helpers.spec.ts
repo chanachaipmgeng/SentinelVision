@@ -23,10 +23,13 @@ describe('scan-hub.helpers', () => {
     });
 
     it('ignores unknown / duplicate noise', () => {
-      expect(toggleEnabledModule(['CORE', 'ATTENDANCE', 'ATTENDANCE'] as unknown, 'WATCHLIST', true)).toEqual([
-        'ATTENDANCE',
-        'WATCHLIST',
-      ]);
+      expect(
+        toggleEnabledModule(
+          ['CORE', 'ATTENDANCE', 'ATTENDANCE'] as unknown as readonly string[],
+          'WATCHLIST',
+          true,
+        ),
+      ).toEqual(['ATTENDANCE', 'WATCHLIST']);
     });
   });
 

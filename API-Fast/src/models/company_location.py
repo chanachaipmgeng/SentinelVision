@@ -32,5 +32,5 @@ class CompanyLocation(Base):
     startDate: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     endDate: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)

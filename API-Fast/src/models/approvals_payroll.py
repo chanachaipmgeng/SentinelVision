@@ -44,7 +44,7 @@ class LeaveBalance(Base):
     entitledDays: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     usedDays: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index(
@@ -91,7 +91,7 @@ class RegularizationRequest(Base):
     approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index("regularization_company_status_idx", "companyId", "status"),
@@ -127,7 +127,7 @@ class OtApprovalRequest(Base):
     approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index("ot_approval_company_status_idx", "companyId", "status"),
@@ -153,7 +153,7 @@ class PayrollPeriod(Base):
     lockedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     lockedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index(

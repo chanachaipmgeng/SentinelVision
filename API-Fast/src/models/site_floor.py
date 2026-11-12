@@ -31,7 +31,7 @@ class SiteFloor(Base):
     heightPx: Mapped[int | None] = mapped_column("height_px", Integer, nullable=True)
     sortOrder: Mapped[int] = mapped_column("sort_order", Integer, nullable=False, default=0, server_default="0")
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("site_floor_company_sort_idx", "companyId", "sort_order"),)

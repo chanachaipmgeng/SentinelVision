@@ -1,9 +1,13 @@
 import logging
+import shutil
+import uuid as uuid_mod
 from datetime import datetime, timezone
-from typing import Optional
+from functools import partial
+from pathlib import Path
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +19,7 @@ from passlib.context import CryptContext
 from ..config.database import get_db
 from ..config.settings import settings
 from ..models.hr_schedule import KioskDevice
-from ..models.member import Member
+from ..models.member import Member, RoleType
 from ..schemas.auth_schema import LoginRequest, Token
 from ..security.auth_cookies import (
     clear_auth_cookies,
@@ -31,9 +35,11 @@ from ..security.jwt import (
     TYP_KIOSK_REFRESH,
     TYP_PASSWORD_RESET,
     TYP_REFRESH,
+    create_face_login_challenge,
     create_kiosk_token_pair,
     create_password_reset_token,
     create_token_pair,
+    decode_face_login_challenge,
     decode_token,
     hash_kiosk_token,
     kiosk_refresh_ttl,
@@ -51,8 +57,11 @@ from ..security.passwords import assert_not_locked, hash_password, register_fail
 from ..security.totp import build_otpauth_uri, generate_totp_secret, verify_totp
 from ..services.audit_service import write_audit
 from ..services import token_revocation_service as revocation
-from ..services.rate_limit_service import rate_limit_login
+from ..services.face_match_service import search_system_admin_face_pgvector
+from ..services.rate_limit_service import rate_limit_face_login, rate_limit_login
 from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
+from ..utils.face_engine import get_walkby_encoding
+from ..utils.face_gpu_queue import run_on_face_gpu
 
 router = APIRouter()
 logger = logging.getLogger("dpu.auth")
@@ -202,6 +211,230 @@ async def login(
     await db.commit()
     await db.refresh(member)
     await write_audit(actor=member, action="LOGIN_OK", path="/auth/login", status_code=200)
+    return _attach_session_cookies(response, _tokens(member))
+
+
+_FACE_IDENTIFY_MIN_FRAMES = 2
+_FACE_IDENTIFY_MAX_FRAMES = 3
+
+
+def _face_login_fail() -> HTTPException:
+    return HTTPException(status_code=401, detail="Invalid credentials")
+
+
+def _face_login_display_name(member: Member) -> str:
+    first = (getattr(member, "firstName", None) or "").strip()
+    last = (getattr(member, "lastName", None) or "").strip()
+    full = f"{first} {last}".strip()
+    if full:
+        return full
+    return (getattr(member, "username", None) or "Admin").strip() or "Admin"
+
+
+async def _save_face_login_frames(files: List[UploadFile]) -> List[str]:
+    temp_dir = Path("temp_images")
+    temp_dir.mkdir(exist_ok=True)
+    paths: List[str] = []
+    for image_file in files:
+        image_path = temp_dir / f"{uuid_mod.uuid4()}.jpg"
+        with image_path.open("wb") as buffer:
+            shutil.copyfileobj(image_file.file, buffer)
+        paths.append(str(image_path))
+    return paths
+
+
+def _cleanup_face_login_paths(paths: List[str]) -> None:
+    for path in paths:
+        p = Path(path)
+        if p.exists():
+            p.unlink()
+
+
+def _parse_face_login_challenge(challenge_token: Optional[str]) -> UUID:
+    raw = (challenge_token or "").strip()
+    if not raw:
+        raise _face_login_fail()
+    try:
+        payload = decode_face_login_challenge(raw)
+        return UUID(str(payload["memberId"]))
+    except HTTPException:
+        raise _face_login_fail() from None
+    except Exception:
+        raise _face_login_fail() from None
+
+
+@router.post("/login/face/identify")
+async def login_face_identify(
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_face_login),
+    frames: List[UploadFile] = File(...),
+):
+    """Match system-admin face and return a greeting challenge (no session cookies)."""
+    if (
+        not frames
+        or len(frames) < _FACE_IDENTIFY_MIN_FRAMES
+        or len(frames) > _FACE_IDENTIFY_MAX_FRAMES
+    ):
+        await write_audit(
+            actor=None,
+            action="LOGIN_FACE_IDENTIFY_FAIL",
+            path="/auth/login/face/identify",
+            status_code=401,
+        )
+        raise _face_login_fail()
+
+    temp_paths: List[str] = []
+    try:
+        temp_paths = await _save_face_login_frames(frames)
+        try:
+            encoding = await run_on_face_gpu(
+                partial(get_walkby_encoding, list(temp_paths)),
+                kind="identify",
+            )
+        except (ValueError, RuntimeError):
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail() from None
+
+        threshold = float(getattr(settings, "FACE_LOGIN_THRESHOLD", 0.32) or 0.32)
+        margin = float(getattr(settings, "FACE_LOGIN_AMBIGUITY_MARGIN", 0.08) or 0.08)
+        hit = await search_system_admin_face_pgvector(
+            db, encoding, threshold, ambiguity_margin=margin
+        )
+        if hit is None:
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        _face_encoding_id, member_id, _distance = hit
+        member = await db.get(Member, member_id)
+        if member is None or getattr(member, "deletedAt", None) is not None:
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        try:
+            assert_not_locked(member)
+        except HTTPException:
+            await write_audit(
+                actor=member,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail() from None
+
+        status_val = getattr(member.status, "value", member.status)
+        if status_val in (0, "DISABLED"):
+            await write_audit(
+                actor=member,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        await write_audit(
+            actor=member,
+            action="LOGIN_FACE_IDENTIFY_OK",
+            path="/auth/login/face/identify",
+            status_code=200,
+        )
+        return {
+            "challengeToken": create_face_login_challenge(str(member.memberId)),
+            "displayName": _face_login_display_name(member),
+            "picture": getattr(member, "picture", None),
+        }
+    finally:
+        _cleanup_face_login_paths(temp_paths)
+
+
+@router.post("/login/face", response_model=Token)
+async def login_face(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_face_login),
+    challengeToken: str = Form(...),
+    totpCode: Optional[str] = Form(None),
+):
+    """Confirm face login after identify+blink using the challenge only (no second GPU match).
+
+    Face was already matched on ``/login/face/identify``; the client blink is the
+    interactive gate. Requiring a short-lived challenge JWT avoids a redundant rematch.
+    """
+    try:
+        challenge_member_id = _parse_face_login_challenge(challengeToken)
+    except HTTPException:
+        await write_audit(
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise
+
+    member = await db.get(Member, challenge_member_id)
+    if member is None or getattr(member, "deletedAt", None) is not None:
+        await write_audit(
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    # Face login is system-admin gallery only — reject if role drifted after identify.
+    role_val = getattr(member.role, "value", member.role)
+    role_ok = member.role == RoleType.ADMIN_SYSTEM or role_val == RoleType.ADMIN_SYSTEM.value
+    if not role_ok:
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    try:
+        assert_not_locked(member)
+    except HTTPException:
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail() from None
+
+    status_val = getattr(member.status, "value", member.status)
+    if status_val in (0, "DISABLED"):
+        await write_audit(
+            actor=member, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    totp_secret = member.totpSecret
+    if bool(member.totpEnabled) and totp_secret:
+        code = (totpCode or "").strip()
+        if not code:
+            raise HTTPException(status_code=401, detail="MFA_REQUIRED")
+        if not verify_totp(totp_secret, code):
+            register_failure(member)
+            await db.commit()
+            await write_audit(
+                actor=member,
+                action="LOGIN_MFA_FAIL",
+                path="/auth/login/face",
+                status_code=401,
+            )
+            raise HTTPException(status_code=401, detail="Invalid 2FA authenticator code")
+
+    register_success(member)
+    await db.commit()
+    await db.refresh(member)
+    await write_audit(
+        actor=member, action="LOGIN_FACE_OK", path="/auth/login/face", status_code=200
+    )
     return _attach_session_cookies(response, _tokens(member))
 
 

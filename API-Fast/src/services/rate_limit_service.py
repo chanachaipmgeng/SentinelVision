@@ -122,6 +122,14 @@ async def rate_limit_login(request: Request) -> None:
     )
 
 
+async def rate_limit_face_login(request: Request) -> None:
+    await enforce_rate_limit(
+        request,
+        "face_login",
+        limit=int(getattr(settings, "RATE_LIMIT_FACE_LOGIN_PER_MINUTE", 8) or 8),
+    )
+
+
 async def rate_limit_identify(request: Request) -> None:
     await enforce_rate_limit(
         request,
@@ -135,4 +143,17 @@ async def rate_limit_import(request: Request) -> None:
         request,
         "import",
         limit=int(getattr(settings, "RATE_LIMIT_IMPORT_PER_MINUTE", 10) or 10),
+    )
+
+
+async def rate_limit_client_errors(request: Request) -> None:
+    member = getattr(request.state, "member", None)
+    member_id = getattr(member, "memberId", None) if member is not None else None
+    device_id = getattr(request.state, "kiosk_device_id", None)
+    key = str(member_id or device_id or _client_ip(request))
+    await enforce_rate_limit(
+        request,
+        "client_errors",
+        limit=int(getattr(settings, "RATE_LIMIT_CLIENT_ERRORS_PER_MINUTE", 30) or 30),
+        key=key,
     )

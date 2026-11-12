@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config.settings import settings
 from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding
-from ..models.member import Member, StatusType
+from ..models.member import Member, RoleType, StatusType
 from ..models.sentinel import SentinelIdentity
 from .observability import observe_face_match, observe_face_match_decision
 
@@ -69,6 +69,66 @@ async def search_face_pgvector(
             accepted=accepted,
             distance=top_distance,
             expected_member_id=str(expected_member_id) if expected_member_id else None,
+            matched_member_id=matched_member_id,
+        )
+
+
+async def search_system_admin_face_pgvector(
+    db: AsyncSession,
+    target_encoding: List[float],
+    threshold: float,
+    *,
+    ambiguity_margin: float,
+):
+    """1:N search restricted to system admins (role 99) for console face login.
+
+    Returns ``(face_encoding_id, member_id, distance)`` when the nearest hit is
+    under ``threshold`` and the second-nearest (if any) is farther than
+    ``ambiguity_margin`` from the top distance. Otherwise returns ``None``.
+    """
+    t0 = time.perf_counter()
+    accepted = False
+    top_distance: Optional[float] = None
+    matched_member_id: Optional[str] = None
+    try:
+        distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
+        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        stmt = (
+            select(
+                FaceEncoding.faceEncodingId,
+                FaceEncoding.memberId,
+                distance_expr.label("distance"),
+            )
+            .join(Member, Member.memberId == FaceEncoding.memberId)
+            .where(
+                Member.deletedAt.is_(None),
+                Member.status == StatusType.ENABLE,
+                Member.role == RoleType.ADMIN_SYSTEM,
+                Member.biometricConsentAt.is_not(None),
+            )
+            .order_by(distance_expr)
+            .limit(2)
+        )
+        rows = (await db.execute(stmt)).all()
+        if not rows:
+            return None
+        face_encoding_id, member_id, distance = rows[0]
+        top_distance = float(distance) if distance is not None else None
+        if distance is None or float(distance) >= threshold:
+            return None
+        if len(rows) > 1:
+            second = rows[1][2]
+            if second is not None and (float(second) - float(distance)) < ambiguity_margin:
+                return None
+        accepted = True
+        matched_member_id = str(member_id)
+        return face_encoding_id, member_id, float(distance)
+    finally:
+        observe_face_match("pgvector_system_admin_login", time.perf_counter() - t0)
+        observe_face_match_decision(
+            "pgvector_system_admin_login",
+            accepted=accepted,
+            distance=top_distance,
             matched_member_id=matched_member_id,
         )
 

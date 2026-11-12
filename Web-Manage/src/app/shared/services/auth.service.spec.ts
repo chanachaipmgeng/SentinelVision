@@ -127,7 +127,7 @@ describe('AuthService', () => {
     });
 
     it('does not expose register()', () => {
-      expect((service as unknown).register).toBeUndefined();
+      expect((service as unknown as { register?: unknown }).register).toBeUndefined();
     });
   });
 

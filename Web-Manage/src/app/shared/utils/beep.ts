@@ -66,6 +66,13 @@ export function playCheckInBeep(): void {
   tone(1319, 110, 0.1, 0.14);
 }
 
+/** Bright triad — face identified / greeting on login. */
+export function playFaceFoundBeep(): void {
+  tone(784, 70, 0, 0.12);
+  tone(988, 80, 0.08, 0.13);
+  tone(1319, 120, 0.18, 0.15);
+}
+
 /** Soft lower beep — duplicate / already checked in. */
 export function playDuplicateBeep(): void {
   tone(660, 70, 0, 0.1);

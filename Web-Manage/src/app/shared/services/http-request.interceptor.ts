@@ -6,6 +6,7 @@ import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { TokenService } from './token.service';
 import { AuthService, RefreshedTokens } from './auth.service';
+import { ClientErrorReporterService } from './client-error-reporter.service';
 import { environment } from '../../../environments/environment';
 
 
@@ -15,18 +16,24 @@ const CSRF_HEADER = 'X-CSRF-Token';
 const NO_REFRESH_PATHS = [
   '/auth/login',
   '/auth/refresh',
+  '/auth/refresh-token',
   '/auth/logout',
   '/auth/kiosk/pair',
   '/auth/kiosk/refresh',
   '/auth/send-reset-password',
   '/auth/reset-password',
+  '/auth/sso/',
 ];
 
 @Injectable()
 export class HttpRequestInterceptor {
   private isRefreshing = false;
   private refreshTokenSubject: BehaviorSubject<unknown> = new BehaviorSubject<unknown>(null);
-  constructor(private tokenService: TokenService, private authService: AuthService) { }
+  constructor(
+    private tokenService: TokenService,
+    private authService: AuthService,
+    private clientErrors: ClientErrorReporterService,
+  ) { }
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (req.url.startsWith("./")) {
@@ -52,6 +59,9 @@ export class HttpRequestInterceptor {
         if (refreshable && !NO_REFRESH_PATHS.some((p) => fullUrl.includes(p))) {
           return this.handle401Error(authReq, next, fullUrl);
         }
+        if (error instanceof HttpErrorResponse) {
+          this.clientErrors.reportFromHttpError(error, authReq.method, fullUrl);
+        }
         return throwError(() => error);
       }));
     }
@@ -68,7 +78,12 @@ export class HttpRequestInterceptor {
       this.refreshTokenSubject.next(null);
 
       const refresh = this.tokenService.getRefreshToken();
-      const canCookieRefresh = !this.tokenService.isKioskSession();
+      // Member refresh is cookie+CSRF only — never POST /refresh-token with an empty session
+      // (that produces a noisy 401 and can signOut during face-login on the login page).
+      const csrf = this.tokenService.getCsrfToken();
+      const hadAccess = !!this.tokenService.getToken();
+      const canCookieRefresh =
+        !this.tokenService.isKioskSession() && (!!csrf || hadAccess);
 
       if (refresh || canCookieRefresh) {
         return this.authService
@@ -90,15 +105,18 @@ export class HttpRequestInterceptor {
           }),
           catchError((err) => {
             this.isRefreshing = false;
-
-            this.tokenService.signOut();
+            // Only bounce to login when we actually had a session to lose.
+            if (hadAccess || csrf || refresh) {
+              this.tokenService.signOut();
+            }
             return throwError(() => err);
           })
         );
       }
       this.isRefreshing = false;
-      this.tokenService.signOut();
-      return throwError(() => new HttpErrorResponse({ status: 401, statusText: 'Session expired', url: fullUrl }));
+      return throwError(
+        () => new HttpErrorResponse({ status: 401, statusText: 'Unauthorized', url: fullUrl }),
+      );
     }
 
     return this.refreshTokenSubject.pipe(

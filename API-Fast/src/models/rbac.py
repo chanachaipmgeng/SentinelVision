@@ -102,7 +102,7 @@ class MemberRoleAssignment(Base):
         nullable=True,
     )
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     role: Mapped[RbacRole] = relationship("RbacRole", back_populates="assignments")
 

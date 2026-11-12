@@ -130,4 +130,29 @@ export class UserService {
     };
     return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + body.memberId, options);
   }
+
+  /** System-admin PDPA consent policy (gallery key ``system``). */
+  getSystemConsentPolicy() {
+    return this.http.get<{
+      version: string;
+      textTh: string;
+      textEn: string;
+      updatedAt?: string | null;
+      galleryKey?: string | null;
+    }>(`${this.apiBaseUrl}/pdpa/consent-policy`);
+  }
+
+  /** System-admin console face-login consent (no company scope). */
+  grantBiometricConsent(memberId: string, locale: string = 'th') {
+    return this.http.post<Record<string, unknown>>(
+      `${this.apiBaseUrl}/${memberId}/biometric-consent`,
+      { locale },
+    );
+  }
+
+  revokeBiometricConsent(memberId: string) {
+    return this.http.delete<Record<string, unknown>>(
+      `${this.apiBaseUrl}/${memberId}/biometric-consent`,
+    );
+  }
 }

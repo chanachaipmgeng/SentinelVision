@@ -47,7 +47,7 @@ class SentinelIdentity(Base):
     consentAcceptedAt: Mapped[datetime | None] = mapped_column("consent_accepted_at", DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="ACTIVE")
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
@@ -98,7 +98,7 @@ class SentinelAccessZone(Base):
     relaySecret: Mapped[str | None] = mapped_column("relay_secret", String(512), nullable=True)
     isActive: Mapped[bool] = mapped_column("is_active", Boolean, nullable=False, default=True)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
@@ -132,7 +132,7 @@ class SentinelEvent(Base):
     autoExpireDays: Mapped[int] = mapped_column("auto_expire_days", Integer, nullable=False, default=7)
     status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="LIVE")
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
     deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (Index("sentinel_event_company_idx", "companyId", "status", "start_at"),)

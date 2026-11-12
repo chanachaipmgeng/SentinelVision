@@ -13,44 +13,44 @@ describe('ThemeService', () => {
   beforeEach(() => {
     localStorage.removeItem(THEME_STORAGE_KEY);
     localStorage.removeItem(DENSITY_STORAGE_KEY);
-    html.classList.remove('dark', 'dpu-kiosk-mode');
+    html.classList.remove('dark', 'light', 'dpu-kiosk-mode');
     html.removeAttribute('data-theme');
+    html.removeAttribute('data-theme-mode');
     html.removeAttribute('data-density');
   });
 
   afterEach(() => {
     localStorage.removeItem(THEME_STORAGE_KEY);
     localStorage.removeItem(DENSITY_STORAGE_KEY);
-    html.classList.remove('dark', 'dpu-kiosk-mode');
-    html.setAttribute('data-theme', 'light');
+    html.classList.remove('dark', 'light', 'dpu-kiosk-mode');
+    html.setAttribute('data-theme', 'dark');
     html.removeAttribute('data-density');
   });
 
-  it('defaults to light and persists the dark preference under sv_theme', () => {
+  it('defaults to dark and persists the light preference under sv_theme', () => {
     const svc = fresh();
-    expect(svc.theme()).toBe('light');
-    svc.setShellActive(true);
-    expect(html.getAttribute('data-theme')).toBe('light');
+    expect(svc.theme()).toBe('dark');
+    expect(html.getAttribute('data-theme')).toBe('dark');
 
     svc.toggleTheme();
-    expect(svc.theme()).toBe('dark');
-    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
-    expect(html.getAttribute('data-theme')).toBe('dark');
-    expect(html.getAttribute('data-theme-mode')).toBe('dark');
-    expect(html.classList.contains('dark')).toBeTrue();
+    expect(svc.theme()).toBe('light');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    expect(html.getAttribute('data-theme')).toBe('light');
+    expect(html.getAttribute('data-theme-mode')).toBe('light');
+    expect(html.classList.contains('dark')).toBeFalse();
   });
 
   it('restores the stored preference on startup', () => {
-    localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    localStorage.setItem(THEME_STORAGE_KEY, 'light');
     const svc = fresh();
-    expect(svc.theme()).toBe('dark');
+    expect(svc.theme()).toBe('light');
   });
 
-  it('keeps login (shell inactive) and kiosk light even when dark is preferred', () => {
+  it('keeps kiosk light even when dark is preferred', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
     const svc = fresh();
-    expect(html.getAttribute('data-theme')).toBe('light');
-    expect(svc.effectiveTheme).toBe('light');
+    expect(html.getAttribute('data-theme')).toBe('dark');
+    expect(svc.effectiveTheme).toBe('dark');
 
     svc.setShellActive(true);
     expect(svc.effectiveTheme).toBe('dark');
@@ -60,8 +60,7 @@ describe('ThemeService', () => {
     expect(html.classList.contains('dark')).toBeFalse();
 
     svc.setKioskActive(false);
-    svc.setShellActive(false);
-    expect(html.getAttribute('data-theme')).toBe('light');
+    expect(html.getAttribute('data-theme')).toBe('dark');
   });
 
   it('toggles compact density and persists it under sv_density', () => {

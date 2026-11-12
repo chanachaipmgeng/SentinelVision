@@ -58,7 +58,8 @@ export class AuthGuard implements CanActivate {
       return this.allow(state);
     }
     // Access token is memory-only: try httpOnly refresh cookie once before bouncing to login.
-    if (this.tokenService.getCsrfToken() || this.tokenService.getUser()?.member?.memberId) {
+    // Require CSRF (proves a prior cookie session) — do not refresh on a bare cached user blob.
+    if (this.tokenService.getCsrfToken()) {
       return this.authService.refreshFromCookie().pipe(
         map(() => this.allow(state)),
         catchError(() => {

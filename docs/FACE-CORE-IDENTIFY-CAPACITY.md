@@ -1,5 +1,7 @@
 # Identify-only capacity + ความต่างสำหรับแยก Face Core
 
+**Gallery contract (role 99):** platform system-admin face login uses Face Core / local gallery key **`system`** (`companyId IS NULL` locally today). DPU `POST /auth/login/face` still searches local pgvector until a dedicated Face Core identify for `system` is cut over — see [ARCHITECTURE.md](ARCHITECTURE.md) § System-admin face login gallery.
+
 **วัด baseline:** 24 ก.ย. 2026 ~03:05–03:18 (UTC+7) · **quad** · `FACE_GPU_WORKERS=3`  
 **วัดเพดานสุดท้ายหลังจูน:** 24 ก.ย. 2026 ~03:43–04:20 · A/B + push ceiling · **hexa** · `FACE_GPU_WORKERS=2`  
 **วัดดัน >48 จนไม่ไหว:** 24 ก.ย. 2026 ~07:50+ · hexa w2 · ดู §3c  

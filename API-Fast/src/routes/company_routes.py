@@ -130,7 +130,7 @@ async def list_audit_logs(
 
     safe_limit = min(max(int(limit or 100), 1), 500)
     safe_offset = max(0, int(offset or 0))
-    clauses = [AuditLog.companyId == companyId]
+    clauses: list[Any] = [AuditLog.companyId == companyId]
 
     actor_q = (actor or "").strip()
     if actor_q:

@@ -132,6 +132,7 @@ _KIOSK_ALLOWED_PREFIXES = (
     "/images/",
     "/enrolled_images/",
     "/system/tts-settings",
+    "/system/client-errors",
 )
 _MEMBER_SELF = re.compile(rf"/employees/member/({_UUID})/")
 # Routes keyed by a tenant-owned resource id (no companyId in the path). The owning
@@ -206,6 +207,8 @@ def _is_api_key_path_allowed(method: str, path: str, scopes: list[str] | None) -
 def _is_kiosk_path_allowed(method: str, path: str) -> bool:
     if path == "/system/tts-settings" and method != "GET":
         return False
+    if path == "/system/client-errors":
+        return method == "POST"
     if path.startswith("/company-locations/company/") and method != "GET":
         return False
     if path.startswith("/devices/company/"):
@@ -340,6 +343,10 @@ def _token_from(request: Request) -> str:
 
 async def _authorize(request: Request, db, member: Member, path: str):
     if path.startswith("/members") or path.startswith("/system"):
+        # Any authenticated caller (incl. company admin / kiosk via allow-list) may report
+        # client HTTP failures; list/detail/resolve stay behind require_system_admin.
+        if path == "/system/client-errors" and request.method == "POST":
+            return None
         if request.method != "GET" and not _is_system_admin(member):
             # company admins may read TTS; writes stay system-admin
             if not (path.startswith("/system") and request.method == "GET"):

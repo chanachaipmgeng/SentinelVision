@@ -90,6 +90,9 @@ class MemberResponse(MemberBase):
     memberId: UUID
     createdAt: datetime
     updatedAt: Optional[datetime] = None
+    biometricConsentAt: Optional[datetime] = None
+    biometricConsentVersion: Optional[str] = None
+    faceEncodingCount: int = 0
 
     class Config:
         from_attributes = True

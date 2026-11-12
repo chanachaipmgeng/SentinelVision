@@ -10,6 +10,12 @@ class Settings(BaseSettings):
 
     # Cosine distance threshold for InsightFace (lower = stricter). Match if distance < threshold.
     FACE_RECOGNITION_THRESHOLD: float = 0.40
+    # System-admin face login (stricter than attendance). Match if distance < threshold.
+    FACE_LOGIN_THRESHOLD: float = 0.32
+    # Reject when 2nd-nearest admin encoding is within this margin of the top hit.
+    FACE_LOGIN_AMBIGUITY_MARGIN: float = 0.08
+    # Greeting → blink challenge JWT TTL (seconds) after identify.
+    FACE_LOGIN_CHALLENGE_SECONDS: int = 45
 
     # Multi-frame liveness: max cosine distance between frame embeddings (same person)
     LIVENESS_SAME_PERSON_MAX_DISTANCE: float = 0.35
@@ -29,7 +35,9 @@ class Settings(BaseSettings):
     FACE_MODEL_VERSION: str = "buffalo_l"
     # Enrollment quality gate (face ratio / pose / sharpness) on add-face.
     ENROLL_QUALITY_GATE_ENABLED: bool = True
-    ENROLL_MIN_FACE_RATIO: float = 0.08
+    # Desk webcam enroll often lands ~0.07–0.10 of the frame; 0.08 was rejecting
+    # near-miss captures (e.g. ratio=0.078) that are still usable for buffalo_l.
+    ENROLL_MIN_FACE_RATIO: float = 0.07
     ENROLL_MAX_YAW_DEG: float = 25.0
     ENROLL_MAX_ROLL_DEG: float = 20.0
     ENROLL_MIN_SHARPNESS: float = 25.0
@@ -37,8 +45,12 @@ class Settings(BaseSettings):
     # D7 app rate limits (per IP / minute). 0 disables. Complements nginx limit_req.
     REDIS_URL: str = ""
     RATE_LIMIT_LOGIN_PER_MINUTE: int = 20
+    RATE_LIMIT_FACE_LOGIN_PER_MINUTE: int = 8
     RATE_LIMIT_IDENTIFY_PER_MINUTE: int = 120
     RATE_LIMIT_IMPORT_PER_MINUTE: int = 10
+    RATE_LIMIT_CLIENT_ERRORS_PER_MINUTE: int = 30
+    # System-admin error_log retention (API + client HTTP failures).
+    ERROR_LOG_RETENTION_DAYS: int = 30
     # D6 Idempotency-Key TTL for punch create + import-jobs.
     IDEMPOTENCY_TTL_SECONDS: int = 86400
 

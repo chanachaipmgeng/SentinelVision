@@ -16,10 +16,10 @@ COPY entrypoint/30-dpu-runtime.sh /docker-entrypoint.d/30-dpu-runtime.sh
 
 USER root
 # Pull Alpine security fixes published after the pinned base digest was built (CI trivy gate
-# fails on fixable HIGH/CRITICAL OS CVEs). Then strip CR from a possible Windows checkout and
-# validate the baked config once at build time with default toggles so a broken snippet fails
-# the image build, not the deploy.
+# fails on fixable HIGH/CRITICAL OS CVEs). Explicit libxslt bump keeps BuildKit from reusing a
+# stale upgrade layer when Alpine publishes a fix mid-cache lifetime.
 RUN apk upgrade --no-cache \
+    && apk add --no-cache --upgrade 'libxslt>=1.1.43-r4' \
     && sed -i 's/\r$//' /docker-entrypoint.d/30-dpu-runtime.sh /etc/nginx/conf.d/*.conf /etc/nginx/snippets/*.conf \
     && chmod 0755 /docker-entrypoint.d/30-dpu-runtime.sh \
     && /docker-entrypoint.d/30-dpu-runtime.sh \

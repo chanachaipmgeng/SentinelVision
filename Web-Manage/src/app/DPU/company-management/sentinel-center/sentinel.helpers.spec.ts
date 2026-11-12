@@ -6,6 +6,7 @@ import {
   filterVisitorItems,
   filterWatchlistItems,
 } from './sentinel.helpers';
+import { SentinelIdentity } from './sentinel.models';
 import { normalizeAccessSection, tabFromModuleSection } from './sentinel-routing';
 
 describe('sentinel.helpers', () => {
@@ -15,7 +16,7 @@ describe('sentinel.helpers', () => {
     { identityType: 'VISITOR', fullName: 'C' },
     { identityType: 'EVENT_ATTENDEE', fullName: 'D' },
     { identityType: 'POI', fullName: 'E' },
-  ];
+  ] as SentinelIdentity[];
 
   it('filters watchlist / visitor / attendee slices', () => {
     expect(filterWatchlistItems(identities).map((i) => i.fullName)).toEqual(['A', 'B', 'E']);

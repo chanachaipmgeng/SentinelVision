@@ -178,7 +178,7 @@ async def purge_expired(db: AsyncSession) -> int:
     result = await db.execute(delete(RevokedToken).where(RevokedToken.exp <= now))
     await db.commit()
     _prune_caches(time.time())
-    return int(result.rowcount or 0)
+    return int(getattr(result, "rowcount", 0) or 0)
 
 
 async def revocation_purge_loop() -> None:

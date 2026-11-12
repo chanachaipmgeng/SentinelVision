@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -67,7 +67,7 @@ async def get_company_shift_settings(companyId: str | UUID, db: AsyncSession) ->
 async def update_company_shift_settings(companyId: str | UUID, payload: dict, db: AsyncSession) -> dict:
     key = _shift_key(companyId)
     row = await db.get(SystemSetting, key)
-    clean = {
+    clean: dict[str, Any] = {
         "name": str(payload.get("name") or DEFAULT_SHIFT["name"]).strip(),
         "startTime": str(payload.get("startTime") or DEFAULT_SHIFT["startTime"]).strip(),
         "endTime": str(payload.get("endTime") or DEFAULT_SHIFT["endTime"]).strip(),

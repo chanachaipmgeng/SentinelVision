@@ -39,7 +39,7 @@ Expected input: BGR face crop resized to the model’s square size (auto-detecte
 `utils/enrollment_quality.py` rejects enroll when:
 
 - blur / brightness fail (`IMAGE_BLUR_THRESHOLD`, `IMAGE_BRIGHTNESS_*`)
-- face area ratio &lt; `ENROLL_MIN_FACE_RATIO` (default 0.08)
+- face area ratio &lt; `ENROLL_MIN_FACE_RATIO` (default 0.07)
 - |yaw| / |roll| from 5-point landmarks exceed `ENROLL_MAX_YAW_DEG` / `ENROLL_MAX_ROLL_DEG`
 - Laplacian sharpness &lt; `ENROLL_MIN_SHARPNESS`
 

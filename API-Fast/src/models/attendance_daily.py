@@ -50,7 +50,7 @@ class AttendanceDaily(Base):
     otMinutes: Mapped[int] = mapped_column("ot_minutes", Integer, nullable=False, default=0, server_default="0")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=AttendanceDailyStatus.ABSENT.value)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
-    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), onupdate=func.now())
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (
         Index(

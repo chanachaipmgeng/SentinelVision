@@ -189,18 +189,23 @@ def decode_image_bytes(image_bytes: bytes, *, for_detect: bool = False) -> np.nd
     return image
 
 
-def detect_faces_bgr(image: np.ndarray) -> dict:
-    """Fast detection-only pass for the kiosk stream (no embeddings)."""
+def detect_faces_bgr(image: np.ndarray, *, for_enrollment: bool = False) -> dict:
+    """Fast detection-only pass for the kiosk stream (no embeddings).
+
+    When ``for_enrollment`` is true, also runs the enrollment quality gate so
+    admin auto-capture can wait until the face matches ENROLL_* config.
+    """
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
 
     app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
-    bboxes, _kpss = app.det_model.detect(image, max_num=0, metric="default")
+    bboxes, kpss = app.det_model.detect(image, max_num=0, metric="default")
 
     faces = []
+    kps_list: list = []
     if bboxes is not None:
-        for box in bboxes:
+        for i, box in enumerate(bboxes):
             x1, y1, x2, y2, score = (float(v) for v in box[:5])
             x1 = max(0.0, x1)
             y1 = max(0.0, y1)
@@ -213,13 +218,25 @@ def detect_faces_bgr(image: np.ndarray) -> dict:
                     "score": score,
                 }
             )
+            if kpss is not None and i < len(kpss):
+                kps_list.append(kpss[i])
+            else:
+                kps_list.append(None)
 
-    return {"frameWidth": width, "frameHeight": height, "faces": faces}
+    result = {"frameWidth": width, "frameHeight": height, "faces": faces}
+    if for_enrollment:
+        from .enrollment_quality import enrich_detect_with_enroll_quality
+
+        return enrich_detect_with_enroll_quality(image, result, kps_list)
+    return result
 
 
-def detect_faces_bytes(image_bytes: bytes) -> dict:
+def detect_faces_bytes(image_bytes: bytes, *, for_enrollment: bool = False) -> dict:
     """Decode + detect (prefer decode_image_bytes + detect_faces_bgr off the GPU path)."""
-    return detect_faces_bgr(decode_image_bytes(image_bytes, for_detect=True))
+    return detect_faces_bgr(
+        decode_image_bytes(image_bytes, for_detect=True),
+        for_enrollment=for_enrollment,
+    )
 
 
 def _largest_det_index(bboxes) -> Optional[int]:

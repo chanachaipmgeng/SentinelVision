@@ -60,7 +60,9 @@ export async function uploadFaceFiles(
     onProgress?.(`กำลังอัปโหลด ${i + 1}/${files.length}...`);
     const formData = new FormData();
     formData.append('file', file, file.name || `face-${i + 1}.jpg`);
-    formData.append('companyId', companyId);
+    if (companyId) {
+      formData.append('companyId', companyId);
+    }
     await firstValueFrom(
       http.post(environment.baseUrl + `/face/members/${memberId}/add-face`, formData),
     );
@@ -81,7 +83,9 @@ export async function uploadAnglePreviews(
     const file = dataURLtoFile(step.preview!, `face-${step.id}.jpg`);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('companyId', companyId);
+    if (companyId) {
+      formData.append('companyId', companyId);
+    }
     await firstValueFrom(
       http.post(environment.baseUrl + `/face/members/${memberId}/add-face`, formData),
     );

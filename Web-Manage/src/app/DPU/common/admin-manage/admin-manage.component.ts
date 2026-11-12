@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FileItem, FileUploader, FileUploadModule } from 'ng2-file-upload';
+import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
@@ -12,9 +13,21 @@ import { SimplePagerComponent } from '../../../shared/components/simple-pager/si
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { UserService } from '../../services/user.service';
 import { UserProfileModel } from '../../models/user.model';
+import { EmployeeModel } from '../../models/employee.model';
 import { TokenService } from '../../../shared/services/token.service';
 import { environment } from '../../../../environments/environment';
+import { EmpFaceEnrollModalComponent } from '../../company-management/company-emp/company-emp-enroll/emp-face-enroll-modal.component';
+import { FaceManagementComponent } from '../../company-management/dialogs/face-management/face-management.component';
+import { apiErrorMessage } from '../../../shared/utils/http-error-body';
 import swal from 'sweetalert';
+
+type ConsentPolicy = {
+  version: string;
+  textTh: string;
+  textEn: string;
+  updatedAt?: string | null;
+  galleryKey?: string | null;
+};
 
 @Component({
     selector: 'app-admin-manage',
@@ -30,6 +43,8 @@ import swal from 'sweetalert';
         StatChipComponent,
         SimplePagerComponent,
         EmptyStateComponent,
+        EmpFaceEnrollModalComponent,
+        FaceManagementComponent,
     ],
     templateUrl: './admin-manage.component.html',
     styleUrls: [
@@ -40,6 +55,10 @@ import swal from 'sweetalert';
 })
 export class AdminManageComponent implements OnInit {
   @ViewChild('closeModal') public childModal?: ElementRef;
+  @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
+  @ViewChild('openFaceOverlay') openFaceOverlay?: ElementRef<HTMLButtonElement>;
+  @ViewChild('openConsentOverlay') openConsentOverlay?: ElementRef<HTMLButtonElement>;
+  @ViewChild('closeConsentOverlay') closeConsentOverlay?: ElementRef<HTMLButtonElement>;
 
   readonly pageSize = 10;
   readonly adminRole = 99;
@@ -51,6 +70,16 @@ export class AdminManageComponent implements OnInit {
   confirmPassword = '';
   pageIndex = 0;
   uploaderProfile?: FileUploader;
+  /** Empty companyId — system-admin enroll writes a local encoding only. */
+  faceEnrollCompanyId = '';
+  faceEnrollSelectModel: EmployeeModel = new EmployeeModel();
+  selectedMemberId = '';
+  selectedMemberName = '';
+
+  consentPolicy: ConsentPolicy | null = null;
+  consentLoading = false;
+  consentGranting = false;
+  pendingConsentMember: UserProfileModel | null = null;
 
   itemsList: UserProfileModel[] = [];
   filteredSource: UserProfileModel[] = [];
@@ -72,6 +101,12 @@ export class AdminManageComponent implements OnInit {
   }
   get activeCount(): number {
     return this.itemsList.filter((x) => x.status === 1).length;
+  }
+  get consentedCount(): number {
+    return this.itemsList.filter((x) => x.hasBiometricConsent()).length;
+  }
+  get faceEnrolledCount(): number {
+    return this.itemsList.filter((x) => x.hasFaceEnrolled()).length;
   }
 
   constructor(
@@ -177,6 +212,97 @@ export class AdminManageComponent implements OnInit {
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel(item);
     this.selectModel.role = this.adminRole;
+  }
+
+  consentText(): string {
+    const locale = (this.translate.currentLang || 'th').toLowerCase();
+    if (!this.consentPolicy) return '';
+    return locale.startsWith('th')
+      ? this.consentPolicy.textTh
+      : this.consentPolicy.textEn || this.consentPolicy.textTh;
+  }
+
+  async openFaceEnroll(item: UserProfileModel): Promise<void> {
+    if (!item?.memberId) return;
+    if (item.hasBiometricConsent()) {
+      await this.startFaceEnroll(item);
+      return;
+    }
+    this.pendingConsentMember = item;
+    this.consentLoading = true;
+    this.consentPolicy = null;
+    this.openConsentOverlay?.nativeElement?.click();
+    try {
+      this.consentPolicy = await firstValueFrom(this.userService.getSystemConsentPolicy());
+    } catch (err) {
+      this.closeConsentDialog();
+      swal('โหลดนโยบายไม่สำเร็จ', apiErrorMessage(err, 'Consent policy failed'), 'error');
+    } finally {
+      this.consentLoading = false;
+    }
+  }
+
+  closeConsentDialog(): void {
+    this.pendingConsentMember = null;
+    this.consentGranting = false;
+    this.closeConsentOverlay?.nativeElement?.click();
+  }
+
+  async acceptConsentAndEnroll(): Promise<void> {
+    const item = this.pendingConsentMember;
+    if (!item?.memberId || this.consentGranting) return;
+    this.consentGranting = true;
+    try {
+      await firstValueFrom(this.userService.grantBiometricConsent(item.memberId, 'th'));
+      item.biometricConsentAt = new Date().toISOString();
+      this.closeConsentDialog();
+      await this.startFaceEnroll(item);
+      this.load();
+    } catch (err) {
+      swal('ไม่สามารถบันทึกความยินยอมได้', apiErrorMessage(err, 'Consent failed'), 'error');
+    } finally {
+      this.consentGranting = false;
+    }
+  }
+
+  private async startFaceEnroll(item: UserProfileModel): Promise<void> {
+    this.faceEnrollSelectModel = new EmployeeModel({
+      member: item,
+      companyId: '',
+    });
+    this.openFaceOverlay?.nativeElement?.click();
+    await this.faceEnrollModal?.openForEmployee(this.faceEnrollSelectModel);
+  }
+
+  openFaceManagementModal(item: UserProfileModel): void {
+    this.selectedMemberId = item?.memberId || '';
+    this.selectedMemberName = item?.getFullname?.() || item?.username || '';
+  }
+
+  onFaceManagementClosed(): void {
+    this.selectedMemberId = '';
+    this.load();
+  }
+
+  revokeConsent(item: UserProfileModel): void {
+    if (!item?.memberId || !item.hasBiometricConsent()) return;
+    swal({
+      title: 'เพิกถอนความยินยอม PDPA?',
+      text: 'จะลบข้อมูลใบหน้าสำหรับเข้าสู่ระบบคอนโซลของผู้ดูแลรายนี้',
+      icon: 'warning',
+      dangerMode: true,
+      buttons: ['ยกเลิก', 'เพิกถอน'],
+    }).then((ok: unknown) => {
+      if (!ok) return;
+      this.userService.revokeBiometricConsent(item.memberId).subscribe({
+        next: () => {
+          swal('สำเร็จ', 'เพิกถอนความยินยอมและลบใบหน้าแล้ว', 'success');
+          this.load();
+        },
+        error: (err) =>
+          swal('เพิกถอนไม่สำเร็จ', apiErrorMessage(err, 'Revoke failed'), 'error'),
+      });
+    });
   }
 
   save() {

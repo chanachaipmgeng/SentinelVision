@@ -1,0 +1,211 @@
+<app-page-header
+  [title]="'บันทึกข้อผิดพลาด'"
+  [activeTitle]="'แอดมินระบบ'"
+  [title1]="'Error logs'"
+></app-page-header>
+
+<div class="dpu-list-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12">
+    <app-page-toolbar title="Error logs">
+      <ng-container controls>
+        <app-pill-search
+          [value]="filters.q"
+          (valueChange)="setSearch($event)"
+          placeholder="ค้นหา path / ข้อความ / requestId..."
+          ariaLabel="ค้นหา error log"
+        ></app-pill-search>
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="reload()">
+          <i class="ri-refresh-line"></i>
+        </button>
+      </ng-container>
+    </app-page-toolbar>
+  </div>
+
+  <div class="col-span-12">
+    <div class="box modern-card glass mb-4">
+      <div class="box-body grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div>
+          <label class="form-label">แหล่ง</label>
+          <select class="form-control" [(ngModel)]="filters.source" (change)="pageIndex = 0; reload()">
+            <option value="">ทั้งหมด</option>
+            <option value="api">API</option>
+            <option value="client">Frontend</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">HTTP status</label>
+          <input
+            class="form-control"
+            [(ngModel)]="filters.statusCode"
+            placeholder="500"
+            (keyup.enter)="pageIndex = 0; reload()"
+          />
+        </div>
+        <div>
+          <label class="form-label">สถานะแก้</label>
+          <select class="form-control" [(ngModel)]="filters.resolved" (change)="pageIndex = 0; reload()">
+            <option value="open">เปิดอยู่</option>
+            <option value="done">แก้แล้ว</option>
+            <option value="all">ทั้งหมด</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">จากวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateFrom" (change)="pageIndex = 0; reload()" />
+        </div>
+        <div>
+          <label class="form-label">ถึงวันที่</label>
+          <input type="date" class="form-control" [(ngModel)]="filters.dateTo" (change)="pageIndex = 0; reload()" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12" [class.lg:col-span-7]="!!selected" [class.xl:col-span-8]="!!selected">
+    <app-data-table
+      [columns]="columns"
+      [rows]="rows"
+      [total]="total"
+      [loading]="loading"
+      [pageIndex]="pageIndex"
+      [pageSize]="pageSize"
+      [sortBy]="sortBy"
+      [sortDir]="sortDir"
+      [search]="filters.q"
+      [showSearch]="false"
+      trackByKey="id"
+      emptyTitle="ยังไม่มี error log"
+      emptyHint="เมื่อ API หรือหน้าเว็บเกิดข้อผิดพลาดที่ระบบเก็บไว้ จะแสดงที่นี่"
+      (pageIndexChange)="onPage($event)"
+      (sortChange)="onSort($event)"
+    >
+      <ng-template #cell let-row let-column="column">
+        @if (column.key === 'id') {
+          <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-error-log-view" (click)="openDetail(row)">
+            ดู
+          </button>
+        } @else if (column.key === 'statusCode') {
+          <span
+            class="dpu-error-log-status cursor-pointer"
+            [class.is-5xx]="row.statusCode >= 500"
+            [class.is-4xx]="row.statusCode >= 400 && row.statusCode < 500"
+            (click)="onCellClick(row, column)"
+          >
+            {{ row.statusCode }}
+          </span>
+        } @else if (column.key === 'resolvedAt') {
+          <span
+            class="dpu-error-log-state cursor-pointer"
+            [class.is-open]="!row.resolvedAt"
+            [class.is-done]="!!row.resolvedAt"
+            (click)="onCellClick(row, column)"
+          >
+            {{ row.resolvedAt ? 'แก้แล้ว' : 'เปิดอยู่' }}
+          </span>
+        } @else {
+          <span class="cursor-pointer" (click)="onCellClick(row, column)">
+            {{ column.value ? column.value(row) : $any(row)[column.key] }}
+          </span>
+        }
+      </ng-template>
+    </app-data-table>
+  </div>
+
+  <div class="col-span-12 lg:col-span-5 xl:col-span-4" *ngIf="selected">
+    <div class="box modern-card glass dpu-error-log-detail">
+      <div class="box-header flex items-center justify-between gap-2">
+        <h5 class="box-title mb-0">รายละเอียด</h5>
+        <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="closeDetail()">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="box-body space-y-3 text-sm" *ngIf="!detailLoading; else loadingDetail">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <div class="text-dpu-muted">แหล่ง</div>
+            <div>{{ selected.source === 'client' ? 'Frontend' : 'API' }}</div>
+          </div>
+          <div>
+            <div class="text-dpu-muted">สถานะ</div>
+            <div>
+              <span
+                class="dpu-error-log-status"
+                [class.is-5xx]="selected.statusCode >= 500"
+                [class.is-4xx]="selected.statusCode >= 400 && selected.statusCode < 500"
+              >
+                {{ selected.statusCode }}
+              </span>
+            </div>
+          </div>
+          <div>
+            <div class="text-dpu-muted">ครั้งที่เกิด</div>
+            <div>{{ selected.hitCount }}</div>
+          </div>
+          <div>
+            <div class="text-dpu-muted">รหัส</div>
+            <div>{{ selected.errorCode || '—' }}</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="text-dpu-muted">Path</div>
+          <div class="font-mono break-all">{{ selected.method || '' }} {{ selected.path || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-dpu-muted">ข้อความ</div>
+          <div>{{ selected.message }}</div>
+        </div>
+        <div>
+          <div class="text-dpu-muted">requestId</div>
+          <div class="font-mono break-all">{{ selected.requestId || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-dpu-muted">บริษัท / ผู้ใช้</div>
+          <div class="break-all">
+            {{ selected.companyId || '—' }}
+            <span *ngIf="selected.actorMemberId"> / {{ selected.actorMemberId }}</span>
+          </div>
+        </div>
+        <div *ngIf="selected.pageUrl">
+          <div class="text-dpu-muted">หน้าเว็บ</div>
+          <div class="break-all">{{ selected.pageUrl }}</div>
+        </div>
+        <div>
+          <div class="text-dpu-muted">เวลา</div>
+          <div>เกิด {{ fmtTime(selected.occurredAt) }}</div>
+          <div>ล่าสุด {{ fmtTime(selected.lastSeenAt) }}</div>
+        </div>
+        <div *ngIf="selected.stack">
+          <div class="text-dpu-muted mb-1">Stack</div>
+          <pre class="text-xs whitespace-pre-wrap break-all max-h-64 overflow-auto p-2 rounded">{{ selected.stack }}</pre>
+        </div>
+        <div *ngIf="selected.detail">
+          <div class="text-dpu-muted mb-1">Detail</div>
+          <pre class="text-xs whitespace-pre-wrap break-all max-h-40 overflow-auto p-2 rounded">{{ selected.detail | json }}</pre>
+        </div>
+
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button
+            *ngIf="!selected.resolvedAt"
+            type="button"
+            class="ti-btn ti-btn-primary-full modern-btn"
+            (click)="markResolved(true)"
+          >
+            มาร์กว่าแก้แล้ว
+          </button>
+          <button
+            *ngIf="selected.resolvedAt"
+            type="button"
+            class="ti-btn ti-btn-light modern-btn"
+            (click)="markResolved(false)"
+          >
+            เปิดเคสใหม่
+          </button>
+        </div>
+      </div>
+      <ng-template #loadingDetail>
+        <div class="box-body text-dpu-muted">กำลังโหลดรายละเอียด…</div>
+      </ng-template>
+    </div>
+  </div>
+</div>

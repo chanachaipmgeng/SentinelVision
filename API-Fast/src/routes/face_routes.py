@@ -85,10 +85,15 @@ async def add_face_route(
 @router.post("/detect")
 async def detect_faces_route(
     file: UploadFile = File(...),
+    forEnrollment: bool = Form(False),
     _auth=_face_auth,
 ):
-    """Detection-only preview for admin enroll camera (no embedding)."""
-    return await detect_faces_upload(file)
+    """Detection-only preview for admin enroll camera (no embedding).
+
+    Pass ``forEnrollment=true`` to include ``enrollReady`` from the ENROLL_* gate
+    so the UI auto-captures only when quality matches config.
+    """
+    return await detect_faces_upload(file, for_enrollment=forEnrollment)
 
 
 @router.post("/members/check-face-emp")

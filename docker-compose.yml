@@ -147,12 +147,15 @@ services:
         max-file: "5"
     # GPU passthrough: use docker-compose.gpu.yml when Docker Desktop exposes NVIDIA
     #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d api
+    # Liveness only: migrate + face workers finish before uvicorn listens, so /health
+    # becoming 200 already implies schema head. Use a long start_period so InsightFace
+    # CPU warmup on cold CI runners cannot flip depends_on to unhealthy prematurely.
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')\""]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 180s
 
   # B7 background worker: notification outbox dispatcher, attendance cutoff, storage / sentinel /
   # import-payload retention and employee import processing. Same image as `api`, different

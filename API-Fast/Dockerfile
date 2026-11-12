@@ -90,8 +90,8 @@ USER ${APP_UID}:${APP_GID}
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=15s --timeout=10s --start-period=60s --retries=10 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)" || exit 1
+HEALTHCHECK --interval=10s --timeout=5s --start-period=180s --retries=12 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)" || exit 1
 
 # nvidia/cuda image sets an nvidia entrypoint; keep it but ensure CMD is clear
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]

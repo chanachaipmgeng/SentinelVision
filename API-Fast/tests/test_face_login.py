@@ -191,6 +191,11 @@ async def test_login_face_success_issues_tokens(monkeypatch):
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
     monkeypatch.setattr(
         auth_routes,
+        "_parse_face_login_challenge",
+        lambda token: admin.memberId,
+    )
+    monkeypatch.setattr(
+        auth_routes,
         "_tokens",
         lambda member, **kw: {
             "member": member,
@@ -214,6 +219,7 @@ async def test_login_face_success_issues_tokens(monkeypatch):
         db=db,
         _rl=None,
         frames=frames,
+        challengeToken="chal",
         totpCode=None,
     )
     assert out["access_token"] == "access"
@@ -222,6 +228,85 @@ async def test_login_face_success_issues_tokens(monkeypatch):
         call.kwargs.get("action") == "LOGIN_FACE_OK"
         for call in auth_routes.write_audit.await_args_list
     )
+
+
+@pytest.mark.asyncio
+async def test_login_face_rejects_member_mismatch(monkeypatch):
+    admin = _admin_member()
+    other = uuid.uuid4()
+    frames = [_fake_upload() for _ in range(5)]
+    db = AsyncMock()
+    db.get = AsyncMock(return_value=admin)
+
+    monkeypatch.setattr(
+        auth_routes,
+        "_save_face_login_frames",
+        AsyncMock(return_value=["/tmp/a.jpg"] * 5),
+    )
+    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
+    monkeypatch.setattr(
+        auth_routes,
+        "run_on_face_gpu",
+        AsyncMock(return_value=[0.01] * 512),
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "search_system_admin_face_pgvector",
+        AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
+    )
+    monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
+    monkeypatch.setattr(auth_routes, "_parse_face_login_challenge", lambda token: other)
+
+    with pytest.raises(HTTPException) as exc:
+        await auth_routes.login_face(
+            response=MagicMock(),
+            db=db,
+            _rl=None,
+            frames=frames,
+            challengeToken="chal",
+            totpCode=None,
+        )
+    assert exc.value.status_code == 401
+    assert exc.value.detail == "Invalid credentials"
+
+
+@pytest.mark.asyncio
+async def test_login_face_identify_returns_challenge(monkeypatch):
+    admin = _admin_member()
+    admin.firstName = "Sys"
+    admin.lastName = "Admin"
+    admin.picture = "a.jpg"
+    frames = [_fake_upload() for _ in range(2)]
+    db = AsyncMock()
+    db.get = AsyncMock(return_value=admin)
+
+    monkeypatch.setattr(
+        auth_routes,
+        "_save_face_login_frames",
+        AsyncMock(return_value=["/tmp/a.jpg"] * 2),
+    )
+    monkeypatch.setattr(auth_routes, "_cleanup_face_login_paths", lambda paths: None)
+    monkeypatch.setattr(
+        auth_routes,
+        "run_on_face_gpu",
+        AsyncMock(return_value=[0.01] * 512),
+    )
+    monkeypatch.setattr(
+        auth_routes,
+        "search_system_admin_face_pgvector",
+        AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
+    )
+    monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
+    monkeypatch.setattr(
+        auth_routes, "create_face_login_challenge", lambda mid: f"chal-{mid}"
+    )
+
+    out = await auth_routes.login_face_identify(db=db, _rl=None, frames=frames)
+    assert out["displayName"] == "Sys Admin"
+    assert out["picture"] == "a.jpg"
+    assert out["challengeToken"].startswith("chal-")
+    assert "access" not in out
+    assert "accessToken" not in out
 
 
 @pytest.mark.asyncio
@@ -248,12 +333,16 @@ async def test_login_face_no_match_uniform_401_no_password_lockout(monkeypatch):
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
     monkeypatch.setattr(auth_routes, "register_failure", lambda m: failures_before.append(m))
 
+    monkeypatch.setattr(
+        auth_routes, "_parse_face_login_challenge", lambda token: uuid.uuid4()
+    )
     with pytest.raises(HTTPException) as exc:
         await auth_routes.login_face(
             response=MagicMock(),
             db=AsyncMock(),
             _rl=None,
             frames=frames,
+            challengeToken="chal",
             totpCode=None,
         )
     assert exc.value.status_code == 401
@@ -270,6 +359,7 @@ async def test_login_face_too_few_frames_401(monkeypatch):
             db=AsyncMock(),
             _rl=None,
             frames=[_fake_upload(), _fake_upload()],
+            challengeToken="chal",
             totpCode=None,
         )
     assert exc.value.status_code == 401
@@ -300,6 +390,9 @@ async def test_login_face_mfa_required_when_totp_enabled(monkeypatch):
         AsyncMock(return_value=(uuid.uuid4(), admin.memberId, 0.11)),
     )
     monkeypatch.setattr(auth_routes, "write_audit", AsyncMock())
+    monkeypatch.setattr(
+        auth_routes, "_parse_face_login_challenge", lambda token: admin.memberId
+    )
 
     with pytest.raises(HTTPException) as exc:
         await auth_routes.login_face(
@@ -307,6 +400,7 @@ async def test_login_face_mfa_required_when_totp_enabled(monkeypatch):
             db=db,
             _rl=None,
             frames=frames,
+            challengeToken="chal",
             totpCode=None,
         )
     assert exc.value.status_code == 401

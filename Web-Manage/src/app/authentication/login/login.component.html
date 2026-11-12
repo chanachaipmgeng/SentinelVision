@@ -57,7 +57,9 @@
           [class.is-live]="loginMode === 'face' && facePhase !== 'error'"
           [attr.aria-hidden]="loginMode === 'face' ? null : 'true'">
           <div class="dpu-login__scan-glow"></div>
-          <div class="dpu-login__scan-frame" [class.is-scanning]="facePhase === 'scanning'">
+          <div
+            class="dpu-login__scan-frame"
+            [class.is-scanning]="facePhase === 'identifying' || facePhase === 'confirming' || facePhase === 'blink'">
             <span class="dpu-login__bracket dpu-login__bracket--tl"></span>
             <span class="dpu-login__bracket dpu-login__bracket--tr"></span>
             <span class="dpu-login__bracket dpu-login__bracket--bl"></span>
@@ -246,7 +248,9 @@
           <div class="dpu-login__face-panel" [formGroup]="loginForm">
             <!-- Mobile / narrow: live camera inside the card (HUD scanner is hidden). -->
             <div class="dpu-login__face-card-scanner">
-              <div class="dpu-login__scan-frame dpu-login__scan-frame--card" [class.is-scanning]="facePhase === 'scanning'">
+              <div
+                class="dpu-login__scan-frame dpu-login__scan-frame--card"
+                [class.is-scanning]="facePhase === 'identifying' || facePhase === 'confirming' || facePhase === 'blink'">
                 <span class="dpu-login__bracket dpu-login__bracket--tl"></span>
                 <span class="dpu-login__bracket dpu-login__bracket--tr"></span>
                 <span class="dpu-login__bracket dpu-login__bracket--bl"></span>
@@ -267,6 +271,27 @@
                 <p class="dpu-login__face-hint">{{ faceHint }}</p>
               }
             </div>
+
+            @if (facePhase === 'greet' || facePhase === 'blink') {
+              <div class="dpu-login__greet" role="status" aria-live="polite">
+                @if (greetPictureUrl) {
+                  <img class="dpu-login__greet-avatar" [src]="greetPictureUrl" alt="">
+                } @else {
+                  <div class="dpu-login__greet-avatar dpu-login__greet-avatar--placeholder">
+                    <i class="ri-user-smile-line"></i>
+                  </div>
+                }
+                <div class="dpu-login__greet-copy">
+                  <p class="dpu-login__greet-hello">
+                    {{ lang === 'th' ? 'สวัสดี' : 'Welcome' }},
+                    <strong>{{ greetName }}</strong>
+                  </p>
+                  @if (facePhase === 'blink') {
+                    <p class="dpu-login__greet-blink">{{ blinkStatus || (lang === 'th' ? 'กรุณากระพริบตาเพื่อยืนยัน' : 'Please blink to confirm') }}</p>
+                  }
+                </div>
+              </div>
+            }
 
             <p class="dpu-login__face-note">
               {{ lang === 'th'
@@ -294,11 +319,17 @@
               <button
                 type="button"
                 class="btn-vault dpu-auth__submit dpu-login__btn"
-                [disabled]="showLoader || facePhase === 'error' || facePhase === 'scanning'"
+                [disabled]="faceBusy || facePhase === 'error' || facePhase === 'greet'"
                 (click)="scanFaceLogin()">
-                @if (showLoader || facePhase === 'scanning') {
+                @if (facePhase === 'identifying') {
                   <span class="dpu-login__spinner"></span>
-                  <span>{{ lang === 'th' ? 'กำลังตรวจสอบสิทธิ์...' : 'Authenticating...' }}</span>
+                  <span>{{ lang === 'th' ? 'กำลังระบุตัวตน...' : 'Identifying...' }}</span>
+                } @else if (facePhase === 'blink') {
+                  <span class="dpu-login__spinner"></span>
+                  <span>{{ lang === 'th' ? 'รอการกระพริบตา...' : 'Waiting for blink...' }}</span>
+                } @else if (facePhase === 'confirming' || showLoader) {
+                  <span class="dpu-login__spinner"></span>
+                  <span>{{ lang === 'th' ? 'กำลังเข้าสู่ระบบ...' : 'Signing in...' }}</span>
                 } @else if (mfaRequired) {
                   <i class="ri-shield-check-line"></i>
                   <span>{{ lang === 'th' ? 'ยืนยัน 2FA และเข้าสู่ระบบ' : 'Confirm 2FA & Sign in' }}</span>

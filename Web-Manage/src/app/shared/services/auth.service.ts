@@ -51,12 +51,28 @@ export class AuthService {
     );
   }
 
-  /** System-admin face login: multipart JPEG frames + optional TOTP. */
-  loginWithFace(frames: Blob[], totpCode?: string) {
+  /** Identify system-admin face → greeting challenge (no session). */
+  identifyWithFace(frames: Blob[]) {
     const form = new FormData();
     frames.forEach((blob, i) => {
       form.append('frames', blob, `frame-${i}.jpg`);
     });
+    return this.http.post<{
+      challengeToken: string;
+      displayName: string;
+      picture?: string | null;
+    }>(this.apiBaseUrl + '/login/face/identify', form, { withCredentials: true });
+  }
+
+  /** Confirm face login after blink: challengeToken + frames + optional TOTP. */
+  loginWithFace(frames: Blob[], totpCode?: string, challengeToken?: string) {
+    const form = new FormData();
+    frames.forEach((blob, i) => {
+      form.append('frames', blob, `frame-${i}.jpg`);
+    });
+    if (challengeToken && challengeToken.trim()) {
+      form.append('challengeToken', challengeToken.trim());
+    }
     if (totpCode && totpCode.trim()) {
       form.append('totpCode', totpCode.trim());
     }

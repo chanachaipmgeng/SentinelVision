@@ -35,9 +35,11 @@ from ..security.jwt import (
     TYP_KIOSK_REFRESH,
     TYP_PASSWORD_RESET,
     TYP_REFRESH,
+    create_face_login_challenge,
     create_kiosk_token_pair,
     create_password_reset_token,
     create_token_pair,
+    decode_face_login_challenge,
     decode_token,
     hash_kiosk_token,
     kiosk_refresh_ttl,
@@ -58,7 +60,7 @@ from ..services import token_revocation_service as revocation
 from ..services.face_match_service import search_system_admin_face_pgvector
 from ..services.rate_limit_service import rate_limit_face_login, rate_limit_login
 from ..services.sso_policy_service import get_sso_policy, jit_provision_member, save_sso_policy
-from ..utils.face_engine import verify_liveness_and_get_encoding
+from ..utils.face_engine import get_walkby_encoding
 from ..utils.face_gpu_queue import run_on_face_gpu
 
 router = APIRouter()
@@ -214,10 +216,21 @@ async def login(
 
 _FACE_LOGIN_MIN_FRAMES = 4
 _FACE_LOGIN_MAX_FRAMES = 6
+_FACE_IDENTIFY_MIN_FRAMES = 2
+_FACE_IDENTIFY_MAX_FRAMES = 3
 
 
 def _face_login_fail() -> HTTPException:
     return HTTPException(status_code=401, detail="Invalid credentials")
+
+
+def _face_login_display_name(member: Member) -> str:
+    first = (getattr(member, "firstName", None) or "").strip()
+    last = (getattr(member, "lastName", None) or "").strip()
+    full = f"{first} {last}".strip()
+    if full:
+        return full
+    return (getattr(member, "username", None) or "Admin").strip() or "Admin"
 
 
 async def _save_face_login_frames(files: List[UploadFile]) -> List[str]:
@@ -239,18 +252,36 @@ def _cleanup_face_login_paths(paths: List[str]) -> None:
             p.unlink()
 
 
-@router.post("/login/face", response_model=Token)
-async def login_face(
-    response: Response,
+def _parse_face_login_challenge(challenge_token: Optional[str]) -> UUID:
+    raw = (challenge_token or "").strip()
+    if not raw:
+        raise _face_login_fail()
+    try:
+        payload = decode_face_login_challenge(raw)
+        return UUID(str(payload["memberId"]))
+    except HTTPException:
+        raise _face_login_fail() from None
+    except Exception:
+        raise _face_login_fail() from None
+
+
+@router.post("/login/face/identify")
+async def login_face_identify(
     db: AsyncSession = Depends(get_db),
     _rl=Depends(rate_limit_face_login),
     frames: List[UploadFile] = File(...),
-    totpCode: Optional[str] = Form(None),
 ):
-    """System-admin console face login (role 99 gallery only). Uniform 401 on failure."""
-    if not frames or len(frames) < _FACE_LOGIN_MIN_FRAMES or len(frames) > _FACE_LOGIN_MAX_FRAMES:
+    """Match system-admin face and return a greeting challenge (no session cookies)."""
+    if (
+        not frames
+        or len(frames) < _FACE_IDENTIFY_MIN_FRAMES
+        or len(frames) > _FACE_IDENTIFY_MAX_FRAMES
+    ):
         await write_audit(
-            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            actor=None,
+            action="LOGIN_FACE_IDENTIFY_FAIL",
+            path="/auth/login/face/identify",
+            status_code=401,
         )
         raise _face_login_fail()
 
@@ -259,7 +290,113 @@ async def login_face(
         temp_paths = await _save_face_login_frames(frames)
         try:
             encoding = await run_on_face_gpu(
-                partial(verify_liveness_and_get_encoding, list(temp_paths)),
+                partial(get_walkby_encoding, list(temp_paths)),
+                kind="identify",
+            )
+        except (ValueError, RuntimeError):
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail() from None
+
+        threshold = float(getattr(settings, "FACE_LOGIN_THRESHOLD", 0.32) or 0.32)
+        margin = float(getattr(settings, "FACE_LOGIN_AMBIGUITY_MARGIN", 0.08) or 0.08)
+        hit = await search_system_admin_face_pgvector(
+            db, encoding, threshold, ambiguity_margin=margin
+        )
+        if hit is None:
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        _face_encoding_id, member_id, _distance = hit
+        member = await db.get(Member, member_id)
+        if member is None or getattr(member, "deletedAt", None) is not None:
+            await write_audit(
+                actor=None,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        try:
+            assert_not_locked(member)
+        except HTTPException:
+            await write_audit(
+                actor=member,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail() from None
+
+        status_val = getattr(member.status, "value", member.status)
+        if status_val in (0, "DISABLED"):
+            await write_audit(
+                actor=member,
+                action="LOGIN_FACE_IDENTIFY_FAIL",
+                path="/auth/login/face/identify",
+                status_code=401,
+            )
+            raise _face_login_fail()
+
+        await write_audit(
+            actor=member,
+            action="LOGIN_FACE_IDENTIFY_OK",
+            path="/auth/login/face/identify",
+            status_code=200,
+        )
+        return {
+            "challengeToken": create_face_login_challenge(str(member.memberId)),
+            "displayName": _face_login_display_name(member),
+            "picture": getattr(member, "picture", None),
+        }
+    finally:
+        _cleanup_face_login_paths(temp_paths)
+
+
+@router.post("/login/face", response_model=Token)
+async def login_face(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_face_login),
+    frames: List[UploadFile] = File(...),
+    challengeToken: Optional[str] = Form(None),
+    totpCode: Optional[str] = Form(None),
+):
+    """Confirm face login after identify+blink: rematch challenge member, then issue session.
+
+    Client blink is the interactive liveness gate; encoding uses walk-by (same as
+    identify) so a still kiosk face is not rejected by multi-frame motion checks.
+    """
+    if not frames or len(frames) < _FACE_LOGIN_MIN_FRAMES or len(frames) > _FACE_LOGIN_MAX_FRAMES:
+        await write_audit(
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise _face_login_fail()
+
+    try:
+        challenge_member_id = _parse_face_login_challenge(challengeToken)
+    except HTTPException:
+        await write_audit(
+            actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+        )
+        raise
+
+    temp_paths: List[str] = []
+    try:
+        temp_paths = await _save_face_login_frames(frames)
+        try:
+            encoding = await run_on_face_gpu(
+                partial(get_walkby_encoding, list(temp_paths)),
                 kind="identify",
             )
         except (ValueError, RuntimeError):
@@ -280,6 +417,12 @@ async def login_face(
             raise _face_login_fail()
 
         _face_encoding_id, member_id, _distance = hit
+        if member_id != challenge_member_id:
+            await write_audit(
+                actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail()
+
         member = await db.get(Member, member_id)
         if member is None or getattr(member, "deletedAt", None) is not None:
             await write_audit(

@@ -30,6 +30,7 @@ TYP_REFRESH = "refresh"
 TYP_KIOSK = "kiosk"
 TYP_KIOSK_REFRESH = "kiosk_refresh"
 TYP_PASSWORD_RESET = "password_reset"
+TYP_FACE_LOGIN_CHAL = "face_login_chal"
 MEMBER_TYPES = (TYP_ACCESS, TYP_REFRESH)
 KIOSK_TYPES = (TYP_KIOSK, TYP_KIOSK_REFRESH)
 
@@ -128,6 +129,24 @@ def create_password_reset_token(member_id: str, username: str, email: str) -> st
         expires=password_reset_ttl(),
         family=new_family_id(),
     )
+
+
+def face_login_challenge_ttl() -> timedelta:
+    return timedelta(seconds=max(15, int(getattr(settings, "FACE_LOGIN_CHALLENGE_SECONDS", 45) or 45)))
+
+
+def create_face_login_challenge(member_id: str) -> str:
+    """Short-lived challenge after face identify; confirm must rematch the same member."""
+    return _encode(
+        {"memberId": str(member_id), "typ": TYP_FACE_LOGIN_CHAL},
+        expires=face_login_challenge_ttl(),
+        family=new_family_id(),
+    )
+
+
+def decode_face_login_challenge(token: str) -> dict[str, Any]:
+    """Verify face-login challenge JWT; raises 401 on expiry / wrong typ / missing memberId."""
+    return decode_token(token, expected_typ=TYP_FACE_LOGIN_CHAL)
 
 
 def kiosk_token_ttl() -> timedelta:

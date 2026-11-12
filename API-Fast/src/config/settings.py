@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     FACE_LOGIN_THRESHOLD: float = 0.32
     # Reject when 2nd-nearest admin encoding is within this margin of the top hit.
     FACE_LOGIN_AMBIGUITY_MARGIN: float = 0.08
+    # Greeting → blink challenge JWT TTL (seconds) after identify.
+    FACE_LOGIN_CHALLENGE_SECONDS: int = 45
 
     # Multi-frame liveness: max cosine distance between frame embeddings (same person)
     LIVENESS_SAME_PERSON_MAX_DISTANCE: float = 0.35

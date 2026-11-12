@@ -31,7 +31,7 @@ test.describe('Kiosk WS session (:8880)', () => {
     const origin = new URL(page.url() === 'about:blank' ? (process.env.DPU_BASE_URL || 'http://localhost:8880') : page.url()).origin;
     const wsUrl = origin.replace(/^http/, 'ws') + '/face/ws/kiosk';
 
-    // First message must be session — anything else closes with error.
+    // Server greets with `ready` before auth; first client message must still be `session`.
     const refused = await page.evaluate(async (url) => {
       return await new Promise<{ type?: string; code?: string; closed: boolean }>((resolve, reject) => {
         const ws = new WebSocket(url);
@@ -39,10 +39,18 @@ test.describe('Kiosk WS session (:8880)', () => {
           ws.close();
           reject(new Error('timeout waiting for unauthenticated refusal'));
         }, 10_000);
-        ws.onopen = () => ws.send(JSON.stringify({ type: 'ping' }));
+        let sawReady = false;
+        ws.onopen = () => {
+          /* wait for ready, then send a non-session probe */
+        };
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(String(ev.data));
+            if (msg.type === 'ready' && !sawReady) {
+              sawReady = true;
+              ws.send(JSON.stringify({ type: 'ping' }));
+              return;
+            }
             clearTimeout(timer);
             ws.close();
             resolve({ type: msg.type, code: msg.code, closed: true });
@@ -60,7 +68,7 @@ test.describe('Kiosk WS session (:8880)', () => {
     expect(refused.type).toBe('error');
     expect(refused.code).toMatch(/unauthenticated|invalid_session|auth_timeout/);
 
-    // Authenticated session → session_ok.
+    // Authenticated session → session_ok (ignore the initial ready greeting).
     const sessionPayload = buildKioskSession({ companyId, token });
     const ok = await page.evaluate(
       async ({ url, payload }) => {
@@ -70,10 +78,15 @@ test.describe('Kiosk WS session (:8880)', () => {
             ws.close();
             reject(new Error('timeout waiting for session_ok'));
           }, 15_000);
-          ws.onopen = () => ws.send(JSON.stringify(payload));
+          let ready = false;
           ws.onmessage = (ev) => {
             try {
               const msg = JSON.parse(String(ev.data));
+              if (msg.type === 'ready' && !ready) {
+                ready = true;
+                ws.send(JSON.stringify(payload));
+                return;
+              }
               clearTimeout(timer);
               ws.close();
               resolve({ type: msg.type });

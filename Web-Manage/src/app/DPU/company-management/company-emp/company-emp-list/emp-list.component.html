@@ -123,31 +123,33 @@
           <nav aria-label="เปลี่ยนหน้า">
             <ul class="ti-pagination mb-0">
               <li class="page-item" [class.disabled]="pageIndex === 0">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="prevPage.emit()">ก่อนหน้า</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  [disabled]="pageIndex === 0"
+                  (click)="prevPage.emit()">ก่อนหน้า</button>
               </li>
               <li class="page-item" *ngIf="pageIndex - 1 > 0">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="goToPage.emit(pageIndex - 2)">{{ pageIndex - 1 }}</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  (click)="goToPage.emit(pageIndex - 2)">{{ pageIndex - 1 }}</button>
               </li>
               <li class="page-item" *ngIf="pageIndex > 0">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="goToPage.emit(pageIndex - 1)">{{ pageIndex }}</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  (click)="goToPage.emit(pageIndex - 1)">{{ pageIndex }}</button>
               </li>
               <li class="page-item">
-                <a class="page-link active px-3 py-[0.375rem]" href="javascript:void(0);">{{ pageIndex + 1 }}</a>
+                <button type="button" class="page-link active px-3 py-[0.375rem]" aria-current="page">{{ pageIndex + 1 }}</button>
               </li>
               <li class="page-item" *ngIf="(pageIndex + 1) * pageSize < totalFiltered">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="goToPage.emit(pageIndex + 1)">{{ pageIndex + 2 }}</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  (click)="goToPage.emit(pageIndex + 1)">{{ pageIndex + 2 }}</button>
               </li>
               <li class="page-item" *ngIf="(pageIndex + 2) * pageSize < totalFiltered">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="goToPage.emit(pageIndex + 2)">{{ pageIndex + 3 }}</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  (click)="goToPage.emit(pageIndex + 2)">{{ pageIndex + 3 }}</button>
               </li>
               <li class="page-item" [class.disabled]="(pageIndex + 1) * pageSize >= totalFiltered">
-                <a class="page-link px-3 py-[0.375rem]" href="javascript:void(0);"
-                  (click)="nextPage.emit()">ถัดไป</a>
+                <button type="button" class="page-link px-3 py-[0.375rem]"
+                  [disabled]="(pageIndex + 1) * pageSize >= totalFiltered"
+                  (click)="nextPage.emit()">ถัดไป</button>
               </li>
             </ul>
           </nav>

@@ -68,7 +68,7 @@
   <ng-container *ngIf="stats && !isLoading">
     <!-- KPI row -->
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass card-surface-cyan">
+      <a routerLink="/company/timestamp-log" class="block box dpu-stat-card modern-card glass card-surface-cyan hover:border-cyan-400/50 transition-colors">
         <div class="box-body">
           <div class="dpu-stat-head">
             <span class="dpu-stat-label">{{ 'Punches today' | translate }}</span>
@@ -78,10 +78,10 @@
           </div>
           <div class="dpu-stat-value text-cyan-400">{{ stats.summary.checkInsToday }}</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass card-surface">
+      <a routerLink="/company/timestamp-log" class="block box dpu-stat-card modern-card glass card-surface hover:border-emerald-400/50 transition-colors">
         <div class="box-body">
           <div class="dpu-stat-head">
             <span class="dpu-stat-label">{{ 'In area today' | translate }}</span>
@@ -91,10 +91,10 @@
           </div>
           <div class="dpu-stat-value text-emerald-400">{{ inAreaToday }}</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass card-surface">
+      <a routerLink="/company/warning-timestamp-log" class="block box dpu-stat-card modern-card glass card-surface hover:border-rose-400/50 transition-colors">
         <div class="box-body">
           <div class="dpu-stat-head">
             <span class="dpu-stat-label">{{ 'Out of area today' | translate }}</span>
@@ -104,7 +104,7 @@
           </div>
           <div class="dpu-stat-value" [ngClass]="outsideToday > 0 ? 'text-rose-400' : 'text-slate-200'">{{ outsideToday }}</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="xl:col-span-3 md:col-span-6 col-span-12">
       <div class="box dpu-stat-card modern-card glass card-surface">

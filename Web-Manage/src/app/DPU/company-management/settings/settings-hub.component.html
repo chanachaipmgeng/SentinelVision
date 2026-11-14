@@ -22,9 +22,18 @@
           <p class="dpu-settings-rail__hint">{{ 'settingsHub.railHint' | translate }}</p>
         </div>
       </div>
+      <div class="px-3 pb-2">
+        <input
+          type="search"
+          class="form-control !py-1.5 !text-xs"
+          [(ngModel)]="sectionQuery"
+          [placeholder]="'Search' | translate"
+          aria-label="Search settings"
+        />
+      </div>
       <div class="dpu-settings-rail__list" role="list">
         <a
-          *ngFor="let s of sections; trackBy: trackSection"
+          *ngFor="let s of filteredSections; trackBy: trackSection"
           role="listitem"
           class="dpu-settings-rail__link"
           [routerLink]="['/company/settings', s.id]"
@@ -34,6 +43,9 @@
           <i class="dpu-settings-rail__icon" [ngClass]="s.icon" aria-hidden="true"></i>
           <span class="dpu-settings-rail__label">{{ s.labelKey | translate }}</span>
         </a>
+        <p *ngIf="!filteredSections.length" class="text-xs text-dpu-muted px-3 py-2">
+          {{ 'No data' | translate }}
+        </p>
       </div>
     </nav>
 

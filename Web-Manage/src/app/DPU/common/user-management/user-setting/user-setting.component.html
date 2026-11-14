@@ -19,9 +19,9 @@
         <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn" (click)="deleteSelect()">
           <i class="ri-delete-bin-line"></i><span>{{ 'Delete' | translate }}</span>
         </button>
-        <a href="javascript:void(0);" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
           <i class="ri-add-line"></i><span>เพิ่มสมาชิก</span>
-        </a>
+        </button>
       </ng-container>
     </app-page-toolbar>
   </div>

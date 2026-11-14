@@ -49,12 +49,12 @@
               <input #importPhotosInput type="file" class="hidden"
                 accept=".zip,application/zip,application/x-zip-compressed"
                 (change)="onImportPhotosSelected($event)">
-              <a href="javascript:void(0);"
+              <button type="button"
                 class="hs-dropdown-toggle ti-btn ti-btn-primary-full modern-btn emp-tool-btn emp-tool-btn--primary"
                 (click)="new()" data-hs-overlay="#modal-detail">
                 <i class="ri-add-line"></i>
                 <span class="emp-tool-label">{{ 'Create' | translate }}</span>
-              </a>
+              </button>
             </div>
           </div>
         </div>

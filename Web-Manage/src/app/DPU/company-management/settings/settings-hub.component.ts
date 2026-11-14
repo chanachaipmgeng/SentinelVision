@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { Subscription, combineLatest } from 'rxjs';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
@@ -28,6 +30,7 @@ import {
     selector: 'app-settings-hub',
     imports: [
         CommonModule,
+        FormsModule,
         RouterModule,
         SharedModule,
         PageToolbarComponent,
@@ -54,6 +57,7 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
   active: SettingsSection | null = null;
   permissionsReady = false;
   statusMsg = '';
+  sectionQuery = '';
 
   private sub?: Subscription;
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
@@ -62,6 +66,7 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private permissions: PermissionService,
+    private translate: TranslateService,
   ) {}
 
   ngOnInit(): void {
@@ -94,6 +99,15 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
     this.statusTimer = setTimeout(() => {
       if (this.statusMsg === msg) this.statusMsg = '';
     }, 3500);
+  }
+
+  get filteredSections(): SettingsSection[] {
+    const q = this.sectionQuery.trim().toLowerCase();
+    if (!q) return this.sections;
+    return this.sections.filter((s) => {
+      const label = (this.translate.instant(s.labelKey) || s.labelKey).toLowerCase();
+      return label.includes(q) || s.id.toLowerCase().includes(q);
+    });
   }
 
   trackSection(_: number, s: SettingsSection): string {

@@ -113,7 +113,7 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
         p.fullName || p.memberId || '',
         p.firstSeenAt || '',
         p.totalDwellMinutes ?? 0,
-        (p.booths || []).map((b) => `${b.zoneName}:${b.dwellMinutes}m`).join(' | '),
+        (p.booths || []).map((b) => `${b.cameraName || b.cameraId}:${b.dwellMinutes}m`).join(' | '),
       ]),
       'event-booth-dwell',
     );

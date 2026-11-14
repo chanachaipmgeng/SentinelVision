@@ -1,11 +1,10 @@
-<aside class="app-sidebar" id="sidebar" [ngClass]="{ 'sticky-pin': scrolled }">
+<aside class="app-sidebar sv-dual-sidebar" id="sidebar" [ngClass]="{ 'sticky-pin': scrolled }">
 
   <!-- Start::main-sidebar-header -->
   <div class="main-sidebar-header">
     <a class="header-logo dpu-sidebar-brand"
       [routerLink]="isInstallerRoute ? '/company/dashboard' : '/admin/home'"
       aria-label="Sentinel by IVAP Home">
-      <!-- desktop-dark = Ynex visible slot on dark menu; asset is the real brand mark -->
       <img
         class="desktop-dark dpu-sidebar-logo"
         src="./assets/images/brand-logos/ivap-logo-light.png"
@@ -20,180 +19,79 @@
       </span>
     </a>
   </div>
-  <div>
-    <ngx-simplebar [options]="options" class="main-sidebar" id="sidebar-scroll">
-      <nav class="main-menu-container nav nav-pills flex-column sub-open">
 
-        <div class="slide-left" id="slide-left">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="#7b8191" width="24" height="24" viewBox="0 0 24 24">
-            <path d="M13.293 6.293 7.586 12l5.707 5.707 1.414-1.414L10.414 12l4.293-4.293z"></path>
-          </svg>
-        </div>
-        <ul class="main-menu">
-          <div class="box custom-box dpu-company-card mx-2" *ngIf="isInstallerRoute">
-            <div class="box-body !p-3">
-              <div class="dpu-company-card__row">
-                <span class="avatar avatar-md !rounded-full bg-white/90 shadow-sm border border-white/20 p-1">
-                  <img [src]="tokenService.getSelectCompany().getPicture()" alt="">
-                </span>
-                <div class="dpu-company-card__meta min-w-0">
-                  <h5 class="font-semibold mb-0 truncate" [title]="tokenService.getSelectCompany().companyName">
-                    {{ tokenService.getSelectCompany().companyName }}
-                  </h5>
-                  <p class="mb-0 truncate text-[0.75rem]">{{ tokenService.getSelectCompany().companyCode }}</p>
-                </div>
+  <!-- Two-Column Dual-Rail Body -->
+  <div class="sv-dual-body">
+    <!-- Column 1: Primary Modules Rail -->
+    <nav class="sv-rail" aria-label="โมดูลหลัก">
+      <button
+        *ngFor="let grp of moduleGroups"
+        type="button"
+        class="sv-rail__btn"
+        [class.is-active]="grp.id === activeModuleGroup?.id"
+        [style.--mod-rgb]="grp.accentRgb"
+        [title]="grp.title | translate"
+        [attr.aria-label]="grp.shortLabel"
+        [attr.aria-current]="grp.id === activeModuleGroup?.id ? 'true' : null"
+        (click)="selectModule(grp)">
+        <span class="sv-rail__icon">
+          <i [class]="grp.icon" aria-hidden="true"></i>
+        </span>
+        <span class="sv-rail__label">{{ grp.shortLabel }}</span>
+      </button>
+    </nav>
+
+    <!-- Column 2: Active Module Sub-Screens -->
+    <div class="sv-subpanel" *ngIf="activeModuleGroup as mod" [style.--mod-rgb]="mod.accentRgb">
+      <ngx-simplebar [options]="options" class="sv-subpanel__scroll" id="sidebar-scroll">
+        <!-- Company Switcher Card (inside subpanel) -->
+        <div class="box custom-box dpu-company-card mx-2 mt-2 mb-2" *ngIf="isInstallerRoute">
+          <div class="box-body !p-2.5">
+            <div class="dpu-company-card__row">
+              <span class="avatar avatar-sm !rounded-full bg-white/90 shadow-sm border border-white/20 p-0.5 shrink-0">
+                <img [src]="tokenService.getSelectCompany().getPicture()" alt="">
+              </span>
+              <div class="dpu-company-card__meta min-w-0">
+                <h5 class="font-semibold mb-0 truncate text-[0.78rem]" [title]="tokenService.getSelectCompany().companyName">
+                  {{ tokenService.getSelectCompany().companyName }}
+                </h5>
+                <p class="mb-0 truncate text-[0.68rem]">{{ tokenService.getSelectCompany().companyCode }}</p>
               </div>
-              <a routerLink="/company/company-info" class="dpu-company-card__link">
-                {{ 'Company info' | translate }} <i class="ri-arrow-right-line"></i>
-              </a>
             </div>
+            <a routerLink="/company/company-info" class="dpu-company-card__link" (click)="menuOpen()">
+              {{ 'Company info' | translate }} <i class="ri-arrow-right-line"></i>
+            </a>
           </div>
-          @for(menuItem of menuItems;track $index){
+        </div>
 
-          <ng-container>
-            <li class="slide" #activeMenuItems [ngClass]="{'slide__category':menuItem.headTitle,
-                      'slide has-sub':menuItem.title,
-                      'open': menuItem.active,
-                      'active': menuItem.selected,}">
-              <!-- head title  -->
-              @if(menuItem.headTitle){
+        <!-- Module Header -->
+        <div class="sv-subpanel__head">
+          <span class="sv-subpanel__badge">
+            <i [class]="mod.icon" aria-hidden="true"></i>
+            {{ mod.shortLabel }}
+          </span>
+          <p class="sv-subpanel__title">{{ mod.title | translate }}</p>
+        </div>
 
-              <span class="category-name">{{menuItem.headTitle | translate}}</span>
-              }
-              <!-- has-Link -->
-              @if(menuItem.type === 'link'){
-
-              <a class="side-menu__item" [routerLink]="!menuItem.type ? null : [menuItem.path]"
-                routerLinkActive="active" (click)="setNavActive(menuItem); menuOpen()">
-                @if(menuItem.icon){
-
-                <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
-                }
-                <span class="side-menu__label">{{menuItem.title! | translate}}
-                  <span *ngIf="menuItem.badgeValue"
-                    class="badge !bg-{{menuItem.badgeClass }}/10 !text-{{menuItem.badgeText}} !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-2">{{menuItem.badgeValue}}</span>
-                </span>
-              </a>
-              }
-              <!-- has-empty -->
-              @if(menuItem.type === 'empty'){
-
-              <a class="side-menu__item" href="javascript:;" (click)="setNavActive(menuItem)">
-                @if(menuItem.icon){
-
-                <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
-                }
-                <span class="side-menu__label">{{menuItem.title! | translate}}</span>
-              </a>
-              }
-              <!-- has-Sub -->
-              @if(menuItem.type === 'sub'){
-
-              <a class="side-menu__item " [routerLink]="menuItem.type ? null: [menuItem.path]"
-                [ngClass]="{active: menuItem.selected}" (click)="toggleNavActive(menuItem)">
-                @if(menuItem.icon){
-
-                <i class="side-menu__icon  bx bx-{{menuItem.icon}}"></i>
-                }
-                <span class="side-menu__label">{{menuItem.title! | translate}}
-                  <span *ngIf="menuItem.badgeValue"
-                    class="badge !bg-{{menuItem.badgeClass}}/10 !text-{{menuItem.badgeText}} !py-[0.25rem] !px-[0.45rem] !text-[0.75em] ms-2">{{menuItem.badgeValue}}</span>
-                </span>
-
-                <i class="fe fe-chevron-right side-menu__angle"></i>
-              </a>
-              }
-
-              <!-- 2nd Level menu -->
-              @if(menuItem.children){
-
-              <ul class="slide-menu child1 {{menuItem.menutype}}" [ngClass]="{ 'active': menuItem.active}" [ngClass]="{
-                              'active': menuItem.active,
-                              'double-menu-active':menuItem.active
-
-                          }" [ngStyle]="{ display: menuItem.active ? 'block' : 'none' }">
-                <li class="slide side-menu__label1"><a href="javascript:void(0)">{{menuItem.title! | translate}}</a>
-                </li>
-                @for(childrenItem of menuItem.children;track $index){
-
-                <ng-container>
-                  <li class="slide " activeMenuItems
-                    [ngClass]="{'open': childrenItem.active,  'has-sub': childrenItem.type === 'sub'}">
-                    <!-- link -->
-                    @if(childrenItem.type === 'link'){
-
-                    <a class="side-menu__item" [routerLink]="!childrenItem.type ? null : [childrenItem.path] "
-                      routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}"
-                      (click)="setNavActive(childrenItem)">
-                      {{childrenItem.title! | translate}}
-                    </a>
-                    }
-                    <!-- empty -->
-                    @if(childrenItem.type === 'empty'){
-
-                    <a class="side-menu__item" href="javascript:;" (click)="setNavActive(childrenItem)">
-                      {{childrenItem.title! | translate }}
-                    </a>
-                    }
-                    <!-- sub -->
-                    @if(childrenItem.type === 'sub'){
-
-                    <a class="side-menu__item" [ngClass]="{'active': childrenItem.active}"
-                      [routerLink]="childrenItem.type ? null : [childrenItem.path]"
-                      (click)="toggleNavActive(childrenItem)">
-                      <span class="">{{childrenItem.title! | translate}}</span>
-                      <i class="fe fe-chevron-right side-menu__angle"></i>
-                    </a>
-                    }
-                    <!-- 3rd Level menu -->
-                    @if(childrenItem.children){
-
-                    <ul class="slide-menu child2" [ngStyle]="{
-                                              display: childrenItem.active ? 'block' : 'none',
-                                              right: localdata['ynex-dir'] === 'rtl' ? 'auto' : '',
-                                              left: localdata['ynex-dir'] === 'rtl' ? '100%' : ''
-                                          }" [ngClass]="{'open': childrenItem.active}">
-                      @for(childrenSubItem of childrenItem.children;track $index){
-
-                      <ng-container>
-                        <li class="slide" activeMenuItems [ngClass]="{'active': childrenSubItem.selected}">
-                          <!-- link -->
-                          @if(childrenSubItem.type === 'link'){
-
-                          }
-                          <a class="side-menu__item" [ngClass]="{'active': childrenSubItem.selected}"
-                            routerLinkActive="active"
-                            [routerLink]="!childrenSubItem.type ?  null : [childrenSubItem.path]"
-                            [routerLinkActiveOptions]="{exact : true}">
-                            {{childrenSubItem.title! | translate}}
-                          </a>
-                          <!-- empty -->
-                          @if(childrenSubItem.type === 'empty'){
-
-                          <a class="side-menu__item" href="javascript:;">
-                            {{childrenSubItem.title! | translate}}
-                          </a>
-                          }
-                        </li>
-                      </ng-container>
-                      }
-                    </ul>
-                    }
-                  </li>
-                </ng-container>
-                }
-              </ul>
-              }
-            </li>
-          </ng-container>
-          }
+        <!-- Module Sub-Screens List -->
+        <ul class="sv-subpanel__list">
+          <li *ngFor="let item of mod.items">
+            <a
+              class="sv-subitem"
+              [routerLink]="item.path ? [item.path] : null"
+              [class.is-active]="isSubItemActive(item)"
+              (click)="menuOpen()">
+              <span class="sv-subitem__dot" aria-hidden="true"></span>
+              <span class="sv-subitem__text">{{ item.title | translate }}</span>
+              <span
+                *ngIf="item.badgeValue"
+                class="badge !bg-{{ item.badgeClass || 'primary' }}/15 !text-{{ item.badgeText || 'primary' }} !py-[0.15rem] !px-[0.4rem] !text-[0.65rem] ms-auto shrink-0">
+                {{ item.badgeValue }}
+              </span>
+            </a>
+          </li>
         </ul>
-        <div class="slide-right" id="slide-right"><svg xmlns="http://www.w3.org/2000/svg" fill="#7b8191" width="24"
-            height="24" viewBox="0 0 24 24">
-            <path d="M10.707 17.707 16.414 12l-5.707-5.707-1.414 1.414L13.586 12l-4.293 4.293z"></path>
-          </svg></div>
-      </nav>
-    </ngx-simplebar>
+      </ngx-simplebar>
+    </div>
   </div>
-
 </aside>

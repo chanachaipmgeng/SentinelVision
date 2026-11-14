@@ -1,0 +1,211 @@
+:host {
+  display: contents;
+}
+
+.sv-dual-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+.sv-dual-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 3.75rem;
+  height: calc(100vh - 3.75rem);
+  overflow: hidden;
+}
+
+/* ---- Column 1: Primary Modules Rail ---- */
+.sv-rail {
+  width: 4.5rem;
+  flex: 0 0 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.65rem 0.35rem;
+  background: rgba(3, 8, 14, 0.86);
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.sv-rail__btn {
+  --mod-rgb: 45, 212, 191;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+  width: 100%;
+  padding: 0.5rem 0.2rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.18s ease;
+
+  &:hover {
+    color: #f1f5f9;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &.is-active {
+    color: #f8fafc;
+    background: rgba(var(--mod-rgb), 0.16);
+    border-color: rgba(var(--mod-rgb), 0.42);
+    box-shadow: 0 0 14px -4px rgba(var(--mod-rgb), 0.35);
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset-inline-start: -0.35rem;
+      top: 20%;
+      bottom: 20%;
+      width: 3px;
+      border-radius: 999px;
+      background: rgb(var(--mod-rgb));
+      box-shadow: 0 0 8px rgb(var(--mod-rgb));
+    }
+
+    .sv-rail__icon {
+      color: rgb(var(--mod-rgb));
+    }
+  }
+}
+
+.sv-rail__icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.sv-rail__label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Column 2: Active Module Sub-Screens Panel ---- */
+.sv-subpanel {
+  --mod-rgb: 45, 212, 191;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(6, 12, 20, 0.55);
+}
+
+.sv-subpanel__scroll {
+  height: 100%;
+  width: 100%;
+}
+
+.sv-subpanel__head {
+  padding: 0.65rem 0.8rem 0.55rem;
+  margin: 0.25rem 0.5rem 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sv-subpanel__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgb(var(--mod-rgb));
+  background: rgba(var(--mod-rgb), 0.14);
+  border: 1px solid rgba(var(--mod-rgb), 0.35);
+}
+
+.sv-subpanel__title {
+  margin: 0.4rem 0 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.sv-subpanel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.sv-subitem {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.56rem 0.68rem;
+  border-radius: 0.6rem;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #cbd5e1;
+  transition: all 0.16s ease;
+
+  &:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &.is-active {
+    color: #f8fafc;
+    font-weight: 600;
+    background: rgba(var(--mod-rgb), 0.15);
+    border-color: rgba(var(--mod-rgb), 0.38);
+
+    .sv-subitem__dot {
+      background: rgb(var(--mod-rgb));
+      box-shadow: 0 0 8px rgb(var(--mod-rgb));
+      transform: scale(1.25);
+    }
+  }
+}
+
+.sv-subitem__dot {
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.45);
+  flex-shrink: 0;
+  transition: all 0.16s ease;
+}
+
+.sv-subitem__text {
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Collapsed icon-only mode: hide Column 2 */
+:host-context([data-toggled="icon-overlay-close"]) .sv-subpanel,
+:host-context([data-toggled="icon-click-closed"]) .sv-subpanel,
+:host-context([data-toggled="icon-hover-closed"]) .sv-subpanel {
+  display: none;
+}
+
+:host-context([data-toggled="icon-overlay-close"]) .sv-rail,
+:host-context([data-toggled="icon-click-closed"]) .sv-rail,
+:host-context([data-toggled="icon-hover-closed"]) .sv-rail {
+  width: 100%;
+  flex: 1 1 auto;
+}

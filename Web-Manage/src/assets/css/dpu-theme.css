@@ -2767,3 +2767,24 @@ html[data-theme-mode="dark"] .table tbody tr:hover {
 
 
 
+
+/* ---- Two-Column Dual-Rail Sidebar Width ---- */
+@media (min-width: 992px) {
+  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-sidebar,
+  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-sidebar .main-sidebar-header {
+    width: 17.5rem !important;
+  }
+  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-header {
+    padding-inline-start: 17.5rem !important;
+  }
+  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .content,
+  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .footer {
+    margin-inline-start: 17.5rem !important;
+  }
+}
+@media (max-width: 991.98px) {
+  .app-sidebar,
+  .app-sidebar .main-sidebar-header {
+    width: 17.5rem !important;
+  }
+}

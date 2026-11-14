@@ -46,5 +46,9 @@
   - Keep background watermark labels (`.dpu-kiosk__float`) low-contrast so they never collide with foreground chips, and verify chip bars and `html.dpu-kiosk-large-text` at `1024x768`.
 - **i18n Key Parity**:
   - Whenever adding or renaming labels in `nav.service.ts` or templates using `| translate`, add matching keys to both `Web-Manage/src/assets/i18n/th.json` and `Web-Manage/src/assets/i18n/en.json`.
+- **Two-Column Dual-Rail Sidebar Invariants (`app-sidebar.sv-dual-sidebar`)**:
+  - Maintain the `17.5rem` (`4.5rem` module rail + `13rem` sub-screens panel) desktop width and synchronized `.app-header` / `.content` / `.footer` offsets in `Web-Manage/src/assets/css/dpu-theme.css`.
+  - Derive Column 1 (`moduleGroups`) strictly from `enabledModules` + RBAC permission filtering and hide modules with zero visible items.
+  - Clicking a module in Column 1 (`selectModule`) MUST prefer the first non-`/company/scan/` management route so operators stay inside the 2-column Console rather than jumping directly into fullscreen Kiosk mode.
 - **File Editing Line Endings**:
   - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.

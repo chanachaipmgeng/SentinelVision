@@ -11,6 +11,37 @@ import { TokenService } from '../../services/token.service';
 import { PermissionService } from '../../services/permission.service';
 import { CompanyModel } from '../../../DPU/models/company.model';
 import { CompanyModuleConfigService } from '../../../DPU/services/company-module-config.service';
+export interface SidebarSubItem {
+  path?: string;
+  title: string;
+  icon?: string;
+  badgeValue?: string;
+  badgeClass?: string;
+  badgeText?: string;
+}
+
+export interface SidebarModuleGroup {
+  id: string;
+  shortLabel: string;
+  title: string;
+  icon: string;
+  accentRgb: string;
+  items: SidebarSubItem[];
+}
+
+const MODULE_META: Record<string, { shortLabel: string; title: string; icon: string; accentRgb: string }> = {
+  COMMAND: { shortLabel: 'ภาพรวม', title: 'SENTINELVISION COMMAND', icon: 'ri-radar-line', accentRgb: '45, 212, 191' },
+  CORE: { shortLabel: 'องค์กร', title: 'CORE — Organization', icon: 'ri-building-4-line', accentRgb: '56, 189, 248' },
+  ATTENDANCE: { shortLabel: 'ลงเวลา', title: 'ATTENDANCE — Time clock', icon: 'ri-time-line', accentRgb: '34, 211, 238' },
+  ACCESS_CONTROL: { shortLabel: 'ประตู', title: 'ACCESS_CONTROL — Doors', icon: 'ri-door-lock-line', accentRgb: '96, 165, 250' },
+  WATCHLIST: { shortLabel: 'เฝ้าระวัง', title: 'WATCHLIST — Watch & VIP', icon: 'ri-shield-star-line', accentRgb: '251, 113, 133' },
+  VISITOR: { shortLabel: 'ผู้ติดต่อ', title: 'VISITOR — Visitors & building', icon: 'ri-user-shared-line', accentRgb: '167, 139, 250' },
+  EVENTS: { shortLabel: 'อีเวนต์', title: 'EVENTS — Events & seminars', icon: 'ri-calendar-event-line', accentRgb: '251, 191, 36' },
+  CCTV: { shortLabel: 'กล้อง AI', title: 'CCTV — Cameras', icon: 'ri-video-on-line', accentRgb: '52, 211, 153' },
+  GOVERNANCE: { shortLabel: 'ระบบ', title: 'GOVERNANCE — Governance', icon: 'ri-settings-4-line', accentRgb: '148, 163, 184' },
+  ADMIN: { shortLabel: 'แอดมิน', title: 'System admin', icon: 'ri-admin-line', accentRgb: '45, 212, 191' },
+};
+
 @Component({
     selector: 'app-sidebar',
     imports: [CommonModule, RouterModule, SimplebarAngularModule, TranslateModule],
@@ -67,6 +98,8 @@ export class SidebarComponent implements OnInit, OnDestroy {
   icon!: SafeHtml;
 
   public menuItems!: Menu[];
+  public moduleGroups: SidebarModuleGroup[] = [];
+  public selectedModuleId: string = 'COMMAND';
   public menuitemsSubscribe$!: Subscription;
   companyModel: CompanyModel = new CompanyModel()
   isCommonRoute: boolean = false;
@@ -181,6 +214,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       const companyId = this.tokenService.getSelectCompany()?.companyId;
       if (!companyId) {
         this.menuItems = this.applyPermissionFilter(raw);
+        this.buildModuleGroups();
         this.ParentActive();
         return;
       }
@@ -193,16 +227,19 @@ export class SidebarComponent implements OnInit, OnDestroy {
                 cfg.enabledModules
               );
               this.menuItems = this.applyPermissionFilter(byModule);
+              this.buildModuleGroups();
               this.ParentActive();
             },
             error: () => {
               this.menuItems = this.applyPermissionFilter(raw);
+              this.buildModuleGroups();
               this.ParentActive();
             },
           });
         },
         error: () => {
           this.menuItems = raw;
+          this.buildModuleGroups();
           this.ParentActive();
         },
       });
@@ -210,13 +247,119 @@ export class SidebarComponent implements OnInit, OnDestroy {
       this.permissionService.load(null).subscribe({
         next: () => {
           this.menuItems = this.applyPermissionFilter(this.navServices.getCommonMenu());
+          this.buildModuleGroups();
           this.ParentActive();
         },
         error: () => {
           this.menuItems = this.navServices.getCommonMenu();
+          this.buildModuleGroups();
           this.ParentActive();
         },
       });
+    }
+  }
+
+  get activeModuleGroup(): SidebarModuleGroup | null {
+    return (
+      this.moduleGroups.find((g) => g.id === this.selectedModuleId) ||
+      this.moduleGroups[0] ||
+      null
+    );
+  }
+
+  selectModule(group: SidebarModuleGroup): void {
+    this.selectedModuleId = group.id;
+    // Expand sidebar if it was collapsed in icon-only mode so Column 2 is visible
+    const html = document.documentElement;
+    if (html.getAttribute('data-toggled')) {
+      html.removeAttribute('data-toggled');
+    }
+    const cleanUrl = (this.currentUrl || '').split('?')[0];
+    const alreadyInGroup = group.items.some(
+      (i) => i.path && (cleanUrl === i.path || cleanUrl.startsWith(i.path + '/'))
+    );
+    if (!alreadyInGroup && group.items.length > 0) {
+      const target =
+        group.items.find((i) => i.path && !i.path.startsWith('/company/scan/')) ||
+        group.items[0];
+      if (target?.path) {
+        this.router.navigate([target.path]);
+      }
+    }
+  }
+
+  isSubItemActive(item: SidebarSubItem): boolean {
+    if (!item.path) return false;
+    const cleanUrl = (this.currentUrl || '').split('?')[0];
+    return cleanUrl === item.path || cleanUrl.startsWith(item.path + '/');
+  }
+
+  private buildModuleGroups(): void {
+    const groupsMap = new Map<string, SidebarModuleGroup>();
+    const order: string[] = [];
+    for (const m of this.menuItems || []) {
+      const modId = m.moduleId || (this.isInstallerRoute ? 'COMMAND' : 'ADMIN');
+      if (!groupsMap.has(modId)) {
+        const meta = MODULE_META[modId] || {
+          shortLabel: modId,
+          title: m.headTitle || modId,
+          icon: 'ri-apps-line',
+          accentRgb: '45, 212, 191',
+        };
+        groupsMap.set(modId, {
+          id: modId,
+          shortLabel: meta.shortLabel,
+          title: m.headTitle || meta.title,
+          icon: meta.icon,
+          accentRgb: meta.accentRgb,
+          items: [],
+        });
+        order.push(modId);
+      }
+      const grp = groupsMap.get(modId)!;
+      if (m.headTitle) {
+        grp.title = m.headTitle;
+        continue;
+      }
+      if (m.type === 'link' && m.path) {
+        grp.items.push({
+          path: m.path,
+          title: m.title || '',
+          icon: m.icon,
+          badgeValue: m.badgeValue,
+          badgeClass: m.badgeClass,
+          badgeText: m.badgeText,
+        });
+      } else if (m.children?.length) {
+        for (const c of m.children) {
+          if (c.path) {
+            grp.items.push({
+              path: c.path,
+              title: c.title || '',
+              icon: c.icon || m.icon,
+              badgeValue: c.badgeValue,
+              badgeClass: c.badgeClass,
+              badgeText: c.badgeText,
+            });
+          }
+        }
+      }
+    }
+    this.moduleGroups = order
+      .map((id) => groupsMap.get(id)!)
+      .filter((g) => g.items.length > 0);
+    this.syncActiveModuleFromUrl();
+  }
+
+  private syncActiveModuleFromUrl(): void {
+    const cleanUrl = (this.currentUrl || '').split('?')[0];
+    const matched = this.moduleGroups.find((g) =>
+      g.items.some((i) => i.path && (cleanUrl === i.path || cleanUrl.startsWith(i.path + '/')))
+    );
+    if (matched) {
+      this.selectedModuleId = matched.id;
+    } else if (!this.moduleGroups.some((g) => g.id === this.selectedModuleId)) {
+      this.selectedModuleId = this.moduleGroups[0]?.id || 'COMMAND';
     }
   }
 
@@ -316,6 +459,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   ParentActive() {
+    this.syncActiveModuleFromUrl();
     if (!this.menuItems?.length) {
       return;
     }

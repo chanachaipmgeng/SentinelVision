@@ -1,14 +1,14 @@
 <!-- Settings section: point operators to per-zone config + closed-loop CTAs -->
 <div *ngIf="isSettings" class="space-y-4">
-  <div class="p-5 rounded-xl border border-defaultborder bg-slate-50/60">
-    <h6 class="font-bold text-base mb-1">
-      <i class="ri-settings-3-line text-teal-700 me-1"></i>
+  <div class="p-5 rounded-xl border border-white/10 card-surface">
+    <h6 class="font-bold text-base text-slate-100 mb-1">
+      <i class="ri-settings-3-line text-cyan-400 me-1"></i>
       ตั้งค่า Access Control &amp; IoT Relay
     </h6>
-    <p class="text-xs text-dpu-muted mb-4">
+    <p class="text-xs text-slate-400 mb-4">
       Webhook ปลดล็อกประตู, ช่วงเวลาอนุญาต และบังคับ Face+PIN/TOTP ตั้งค่าต่อโซนในหน้าจัดการโซนประตู
     </p>
-    <ul class="text-xs text-slate-700 space-y-2 mb-4 list-disc ps-5">
+    <ul class="text-xs text-slate-300 space-y-2 mb-4 list-disc ps-5">
       <li>IoT Door Relay Webhook — กรอกตอนสร้าง/แก้ไขโซน</li>
       <li>Schedule (เวลาเริ่ม–สิ้นสุด) และกลุ่มผู้มีสิทธิ์ — ต่อโซน</li>
       <li>2FA (Face + PIN/TOTP) — เปิดที่โซนความมั่นคงสูง</li>
@@ -16,7 +16,7 @@
     <div class="flex flex-wrap gap-2">
       <a
         routerLink="/company/access-control/zones"
-        class="ti-btn ti-btn-primary-full font-semibold text-xs"
+        class="btn-vault px-4 py-2 font-semibold text-xs"
       >
         <i class="ri-door-lock-line me-1"></i> ไปจัดการโซนประตู
       </a>
@@ -36,11 +36,11 @@
   </div>
 
   <div *ngIf="zones.length > 0">
-    <h6 class="font-bold text-sm mb-2">โซนที่ตั้งค่าแล้ว ({{ zones.length }})</h6>
+    <h6 class="font-bold text-sm text-slate-100 mb-2">โซนที่ตั้งค่าแล้ว ({{ zones.length }})</h6>
     <div class="flex flex-wrap gap-2">
       <a
         *ngFor="let z of zones"
-        class="badge bg-teal-50 text-teal-900 border border-teal-200 px-2.5 py-1.5 rounded text-xs font-semibold hover:bg-teal-100"
+        class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-2.5 py-1.5 rounded text-xs font-semibold hover:bg-cyan-500/25"
         [routerLink]="['/company/scan/access-control']"
         [queryParams]="{ zoneId: z.zoneId }"
       >
@@ -51,9 +51,9 @@
 </div>
 
 <div *ngIf="!isSettings" class="grid grid-cols-12 gap-6">
-            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
-              <h6 class="font-bold text-base mb-1">สร้างโซนควบคุมประตู / จุดสแกน (Access Zone)</h6>
-              <p class="text-xs text-dpu-muted mb-4">
+            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-white/10 card-surface">
+              <h6 class="font-bold text-base text-slate-100 mb-1">สร้างโซนควบคุมประตู / จุดสแกน (Access Zone)</h6>
+              <p class="text-xs text-slate-400 mb-4">
                 กำหนดสิทธิ์การเข้าพื้นที่ ช่วงเวลาอนุญาต ระบบ 2FA และ Webhook สั่งเปิดกลอนประตูอัจฉริยะ
               </p>
 
@@ -115,7 +115,7 @@
                 <div class="col-span-12">
                   <label class="flex items-center gap-2 text-xs cursor-pointer">
                     <input type="checkbox" [(ngModel)]="zoneForm.require2FA" />
-                    <span class="font-semibold text-teal-900">
+                    <span class="font-semibold text-cyan-300">
                       บังคับยืนยันตัวตน 2 ชั้น (Face + PIN/TOTP) สำหรับโซนความมั่นคงสูง
                     </span>
                   </label>
@@ -123,7 +123,7 @@
                 <div class="col-span-12">
                   <button
                     type="button"
-                    class="ti-btn ti-btn-primary-full w-full font-semibold"
+                    class="btn-vault w-full py-2.5 font-semibold text-sm"
                     (click)="createAccessZone()"
                   >
                     + บันทึกโซนควบคุมการเข้า-ออก
@@ -131,9 +131,9 @@
                 </div>
                 <div
                   *ngIf="lastCreatedZoneId"
-                  class="col-span-12 p-3 rounded-lg border border-teal-200 bg-teal-50/80"
+                  class="col-span-12 p-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10"
                 >
-                  <p class="text-xs text-teal-900 mb-2 font-semibold">
+                  <p class="text-xs text-cyan-200 mb-2 font-semibold">
                     โซนพร้อมแล้ว — เปิดสแกนเพื่อสร้างเหตุการณ์ในประวัติ
                   </p>
                   <div class="flex flex-wrap gap-2">
@@ -157,12 +157,12 @@
 
             <div class="col-span-12 lg:col-span-8">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-                <h6 class="font-bold text-base mb-0">
+                <h6 class="font-bold text-base text-slate-100 mb-0">
                   รายการโซนประตูและจุดควบคุมทั้งหมด ({{ zones.length }})
                 </h6>
                 <a
                   routerLink="/company/access-control/logs"
-                  class="text-xs font-semibold text-teal-800 hover:underline"
+                  class="text-xs font-semibold text-cyan-400 hover:underline"
                 >
                   ดูประวัติผ่านประตู →
                 </a>
@@ -175,7 +175,7 @@
               >
                 <table class="table whitespace-nowrap">
                   <thead>
-                    <tr class="border-b border-defaultborder text-xs">
+                    <tr class="border-b border-white/10 text-xs">
                       <th class="text-start p-3">ชื่อโซน / ประตู</th>
                       <th class="text-start p-3">โหมด</th>
                       <th class="text-start p-3">กลุ่มที่อนุญาต</th>
@@ -185,30 +185,30 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr *ngFor="let z of zones" class="border-b border-defaultborder text-xs">
+                    <tr *ngFor="let z of zones" class="border-b border-white/10 text-xs">
                       <th class="text-start p-3">
-                        <div class="font-semibold">{{ z.name }}</div>
-                        <div class="text-[0.7rem] text-dpu-muted">Code: {{ z.code }}</div>
+                        <div class="font-semibold text-slate-100">{{ z.name }}</div>
+                        <div class="text-[0.7rem] text-slate-400">Code: {{ z.code }}</div>
                       </th>
                       <td class="p-3">
-                        <span class="badge bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
+                        <span class="badge bg-slate-800 text-slate-200 border border-white/10 px-2 py-0.5 rounded">
                           {{ z.stationMode }}
                         </span>
                       </td>
                       <td class="p-3">
                         <span
                           *ngFor="let t of z.allowedIdentityTypes"
-                          class="badge bg-teal-50 text-teal-800 border border-teal-200 me-1 px-1.5 py-0.5 rounded"
+                          class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 me-1 px-1.5 py-0.5 rounded"
                         >
                           {{ t }}
                         </span>
                       </td>
-                      <td class="p-3">{{ z.scheduleStart }} - {{ z.scheduleEnd }}</td>
+                      <td class="p-3 text-slate-300">{{ z.scheduleStart }} - {{ z.scheduleEnd }}</td>
                       <td class="p-3">
-                        <span *ngIf="z.require2FA" class="badge bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                        <span *ngIf="z.require2FA" class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded">
                           Face + 2FA
                         </span>
-                        <span *ngIf="!z.require2FA" class="badge bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                        <span *ngIf="!z.require2FA" class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded">
                           Face Single-Step
                         </span>
                       </td>

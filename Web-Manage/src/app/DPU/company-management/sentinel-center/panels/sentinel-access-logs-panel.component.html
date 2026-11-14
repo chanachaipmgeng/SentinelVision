@@ -164,8 +164,8 @@
             />
           </td>
           <th class="text-start p-3">
-            <div class="font-semibold text-slate-900">{{ inc.subjectName || 'Unknown' }}</div>
-            <div class="text-[0.7rem] text-dpu-muted">{{ inc.identityType || '-' }}</div>
+            <div class="font-semibold text-slate-100">{{ inc.subjectName || 'Unknown' }}</div>
+            <div class="text-[0.7rem] text-slate-400">{{ inc.identityType || '-' }}</div>
           </th>
           <td class="p-3">
             <span
@@ -174,19 +174,19 @@
                 inc.severity === 'CRITICAL'
                   ? 'sv-pill-critical'
                   : inc.severity === 'WARNING'
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-emerald-100 text-emerald-800'
+                  ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                  : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
               "
             >
               {{ inc.eventType }}
             </span>
-            <div class="text-[0.7rem] text-dpu-muted mt-0.5">{{ inc.actionTaken }}</div>
+            <div class="text-[0.7rem] text-slate-400 mt-0.5">{{ inc.actionTaken }}</div>
           </td>
           <td class="p-3">
-            <div>{{ inc.zoneName || '-' }}</div>
+            <div class="text-slate-200">{{ inc.zoneName || '-' }}</div>
             <a
               *ngIf="inc.zoneId"
-              class="text-[0.7rem] text-teal-700 hover:underline"
+              class="text-[0.7rem] text-cyan-400 hover:underline"
               [routerLink]="['/company/scan/access-control']"
               [queryParams]="{ zoneId: inc.zoneId }"
               (click)="$event.stopPropagation()"

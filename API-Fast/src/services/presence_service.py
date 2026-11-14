@@ -218,30 +218,31 @@ async def search_members(
     limit: int = 20,
 ) -> dict[str, Any]:
     needle = (q or "").strip()
-    if len(needle) < 1:
-        return {"items": [], "query": needle}
-
     safe_limit = min(max(1, int(limit or 20)), 50)
-    pattern = f"%{needle}%"
+    stmt = (
+        select(CompanyEmployee)
+        .options(selectinload(CompanyEmployee.member))
+        .join(Member, Member.memberId == CompanyEmployee.memberId)
+        .where(
+            CompanyEmployee.companyId == company_id,
+            CompanyEmployee.deletedAt.is_(None),
+            Member.deletedAt.is_(None),
+            Member.status == StatusType.ENABLE,
+        )
+    )
+    if len(needle) >= 1:
+        pattern = f"%{needle}%"
+        stmt = stmt.where(
+            or_(
+                Member.firstName.ilike(pattern),
+                Member.lastName.ilike(pattern),
+                Member.username.ilike(pattern),
+                func.concat(Member.firstName, " ", Member.lastName).ilike(pattern),
+            )
+        )
     emp_rows = (
         await db.execute(
-            select(CompanyEmployee)
-            .options(selectinload(CompanyEmployee.member))
-            .join(Member, Member.memberId == CompanyEmployee.memberId)
-            .where(
-                CompanyEmployee.companyId == company_id,
-                CompanyEmployee.deletedAt.is_(None),
-                Member.deletedAt.is_(None),
-                Member.status == StatusType.ENABLE,
-                or_(
-                    Member.firstName.ilike(pattern),
-                    Member.lastName.ilike(pattern),
-                    Member.username.ilike(pattern),
-                    func.concat(Member.firstName, " ", Member.lastName).ilike(pattern),
-                ),
-            )
-            .order_by(Member.firstName.asc(), Member.lastName.asc())
-            .limit(safe_limit)
+            stmt.order_by(Member.firstName.asc(), Member.lastName.asc()).limit(safe_limit)
         )
     ).scalars().all()
 
@@ -298,6 +299,14 @@ async def search_members(
                 "sessionOpen": bool(sess.open) if sess else False,
             }
         )
+
+    status_rank = {"here": 0, "last_seen": 1, "not_seen": 2}
+    items.sort(
+        key=lambda x: (
+            status_rank.get(str(x.get("status")), 3),
+            str(x.get("fullName") or ""),
+        )
+    )
 
     return {"items": items, "query": needle, "hereCutoffSeconds": int(_here_cutoff(interval).total_seconds())}
 

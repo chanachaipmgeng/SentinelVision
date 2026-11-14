@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import {
@@ -9,13 +10,15 @@ import {
   firstFileFromInput,
 } from '../sentinel.helpers';
 import { SentinelIdentity } from '../sentinel.models';
+import { VisitorSection } from '../sentinel-routing';
 
 @Component({
     selector: 'app-sentinel-visitors-panel',
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterModule],
     templateUrl: './sentinel-visitors-panel.component.html'
 })
 export class SentinelVisitorsPanelComponent implements OnInit {
+  @Input() section: VisitorSection = 'passes';
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
@@ -35,6 +38,10 @@ export class SentinelVisitorsPanelComponent implements OnInit {
 
   get visitorItems(): SentinelIdentity[] {
     return filterVisitorItems(this.identities);
+  }
+
+  get enrolledVisitorCount(): number {
+    return this.visitorItems.filter((v) => !!v.hasFaceEnrolled).length;
   }
 
   loadIdentities(): void {

@@ -895,5 +895,7 @@
   "presence.ot.col.status": "สถานะ",
   "presence.ot.status.aligned": "ตรงกัน",
   "presence.ot.status.punch_without_camera": "มีลงเวลา ไม่เห็นในกล้อง",
-  "presence.ot.status.camera_without_punch": "เห็นในกล้อง ไม่มี OT จากลงเวลา"
+  "presence.ot.status.camera_without_punch": "เห็นในกล้อง ไม่มี OT จากลงเวลา",
+  "CCTV — Cameras": "CCTV — กล้องวงจรปิด AI",
+  "Error logs": "บันทึกข้อผิดพลาดระบบ"
 }

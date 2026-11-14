@@ -10,7 +10,7 @@ import { PermissionService } from '../../../shared/services/permission.service';
 import { TimestampService } from '../../services/timestamp.service';
 import swal from 'sweetalert';
 
-type Tab = 'attendance' | 'leave' | 'regularization';
+type Tab = 'attendance' | 'leave' | 'regularization' | 'ot';
 
 interface SelfAttendanceRow {
   timestamp?: string;
@@ -39,6 +39,25 @@ interface SelfLeaveBalanceRow {
   remainingDays?: number;
 }
 
+interface SelfRegularizationRow {
+  id?: string;
+  workDate?: string;
+  requestedTimestamp?: string;
+  requestedType?: number | string;
+  status?: string;
+  reason?: string;
+  createdAt?: string;
+}
+
+interface SelfOtRow {
+  id?: string;
+  workDate?: string;
+  otMinutes?: number;
+  status?: string;
+  reason?: string;
+  createdAt?: string;
+}
+
 @Component({
     selector: 'app-employee-self-service',
     imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
@@ -60,11 +79,18 @@ export class SelfServiceComponent implements OnInit {
   attendance: SelfAttendanceRow[] = [];
   leaves: SelfLeaveRow[] = [];
   leaveBalances: SelfLeaveBalanceRow[] = [];
+  regularizations: SelfRegularizationRow[] = [];
+  otRequests: SelfOtRow[] = [];
   leaveDraft = { startDate: '', endDate: '', leaveType: 'ANNUAL', reason: '' };
   regenDraft = {
     workDate: '',
     requestedTimestamp: '',
     requestedType: 1,
+    reason: '',
+  };
+  otDraft = {
+    workDate: '',
+    otMinutes: 60,
     reason: '',
   };
 
@@ -176,6 +202,32 @@ export class SelfServiceComponent implements OnInit {
             (this.leaveBalances = Array.isArray(res) ? res : res?.items || []),
           error: () => undefined,
         });
+    } else if (this.activeTab === 'regularization') {
+      this.http
+        .get<SelfRegularizationRow[] | { items?: SelfRegularizationRow[] }>(
+          `/hr/company/${this.companyId}/regularizations`,
+          { params: { company_employeeId: this.companyEmployeeId } }
+        )
+        .subscribe({
+          next: (res) => {
+            this.regularizations = Array.isArray(res) ? res : res?.items || [];
+            this.loading = false;
+          },
+          error: () => (this.loading = false),
+        });
+    } else if (this.activeTab === 'ot') {
+      this.http
+        .get<SelfOtRow[] | { items?: SelfOtRow[] }>(
+          `/hr/company/${this.companyId}/ot-approvals`,
+          { params: { company_employeeId: this.companyEmployeeId } }
+        )
+        .subscribe({
+          next: (res) => {
+            this.otRequests = Array.isArray(res) ? res : res?.items || [];
+            this.loading = false;
+          },
+          error: () => (this.loading = false),
+        });
     } else {
       this.loading = false;
     }
@@ -217,6 +269,26 @@ export class SelfServiceComponent implements OnInit {
         next: () => {
           swal('สำเร็จ', 'ส่งคำขอแก้เวลาแล้ว', 'success');
           this.regenDraft = { workDate: '', requestedTimestamp: '', requestedType: 1, reason: '' };
+          this.reload();
+        },
+        error: (err) => swal('Error', err?.error?.detail || 'ส่งคำขอไม่สำเร็จ', 'error'),
+      });
+  }
+
+  submitOt(): void {
+    if (!this.companyEmployeeId) return;
+    this.http
+      .post(`/hr/company/${this.companyId}/ot-approvals`, {
+        company_employeeId: this.companyEmployeeId,
+        workDate: this.otDraft.workDate,
+        otMinutes: Number(this.otDraft.otMinutes) || 60,
+        reason: this.otDraft.reason,
+      })
+      .subscribe({
+        next: () => {
+          swal('สำเร็จ', 'ส่งคำขอ OT แล้ว', 'success');
+          this.otDraft = { workDate: '', otMinutes: 60, reason: '' };
+          this.reload();
         },
         error: (err) => swal('Error', err?.error?.detail || 'ส่งคำขอไม่สำเร็จ', 'error'),
       });

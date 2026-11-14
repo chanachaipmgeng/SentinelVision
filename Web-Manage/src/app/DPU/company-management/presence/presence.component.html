@@ -42,23 +42,67 @@
 
   <ng-container *ngIf="tab === 'locate'">
     <div class="box modern-card glass mb-3">
-      <div class="box-body">
-        <app-pill-search
-          [placeholder]="'presence.searchPlaceholder' | translate"
-          [value]="query"
-          (valueChange)="onSearch($event)">
-        </app-pill-search>
+      <div class="box-body flex flex-wrap items-center justify-between gap-3">
+        <div class="flex-1 min-w-[16rem]">
+          <app-pill-search
+            [placeholder]="'presence.searchPlaceholder' | translate"
+            [value]="query"
+            (valueChange)="onSearch($event)">
+          </app-pill-search>
+        </div>
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            class="ti-btn !rounded-full !px-3 !py-1.5 !text-xs !font-semibold"
+            [ngClass]="statusFilter === 'all' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setStatusFilter('all')"
+          >
+            {{ 'All' | translate }} ({{ results.length }})
+          </button>
+          <button
+            type="button"
+            class="ti-btn !rounded-full !px-3 !py-1.5 !text-xs !font-semibold"
+            [ngClass]="statusFilter === 'here' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setStatusFilter('here')"
+          >
+            {{ 'presence.status.here' | translate }} ({{ hereCount }})
+          </button>
+          <button
+            type="button"
+            class="ti-btn !rounded-full !px-3 !py-1.5 !text-xs !font-semibold"
+            [ngClass]="statusFilter === 'last_seen' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setStatusFilter('last_seen')"
+          >
+            {{ 'presence.status.last_seen' | translate }} ({{ lastSeenCount }})
+          </button>
+          <button
+            type="button"
+            class="ti-btn !rounded-full !px-3 !py-1.5 !text-xs !font-semibold"
+            [ngClass]="statusFilter === 'not_seen' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setStatusFilter('not_seen')"
+          >
+            {{ 'presence.status.not_seen' | translate }}
+          </button>
+          <button
+            type="button"
+            class="ti-btn ti-btn-light modern-btn !px-3 !py-1.5 !text-xs"
+            [disabled]="searching"
+            (click)="runSearch()"
+          >
+            <i class="ri-refresh-line" [class.animate-spin]="searching"></i>
+          </button>
+        </div>
       </div>
     </div>
 
     <section class="box modern-card glass min-w-0">
       <div class="box-body">
-        <h3 class="presence-h text-dpu-ink">{{ 'presence.results' | translate }}</h3>
+        <h3 class="presence-h text-dpu-ink">{{ 'presence.results' | translate }} ({{ filteredResults.length }})</h3>
         <app-empty-state *ngIf="searching" [loading]="true" message="presence.searching"></app-empty-state>
-        <app-empty-state *ngIf="!searching && !results.length" message="presence.empty"></app-empty-state>
-        <ul class="presence-list" *ngIf="!searching && results.length">
+        <app-empty-state *ngIf="!searching && !filteredResults.length" message="presence.empty"></app-empty-state>
+        <ul class="presence-list" *ngIf="!searching && filteredResults.length">
           <li
-            *ngFor="let row of results"
+            *ngFor="let row of filteredResults"
             class="presence-row"
             [class.presence-row--active]="selected?.memberId === row.memberId"
             (click)="selectMember(row)"

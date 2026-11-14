@@ -135,3 +135,27 @@ export interface SentinelOverview {
   musterRoll?: SentinelMusterRollItem[];
   musterMeta?: { total?: number; workDate?: string };
 }
+
+export interface SentinelEventBoothDwell {
+  cameraId: string;
+  cameraName?: string | null;
+  dwellSeconds: number;
+  dwellMinutes: number;
+  sessions: number;
+}
+
+export interface SentinelEventPersonDwell {
+  memberId: string;
+  fullName?: string | null;
+  firstSeenAt?: string | null;
+  totalDwellSeconds: number;
+  totalDwellMinutes: number;
+  booths: SentinelEventBoothDwell[];
+}
+
+export interface SentinelEventDwellReport {
+  eventId: string;
+  found: boolean;
+  eventName?: string | null;
+  people: SentinelEventPersonDwell[];
+}

@@ -47,15 +47,27 @@
           </div>
         </div>
 
-        <div class="pt-3 border-t border-white/10 flex items-center justify-between">
+        <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
           <p class="text-xs text-slate-400 mb-0">
             <i class="ri-information-line text-cyan-400 me-1"></i> รองรับการส่งออกข้อมูลดิบและสรุปค่ากะพร้อมคำนวณสาย
           </p>
-          <button type="button" class="btn-vault flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold" [disabled]="busy" (click)="export()">
-            <i *ngIf="!busy" class="ri-download-2-line"></i>
-            <span *ngIf="busy" class="ti-spinner animation-spin !w-4 !h-4" role="status"></span>
-            {{ (busy ? 'Exporting...' : 'Export') | translate }}
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              class="ti-btn ti-btn-light modern-btn flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-semibold"
+              [disabled]="previewLoading"
+              (click)="loadPreview()"
+            >
+              <i class="ri-eye-line" *ngIf="!previewLoading"></i>
+              <i class="ri-refresh-line animate-spin" *ngIf="previewLoading"></i>
+              ดูตัวอย่างข้อมูล ({{ previewTotal }})
+            </button>
+            <button type="button" class="btn-vault flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold" [disabled]="busy" (click)="export()">
+              <i *ngIf="!busy" class="ri-download-2-line"></i>
+              <span *ngIf="busy" class="ti-spinner animation-spin !w-4 !h-4" role="status"></span>
+              {{ (busy ? 'Exporting...' : 'Export') | translate }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -80,20 +92,93 @@
           </p>
         </div>
 
-        <div class="space-y-2.5 text-xs text-slate-400">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+            <div class="text-[0.7rem] text-slate-400">รายการที่พบในช่วงเวลา</div>
+            <div class="text-xl font-bold text-cyan-300">{{ previewTotal }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+            <div class="text-[0.7rem] text-slate-400">นอกพื้นที่ / รออนุมัติ</div>
+            <div class="text-xl font-bold text-amber-300">{{ pendingOrOutCount }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+            <div class="text-[0.7rem] text-slate-400">สายรวม (นาที)</div>
+            <div class="text-xl font-bold text-rose-300">{{ totalLateMinutes }} นาที ({{ lateCount }} ครั้ง)</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+            <div class="text-[0.7rem] text-slate-400">OT รวม (นาที)</div>
+            <div class="text-xl font-bold text-emerald-300">{{ totalOtMinutes }} นาที</div>
+          </div>
+        </div>
+
+        <div class="space-y-2 text-xs text-slate-400">
           <div class="flex items-start gap-2">
             <i class="ri-check-line text-emerald-400 mt-0.5"></i>
-            <span><strong>Raw punches:</strong> แสดงพิกัด GPS, ผลตรวจใบหน้า AI, อุณหภูมิ และภาพบันทึกหน้ากล้อง</span>
+            <span><strong>Raw punches:</strong> แสดงพิกัด GPS, ผลตรวจใบหน้า AI และภาพบันทึกหน้ากล้อง</span>
           </div>
           <div class="flex items-start gap-2">
             <i class="ri-check-line text-emerald-400 mt-0.5"></i>
             <span><strong>Payroll summary:</strong> คำนวณสรุปเวลาทำงาน ชั่วโมงโอที เวลาสาย การลา ตามเงื่อนไขกะทำงาน</span>
           </div>
-          <div class="flex items-start gap-2">
-            <i class="ri-shield-check-line text-cyan-400 mt-0.5"></i>
-            <span>สอดคล้องกับมาตรฐานความปลอดภัย <strong>PDPA & Multi-tenant isolation</strong></span>
-          </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Preview Table -->
+  <div class="col-span-12">
+    <div class="box modern-card glass card-surface">
+      <div class="box-header flex flex-wrap items-center justify-between gap-2 border-b border-white/10 p-4">
+        <div class="box-title text-slate-100 font-bold flex items-center gap-2">
+          <i class="ri-table-line text-cyan-400 text-lg"></i>
+          ตัวอย่างข้อมูลก่อนส่งออก (Preview — แสดงสูงสุด 50 รายการล่าสุด)
+        </div>
+        <span class="badge bg-slate-800 text-slate-300 border border-white/10 text-xs px-3 py-1 rounded-full">
+          พบทั้งหมด {{ previewTotal }} รายการ
+        </span>
+      </div>
+      <div class="box-body p-0 overflow-x-auto">
+        <table class="table dpu-list-table w-full whitespace-nowrap">
+          <thead>
+            <tr>
+              <th>วัน-เวลา</th>
+              <th>พนักงาน</th>
+              <th>สถานที่ / จุดสแกน</th>
+              <th>สถานะการลงเวลา</th>
+              <th>สาย (นาที)</th>
+              <th>OT (นาที)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of previewRows | slice:0:50">
+              <td class="text-xs font-mono text-slate-300">{{ row.timestamp | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+              <td>
+                <div class="font-semibold text-slate-100">{{ row.employee.getFullname() }}</div>
+                <div class="text-xs text-slate-400">{{ row.employee.employeeId || row.company_employeeId }}</div>
+              </td>
+              <td class="text-slate-300">{{ row.getLocation() }}</td>
+              <td>
+                <span
+                  class="badge px-2.5 py-0.5 rounded text-xs"
+                  [ngClass]="
+                    row.approvalStatus === 'PENDING' || row.timestampType === 0
+                      ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                  "
+                >
+                  {{ row.getStatus() }}
+                </span>
+              </td>
+              <td class="text-slate-300">{{ row.lateMinutes || 0 }}</td>
+              <td class="text-slate-300">{{ row.overtimeMinutes || 0 }}</td>
+            </tr>
+            <tr *ngIf="!previewLoading && previewRows.length === 0">
+              <td colspan="6" class="text-center text-slate-400 py-8">
+                ไม่พบรายการลงเวลาในช่วงวันที่เลือก
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

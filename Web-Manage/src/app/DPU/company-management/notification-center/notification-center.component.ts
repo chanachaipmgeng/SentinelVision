@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { TranslateModule } from '@ngx-translate/core';
 import {
@@ -23,6 +24,7 @@ type Tab = 'inbox' | 'dead-letter' | 'prefs' | 'templates';
         FormsModule,
         RouterModule,
         TranslateModule,
+        SharedModule,
         PageToolbarComponent,
         EmptyStateComponent,
     ],

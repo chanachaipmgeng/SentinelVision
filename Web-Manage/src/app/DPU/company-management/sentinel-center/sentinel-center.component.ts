@@ -9,10 +9,19 @@ import { TokenService } from '../../../shared/services/token.service';
 import { SentinelApiService } from './sentinel-api.service';
 import { SentinelOverview } from './sentinel.models';
 import {
+  EventsSection,
   LEGACY_TAB_REDIRECTS,
   SentinelTab,
+  VisitorSection,
+  WatchlistSection,
+  WorkspaceSubNavItem,
   labelForWorkspace,
+  normalizeAccessSection,
+  normalizeEventsSection,
+  normalizeVisitorSection,
+  normalizeWatchlistSection,
   tabFromModuleSection,
+  workspaceSubNav,
 } from './sentinel-routing';
 import { SentinelAccessLogsPanelComponent } from './panels/sentinel-access-logs-panel.component';
 import { SentinelAccessPanelComponent } from './panels/sentinel-access-panel.component';
@@ -146,13 +155,31 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
               <span>เช็คยอดคนในอาคาร &amp; Edge AI</span>
             </button>
           </nav>
-          <div *ngIf="moduleScoped" class="text-sm font-semibold text-slate-700">
-            {{ moduleWorkspaceLabel }}
+          <div *ngIf="moduleScoped" class="flex flex-wrap items-center justify-between gap-3 w-full">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
+              <i class="ri-shield-star-line text-cyan-400 text-base"></i>
+              <span>{{ moduleWorkspaceLabel }}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2" *ngIf="subNavItems.length">
+              <a
+                *ngFor="let item of subNavItems"
+                [routerLink]="item.route"
+                class="ti-btn !rounded-full !px-3.5 !py-1.5 !text-xs !font-semibold transition-all duration-200 inline-flex items-center gap-1.5"
+                [ngClass]="
+                  currentSection === item.section
+                    ? '!bg-gradient-to-r !from-cyan-500 !to-teal-500 !text-white !border-transparent !shadow-md !shadow-cyan-500/25'
+                    : '!bg-white/5 hover:!bg-white/10 !text-slate-300 !border !border-white/10'
+                "
+              >
+                <i [class]="item.icon"></i>
+                <span>{{ item.label }}</span>
+              </a>
+            </div>
           </div>
 
           <span
             *ngIf="toastMessage"
-            class="badge bg-teal-600/10 text-teal-800 border border-teal-600/20 px-3 py-1.5 text-xs font-semibold"
+            class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 text-xs font-semibold"
           >
             <i class="ri-checkbox-circle-line me-1"></i> {{ toastMessage }}
           </span>
@@ -166,6 +193,7 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         </div>
         <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'watchlist'">
           <app-sentinel-watchlist-panel
+            [section]="watchlistSection"
             (toast)="showToast($event)"
             (overviewChanged)="reloadOverview()"
           ></app-sentinel-watchlist-panel>
@@ -192,12 +220,14 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         </div>
         <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'visitors'">
           <app-sentinel-visitors-panel
+            [section]="visitorSection"
             (toast)="showToast($event)"
             (overviewChanged)="reloadOverview()"
           ></app-sentinel-visitors-panel>
         </div>
         <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'events'">
           <app-sentinel-events-panel
+            [section]="eventsSection"
             (toast)="showToast($event)"
             (overviewChanged)="reloadOverview()"
           ></app-sentinel-events-panel>
@@ -214,6 +244,11 @@ export class SentinelCenterComponent implements OnInit {
   activeTab: SentinelTab = 'command';
   moduleScoped = false;
   moduleWorkspaceLabel = '';
+  currentSection = '';
+  watchlistSection: WatchlistSection = 'identities';
+  visitorSection: VisitorSection = 'passes';
+  eventsSection: EventsSection = 'campaigns';
+  subNavItems: WorkspaceSubNavItem[] = [];
   isLoading = false;
   toastMessage = '';
   overview: SentinelOverview | null = null;
@@ -242,9 +277,24 @@ export class SentinelCenterComponent implements OnInit {
           this.moduleScoped = true;
           this.activeTab = mapped;
           this.moduleWorkspaceLabel = labelForWorkspace(workspace!, section);
+          this.subNavItems = workspaceSubNav(workspace);
+          if (workspace === 'ACCESS_CONTROL') {
+            this.currentSection = normalizeAccessSection(section);
+          } else if (workspace === 'WATCHLIST') {
+            this.watchlistSection = normalizeWatchlistSection(section);
+            this.currentSection = this.watchlistSection;
+          } else if (workspace === 'VISITOR') {
+            this.visitorSection = normalizeVisitorSection(section);
+            this.currentSection = this.visitorSection;
+          } else if (workspace === 'EVENTS') {
+            this.eventsSection = normalizeEventsSection(section);
+            this.currentSection = this.eventsSection;
+          }
           return;
         }
         this.moduleScoped = false;
+        this.subNavItems = [];
+        this.currentSection = '';
         const tab = query.get('tab');
         if (tab && LEGACY_TAB_REDIRECTS[tab]) {
           this.router.navigateByUrl(LEGACY_TAB_REDIRECTS[tab], { replaceUrl: true });

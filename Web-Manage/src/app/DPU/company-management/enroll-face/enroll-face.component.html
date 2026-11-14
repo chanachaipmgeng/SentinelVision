@@ -1,4 +1,4 @@
-<div class="dpu-kiosk">
+<div class="dpu-kiosk" [attr.data-station-mode]="stationMode">
   <div class="dpu-kiosk__scene" aria-hidden="true">
     <div class="dpu-kiosk__mesh"></div>
     <div class="dpu-kiosk__orbit dpu-kiosk__orbit--a"></div>
@@ -58,8 +58,21 @@
 
   <header class="dpu-kiosk__top">
     <div class="dpu-kiosk__brand">
-      <p class="dpu-kiosk__eyebrow">{{ companyName }} • SentinelVision • {{ stationMode }}</p>
+      <p class="dpu-kiosk__eyebrow">
+        <span>{{ companyName }}</span>
+        <span>•</span>
+        <span>SentinelVision</span>
+        <span class="dpu-kiosk__mode-badge">{{ stationMode }}</span>
+      </p>
       <h1 class="dpu-kiosk__title">{{ kioskTitle | translate }}</h1>
+      <nav *ngIf="!isKioskDevice" class="dpu-kiosk__mode-nav" aria-label="สลับโหมดสถานีสแกน">
+        <a routerLink="/company/scan/attendance" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Attendance</a>
+        <a routerLink="/company/scan/access-control" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Access</a>
+        <a routerLink="/company/scan/watchlist" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Watchlist</a>
+        <a routerLink="/company/scan/visitor" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Visitor</a>
+        <a routerLink="/company/scan/event" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Event</a>
+        <a routerLink="/company/scan/unified-hybrid" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Hybrid</a>
+      </nav>
     </div>
     <div class="dpu-kiosk__top-actions">
       <button
@@ -458,7 +471,139 @@
         </div>
       </ng-container>
 
-      <header class="dpu-kiosk__panel-head" [class.dpu-kiosk__panel-head--spaced]="showAttendancePanel">
+      <!-- Access Control Summary Panel -->
+      <ng-container *ngIf="showAccessChrome && !showAttendancePanel">
+        <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
+          <div>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">โซนประตู &amp; Access Control</h2>
+            <p class="dpu-kiosk__subtitle">{{ selectedZone?.name || 'เลือกโซนเพื่อตรวจสิทธิ์และสั่งเปิดประตู' }}</p>
+          </div>
+          <a routerLink="/company/sentinel-center/access/zones" class="dpu-kiosk__icon-btn" title="ตั้งค่าโซนประตู">
+            <i class="ri-door-lock-line"></i>
+          </a>
+        </header>
+
+        <div class="dpu-kiosk__summary">
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ zones.length }}</span>
+            <span class="dpu-kiosk__summary-label">โซนทั้งหมด</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ successCount }}</span>
+            <span class="dpu-kiosk__summary-label">อนุญาตผ่าน</span>
+          </div>
+          <div class="dpu-kiosk__summary-card is-warn">
+            <span class="dpu-kiosk__summary-val">{{ warningCount + errorCount }}</span>
+            <span class="dpu-kiosk__summary-label">ปฏิเสธ / เตือน</span>
+          </div>
+        </div>
+
+        <div class="dpu-kiosk__module-meta">
+          <span><i class="ri-shield-keyhole-line"></i> {{ zoneRequires2FA ? 'ต้องยืนยัน PIN / 2FA' : 'สแกนใบหน้า 1:N' }}</span>
+          <span><i class="ri-door-open-line"></i> {{ doorStatus === 'unlocked' ? 'เปิดประตูแล้ว' : doorStatus === 'denied' ? 'ปฏิเสธสิทธิ์' : 'Relay พร้อมใช้งาน' }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Watchlist & VIP Summary Panel -->
+      <ng-container *ngIf="showWatchlistChrome">
+        <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
+          <div>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">คัดกรองเฝ้าระวัง &amp; VIP</h2>
+            <p class="dpu-kiosk__subtitle">Walk-by Screening • Blacklist / VIP Recognition</p>
+          </div>
+          <a routerLink="/company/sentinel-center/watchlist/identities" class="dpu-kiosk__icon-btn" title="จัดการบัญชีเฝ้าระวัง">
+            <i class="ri-spy-line"></i>
+          </a>
+        </header>
+
+        <div class="dpu-kiosk__summary">
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ sessionTotal }}</span>
+            <span class="dpu-kiosk__summary-label">คัดกรองรอบนี้</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ vipArrivalName ? 1 : 0 }}</span>
+            <span class="dpu-kiosk__summary-label">ต้อนรับ VIP</span>
+          </div>
+          <div class="dpu-kiosk__summary-card is-warn">
+            <span class="dpu-kiosk__summary-val">{{ warningCount + errorCount }}</span>
+            <span class="dpu-kiosk__summary-label">แจ้งเตือนเฝ้าระวัง</span>
+          </div>
+        </div>
+
+        <div class="dpu-kiosk__module-meta">
+          <span><i class="ri-radar-line"></i> InsightFace 512-d HNSW</span>
+          <span><i class="ri-webhook-line"></i> SIEM &amp; Silent Alert พร้อม</span>
+        </div>
+      </ng-container>
+
+      <!-- Visitor Check-In Summary Panel -->
+      <ng-container *ngIf="showVisitorChrome">
+        <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
+          <div>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">จุดรับรองผู้มาติดต่อ</h2>
+            <p class="dpu-kiosk__subtitle">{{ selectedZone?.name || 'ยืนยันบัตร Visitor และแจ้งเตือน Host' }}</p>
+          </div>
+          <a routerLink="/company/sentinel-center/visitor/passes" class="dpu-kiosk__icon-btn" title="ออกบัตร Visitor">
+            <i class="ri-id-card-line"></i>
+          </a>
+        </header>
+
+        <div class="dpu-kiosk__summary">
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ zones.length }}</span>
+            <span class="dpu-kiosk__summary-label">จุดรับรอง</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ successCount }}</span>
+            <span class="dpu-kiosk__summary-label">เช็คอินผ่าน</span>
+          </div>
+          <div class="dpu-kiosk__summary-card is-warn">
+            <span class="dpu-kiosk__summary-val">{{ warningCount + errorCount }}</span>
+            <span class="dpu-kiosk__summary-label">ไม่ผ่าน / หมดอายุ</span>
+          </div>
+        </div>
+
+        <div class="dpu-kiosk__module-meta">
+          <span><i class="ri-shield-check-line"></i> PDPA Auto-Purge</span>
+          <span><i class="ri-notification-3-line"></i> แจ้งเตือน Host อัตโนมัติ</span>
+        </div>
+      </ng-container>
+
+      <!-- Event Check-In Summary Panel -->
+      <ng-container *ngIf="showEventChrome">
+        <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--row">
+          <div>
+            <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">เช็คอินงานอีเวนต์ &amp; สัมมนา</h2>
+            <p class="dpu-kiosk__subtitle">{{ selectedEvent?.name || 'เลือกแคมเปญอีเวนต์ด้านบนเพื่อเริ่มเช็คอิน' }}</p>
+          </div>
+          <a routerLink="/company/sentinel-center/events/campaigns" class="dpu-kiosk__icon-btn" title="จัดการงานอีเวนต์">
+            <i class="ri-calendar-event-line"></i>
+          </a>
+        </header>
+
+        <div class="dpu-kiosk__summary">
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ selectedEvent?.checkedInCount ?? successCount }}</span>
+            <span class="dpu-kiosk__summary-label">เช็คอินแล้ว</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ selectedEvent?.capacity ?? '∞' }}</span>
+            <span class="dpu-kiosk__summary-label">ความจุงาน</span>
+          </div>
+          <div class="dpu-kiosk__summary-card">
+            <span class="dpu-kiosk__summary-val">{{ seatNumber || '—' }}</span>
+            <span class="dpu-kiosk__summary-label">ที่นั่งล่าสุด</span>
+          </div>
+        </div>
+
+        <div class="dpu-kiosk__module-meta">
+          <span><i class="ri-vip-diamond-line"></i> แสดงเลขที่นั่ง / โต๊ะอัตโนมัติ</span>
+          <span><i class="ri-group-line"></i> {{ events.length }} แคมเปญในระบบ</span>
+        </div>
+      </ng-container>
+
+      <header class="dpu-kiosk__panel-head dpu-kiosk__panel-head--spaced">
         <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">ผลล่าสุด</h2>
         <p class="dpu-kiosk__subtitle">
           <ng-container *ngIf="showAccessChrome && !showPunchChips">สถานะประตูและรายการผ่านโซน</ng-container>

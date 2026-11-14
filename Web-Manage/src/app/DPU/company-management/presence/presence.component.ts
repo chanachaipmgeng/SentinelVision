@@ -65,6 +65,7 @@ export class PresenceComponent implements OnInit {
   companyId = '';
   tab: 'locate' | 'ot' = 'locate';
   query = '';
+  statusFilter: 'all' | 'here' | 'last_seen' | 'not_seen' = 'all';
   searching = false;
   loadingTrail = false;
   loadingOt = false;
@@ -84,11 +85,28 @@ export class PresenceComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // no auto-search
+    if (this.companyId) {
+      void this.runSearch();
+    }
   }
 
   get hereCount(): number {
     return this.results.filter((r) => r.status === 'here').length;
+  }
+
+  get lastSeenCount(): number {
+    return this.results.filter((r) => r.status === 'last_seen').length;
+  }
+
+  get filteredResults(): PresenceSearchItem[] {
+    if (this.statusFilter === 'all') {
+      return this.results;
+    }
+    return this.results.filter((r) => r.status === this.statusFilter);
+  }
+
+  setStatusFilter(filter: 'all' | 'here' | 'last_seen' | 'not_seen'): void {
+    this.statusFilter = filter;
   }
 
   onSearch(q: string): void {
@@ -96,7 +114,7 @@ export class PresenceComponent implements OnInit {
     if (this.searchTimer) {
       clearTimeout(this.searchTimer);
     }
-    if (!this.companyId || this.query.length < 2) {
+    if (!this.companyId) {
       this.results = [];
       return;
     }
@@ -105,14 +123,14 @@ export class PresenceComponent implements OnInit {
     }, 280);
   }
 
-  private async runSearch(): Promise<void> {
-    if (!this.companyId || this.query.length < 2) {
+  async runSearch(): Promise<void> {
+    if (!this.companyId) {
       return;
     }
     this.searching = true;
     this.error = null;
     try {
-      const params = new HttpParams().set('q', this.query).set('limit', '20');
+      const params = new HttpParams().set('q', this.query).set('limit', '50');
       const res = await firstValueFrom(
         this.http.get<{ items: PresenceSearchItem[] }>(
           `/presence/company/${this.companyId}/search`,

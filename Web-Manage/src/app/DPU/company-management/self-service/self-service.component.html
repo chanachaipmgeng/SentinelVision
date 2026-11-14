@@ -25,12 +25,13 @@
 
   <ng-container *ngIf="!loading && !showEmployeeAudienceEmpty">
     <div class="flex flex-wrap gap-2 mb-4">
-      <button type="button" class="ti-btn" [ngClass]="activeTab === 'attendance' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('attendance')">การลงเวลา</button>
-      <button type="button" class="ti-btn" [ngClass]="activeTab === 'leave' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('leave')">วันลา</button>
-      <button type="button" class="ti-btn" [ngClass]="activeTab === 'regularization' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="setTab('regularization')">แก้เวลา</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'attendance' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('attendance')">การลงเวลา</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'leave' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('leave')">วันลา</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'regularization' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('regularization')">แก้เวลา</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'ot' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('ot')">ขอทำ OT</button>
     </div>
 
-    <div *ngIf="activeTab === 'attendance'" class="box modern-card glass">
+    <div *ngIf="activeTab === 'attendance'" class="box modern-card glass card-surface">
       <div class="box-body p-0 overflow-x-auto">
         <table class="table dpu-list-table w-full">
           <thead>
@@ -53,7 +54,7 @@
 
     <div *ngIf="activeTab === 'leave'" class="grid grid-cols-12 gap-4">
       <div class="col-span-12 lg:col-span-5">
-        <div class="box modern-card glass">
+        <div class="box modern-card glass card-surface">
           <div class="box-header"><div class="box-title">ขอลา</div></div>
           <div class="box-body space-y-3">
             <div class="grid grid-cols-2 gap-2">
@@ -78,7 +79,7 @@
         </div>
       </div>
       <div class="col-span-12 lg:col-span-7">
-        <div class="box modern-card glass">
+        <div class="box modern-card glass card-surface">
           <div class="box-header"><div class="box-title">ประวัติคำขอลา</div></div>
           <div class="box-body p-0 overflow-x-auto">
             <table class="table dpu-list-table w-full">
@@ -97,20 +98,85 @@
       </div>
     </div>
 
-    <div *ngIf="activeTab === 'regularization'" class="box modern-card glass max-w-xl">
-      <div class="box-header"><div class="box-title">ขอแก้เวลา</div></div>
-      <div class="box-body space-y-3">
-        <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="regenDraft.workDate" /></div>
-        <div><label class="form-label">เวลาที่ขอ</label><input type="datetime-local" class="form-control" [(ngModel)]="regenDraft.requestedTimestamp" /></div>
-        <div>
-          <label class="form-label">ประเภท</label>
-          <select class="form-control" [(ngModel)]="regenDraft.requestedType">
-            <option [ngValue]="1">เข้างาน</option>
-            <option [ngValue]="2">ออกงาน</option>
-          </select>
+    <div *ngIf="activeTab === 'regularization'" class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 lg:col-span-5">
+        <div class="box modern-card glass card-surface">
+          <div class="box-header"><div class="box-title">ขอแก้เวลา</div></div>
+          <div class="box-body space-y-3">
+            <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="regenDraft.workDate" /></div>
+            <div><label class="form-label">เวลาที่ขอ</label><input type="datetime-local" class="form-control" [(ngModel)]="regenDraft.requestedTimestamp" /></div>
+            <div>
+              <label class="form-label">ประเภท</label>
+              <select class="form-control" [(ngModel)]="regenDraft.requestedType">
+                <option [ngValue]="1">เข้างาน</option>
+                <option [ngValue]="2">ออกงาน</option>
+              </select>
+            </div>
+            <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="regenDraft.reason"></textarea></div>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitRegularization()">ส่งคำขอ</button>
+          </div>
         </div>
-        <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="regenDraft.reason"></textarea></div>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="submitRegularization()">ส่งคำขอ</button>
+      </div>
+      <div class="col-span-12 lg:col-span-7">
+        <div class="box modern-card glass card-surface">
+          <div class="box-header"><div class="box-title">ประวัติคำขอแก้เวลา</div></div>
+          <div class="box-body p-0 overflow-x-auto">
+            <table class="table dpu-list-table w-full">
+              <thead>
+                <tr><th>วันทำงาน</th><th>เวลาที่ขอ</th><th>ประเภท</th><th>สถานะ</th><th>เหตุผล</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of regularizations">
+                  <td>{{ r.workDate }}</td>
+                  <td>{{ r.requestedTimestamp | date: 'short' }}</td>
+                  <td>{{ r.requestedType === 1 || r.requestedType === '1' ? 'เข้างาน' : 'ออกงาน' }}</td>
+                  <td>{{ r.status || 'PENDING' }}</td>
+                  <td>{{ r.reason || '—' }}</td>
+                </tr>
+                <tr *ngIf="!regularizations.length">
+                  <td colspan="5" class="text-center text-muted py-6">ยังไม่มีคำขอแก้เวลา</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="activeTab === 'ot'" class="grid grid-cols-12 gap-4">
+      <div class="col-span-12 lg:col-span-5">
+        <div class="box modern-card glass card-surface">
+          <div class="box-header"><div class="box-title">ขอทำ OT</div></div>
+          <div class="box-body space-y-3">
+            <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="otDraft.workDate" /></div>
+            <div><label class="form-label">จำนวนนาที OT</label><input type="number" min="15" step="15" class="form-control" [(ngModel)]="otDraft.otMinutes" /></div>
+            <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="otDraft.reason"></textarea></div>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitOt()">ส่งคำขอ OT</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-span-12 lg:col-span-7">
+        <div class="box modern-card glass card-surface">
+          <div class="box-header"><div class="box-title">ประวัติคำขอ OT</div></div>
+          <div class="box-body p-0 overflow-x-auto">
+            <table class="table dpu-list-table w-full">
+              <thead>
+                <tr><th>วันทำงาน</th><th>จำนวน (นาที)</th><th>สถานะ</th><th>เหตุผล</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let o of otRequests">
+                  <td>{{ o.workDate }}</td>
+                  <td>{{ o.otMinutes }}</td>
+                  <td>{{ o.status || 'PENDING' }}</td>
+                  <td>{{ o.reason || '—' }}</td>
+                </tr>
+                <tr *ngIf="!otRequests.length">
+                  <td colspan="4" class="text-center text-muted py-6">ยังไม่มีคำขอ OT</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </ng-container>

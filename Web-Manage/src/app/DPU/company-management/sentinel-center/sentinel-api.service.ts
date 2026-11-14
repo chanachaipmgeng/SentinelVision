@@ -7,6 +7,7 @@ import {
   SentinelSiemSettings,
   SentinelBulkAckResult,
   SentinelBulkCloseResult,
+  SentinelEventDwellReport,
   SentinelEventRule,
   SentinelIdentity,
   SentinelIncident,
@@ -161,5 +162,11 @@ export class SentinelApiService {
 
   unifiedScan(companyId: string, formData: FormData): Observable<SentinelScanResult> {
     return this.http.post<SentinelScanResult>(`${this.base(companyId)}/scan`, formData);
+  }
+
+  getEventDwell(companyId: string, eventId: string): Observable<SentinelEventDwellReport> {
+    return this.http.get<SentinelEventDwellReport>(
+      `/presence/company/${companyId}/events/${eventId}/dwell`,
+    );
   }
 }

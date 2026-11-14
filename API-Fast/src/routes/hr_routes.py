@@ -1100,6 +1100,30 @@ async def upsert_leave_balance(
     }
 
 
+@router.get("/company/{companyId}/regularizations")
+async def list_regularizations(
+    companyId: UUID,
+    request: Request,
+    company_employeeId: Optional[UUID] = None,
+    status_filter: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    stmt = select(RegularizationRequest).where(RegularizationRequest.companyId == companyId)
+    if company_employeeId:
+        stmt = stmt.where(RegularizationRequest.company_employeeId == company_employeeId)
+    if status_filter:
+        stmt = stmt.where(RegularizationRequest.status == status_filter.upper())
+    rows = (
+        await db.execute(
+            stmt.order_by(RegularizationRequest.workDate.desc(), RegularizationRequest.createdAt.desc()).limit(200)
+        )
+    ).scalars().all()
+    emps = await _emps_map(db, [r.company_employeeId for r in rows])
+    items = [_serialize_regularization(r, emps.get(r.company_employeeId)) for r in rows]
+    return {"items": items, "total": len(items)}
+
+
 @router.post("/company/{companyId}/regularizations")
 async def create_regularization(
     companyId: UUID,
@@ -1163,6 +1187,30 @@ async def decide_regularization(
     await db.commit()
     await db.refresh(row)
     return _serialize_regularization(row, emp)
+
+
+@router.get("/company/{companyId}/ot-approvals")
+async def list_ot_approvals(
+    companyId: UUID,
+    request: Request,
+    company_employeeId: Optional[UUID] = None,
+    status_filter: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    stmt = select(OtApprovalRequest).where(OtApprovalRequest.companyId == companyId)
+    if company_employeeId:
+        stmt = stmt.where(OtApprovalRequest.company_employeeId == company_employeeId)
+    if status_filter:
+        stmt = stmt.where(OtApprovalRequest.status == status_filter.upper())
+    rows = (
+        await db.execute(
+            stmt.order_by(OtApprovalRequest.workDate.desc(), OtApprovalRequest.createdAt.desc()).limit(200)
+        )
+    ).scalars().all()
+    emps = await _emps_map(db, [r.company_employeeId for r in rows])
+    items = [_serialize_ot(r, emps.get(r.company_employeeId)) for r in rows]
+    return {"items": items, "total": len(items)}
 
 
 @router.post("/company/{companyId}/ot-approvals")

@@ -6,6 +6,7 @@ import { PageToolbarComponent } from '../../../shared/components/page-toolbar/pa
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampService } from '../../services/timestamp.service';
 import { EmployeeService } from '../../services/employee.service';
+import { TimestampModel } from '../../models/timestamp.model';
 import swal from 'sweetalert';
 
 @Component({
@@ -18,6 +19,9 @@ import swal from 'sweetalert';
 export class ReportsComponent implements OnInit {
   companyId = '';
   busy = false;
+  previewLoading = false;
+  previewRows: TimestampModel[] = [];
+  previewTotal = 0;
   employees: Array<{ company_employeeId: string; label: string }> = [];
   draft = {
     startDate: '',
@@ -35,6 +39,22 @@ export class ReportsComponent implements OnInit {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
 
+  get lateCount(): number {
+    return this.previewRows.filter((r) => r.isLate || (r.lateMinutes || 0) > 0).length;
+  }
+
+  get totalLateMinutes(): number {
+    return this.previewRows.reduce((acc, r) => acc + Number(r.lateMinutes || 0), 0);
+  }
+
+  get totalOtMinutes(): number {
+    return this.previewRows.reduce((acc, r) => acc + Number(r.overtimeMinutes || 0), 0);
+  }
+
+  get pendingOrOutCount(): number {
+    return this.previewRows.filter((r) => r.timestampType === 0 || r.approvalStatus === 'PENDING').length;
+  }
+
   ngOnInit(): void {
     const now = new Date();
     const first = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -42,6 +62,7 @@ export class ReportsComponent implements OnInit {
     this.draft.startDate = this.isoDate(first);
     this.draft.endDate = this.isoDate(last);
     if (!this.companyId) return;
+    this.loadPreview();
     this.employeesApi.getLists(this.companyId).subscribe({
       next: (rows: unknown[]) => {
         this.employees = (rows || []).map((row) => {
@@ -60,6 +81,30 @@ export class ReportsComponent implements OnInit {
       },
       error: () => undefined,
     });
+  }
+
+  loadPreview(): void {
+    if (!this.companyId || this.previewLoading) return;
+    this.previewLoading = true;
+    this.timestamps
+      .getListsSearch(
+        this.companyId,
+        this.draft.company_employeeId || undefined,
+        this.draft.startDate || undefined,
+        this.draft.endDate || undefined,
+      )
+      .subscribe({
+        next: (rows) => {
+          this.previewRows = rows || [];
+          this.previewTotal = this.previewRows.length;
+          this.previewLoading = false;
+        },
+        error: () => {
+          this.previewRows = [];
+          this.previewTotal = 0;
+          this.previewLoading = false;
+        },
+      });
   }
 
   export(): void {

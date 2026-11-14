@@ -895,5 +895,7 @@
   "presence.ot.col.status": "Status",
   "presence.ot.status.aligned": "Aligned",
   "presence.ot.status.punch_without_camera": "Punch, no camera",
-  "presence.ot.status.camera_without_punch": "Camera, no punch"
+  "presence.ot.status.camera_without_punch": "Camera, no punch",
+  "CCTV — Cameras": "CCTV — Cameras",
+  "Error logs": "Error logs"
 }

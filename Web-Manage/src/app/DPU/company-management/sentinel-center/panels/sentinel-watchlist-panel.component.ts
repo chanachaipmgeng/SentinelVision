@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import {
@@ -8,14 +9,17 @@ import {
   filterWatchlistItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
-import { SentinelIdentity } from '../sentinel.models';
+import { SentinelIdentity, SentinelSiemSettings } from '../sentinel.models';
+import { WatchlistSection } from '../sentinel-routing';
+import { SentinelCommandPanelComponent } from './sentinel-command-panel.component';
 
 @Component({
     selector: 'app-sentinel-watchlist-panel',
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterModule, SentinelCommandPanelComponent],
     templateUrl: './sentinel-watchlist-panel.component.html'
 })
-export class SentinelWatchlistPanelComponent implements OnInit {
+export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {
+  @Input() section: WatchlistSection = 'identities';
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
@@ -24,6 +28,15 @@ export class SentinelWatchlistPanelComponent implements OnInit {
   selectedIdentityPhoto: File | null = null;
   watchlistForm = defaultWatchlistForm();
 
+  siemForm = {
+    siemWebhookUrl: '',
+    siemWebhookSecret: '',
+    hasSiemWebhookSecret: false,
+  };
+  siemSaving = false;
+  slaMinutesHigh = 15;
+  slaSaving = false;
+
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
@@ -31,6 +44,88 @@ export class SentinelWatchlistPanelComponent implements OnInit {
   ngOnInit(): void {
     if (!this.companyId) return;
     this.loadIdentities();
+    if (this.section === 'settings') {
+      this.loadAlertSettings();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['section'] && this.section === 'settings' && this.companyId) {
+      this.loadAlertSettings();
+    }
+  }
+
+  loadAlertSettings(): void {
+    this.api.getSiemSettings(this.companyId).subscribe({
+      next: (s: SentinelSiemSettings) => {
+        this.siemForm = {
+          siemWebhookUrl: s.siemWebhookUrl || '',
+          siemWebhookSecret: '',
+          hasSiemWebhookSecret: !!s.hasSiemWebhookSecret,
+        };
+      },
+    });
+    this.api.getIncidentSlaSettings(this.companyId).subscribe({
+      next: (res) => {
+        if (res?.incidentSlaMinutesHigh) {
+          this.slaMinutesHigh = res.incidentSlaMinutesHigh;
+        }
+      },
+    });
+  }
+
+  saveSiemSettings(): void {
+    this.siemSaving = true;
+    const body: Record<string, string> = {
+      siemWebhookUrl: this.siemForm.siemWebhookUrl || '',
+    };
+    if ((this.siemForm.siemWebhookSecret || '').trim()) {
+      body['siemWebhookSecret'] = this.siemForm.siemWebhookSecret.trim();
+    }
+    this.api.putSiemSettings(this.companyId, body).subscribe({
+      next: (s) => {
+        this.siemSaving = false;
+        this.siemForm.siemWebhookSecret = '';
+        this.siemForm.hasSiemWebhookSecret = !!s?.hasSiemWebhookSecret;
+        this.siemForm.siemWebhookUrl = s?.siemWebhookUrl || this.siemForm.siemWebhookUrl;
+        this.toast.emit('บันทึก SIEM Webhook แล้ว');
+      },
+      error: () => {
+        this.siemSaving = false;
+        this.toast.emit('บันทึก SIEM ไม่สำเร็จ');
+      },
+    });
+  }
+
+  testSiemSettings(): void {
+    this.api.testSiemSettings(this.companyId).subscribe({
+      next: (res) => {
+        const body = res as { queued?: boolean; reason?: string };
+        this.toast.emit(
+          body.queued ? 'ส่ง SIEM test ping เข้า outbox แล้ว' : body.reason || 'ยังไม่ได้ตั้งค่า webhook'
+        );
+      },
+      error: () => this.toast.emit('ทดสอบ SIEM ไม่สำเร็จ'),
+    });
+  }
+
+  saveSlaSettings(): void {
+    this.slaSaving = true;
+    this.api
+      .putIncidentSlaSettings(this.companyId, {
+        incidentSlaMinutesHigh: Math.max(1, Number(this.slaMinutesHigh) || 15),
+      })
+      .subscribe({
+        next: (res) => {
+          this.slaSaving = false;
+          this.slaMinutesHigh = res.incidentSlaMinutesHigh;
+          this.toast.emit('บันทึก SLA เหตุการณ์ความสำคัญสูงแล้ว');
+        },
+        error: () => {
+          this.slaSaving = false;
+          this.toast.emit('บันทึก SLA ไม่สำเร็จ');
+        },
+      });
   }
 
   get watchlistItems(): SentinelIdentity[] {

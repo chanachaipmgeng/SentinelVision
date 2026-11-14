@@ -1,192 +1,409 @@
-<div class="grid grid-cols-12 gap-6">
-            <!-- Create Event Form -->
-            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60 space-y-5">
-              <div>
-                <h6 class="font-bold text-base mb-1">สร้างแคมเปญงานอีเวนต์ / งานสัมมนา</h6>
-                <p class="text-xs text-dpu-muted mb-3">
-                  ใช้ใบหน้าเดินเข้างานแบบไม่ต้องค้นหาบัตร พร้อมแสดงข้อความต้อนรับและเลขที่นั่งบนจอ Kiosk
-                </p>
+<!-- Section: Check-ins & Booth Dwell -->
+<div *ngIf="section === 'checkins'" class="space-y-6">
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5">
+      <div class="text-xs text-slate-400">แคมเปญงานอีเวนต์ที่เปิดอยู่</div>
+      <div class="text-2xl font-bold text-cyan-300 mt-1">{{ events.length }} งาน</div>
+    </div>
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5">
+      <div class="text-xs text-slate-400">ลงทะเบียนเข้างานรวม</div>
+      <div class="text-2xl font-bold text-teal-300 mt-1">{{ totalRegistered }} / {{ totalCapacity }} ที่นั่ง</div>
+    </div>
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+      <div class="text-xs text-slate-400">สแกนใบหน้าเช็คอินเข้างานแล้ว</div>
+      <div class="text-2xl font-bold text-emerald-300 mt-1">{{ totalCheckedIn }} คน</div>
+    </div>
+  </div>
 
-                <div class="grid grid-cols-12 gap-3">
-                  <div class="col-span-12">
-                    <label class="form-label text-xs font-semibold">ชื่องานอีเวนต์ / สัมมนา</label>
-                    <input
-                      class="form-control"
-                      [(ngModel)]="eventForm.name"
-                      placeholder="เช่น Townhall 2026 / AI Innovation Summit"
-                    />
-                  </div>
-                  <div class="col-span-12 sm:col-span-6">
-                    <label class="form-label text-xs font-semibold">ห้องประชุม / สถานที่จัดงาน</label>
-                    <input class="form-control" [(ngModel)]="eventForm.locationName" placeholder="Grand Ballroom" />
-                  </div>
-                  <div class="col-span-12 sm:col-span-6">
-                    <label class="form-label text-xs font-semibold">จำนวนที่นั่งรองรับ</label>
-                    <input type="number" class="form-control" [(ngModel)]="eventForm.capacity" />
-                  </div>
-                  <div class="col-span-12">
-                    <label class="form-label text-xs font-semibold">ข้อความต้อนรับบนจอ Kiosk</label>
-                    <input
-                      class="form-control"
-                      [(ngModel)]="eventForm.welcomeMessage"
-                      placeholder="ยินดีต้อนรับสู่งานสัมมนาประจำปี"
-                    />
-                  </div>
-                  <div class="col-span-12">
-                    <button
-                      type="button"
-                      class="ti-btn ti-btn-primary-full w-full font-semibold"
-                      (click)="createEventCampaign()"
-                    >
-                      + เปิดแคมเปญงานอีเวนต์ใหม่
-                    </button>
-                  </div>
-                </div>
-              </div>
+  <!-- Live campaign check-in progress -->
+  <div class="p-5 rounded-xl border border-white/10 card-surface space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h6 class="font-bold text-base text-slate-100 mb-0">
+          <i class="ri-bar-chart-grouped-line text-cyan-400 me-1"></i>
+          สถิติการสแกนใบหน้าเข้างานอีเวนต์แบบสด (Live Event Check-in Status)
+        </h6>
+        <p class="text-xs text-slate-400 mb-0">
+          ติดตามอัตราผู้เข้าร่วมงานที่เดินผ่านจุดสแกน Kiosk และเปิดหน้าจอต้อนรับรายแคมเปญ
+        </p>
+      </div>
+      <a routerLink="/company/events/campaigns" class="ti-btn ti-btn-light text-xs font-semibold">
+        <i class="ri-add-line me-1"></i> จัดการแคมเปญ &amp; ผู้ร่วมงาน
+      </a>
+    </div>
 
-              <!-- Enroll Event Attendee -->
-              <div class="pt-4 border-t border-defaultborder">
-                <h6 class="font-bold text-sm mb-2">ลงทะเบียนผู้เข้าร่วมงาน + กำหนดหมายเลขที่นั่ง</h6>
-                <div class="grid grid-cols-12 gap-3">
-                  <div class="col-span-12">
-                    <label class="form-label text-xs font-semibold">เลือกงานอีเวนต์</label>
-                    <select class="form-control" [(ngModel)]="attendeeForm.eventId">
-                      <option value="">-- เลือกงานอีเวนต์ --</option>
-                      <option *ngFor="let ev of events" [value]="ev.eventId">{{ ev.name }}</option>
-                    </select>
-                  </div>
-                  <div class="col-span-12 sm:col-span-7">
-                    <label class="form-label text-xs font-semibold">ชื่อผู้เข้าร่วมงาน</label>
-                    <input class="form-control" [(ngModel)]="attendeeForm.fullName" placeholder="ชื่อ - นามสกุล" />
-                  </div>
-                  <div class="col-span-12 sm:col-span-5">
-                    <label class="form-label text-xs font-semibold">โต๊ะ / ที่นั่ง (Seat)</label>
-                    <input class="form-control" [(ngModel)]="attendeeForm.seatNumber" placeholder="เช่น VIP-A01" />
-                  </div>
-                  <div class="col-span-12">
-                    <label class="form-label text-xs font-semibold">รูปถ่ายใบหน้าผู้ร่วมงาน</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      class="form-control"
-                      (change)="onIdentityPhotoSelected($event)"
-                    />
-                  </div>
-                  <div class="col-span-12">
-                    <button
-                      type="button"
-                      class="ti-btn ti-btn-secondary-full w-full font-semibold"
-                      (click)="createIdentityRecord(attendeeForm)"
-                    >
-                      + ลงทะเบียนผู้เข้าร่วมงานอีเวนต์
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div *ngIf="events.length === 0" class="text-center text-slate-400 py-6 text-xs">
+      ยังไม่มีแคมเปญงานอีเวนต์ — สร้างแคมเปญที่แท็บ "แคมเปญ &amp; ผู้ร่วมงาน" ก่อน
+    </div>
 
-            <!-- Event Campaigns & Attendees List -->
-            <div class="col-span-12 lg:col-span-8 space-y-5">
-              <div>
-                <h6 class="font-bold text-base mb-3">แคมเปญงานอีเวนต์ทั้งหมด ({{ events.length }})</h6>
-                <div
-                  tabindex="0"
-                  role="region"
-                  aria-label="ตารางแคมเปญงานอีเวนต์"
-                  class="sv-table-wrapper"
-                >
-                  <table class="table whitespace-nowrap">
-                    <thead>
-                      <tr class="border-b border-defaultborder text-xs">
-                        <th class="text-start p-3">ชื่องานอีเวนต์</th>
-                        <th class="text-start p-3">สถานที่</th>
-                        <th class="text-start p-3">ลงทะเบียนแล้ว</th>
-                        <th class="text-start p-3">สแกนเข้างานแล้ว</th>
-                        <th class="text-end p-3">จัดการ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let ev of events" class="border-b border-defaultborder text-xs">
-                        <th class="text-start p-3">
-                          <div class="font-semibold">{{ ev.name }}</div>
-                          <div class="text-[0.7rem] text-dpu-muted">{{ ev.welcomeMessage }}</div>
-                        </th>
-                        <td class="p-3">{{ ev.locationName || '-' }}</td>
-                        <td class="p-3">
-                          <span class="badge sv-pill-event px-2 py-0.5 rounded">
-                            {{ ev.attendeeCount }} / {{ ev.capacity }} คน
-                          </span>
-                        </td>
-                        <td class="p-3 font-bold text-emerald-700">{{ ev.checkedInCount }} คน</td>
-                        <td class="p-3 text-end">
-                          <button
-                            type="button"
-                            class="ti-btn ti-btn-sm ti-btn-danger"
-                            (click)="deleteEvent(ev.eventId)"
-                          >
-                            ปิดงาน
-                          </button>
-                        </td>
-                      </tr>
-                      <tr *ngIf="events.length === 0">
-                        <td colspan="5" class="text-center text-dpu-muted py-5">
-                          ยังไม่มีแคมเปญงานอีเวนต์
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div>
-                <h6 class="font-bold text-base mb-3">
-                  รายชื่อผู้ลงทะเบียนเข้างานอีเวนต์ ({{ eventAttendeeItems.length }})
-                </h6>
-                <div
-                  tabindex="0"
-                  role="region"
-                  aria-label="ตารางรายชื่อผู้เข้าร่วมงานอีเวนต์"
-                  class="sv-table-wrapper"
-                >
-                  <table class="table whitespace-nowrap">
-                    <thead>
-                      <tr class="border-b border-defaultborder text-xs">
-                        <th class="text-start p-3">ชื่อผู้ร่วมงาน</th>
-                        <th class="text-start p-3">หมายเลขที่นั่ง / โต๊ะ</th>
-                        <th class="text-start p-3">ใบหน้า 512-d</th>
-                        <th class="text-end p-3">จัดการ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let att of eventAttendeeItems" class="border-b border-defaultborder text-xs">
-                        <th class="text-start p-3">{{ att.fullName }}</th>
-                        <td class="p-3">
-                          <span class="badge bg-amber-100 text-amber-900 font-semibold px-2.5 py-0.5 rounded">
-                            {{ att.seatNumber || 'General' }}
-                          </span>
-                        </td>
-                        <td class="p-3">
-                          <span *ngIf="att.hasFaceEnrolled" class="text-emerald-700 font-semibold">พร้อมสแกนเข้างาน</span>
-                          <span *ngIf="!att.hasFaceEnrolled" class="text-amber-700">รออัปโหลดรูปหน้า</span>
-                        </td>
-                        <td class="p-3 text-end">
-                          <button
-                            type="button"
-                            class="ti-btn ti-btn-sm ti-btn-danger"
-                            (click)="deleteIdentity(att.identityId)"
-                          >
-                            ลบ
-                          </button>
-                        </td>
-                      </tr>
-                      <tr *ngIf="eventAttendeeItems.length === 0">
-                        <td colspan="4" class="text-center text-dpu-muted py-5">
-                          ยังไม่มีผู้ลงทะเบียนงานอีเวนต์
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" *ngIf="events.length > 0">
+      <div
+        *ngFor="let ev of events"
+        class="p-4 rounded-xl border border-white/10 bg-slate-900/50 space-y-3"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div class="font-bold text-slate-100 text-sm">{{ ev.name }}</div>
+            <div class="text-xs text-slate-400">{{ ev.locationName || 'ไม่ระบุสถานที่' }} · {{ ev.welcomeMessage || 'ยินดีต้อนรับ' }}</div>
           </div>
+          <a
+            [routerLink]="['/company/scan/event']"
+            [queryParams]="{ eventId: ev.eventId }"
+            class="btn-vault px-3 py-1.5 text-xs font-semibold inline-flex items-center gap-1"
+          >
+            <i class="ri-camera-lens-line"></i> เปิดสแกนหน้างาน
+          </a>
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-300">
+          <span>เช็คอินแล้ว <strong class="text-emerald-400">{{ ev.checkedInCount || 0 }}</strong> จากผู้ลงทะเบียน {{ ev.attendeeCount || 0 }} คน (ความจุ {{ ev.capacity || 0 }})</span>
+          <span class="font-mono font-bold text-cyan-300">{{ checkinPercent(ev) }}%</span>
+        </div>
+        <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+          <div
+            class="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300"
+            [style.width.%]="checkinPercent(ev)"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booth Dwell Report -->
+  <div class="p-5 rounded-xl border border-white/10 card-surface space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h6 class="font-bold text-base text-slate-100 mb-0">
+          <i class="ri-Walk-line text-teal-400 me-1"></i>
+          วิเคราะห์เวลาแวะบูธด้วยกล้อง AI (Booth Dwell Analytics)
+        </h6>
+        <p class="text-xs text-slate-400 mb-0">
+          คำนวณเวลาที่ผู้ร่วมงานใช้ในแต่ละบูธจากกล้อง CCTV ที่ตั้งค่า <code class="text-cyan-300">presenceRole = BOOTH</code>
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2" *ngIf="events.length > 0">
+        <select
+          class="form-control !py-1.5 !text-xs !w-auto"
+          [(ngModel)]="selectedDwellEventId"
+          (change)="loadEventDwell(selectedDwellEventId)"
+        >
+          <option *ngFor="let ev of events" [value]="ev.eventId">{{ ev.name }}</option>
+        </select>
+        <button
+          type="button"
+          class="ti-btn ti-btn-light text-xs"
+          [disabled]="dwellLoading"
+          (click)="loadEventDwell(selectedDwellEventId)"
+        >
+          <i class="ri-refresh-line me-1" [class.animate-spin]="dwellLoading"></i> รีเฟรช
+        </button>
+      </div>
+    </div>
+
+    <div class="sv-table-wrapper">
+      <table class="table whitespace-nowrap">
+        <thead>
+          <tr class="border-b border-white/10 text-xs">
+            <th class="text-start p-3">ชื่อผู้เข้าร่วมงาน</th>
+            <th class="text-start p-3">พบครั้งแรก</th>
+            <th class="text-start p-3">เวลารวมในโซนบูธ</th>
+            <th class="text-start p-3">รายละเอียดรายบูธ (กล้อง BOOTH)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of dwellReport?.people || []" class="border-b border-white/10 text-xs">
+            <th class="text-start p-3 font-semibold text-slate-100">{{ p.fullName || p.memberId }}</th>
+            <td class="p-3 text-slate-300">{{ p.firstSeenAt ? (p.firstSeenAt | date:'dd/MM HH:mm:ss') : '-' }}</td>
+            <td class="p-3 font-bold text-cyan-300">{{ p.totalDwellMinutes }} นาที</td>
+            <td class="p-3">
+              <span
+                *ngFor="let b of p.booths"
+                class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 me-1.5 px-2 py-0.5 rounded text-xs"
+              >
+                {{ b.cameraName || b.cameraId }}: {{ b.dwellMinutes }} นาที ({{ b.sessions }} ครั้ง)
+              </span>
+            </td>
+          </tr>
+          <tr *ngIf="!dwellLoading && !(dwellReport?.people?.length)">
+            <td colspan="4" class="text-center text-slate-400 py-6 text-xs">
+              ยังไม่มีข้อมูล Booth Dwell สำหรับงานอีเวนต์นี้ (ผูกกล้อง CCTV กับ Event ในโหมด BOOTH เพื่อเริ่มเก็บสถิติอัตโนมัติ)
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Section: Settings -->
+<div *ngIf="section === 'settings'" class="grid grid-cols-12 gap-6">
+  <div class="col-span-12 lg:col-span-7 p-5 rounded-xl border border-white/10 card-surface space-y-4">
+    <div>
+      <h6 class="font-bold text-base text-slate-100 mb-1">
+        <i class="ri-settings-3-line text-cyan-400 me-1"></i>
+        ตั้งค่าจุดต้อนรับงานอีเวนต์ &amp; Smart Seminar Kiosk
+      </h6>
+      <p class="text-xs text-slate-400 mb-3">
+        กำหนดค่าเริ่มต้นของโหมดสแกนเข้างานอีเวนต์ เสียงทักทาย TTS และการผูกกล้องวัดความสนใจรายบูธ
+      </p>
+    </div>
+
+    <ul class="text-xs text-slate-300 space-y-2.5 list-disc ps-5">
+      <li>
+        <strong class="text-slate-100">ข้อความต้อนรับและหมายเลขที่นั่ง (Seat &amp; Welcome Banner):</strong>
+        กำหนดแยกตามแคมเปญในแท็บ "แคมเปญ &amp; ผู้ร่วมงาน" เมื่อผู้ร่วมงานสแกนใบหน้าที่ Kiosk จะขึ้นชื่อและเลขโต๊ะ/ที่นั่งทันที
+      </li>
+      <li>
+        <strong class="text-slate-100">งานอีเวนต์หลักของ Kiosk (Default Event):</strong>
+        เลือกงานอีเวนต์เริ่มต้นและเปิดเสียงพูดต้อนรับอัตโนมัติ (TTS Voice) ได้ที่หน้า Scan &amp; Action Hub
+      </li>
+      <li>
+        <strong class="text-slate-100">กล้องนับเวลาแวะบูธ (Booth Dwell Cameras):</strong>
+        ตั้งค่ากล้องในเมนู CCTV ให้เป็นโหมด <code class="text-cyan-300">BOOTH</code> พร้อมผูก <code class="text-cyan-300">eventId</code> เพื่อเก็บสถิติความสนใจบูธ
+      </li>
+    </ul>
+
+    <div class="flex flex-wrap gap-2 pt-2">
+      <a routerLink="/company/events/campaigns" class="btn-vault px-4 py-2 text-xs font-semibold">
+        <i class="ri-ticket-2-line me-1"></i> จัดการแคมเปญ &amp; ที่นั่ง
+      </a>
+      <a routerLink="/company/events/checkins" class="ti-btn ti-btn-light text-xs font-semibold">
+        <i class="ri-bar-chart-grouped-line me-1"></i> ดูสถิติเช็คอินสด &amp; Booth Dwell
+      </a>
+      <a routerLink="/company/scan-hub" class="ti-btn ti-btn-light text-xs font-semibold">
+        <i class="ri-radar-line me-1"></i> ตั้งค่า Default Event ใน Scan Hub
+      </a>
+      <a routerLink="/company/scan/event" class="ti-btn ti-btn-primary-full text-xs font-semibold">
+        <i class="ri-camera-lens-line me-1"></i> เปิด Kiosk สแกนงานอีเวนต์
+      </a>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-5 p-5 rounded-xl border border-white/10 card-surface space-y-3">
+    <h6 class="font-bold text-base text-slate-100 mb-1">
+      <i class="ri-qr-scan-2-line text-teal-400 me-1"></i>
+      ลิงก์ด่วนเปิดจุดสแกนรายแคมเปญ ({{ events.length }})
+    </h6>
+    <p class="text-xs text-slate-400 mb-2">
+      คลิกเพื่อเปิดหน้าจอ Kiosk โหมด <code class="text-cyan-300">EVENT_CHECKIN</code> ล็อกเฉพาะแคมเปญที่เลือก
+    </p>
+    <div class="flex flex-wrap gap-2" *ngIf="events.length > 0">
+      <a
+        *ngFor="let ev of events"
+        [routerLink]="['/company/scan/event']"
+        [queryParams]="{ eventId: ev.eventId }"
+        class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-cyan-500/25"
+      >
+        <i class="ri-camera-lens-line me-1"></i> {{ ev.name }} ({{ ev.checkedInCount || 0 }}/{{ ev.attendeeCount || 0 }})
+      </a>
+    </div>
+    <div *ngIf="events.length === 0" class="text-xs text-slate-400">
+      ยังไม่มีแคมเปญที่เปิดใช้งาน
+    </div>
+  </div>
+</div>
+
+<!-- Section: Campaigns (Default) -->
+<div *ngIf="section === 'campaigns'" class="grid grid-cols-12 gap-6">
+  <!-- Create Event Form -->
+  <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-white/10 card-surface space-y-5">
+    <div>
+      <h6 class="font-bold text-base text-slate-100 mb-1">สร้างแคมเปญงานอีเวนต์ / งานสัมมนา</h6>
+      <p class="text-xs text-slate-400 mb-3">
+        ใช้ใบหน้าเดินเข้างานแบบไม่ต้องค้นหาบัตร พร้อมแสดงข้อความต้อนรับและเลขที่นั่งบนจอ Kiosk
+      </p>
+
+      <div class="grid grid-cols-12 gap-3">
+        <div class="col-span-12">
+          <label class="form-label text-xs font-semibold text-slate-300">ชื่องานอีเวนต์ / สัมมนา</label>
+          <input
+            class="form-control"
+            [(ngModel)]="eventForm.name"
+            placeholder="เช่น Townhall 2026 / AI Innovation Summit"
+          />
+        </div>
+        <div class="col-span-12 sm:col-span-6">
+          <label class="form-label text-xs font-semibold text-slate-300">ห้องประชุม / สถานที่จัดงาน</label>
+          <input class="form-control" [(ngModel)]="eventForm.locationName" placeholder="Grand Ballroom" />
+        </div>
+        <div class="col-span-12 sm:col-span-6">
+          <label class="form-label text-xs font-semibold text-slate-300">จำนวนที่นั่งรองรับ</label>
+          <input type="number" class="form-control" [(ngModel)]="eventForm.capacity" />
+        </div>
+        <div class="col-span-12">
+          <label class="form-label text-xs font-semibold text-slate-300">ข้อความต้อนรับบนจอ Kiosk</label>
+          <input
+            class="form-control"
+            [(ngModel)]="eventForm.welcomeMessage"
+            placeholder="ยินดีต้อนรับสู่งานสัมมนาประจำปี"
+          />
+        </div>
+        <div class="col-span-12">
+          <button
+            type="button"
+            class="btn-vault w-full py-2.5 font-semibold text-sm"
+            (click)="createEventCampaign()"
+          >
+            + เปิดแคมเปญงานอีเวนต์ใหม่
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Enroll Event Attendee -->
+    <div class="pt-4 border-t border-white/10">
+      <h6 class="font-bold text-sm text-slate-100 mb-2">ลงทะเบียนผู้เข้าร่วมงาน + กำหนดหมายเลขที่นั่ง</h6>
+      <div class="grid grid-cols-12 gap-3">
+        <div class="col-span-12">
+          <label class="form-label text-xs font-semibold text-slate-300">เลือกงานอีเวนต์</label>
+          <select class="form-control" [(ngModel)]="attendeeForm.eventId">
+            <option value="">-- เลือกงานอีเวนต์ --</option>
+            <option *ngFor="let ev of events" [value]="ev.eventId">{{ ev.name }}</option>
+          </select>
+        </div>
+        <div class="col-span-12 sm:col-span-7">
+          <label class="form-label text-xs font-semibold text-slate-300">ชื่อผู้เข้าร่วมงาน</label>
+          <input class="form-control" [(ngModel)]="attendeeForm.fullName" placeholder="ชื่อ - นามสกุล" />
+        </div>
+        <div class="col-span-12 sm:col-span-5">
+          <label class="form-label text-xs font-semibold text-slate-300">โต๊ะ / ที่นั่ง (Seat)</label>
+          <input class="form-control" [(ngModel)]="attendeeForm.seatNumber" placeholder="เช่น VIP-A01" />
+        </div>
+        <div class="col-span-12">
+          <label class="form-label text-xs font-semibold text-slate-300">รูปถ่ายใบหน้าผู้ร่วมงาน</label>
+          <input
+            type="file"
+            accept="image/*"
+            class="form-control"
+            (change)="onIdentityPhotoSelected($event)"
+          />
+        </div>
+        <div class="col-span-12">
+          <button
+            type="button"
+            class="ti-btn ti-btn-secondary-full w-full font-semibold"
+            (click)="createIdentityRecord(attendeeForm)"
+          >
+            + ลงทะเบียนผู้เข้าร่วมงานอีเวนต์
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event Campaigns & Attendees List -->
+  <div class="col-span-12 lg:col-span-8 space-y-5">
+    <div>
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h6 class="font-bold text-base text-slate-100 mb-0">แคมเปญงานอีเวนต์ทั้งหมด ({{ events.length }})</h6>
+        <a routerLink="/company/events/checkins" class="text-xs font-semibold text-cyan-400 hover:underline">
+          ดูสถิติเช็คอินสด &amp; Booth Dwell →
+        </a>
+      </div>
+      <div
+        tabindex="0"
+        role="region"
+        aria-label="ตารางแคมเปญงานอีเวนต์"
+        class="sv-table-wrapper"
+      >
+        <table class="table whitespace-nowrap">
+          <thead>
+            <tr class="border-b border-white/10 text-xs">
+              <th class="text-start p-3">ชื่องานอีเวนต์</th>
+              <th class="text-start p-3">สถานที่</th>
+              <th class="text-start p-3">ลงทะเบียนแล้ว</th>
+              <th class="text-start p-3">สแกนเข้างานแล้ว</th>
+              <th class="text-end p-3">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let ev of events" class="border-b border-white/10 text-xs">
+              <th class="text-start p-3">
+                <div class="font-semibold text-slate-100">{{ ev.name }}</div>
+                <div class="text-[0.7rem] text-slate-400">{{ ev.welcomeMessage }}</div>
+              </th>
+              <td class="p-3 text-slate-200">{{ ev.locationName || '-' }}</td>
+              <td class="p-3">
+                <span class="badge sv-pill-event px-2 py-0.5 rounded">
+                  {{ ev.attendeeCount }} / {{ ev.capacity }} คน
+                </span>
+              </td>
+              <td class="p-3 font-bold text-emerald-400">{{ ev.checkedInCount }} คน</td>
+              <td class="p-3 text-end space-x-1">
+                <a
+                  [routerLink]="['/company/scan/event']"
+                  [queryParams]="{ eventId: ev.eventId }"
+                  class="ti-btn ti-btn-sm ti-btn-primary-full"
+                >
+                  <i class="ri-camera-lens-line me-1"></i> สแกนเข้างาน
+                </a>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-danger"
+                  (click)="deleteEvent(ev.eventId)"
+                >
+                  ปิดงาน
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="events.length === 0">
+              <td colspan="5" class="text-center text-slate-400 py-5">
+                ยังไม่มีแคมเปญงานอีเวนต์
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <h6 class="font-bold text-base text-slate-100 mb-3">
+        รายชื่อผู้ลงทะเบียนเข้างานอีเวนต์ ({{ eventAttendeeItems.length }})
+      </h6>
+      <div
+        tabindex="0"
+        role="region"
+        aria-label="ตารางรายชื่อผู้เข้าร่วมงานอีเวนต์"
+        class="sv-table-wrapper"
+      >
+        <table class="table whitespace-nowrap">
+          <thead>
+            <tr class="border-b border-white/10 text-xs">
+              <th class="text-start p-3">ชื่อผู้ร่วมงาน</th>
+              <th class="text-start p-3">หมายเลขที่นั่ง / โต๊ะ</th>
+              <th class="text-start p-3">ใบหน้า 512-d</th>
+              <th class="text-end p-3">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let att of eventAttendeeItems" class="border-b border-white/10 text-xs">
+              <th class="text-start p-3 font-semibold text-slate-100">{{ att.fullName }}</th>
+              <td class="p-3">
+                <span class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold px-2.5 py-0.5 rounded">
+                  {{ att.seatNumber || 'General' }}
+                </span>
+              </td>
+              <td class="p-3">
+                <span *ngIf="att.hasFaceEnrolled" class="text-emerald-400 font-semibold">พร้อมสแกนเข้างาน</span>
+                <span *ngIf="!att.hasFaceEnrolled" class="text-amber-400">รออัปโหลดรูปหน้า</span>
+              </td>
+              <td class="p-3 text-end">
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-danger"
+                  (click)="deleteIdentity(att.identityId)"
+                >
+                  ลบ
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="eventAttendeeItems.length === 0">
+              <td colspan="4" class="text-center text-slate-400 py-5">
+                ยังไม่มีผู้ลงทะเบียนงานอีเวนต์
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -37,8 +37,14 @@
 - **Desktop Shell Overlay Protection**:
   - Modal backdrops intended for mobile navigation drawers (`#responsive-overlay`) MUST be suppressed on desktop screens (`@media (min-width: 992px) { #responsive-overlay { display: none !important; } }`) to prevent screen-blocking dimming.
 - **Fast Docker Static Asset Deployment**:
-  - For frontend-only changes in `Web-Manage`, build locally via `npm run build` and sync assets into the running container without rebuilding the Docker image:
+  - For frontend-only changes in `Web-Manage`, build locally via `npm run build` and **wait for the build to exit 0 before** syncing assets into the running container without rebuilding the Docker image:
     `docker cp Web-Manage/dist/preview/browser/. sentinel-admin:/usr/share/nginx/html/`
     `docker exec sentinel-admin nginx -s reload`
+- **Modular Scan/Kiosk Visual & Balance Invariants (`/company/scan/:stationMode`)**:
+  - `.dpu-kiosk` MUST use the VaultX Obsidian Glass dark base (`#04080f`–`#070d14`) and bind `[attr.data-station-mode]="stationMode"` to drive per-module `--kiosk-accent` / `--kiosk-accent-rgb` tokens (`ATTENDANCE` cyan, `ACCESS_CONTROL` sky, `WATCHLIST_MONITOR` rose, `VISITOR_CHECKIN` violet, `EVENT_CHECKIN` amber, `UNIFIED_HYBRID` teal).
+  - Every non-attendance station mode MUST render a dedicated module summary/status card above "ผลล่าสุด" in `.dpu-kiosk__feed-panel` so the right column remains visually balanced with no empty void.
+  - Keep background watermark labels (`.dpu-kiosk__float`) low-contrast so they never collide with foreground chips, and verify chip bars and `html.dpu-kiosk-large-text` at `1024x768`.
+- **i18n Key Parity**:
+  - Whenever adding or renaming labels in `nav.service.ts` or templates using `| translate`, add matching keys to both `Web-Manage/src/assets/i18n/th.json` and `Web-Manage/src/assets/i18n/en.json`.
 - **File Editing Line Endings**:
   - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.

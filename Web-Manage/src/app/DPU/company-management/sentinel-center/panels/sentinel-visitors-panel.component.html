@@ -1,124 +1,198 @@
-<div class="grid grid-cols-12 gap-6">
-            <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-defaultborder bg-slate-50/60">
-              <h6 class="font-bold text-base mb-1">ลงทะเบียนผู้มาติดต่อชั่วคราว (Visitor Face Pass)</h6>
-              <p class="text-xs text-dpu-muted mb-4">
-                อนุญาตให้ผู้มาติดต่อเดินสแกนใบหน้าผ่านประตูที่กำหนด และหมดอายุพร้อมลบข้อมูลอัตโนมัติตาม PDPA
-              </p>
+<!-- Section: Settings -->
+<div *ngIf="section === 'settings'" class="grid grid-cols-12 gap-6">
+  <div class="col-span-12 lg:col-span-7 p-5 rounded-xl border border-white/10 card-surface space-y-4">
+    <div>
+      <h6 class="font-bold text-base text-slate-100 mb-1">
+        <i class="ri-shield-check-line text-cyan-400 me-1"></i>
+        ตั้งค่าบัตรผู้มาติดต่อ &amp; นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA Visitor Policy)
+      </h6>
+      <p class="text-xs text-slate-400 mb-3">
+        ระบบบัตรผ่านใบหน้าชั่วคราว (Visitor Face Pass) กำหนดวันเวลาหมดอายุอัตโนมัติและลบเวกเตอร์ใบหน้าตามระยะเวลาเก็บรักษาข้อมูล PDPA
+      </p>
+    </div>
 
-              <div class="grid grid-cols-12 gap-3">
-                <div class="col-span-12">
-                  <label class="form-label text-xs font-semibold">ชื่อ - นามสกุล ผู้มาติดต่อ</label>
-                  <input
-                    class="form-control"
-                    [(ngModel)]="visitorForm.fullName"
-                    placeholder="เช่น คุณสมชาย ใจดี"
-                  />
-                </div>
-                <div class="col-span-12 sm:col-span-6">
-                  <label class="form-label text-xs font-semibold">บริษัท / หน่วยงาน</label>
-                  <input class="form-control" [(ngModel)]="visitorForm.organization" placeholder="บริษัทคู่ค้า / ผู้รับเหมา" />
-                </div>
-                <div class="col-span-12 sm:col-span-6">
-                  <label class="form-label text-xs font-semibold">เบอร์โทรศัพท์</label>
-                  <input class="form-control" [(ngModel)]="visitorForm.phoneNumber" placeholder="08x-xxx-xxxx" />
-                </div>
-                <div class="col-span-12">
-                  <label class="form-label text-xs font-semibold">วัตถุประสงค์การเข้าติดต่อ</label>
-                  <input
-                    class="form-control"
-                    [(ngModel)]="visitorForm.visitPurpose"
-                    placeholder="เช่น ประชุมโปรเจกต์ชั้น 3 / ซ่อมบำรุงระบบแอร์"
-                  />
-                </div>
-                <div class="col-span-12">
-                  <label class="form-label text-xs font-semibold">เวลาหมดอายุบัตรใบหน้าอัตโนมัติ (PDPA Expiry)</label>
-                  <input type="datetime-local" class="form-control" [(ngModel)]="visitorForm.expiresAt" />
-                </div>
-                <div class="col-span-12">
-                  <label class="form-label text-xs font-semibold">รูปถ่ายใบหน้าผู้มาติดต่อ</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="form-control"
-                    (change)="onIdentityPhotoSelected($event)"
-                  />
-                </div>
-                <div class="col-span-12">
-                  <button
-                    type="button"
-                    class="ti-btn ti-btn-primary-full w-full font-semibold"
-                    (click)="createIdentityRecord(visitorForm)"
-                  >
-                    + ออกบัตรผ่านใบหน้าชั่วคราว (Issue Visitor Pass)
-                  </button>
-                </div>
-              </div>
-            </div>
+    <ul class="text-xs text-slate-300 space-y-2.5 list-disc ps-5">
+      <li>
+        <strong class="text-slate-100">หมดอายุบัตรอัตโนมัติ (Auto-Expiry):</strong>
+        กำหนดวัน-เวลาหมดอายุรายบุคคลตอนออกบัตร (ค่าเริ่มต้น 12 ชั่วโมงหากไม่ระบุ) เมื่อหมดอายุจะไม่สามารถสแกนเปิดประตูได้ทันที
+      </li>
+      <li>
+        <strong class="text-slate-100">สิทธิ์เข้าโซนประตู (Visitor Access Zones):</strong>
+        อนุญาตเฉพาะโซนประตูที่เปิดสิทธิ์ <code class="text-cyan-300">VISITOR</code> ในโมดูล Access Control
+      </li>
+      <li>
+        <strong class="text-slate-100">การลบข้อมูลชีวมิติอัตโนมัติ (PDPA Retention):</strong>
+        ตั้งค่าระยะเวลาลบภาพและเวกเตอร์ใบหน้าอัตโนมัติได้ที่ศูนย์ตั้งค่า PDPA &amp; ข้อมูลชีวมิติ
+      </li>
+    </ul>
 
-            <div class="col-span-12 lg:col-span-8">
-              <h6 class="font-bold text-base mb-3">
-                รายชื่อผู้มาติดต่อที่กำลังใช้งาน ({{ visitorItems.length }})
-              </h6>
-              <div
-                tabindex="0"
-                role="region"
-                aria-label="ตารางรายชื่อผู้มาติดต่อ Visitor"
-                class="sv-table-wrapper"
+    <div class="flex flex-wrap gap-2 pt-2">
+      <a routerLink="/company/visitors/passes" class="btn-vault px-4 py-2 text-xs font-semibold">
+        <i class="ri-user-shared-line me-1"></i> ไปหน้าออกบัตร Visitor Pass
+      </a>
+      <a routerLink="/company/visitors/muster-roll" class="ti-btn ti-btn-light text-xs font-semibold">
+        <i class="ri-broadcast-line me-1"></i> เช็คยอดคนในอาคาร (Muster Roll)
+      </a>
+      <a routerLink="/company/hr-schedule/pdpa" class="ti-btn ti-btn-light text-xs font-semibold">
+        <i class="ri-database-2-line me-1"></i> ตั้งค่าระยะเวลาเก็บข้อมูล PDPA
+      </a>
+      <a routerLink="/company/scan/visitor" class="ti-btn ti-btn-primary-full text-xs font-semibold">
+        <i class="ri-camera-lens-line me-1"></i> เปิดจุดสแกนผู้มาติดต่อสด
+      </a>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-5 p-5 rounded-xl border border-white/10 card-surface space-y-4">
+    <h6 class="font-bold text-base text-slate-100 mb-1">
+      <i class="ri-bar-chart-box-line text-teal-400 me-1"></i>
+      สถานะบัตรผู้มาติดต่อปัจจุบัน
+    </h6>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+        <div class="text-xs text-slate-400">บัตร Visitor ที่เปิดใช้งาน</div>
+        <div class="text-2xl font-bold text-cyan-300 mt-1">{{ visitorItems.length }}</div>
+      </div>
+      <div class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+        <div class="text-xs text-slate-400">ลงทะเบียนใบหน้า 512-d แล้ว</div>
+        <div class="text-2xl font-bold text-emerald-300 mt-1">
+          {{ enrolledVisitorCount }}
+        </div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 mb-0">
+      สามารถตรวจสอบรายชื่อผู้มาติดต่อที่ยังอยู่ในพื้นที่อาคารแบบเรียลไทม์ได้ที่แท็บ
+      <a routerLink="/company/visitors/muster-roll" class="text-cyan-400 font-semibold hover:underline">Muster Roll</a>
+    </p>
+  </div>
+</div>
+
+<!-- Section: Passes (Default) -->
+<div *ngIf="section !== 'settings'" class="grid grid-cols-12 gap-6">
+  <div class="col-span-12 lg:col-span-4 p-5 rounded-xl border border-white/10 card-surface">
+    <h6 class="font-bold text-base text-slate-100 mb-1">ลงทะเบียนผู้มาติดต่อชั่วคราว (Visitor Face Pass)</h6>
+    <p class="text-xs text-slate-400 mb-4">
+      อนุญาตให้ผู้มาติดต่อเดินสแกนใบหน้าผ่านประตูที่กำหนด และหมดอายุพร้อมลบข้อมูลอัตโนมัติตาม PDPA
+    </p>
+
+    <div class="grid grid-cols-12 gap-3">
+      <div class="col-span-12">
+        <label class="form-label text-xs font-semibold text-slate-300">ชื่อ - นามสกุล ผู้มาติดต่อ</label>
+        <input
+          class="form-control"
+          [(ngModel)]="visitorForm.fullName"
+          placeholder="เช่น คุณสมชาย ใจดี"
+        />
+      </div>
+      <div class="col-span-12 sm:col-span-6">
+        <label class="form-label text-xs font-semibold text-slate-300">บริษัท / หน่วยงาน</label>
+        <input class="form-control" [(ngModel)]="visitorForm.organization" placeholder="บริษัทคู่ค้า / ผู้รับเหมา" />
+      </div>
+      <div class="col-span-12 sm:col-span-6">
+        <label class="form-label text-xs font-semibold text-slate-300">เบอร์โทรศัพท์</label>
+        <input class="form-control" [(ngModel)]="visitorForm.phoneNumber" placeholder="08x-xxx-xxxx" />
+      </div>
+      <div class="col-span-12">
+        <label class="form-label text-xs font-semibold text-slate-300">วัตถุประสงค์การเข้าติดต่อ</label>
+        <input
+          class="form-control"
+          [(ngModel)]="visitorForm.visitPurpose"
+          placeholder="เช่น ประชุมโปรเจกต์ชั้น 3 / ซ่อมบำรุงระบบแอร์"
+        />
+      </div>
+      <div class="col-span-12">
+        <label class="form-label text-xs font-semibold text-slate-300">เวลาหมดอายุบัตรใบหน้าอัตโนมัติ (PDPA Expiry)</label>
+        <input type="datetime-local" class="form-control" [(ngModel)]="visitorForm.expiresAt" />
+      </div>
+      <div class="col-span-12">
+        <label class="form-label text-xs font-semibold text-slate-300">รูปถ่ายใบหน้าผู้มาติดต่อ</label>
+        <input
+          type="file"
+          accept="image/*"
+          class="form-control"
+          (change)="onIdentityPhotoSelected($event)"
+        />
+      </div>
+      <div class="col-span-12">
+        <button
+          type="button"
+          class="btn-vault w-full py-2.5 font-semibold text-sm"
+          (click)="createIdentityRecord(visitorForm)"
+        >
+          + ออกบัตรผ่านใบหน้าชั่วคราว (Issue Visitor Pass)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-span-12 lg:col-span-8">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h6 class="font-bold text-base text-slate-100 mb-0">
+        รายชื่อผู้มาติดต่อที่กำลังใช้งาน ({{ visitorItems.length }})
+      </h6>
+      <a routerLink="/company/visitors/muster-roll" class="text-xs font-semibold text-cyan-400 hover:underline">
+        เช็คยอดคนในอาคาร (Muster Roll) →
+      </a>
+    </div>
+    <div
+      tabindex="0"
+      role="region"
+      aria-label="ตารางรายชื่อผู้มาติดต่อ Visitor"
+      class="sv-table-wrapper"
+    >
+      <table class="table whitespace-nowrap">
+        <thead>
+          <tr class="border-b border-white/10 text-xs">
+            <th class="text-start p-3">ชื่อผู้มาติดต่อ</th>
+            <th class="text-start p-3">หน่วยงาน</th>
+            <th class="text-start p-3">วัตถุประสงค์</th>
+            <th class="text-start p-3">หมดอายุอัตโนมัติ</th>
+            <th class="text-start p-3">ใบหน้า 512-d</th>
+            <th class="text-end p-3">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let v of visitorItems" class="border-b border-white/10 text-xs">
+            <th class="text-start p-3">
+              <div class="font-semibold text-slate-100">{{ v.fullName }}</div>
+              <div class="text-[0.7rem] text-slate-400">{{ v.phoneNumber || '-' }}</div>
+            </th>
+            <td class="p-3 text-slate-200">{{ v.organization || '-' }}</td>
+            <td class="p-3 text-slate-300">{{ v.visitPurpose || '-' }}</td>
+            <td class="p-3 text-slate-300">{{ v.expiresAt ? (v.expiresAt | date:'dd/MM/yyyy HH:mm') : '12 ชม.' }}</td>
+            <td class="p-3">
+              <span *ngIf="v.hasFaceEnrolled" class="badge sv-pill-visitor px-2 py-0.5 rounded">
+                พร้อมใช้งาน
+              </span>
+              <label
+                *ngIf="!v.hasFaceEnrolled"
+                class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded cursor-pointer"
               >
-                <table class="table whitespace-nowrap">
-                  <thead>
-                    <tr class="border-b border-defaultborder text-xs">
-                      <th class="text-start p-3">ชื่อผู้มาติดต่อ</th>
-                      <th class="text-start p-3">หน่วยงาน</th>
-                      <th class="text-start p-3">วัตถุประสงค์</th>
-                      <th class="text-start p-3">หมดอายุอัตโนมัติ</th>
-                      <th class="text-start p-3">ใบหน้า 512-d</th>
-                      <th class="text-end p-3">จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let v of visitorItems" class="border-b border-defaultborder text-xs">
-                      <th class="text-start p-3">
-                        <div class="font-semibold">{{ v.fullName }}</div>
-                        <div class="text-[0.7rem] text-dpu-muted">{{ v.phoneNumber || '-' }}</div>
-                      </th>
-                      <td class="p-3">{{ v.organization || '-' }}</td>
-                      <td class="p-3">{{ v.visitPurpose || '-' }}</td>
-                      <td class="p-3">{{ v.expiresAt ? (v.expiresAt | date:'dd/MM/yyyy HH:mm') : '12 ชม.' }}</td>
-                      <td class="p-3">
-                        <span *ngIf="v.hasFaceEnrolled" class="badge sv-pill-visitor px-2 py-0.5 rounded">
-                          พร้อมใช้งาน
-                        </span>
-                        <label
-                          *ngIf="!v.hasFaceEnrolled"
-                          class="badge bg-amber-100 text-amber-800 px-2 py-0.5 rounded cursor-pointer"
-                        >
-                          + เพิ่มรูปหน้า
-                          <input
-                            type="file"
-                            accept="image/*"
-                            class="hidden"
-                            (change)="enrollExistingIdentityFace(v.identityId, $event)"
-                          />
-                        </label>
-                      </td>
-                      <td class="p-3 text-end">
-                        <button
-                          type="button"
-                          class="ti-btn ti-btn-sm ti-btn-danger"
-                          (click)="deleteIdentity(v.identityId)"
-                        >
-                          ยกเลิกบัตร
-                        </button>
-                      </td>
-                    </tr>
-                    <tr *ngIf="visitorItems.length === 0">
-                      <td colspan="6" class="text-center text-dpu-muted py-6">
-                        ยังไม่มีผู้มาติดต่อที่ลงทะเบียนในขณะนี้
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+                + เพิ่มรูปหน้า
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  (change)="enrollExistingIdentityFace(v.identityId, $event)"
+                />
+              </label>
+            </td>
+            <td class="p-3 text-end">
+              <button
+                type="button"
+                class="ti-btn ti-btn-sm ti-btn-danger"
+                (click)="deleteIdentity(v.identityId)"
+              >
+                ยกเลิกบัตร
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="visitorItems.length === 0">
+            <td colspan="6" class="text-center text-slate-400 py-6">
+              ยังไม่มีผู้มาติดต่อที่ลงทะเบียนในขณะนี้
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

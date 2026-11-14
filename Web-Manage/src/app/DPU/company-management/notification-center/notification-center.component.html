@@ -1,36 +1,38 @@
+<app-page-header [title]="'Notification Center' | translate" [activeTitle]="'Governance' | translate" [title1]="'Notification Center' | translate"></app-page-header>
+
 <div class="dpu-list-page notification-center">
   <app-page-toolbar [title]="'Notification Center' | translate"></app-page-toolbar>
-  <p class="text-sm text-muted mb-4">กล่องแจ้งเตือนในแอป · Dead-letter · ค่ากำหนดส่วนตัว</p>
+  <p class="text-sm text-dpu-muted mb-4">กล่องแจ้งเตือนในแอป · Dead-letter · ค่ากำหนดส่วนตัว</p>
 
   <div class="flex flex-wrap gap-2 mb-4">
     <button
       type="button"
-      class="ti-btn"
-      [ngClass]="activeTab === 'inbox' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
+      [ngClass]="activeTab === 'inbox' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
       (click)="setTab('inbox')"
     >
       {{ 'Inbox' | translate }}
     </button>
     <button
       type="button"
-      class="ti-btn"
-      [ngClass]="activeTab === 'dead-letter' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
+      [ngClass]="activeTab === 'dead-letter' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
       (click)="setTab('dead-letter')"
     >
       {{ 'Dead letter' | translate }}
     </button>
     <button
       type="button"
-      class="ti-btn"
-      [ngClass]="activeTab === 'prefs' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
+      [ngClass]="activeTab === 'prefs' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
       (click)="setTab('prefs')"
     >
       {{ 'Preferences' | translate }}
     </button>
     <button
       type="button"
-      class="ti-btn"
-      [ngClass]="activeTab === 'templates' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+      class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
+      [ngClass]="activeTab === 'templates' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
       (click)="setTab('templates')"
     >
       {{ 'Templates' | translate }}
@@ -39,7 +41,7 @@
 
   <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
 
-  <div *ngIf="!loading && activeTab === 'inbox'" class="box modern-card glass">
+  <div *ngIf="!loading && activeTab === 'inbox'" class="box modern-card glass card-surface">
     <div class="box-header flex flex-wrap justify-between items-center gap-2">
       <h6 class="font-semibold m-0">{{ 'Inbox' | translate }} ({{ inboxFiltered.length }}/{{ inbox.length }})</h6>
       <div class="flex flex-wrap gap-2 items-center">
@@ -93,7 +95,7 @@
     </div>
   </div>
 
-  <div *ngIf="!loading && activeTab === 'dead-letter'" class="box">
+  <div *ngIf="!loading && activeTab === 'dead-letter'" class="box modern-card glass card-surface">
     <div class="box-header">
       <h6 class="font-semibold m-0">{{ 'Dead letter' | translate }} ({{ deadLetter.length }})</h6>
     </div>
@@ -130,7 +132,7 @@
     </div>
   </div>
 
-  <div *ngIf="!loading && activeTab === 'prefs'" class="box">
+  <div *ngIf="!loading && activeTab === 'prefs'" class="box modern-card glass card-surface">
     <div class="box-header">
       <h6 class="font-semibold m-0">{{ 'Preferences' | translate }}</h6>
     </div>
@@ -170,7 +172,7 @@
     </div>
   </div>
 
-  <div *ngIf="!loading && activeTab === 'templates'" class="box">
+  <div *ngIf="!loading && activeTab === 'templates'" class="box modern-card glass card-surface">
     <div class="box-header">
       <h6 class="font-semibold m-0">{{ 'Templates' | translate }} &amp; i18n keys</h6>
     </div>

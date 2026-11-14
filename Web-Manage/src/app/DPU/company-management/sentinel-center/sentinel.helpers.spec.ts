@@ -7,7 +7,14 @@ import {
   filterWatchlistItems,
 } from './sentinel.helpers';
 import { SentinelIdentity } from './sentinel.models';
-import { normalizeAccessSection, tabFromModuleSection } from './sentinel-routing';
+import {
+  normalizeAccessSection,
+  normalizeEventsSection,
+  normalizeVisitorSection,
+  normalizeWatchlistSection,
+  tabFromModuleSection,
+  workspaceSubNav,
+} from './sentinel-routing';
 
 describe('sentinel.helpers', () => {
   const identities = [
@@ -69,5 +76,35 @@ describe('sentinel-routing', () => {
     expect(normalizeAccessSection('settings')).toBe('settings');
     expect(normalizeAccessSection('zones')).toBe('zones');
     expect(normalizeAccessSection('weird')).toBe('zones');
+  });
+
+  it('normalizes watchlist, visitor, and events sections and builds sub-nav', () => {
+    expect(normalizeWatchlistSection('incidents')).toBe('incidents');
+    expect(normalizeWatchlistSection('settings')).toBe('settings');
+    expect(normalizeWatchlistSection('other')).toBe('identities');
+
+    expect(normalizeVisitorSection('muster-roll')).toBe('muster-roll');
+    expect(normalizeVisitorSection('settings')).toBe('settings');
+    expect(normalizeVisitorSection('other')).toBe('passes');
+
+    expect(normalizeEventsSection('checkins')).toBe('checkins');
+    expect(normalizeEventsSection('settings')).toBe('settings');
+    expect(normalizeEventsSection('other')).toBe('campaigns');
+
+    expect(workspaceSubNav('WATCHLIST').map((x) => x.section)).toEqual([
+      'identities',
+      'incidents',
+      'settings',
+    ]);
+    expect(workspaceSubNav('VISITOR').map((x) => x.section)).toEqual([
+      'passes',
+      'muster-roll',
+      'settings',
+    ]);
+    expect(workspaceSubNav('EVENTS').map((x) => x.section)).toEqual([
+      'campaigns',
+      'checkins',
+      'settings',
+    ]);
   });
 });

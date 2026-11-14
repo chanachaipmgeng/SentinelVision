@@ -94,6 +94,18 @@ export class SentinelVisitorsPanelComponent implements OnInit {
     });
   }
 
+  copyPreRegLink(): void {
+    const url = `${window.location.origin}/#/company/scan/visitor-checkin?preReg=1`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => this.toast.emit('คัดลอกลิงก์ลงทะเบียนผู้มาติดต่อล่วงหน้าแล้ว'),
+        () => this.toast.emit(url),
+      );
+      return;
+    }
+    this.toast.emit(url);
+  }
+
   printVisitorBadge(v: SentinelIdentity): void {
     const popup = window.open('', '_blank', 'width=460,height=600');
     if (!popup) {

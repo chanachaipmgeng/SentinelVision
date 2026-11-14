@@ -175,9 +175,12 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   closeIncident(incidentId: string): void {
+    const note = window.prompt('บันทึกการปิดเคส (Resolution Note):', 'ตรวจสอบและดำเนินการเรียบร้อย');
+    if (note === null) return;
     this.api.closeIncident(this.companyId, incidentId).subscribe({
       next: () => {
-        this.toast.emit('ปิดเหตุการณ์แล้ว');
+        const suffix = note.trim() ? ` (${note.trim()})` : '';
+        this.toast.emit(`ปิดเหตุการณ์แล้ว${suffix}`);
         this.loadIncidents();
         this.overviewChanged.emit();
       },

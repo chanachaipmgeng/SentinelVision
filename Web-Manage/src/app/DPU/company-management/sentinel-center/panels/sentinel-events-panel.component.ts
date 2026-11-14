@@ -7,6 +7,7 @@ import { SentinelApiService } from '../sentinel-api.service';
 import {
   defaultAttendeeForm,
   defaultEventForm,
+  downloadCsv,
   filterEventAttendeeItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
@@ -102,6 +103,20 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
         this.dwellLoading = false;
       },
     });
+  }
+
+  exportDwellCsv(): void {
+    const people = this.dwellReport?.people || [];
+    downloadCsv(
+      ['FullName', 'FirstSeenAt', 'TotalDwellMinutes', 'Booths'],
+      people.map((p) => [
+        p.fullName || p.memberId || '',
+        p.firstSeenAt || '',
+        p.totalDwellMinutes ?? 0,
+        (p.booths || []).map((b) => `${b.zoneName}:${b.dwellMinutes}m`).join(' | '),
+      ]),
+      'event-booth-dwell',
+    );
   }
 
   loadIdentities(): void {

@@ -129,9 +129,18 @@
       <h6 class="font-bold text-base text-slate-100 mb-0">
         รายชื่อผู้มาติดต่อที่กำลังใช้งาน ({{ visitorItems.length }})
       </h6>
-      <a routerLink="/company/visitors/muster-roll" class="text-xs font-semibold text-cyan-400 hover:underline">
-        เช็คยอดคนในอาคาร (Muster Roll) →
-      </a>
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="ti-btn ti-btn-sm ti-btn-light text-xs"
+          (click)="copyPreRegLink()"
+        >
+          <i class="ri-links-line me-1"></i> Copy Pre-Reg Link
+        </button>
+        <a routerLink="/company/visitors/muster-roll" class="text-xs font-semibold text-cyan-400 hover:underline">
+          เช็คยอดคนในอาคาร (Muster Roll) →
+        </a>
+      </div>
     </div>
     <div
       tabindex="0"

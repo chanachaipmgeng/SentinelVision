@@ -112,6 +112,14 @@
                     placeholder="https://iot-gateway.local/api/doors/gate-01/unlock"
                   />
                 </div>
+                <div class="col-span-6">
+                  <label class="form-label text-xs font-semibold">เวลาเปิดประตูอัตโนมัติ (Schedule)</label>
+                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleStart" />
+                </div>
+                <div class="col-span-6">
+                  <label class="form-label text-xs font-semibold">เวลาล็อกประตูอัตโนมัติ</label>
+                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleEnd" />
+                </div>
                 <div class="col-span-12">
                   <label class="flex items-center gap-2 text-xs cursor-pointer">
                     <input type="checkbox" [(ngModel)]="zoneForm.require2FA" />

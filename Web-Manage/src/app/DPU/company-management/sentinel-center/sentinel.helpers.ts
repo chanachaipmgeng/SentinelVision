@@ -48,6 +48,7 @@ export function defaultWatchlistForm(): {
   documentRef: string;
   organization: string;
   alertNote: string;
+  expiresAt: string;
 } {
   return {
     identityType: 'BLACKLIST',
@@ -56,6 +57,7 @@ export function defaultWatchlistForm(): {
     documentRef: '',
     organization: '',
     alertNote: '',
+    expiresAt: '',
   };
 }
 

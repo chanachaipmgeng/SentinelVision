@@ -163,6 +163,10 @@
         <input class="form-control" [(ngModel)]="watchlistForm.organization" placeholder="ระบุสังกัด (ถ้ามี)" />
       </div>
       <div class="col-span-12">
+        <label class="form-label text-xs font-semibold text-slate-300">วันหมดอายุ / รอบทบทวนรายชื่อ (ถ้ามี)</label>
+        <input type="datetime-local" class="form-control" [(ngModel)]="watchlistForm.expiresAt" />
+      </div>
+      <div class="col-span-12">
         <label class="form-label text-xs font-semibold text-slate-300">ข้อความแจ้งเตือน รปภ. / ฝ่ายต้อนรับ</label>
         <textarea
           rows="2"

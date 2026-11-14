@@ -41,7 +41,11 @@
   - For frontend-only changes in `Web-Manage`, build locally via `npm run build` and **wait for the build to exit 0 before** syncing assets into the running container without rebuilding the Docker image:
     `docker cp Web-Manage/dist/preview/browser/. sentinel-admin:/usr/share/nginx/html/`
     `docker exec sentinel-admin nginx -s reload`
+  - Never launch `docker cp`, `git commit`, or browser verification in parallel with a running `ng build` task; wait for the background `npm run build` notification (`Command exited with code 0`) first.
   - When verifying in an existing browser session after deploying static assets, reload with cache disabled or a cache-busting query string (e.g., `/?v=...#/`) and confirm the newly built `styles-*.css` bundle is loaded.
+- **Model-First Template & Exporter Edits**:
+  - Before adding CSV exporters, filters, or template bindings, inspect the exact TypeScript model/interface (`*.model.ts` / `*.models.ts` / `*.service.ts`) so field names match 100% on the first build.
+  - Before implementing a roadmap item, search the target module/component to confirm what already exists so duplicate endpoints or UI controls are never added.
 - **Header Control Uniformity & Dark-Mode Logo**:
   - Keep `.sv-search-chip`, `.dpu-header-lang`, `.sv-header-btn`, and `.dpu-header-avatar` in `.app-header` on a single shared height and pill/circle geometry (`2.25rem` on desktop; `2.5rem` on `< 992px` mobile).
   - In dark mode, explicitly hide `.app-header .dpu-header-brand img.desktop-logo` / `img.toggle-logo` and display `img.toggle-dark` so dark logos never blend into the obsidian header.

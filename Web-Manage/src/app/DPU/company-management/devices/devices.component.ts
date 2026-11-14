@@ -247,6 +247,21 @@ export class DevicesComponent implements OnInit {
       });
   }
 
+  copyKioskUrl(device: KioskDeviceRow): void {
+    const mode = (device.stationMode || 'ATTENDANCE').toLowerCase().replace(/_/g, '-');
+    const params = new URLSearchParams({ deviceId: device.deviceId });
+    if (device.zoneId) params.set('zoneId', device.zoneId);
+    const url = `${window.location.origin}/#/company/scan/${mode}?${params.toString()}`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => swal('คัดลอกลิงก์แล้ว', url, 'success'),
+        () => swal('ลิงก์ Kiosk', url, 'info'),
+      );
+      return;
+    }
+    swal('ลิงก์ Kiosk', url, 'info');
+  }
+
   statusLabel(d: KioskDeviceRow): string {
     if (d.revokedAt) return 'REVOKED';
     if (d.isPaired) return 'PAIRED';

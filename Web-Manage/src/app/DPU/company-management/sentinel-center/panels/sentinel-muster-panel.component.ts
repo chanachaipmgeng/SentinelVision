@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
+import { downloadMusterCsv } from '../sentinel.helpers';
 import { SentinelEdgeManifest, SentinelMusterRollItem, SentinelOverview } from '../sentinel.models';
 
 @Component({
@@ -20,6 +21,7 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
   musterLoading = false;
   musterLimit = 100;
   musterOffset = 0;
+  safeKeys = new Set<string>();
 
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -84,5 +86,30 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
     if (this.musterOffset <= 0) return;
     this.musterOffset = Math.max(0, this.musterOffset - this.musterLimit);
     this.refreshMuster();
+  }
+
+  personKey(person: SentinelMusterRollItem): string {
+    return `${person.category}:${person.badgeCode || person.fullName}`;
+  }
+
+  isSafe(person: SentinelMusterRollItem): boolean {
+    return this.safeKeys.has(this.personKey(person));
+  }
+
+  toggleSafe(person: SentinelMusterRollItem): void {
+    const key = this.personKey(person);
+    if (this.safeKeys.has(key)) {
+      this.safeKeys.delete(key);
+    } else {
+      this.safeKeys.add(key);
+    }
+  }
+
+  get safeCount(): number {
+    return this.musterItems.filter((p) => this.isSafe(p)).length;
+  }
+
+  exportMusterCsv(): void {
+    downloadMusterCsv(this.musterItems, this.safeKeys, (p) => this.personKey(p));
   }
 }

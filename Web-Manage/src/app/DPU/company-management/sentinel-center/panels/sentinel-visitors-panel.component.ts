@@ -6,6 +6,7 @@ import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import {
   defaultVisitorForm,
+  escapeHtml,
   filterVisitorItems,
   firstFileFromInput,
 } from '../sentinel.helpers';
@@ -91,6 +92,43 @@ export class SentinelVisitorsPanelComponent implements OnInit {
         this.loadIdentities();
       },
     });
+  }
+
+  printVisitorBadge(v: SentinelIdentity): void {
+    const popup = window.open('', '_blank', 'width=460,height=600');
+    if (!popup) {
+      this.toast.emit('กรุณาอนุญาตป๊อปอัป (Pop-up) เพื่อพิมพ์บัตรผู้มาติดต่อ');
+      return;
+    }
+    const name = escapeHtml(v.fullName);
+    const org = escapeHtml(v.organization || '-');
+    const purpose = escapeHtml(v.alertNote || '-');
+    const expiry = escapeHtml(v.expiresAt ? new Date(v.expiresAt).toLocaleString() : 'ไม่ระบุ');
+    const code = escapeHtml(`SV-VISITOR:${v.identityId}`);
+    popup.document.write(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Visitor Pass - ${name}</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; color: #0f172a; }
+  .badge { border: 2px solid #0f172a; border-radius: 12px; padding: 20px; max-width: 340px; }
+  .brand { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #0284c7; font-weight: 700; }
+  h1 { font-size: 20px; margin: 8px 0 4px; }
+  .meta { font-size: 13px; color: #334155; margin: 6px 0; }
+  .code { margin-top: 14px; padding: 10px; background: #f1f5f9; border-radius: 8px; font-family: monospace; font-size: 11px; word-break: break-all; }
+  @media print { .no-print { display: none; } }
+</style></head>
+<body>
+  <div class="badge">
+    <div class="brand">SentinelVision Visitor Pass</div>
+    <h1>${name}</h1>
+    <div class="meta"><strong>หน่วยงาน:</strong> ${org}</div>
+    <div class="meta"><strong>วัตถุประสงค์:</strong> ${purpose}</div>
+    <div class="meta"><strong>หมดอายุ:</strong> ${expiry}</div>
+    <div class="code">${code}</div>
+  </div>
+  <p class="no-print" style="margin-top:16px"><button onclick="window.print()">พิมพ์บัตร</button></p>
+</body></html>`);
+    popup.document.close();
+    popup.focus();
   }
 
   deleteIdentity(identityId: string): void {

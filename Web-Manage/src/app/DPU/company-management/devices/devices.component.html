@@ -202,6 +202,14 @@
     <button
       type="button"
       class="ti-btn ti-btn-light modern-btn"
+      (click)="copyKioskUrl(d)"
+      [disabled]="!!d.revokedAt">
+      <i class="ri-links-line" aria-hidden="true"></i>
+      <span>Copy Kiosk URL</span>
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-light modern-btn"
       (click)="rotate(d)"
       [disabled]="!!d.revokedAt">
       <i class="ri-refresh-line" aria-hidden="true"></i>

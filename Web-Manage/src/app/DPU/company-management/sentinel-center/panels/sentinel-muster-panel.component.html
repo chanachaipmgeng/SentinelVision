@@ -55,10 +55,22 @@
                     <span *ngIf="musterWorkDate">· {{ musterWorkDate }}</span>
                   </p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-3 py-1 text-xs font-bold">
                     รวม {{ musterTotal }} คน
                   </span>
+                  <span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-3 py-1 text-xs font-bold">
+                    ปลอดภัยแล้ว {{ safeCount }} / {{ musterItems.length }}
+                  </span>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-light"
+                    [disabled]="!musterItems.length"
+                    (click)="exportMusterCsv()"
+                  >
+                    <i class="ri-download-2-line me-1"></i>
+                    Export CSV
+                  </button>
                   <button
                     type="button"
                     class="ti-btn ti-btn-sm ti-btn-light"
@@ -85,6 +97,7 @@
                       <th class="text-start p-3">จุดสแกนล่าสุด</th>
                       <th class="text-start p-3">แหล่ง</th>
                       <th class="text-end p-3">เวลาที่พบล่าสุด</th>
+                      <th class="text-center p-3">เช็คชื่อปลอดภัย</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -109,9 +122,20 @@
                       <td class="p-3 text-slate-300">{{ person.zoneOrLocation }}</td>
                       <td class="p-3 text-[0.7rem] text-slate-400">{{ person.source || '-' }}</td>
                       <td class="p-3 text-end text-slate-300">{{ person.lastSeenAt | date:'dd/MM HH:mm:ss' }}</td>
+                      <td class="p-3 text-center">
+                        <button
+                          type="button"
+                          class="ti-btn ti-btn-sm"
+                          [ngClass]="isSafe(person) ? 'ti-btn-success' : 'ti-btn-light'"
+                          (click)="toggleSafe(person)"
+                        >
+                          <i class="ri-checkbox-circle-line me-1" *ngIf="isSafe(person)"></i>
+                          {{ isSafe(person) ? 'ปลอดภัย' : 'เช็คชื่อ' }}
+                        </button>
+                      </td>
                     </tr>
                     <tr *ngIf="!musterItems.length">
-                      <td colspan="6" class="text-center text-dpu-muted py-6">
+                      <td colspan="7" class="text-center text-dpu-muted py-6">
                         {{ musterLoading ? 'กำลังโหลด...' : 'ยังไม่มีรายชื่อในพื้นที่วันนี้' }}
                       </td>
                     </tr>

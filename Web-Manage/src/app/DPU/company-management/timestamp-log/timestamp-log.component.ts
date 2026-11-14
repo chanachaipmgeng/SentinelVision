@@ -332,6 +332,26 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     return Math.min(index, 8) * 40;
   }
 
+  saveCorrection(item: TimestampModel) {
+    if (this.actionBusy || !this.companyId) return;
+    if (!item.note || !item.note.trim()) {
+      swal('แจ้งเตือน', 'กรุณาระบุเหตุผล/หมายเหตุการแก้ไขเวลา', 'warning');
+      return;
+    }
+    this.actionBusy = true;
+    this.timeService.update(this.companyId, item).subscribe({
+      next: () => {
+        this.actionBusy = false;
+        swal('สำเร็จ', 'บันทึกการแก้ไขเวลาเรียบร้อยแล้ว', 'success');
+        this.getTimestamp();
+      },
+      error: (err) => {
+        this.actionBusy = false;
+        swal('Error', err?.error?.detail || 'บันทึกการแก้ไขไม่สำเร็จ', 'error');
+      },
+    });
+  }
+
   approveTime(item: TimestampModel) {
     if (this.actionBusy) return;
     swal({

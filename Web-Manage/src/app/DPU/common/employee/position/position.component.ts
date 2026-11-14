@@ -133,6 +133,10 @@ export class PositionComponent {
   }
 
   delete(item: PositionModel) {
+    if (item.employeeCount > 0) {
+      swal('ไม่สามารถลบได้', `ตำแหน่ง "${item.thName}" ยังมีพนักงานใช้งานอยู่ ${item.employeeCount} คน กรุณาย้ายพนักงานออกก่อน`, 'warning');
+      return;
+    }
     swal({
       title: 'ลบตำแหน่งนี้?',
       text: item.thName || '',
@@ -146,7 +150,10 @@ export class PositionComponent {
           swal('สำเร็จ', 'ลบแล้ว', 'success');
           this.getPosition();
         },
-        error: () => swal('Error', 'ลบไม่สำเร็จ', 'error'),
+        error: (err) => {
+          const msg = err?.error?.detail || 'ลบไม่สำเร็จ';
+          swal('Error', msg, 'error');
+        },
       });
     });
   }

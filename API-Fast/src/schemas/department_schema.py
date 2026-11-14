@@ -19,6 +19,7 @@ class DepartmentUpdate(BaseModel):
 
 class DepartmentResponse(DepartmentBase):
     departmentId: UUID
+    employeeCount: int = 0
 
     class Config:
         from_attributes = True

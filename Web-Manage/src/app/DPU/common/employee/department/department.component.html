@@ -78,6 +78,7 @@
                 <th scope="col" class="text-start">{{ 'ID' | translate }}</th>
                 <th scope="col" class="text-start">ชื่อ (TH)</th>
                 <th scope="col" class="text-start">ชื่อ (EN)</th>
+                <th scope="col" class="text-center">พนักงาน</th>
                 <th scope="col" class="text-end">{{ 'Manage' | translate }}</th>
               </tr>
             </thead>
@@ -94,6 +95,9 @@
                   <td><span class="font-semibold text-primary">{{ item.departmentId }}</span></td>
                   <td class="font-semibold">{{ item.thName }}</td>
                   <td class="text-dpu-muted">{{ item.engName || '—' }}</td>
+                  <td class="text-center">
+                    <span class="badge bg-primary/10 text-primary">{{ item.employeeCount || 0 }} คน</span>
+                  </td>
                   <td class="text-end">
                     <div class="inline-flex gap-2">
                       <button

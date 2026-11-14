@@ -2,6 +2,8 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { forkJoin, Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampService } from '../../services/timestamp.service';
@@ -63,9 +65,18 @@ export class ApprovalInboxComponent implements OnInit {
   }
 
   filtered: ApprovalInboxItem[] = [];
+  selectedKeys = new Set<string>();
 
   get pendingCount(): number {
     return this.items.length;
+  }
+
+  get selectedCount(): number {
+    return this.selectedKeys.size;
+  }
+
+  get allFilteredSelected(): boolean {
+    return this.filtered.length > 0 && this.filtered.every((item) => this.selectedKeys.has(this.selectedKey(item)));
   }
 
   constructor(
@@ -88,6 +99,7 @@ export class ApprovalInboxComponent implements OnInit {
     this.approvals.inbox(this.companyId, 'PENDING').subscribe({
       next: (res) => {
         this.items = res.items || [];
+        this.selectedKeys.clear();
         this.applyFilter(keep);
         this.loading = false;
       },
@@ -171,24 +183,109 @@ export class ApprovalInboxComponent implements OnInit {
     });
   }
 
+  isChecked(item: ApprovalInboxItem): boolean {
+    return this.selectedKeys.has(this.selectedKey(item));
+  }
+
+  toggleCheck(item: ApprovalInboxItem, event: Event): void {
+    event.stopPropagation();
+    const key = this.selectedKey(item);
+    if (!key) return;
+    if ((event.target as HTMLInputElement).checked) {
+      this.selectedKeys.add(key);
+    } else {
+      this.selectedKeys.delete(key);
+    }
+  }
+
+  toggleSelectAll(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (checked) {
+      this.filtered.forEach((item) => {
+        const key = this.selectedKey(item);
+        if (key) this.selectedKeys.add(key);
+      });
+    } else {
+      this.filtered.forEach((item) => this.selectedKeys.delete(this.selectedKey(item)));
+    }
+  }
+
+  bulkApprove(): void {
+    const targets = this.filtered.filter((item) => this.selectedKeys.has(this.selectedKey(item)));
+    if (!targets.length || this.actionBusy || !this.companyId) return;
+    swal({
+      title: `อนุมัติทั้งหมด ${targets.length} รายการ?`,
+      icon: 'info',
+      buttons: ['ยกเลิก', 'อนุมัติทั้งหมด'],
+    }).then((ok: unknown) => {
+      if (!ok) return;
+      this.runBulkDecision(targets, true);
+    });
+  }
+
+  bulkReject(): void {
+    const targets = this.filtered.filter((item) => this.selectedKeys.has(this.selectedKey(item)));
+    if (!targets.length || this.actionBusy || !this.companyId) return;
+    swal({
+      title: `ไม่อนุมัติทั้งหมด ${targets.length} รายการ?`,
+      content: { element: 'input', attributes: { placeholder: 'เหตุผล (ถ้ามี)' } },
+      icon: 'warning',
+      dangerMode: true,
+      buttons: ['ยกเลิก', 'ไม่อนุมัติทั้งหมด'],
+    }).then((reason: unknown) => {
+      if (reason === null || reason === false) return;
+      const rejectReason = typeof reason === 'string' && reason.trim() ? reason.trim() : 'ไม่อนุมัติ';
+      this.runBulkDecision(targets, false, rejectReason);
+    });
+  }
+
+  private runBulkDecision(targets: ApprovalInboxItem[], approve: boolean, rejectReason?: string): void {
+    this.actionBusy = true;
+    const calls: Observable<unknown>[] = targets.map((item) => {
+      const req = this.buildDecisionRequest(item, approve, rejectReason);
+      return req ? req.pipe(catchError(() => of({ __failed: true }))) : of({ __failed: true });
+    });
+    forkJoin(calls).subscribe({
+      next: (results) => {
+        this.actionBusy = false;
+        const failed = results.filter((r) => (r as { __failed?: boolean })?.__failed).length;
+        const succeeded = results.length - failed;
+        if (failed === 0) {
+          swal('สำเร็จ', `${approve ? 'อนุมัติ' : 'ไม่อนุมัติ'}แล้ว ${succeeded} รายการ`, 'success');
+        } else {
+          swal('แจ้งเตือน', `สำเร็จ ${succeeded} รายการ, ไม่สำเร็จ ${failed} รายการ`, 'warning');
+        }
+        this.reload();
+      },
+      error: () => {
+        this.actionBusy = false;
+        swal('Error', 'ดำเนินการแบบกลุ่มไม่สำเร็จ', 'error');
+      },
+    });
+  }
+
+  private buildDecisionRequest(item: ApprovalInboxItem, approve: boolean, rejectReason?: string): Observable<unknown> | null {
+    const body = { approve, rejectReason };
+    if (item.kind === 'LEAVE' && item.leaveId) {
+      return this.approvals.decideLeave(this.companyId, item.leaveId, body);
+    }
+    if (item.kind === 'REGULARIZATION' && item.requestId) {
+      return this.approvals.decideRegularization(this.companyId, item.requestId, body);
+    }
+    if (item.kind === 'OT' && item.requestId) {
+      return this.approvals.decideOt(this.companyId, item.requestId, body);
+    }
+    if (item.kind === 'TIMESTAMP' && item.timestampId) {
+      return this.timestamps.approve(this.companyId, item.timestampId, { approve, rejectReason });
+    }
+    return null;
+  }
+
   private decide(item: ApprovalInboxItem, approve: boolean, rejectReason?: string): void {
     if (this.actionBusy || !this.companyId) return;
     this.actionBusy = true;
-    const body = { approve, rejectReason };
-    let req;
-    if (item.kind === 'LEAVE' && item.leaveId) {
-      req = this.approvals.decideLeave(this.companyId, item.leaveId, body);
-    } else if (item.kind === 'REGULARIZATION' && item.requestId) {
-      req = this.approvals.decideRegularization(this.companyId, item.requestId, body);
-    } else if (item.kind === 'OT' && item.requestId) {
-      req = this.approvals.decideOt(this.companyId, item.requestId, body);
-    } else if (item.kind === 'TIMESTAMP' && item.timestampId) {
-      // JWT sets approvedBy server-side — do not send client memberId.
-      req = this.timestamps.approve(this.companyId, item.timestampId, {
-        approve,
-        rejectReason,
-      });
-    } else {
+    const req = this.buildDecisionRequest(item, approve, rejectReason);
+    if (!req) {
       this.actionBusy = false;
       swal('Error', 'ไม่รองรับประเภทนี้', 'error');
       return;

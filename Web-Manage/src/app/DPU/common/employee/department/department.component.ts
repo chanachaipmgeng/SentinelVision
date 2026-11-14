@@ -133,6 +133,10 @@ export class DepartmentComponent {
   }
 
   delete(item: DepartmentModel) {
+    if (item.employeeCount > 0) {
+      swal('ไม่สามารถลบได้', `แผนก "${item.thName}" ยังมีพนักงานใช้งานอยู่ ${item.employeeCount} คน กรุณาย้ายพนักงานออกก่อน`, 'warning');
+      return;
+    }
     swal({
       title: 'ลบแผนกนี้?',
       text: item.thName || '',
@@ -146,7 +150,10 @@ export class DepartmentComponent {
           swal('สำเร็จ', 'ลบแล้ว', 'success');
           this.getDepartment();
         },
-        error: () => swal('Error', 'ลบไม่สำเร็จ', 'error'),
+        error: (err) => {
+          const msg = err?.error?.detail || 'ลบไม่สำเร็จ';
+          swal('Error', msg, 'error');
+        },
       });
     });
   }

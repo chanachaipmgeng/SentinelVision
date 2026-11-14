@@ -12,6 +12,24 @@
       <span class="inbox-chip inbox-chip--soft" *ngIf="searchTerm || kindFilter">{{ 'Found' | translate }} {{ filtered.length }}</span>
     </div>
     <div class="inbox-toolbar-actions">
+      <button
+        *ngIf="selectedCount > 0"
+        type="button"
+        class="ti-btn ti-btn-success-full modern-btn"
+        [disabled]="actionBusy"
+        (click)="bulkApprove()">
+        <i class="ri-check-double-line"></i>
+        อนุมัติที่เลือก ({{ selectedCount }})
+      </button>
+      <button
+        *ngIf="selectedCount > 0"
+        type="button"
+        class="ti-btn ti-btn-danger-full modern-btn"
+        [disabled]="actionBusy"
+        (click)="bulkReject()">
+        <i class="ri-close-circle-line"></i>
+        ไม่อนุมัติ ({{ selectedCount }})
+      </button>
       <button type="button" class="ti-btn ti-btn-primary-full modern-btn" [disabled]="loading" (click)="reload()">
         <i class="ri-refresh-line" [class.inbox-spin]="loading"></i>
         {{ 'Refresh' | translate }}
@@ -71,11 +89,28 @@
       <p *ngIf="searchTerm">{{ 'No results for' | translate }} “{{ searchTerm }}”</p>
       <p *ngIf="!searchTerm && kindFilter">{{ 'listKit.approvalInbox.noneOfKind' | translate }}</p>
     </div>
+    <div *ngIf="!loading && filtered.length" class="flex items-center justify-between px-4 py-2 border-b border-white/10">
+      <label class="inline-flex items-center gap-2 text-xs text-dpu-muted cursor-pointer">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          [checked]="allFilteredSelected"
+          (change)="toggleSelectAll($event)" />
+        <span>เลือกทั้งหมด ({{ filtered.length }})</span>
+      </label>
+      <span class="text-xs text-cyan-300" *ngIf="selectedCount > 0">เลือกไว้ {{ selectedCount }} รายการ</span>
+    </div>
     <ul *ngIf="!loading && filtered.length" class="inbox-queue">
-      <li *ngFor="let item of filtered; let i = index">
+      <li *ngFor="let item of filtered; let i = index" class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          class="form-check-input ms-3 shrink-0"
+          [checked]="isChecked(item)"
+          (change)="toggleCheck(item, $event)"
+          aria-label="เลือกรายการ" />
         <button
           type="button"
-          class="inbox-card"
+          class="inbox-card flex-1"
           [class.active]="isSelected(item)"
           [attr.aria-haspopup]="'dialog'"
           [style.animation-delay.ms]="itemDelay(i)"

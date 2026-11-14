@@ -281,9 +281,26 @@
               </a>
             </dd>
           </div>
-          <div *ngIf="item.note">
+          <div>
+            <dt>แก้ไขสถานะ (HR)</dt>
+            <dd>
+              <select class="form-control" [(ngModel)]="item.timestampType">
+                <option [ngValue]="1">เข้างาน (อนุมัติ)</option>
+                <option [ngValue]="2">ออกงาน</option>
+                <option [ngValue]="0">รออนุมัติ / นอกพื้นที่</option>
+                <option [ngValue]="3">ไม่อนุมัติ / ยกเลิก</option>
+              </select>
+            </dd>
+          </div>
+          <div>
             <dt>{{ 'Note' | translate }}</dt>
-            <dd class="ts-note-text">{{ item.note }}</dd>
+            <dd>
+              <input
+                type="text"
+                class="form-control"
+                [(ngModel)]="item.note"
+                placeholder="ระบุเหตุผลการแก้ไขเวลา..." />
+            </dd>
           </div>
           <div *ngIf="item.approvalStatus && item.approvalStatus !== 'NONE'">
             <dt>{{ 'Approve' | translate }}</dt>
@@ -304,8 +321,9 @@
     </div>
   </div>
 
-  <div drawerFooter class="ts-actions" *ngIf="selectModel?.timestampType === 0 && selectModel as item">
+  <div drawerFooter class="ts-actions" *ngIf="selectModel as item">
     <button
+      *ngIf="item.timestampType === 0"
       type="button"
       class="ti-btn ti-btn-danger-full modern-btn ts-action-btn"
       [disabled]="actionBusy"
@@ -314,12 +332,21 @@
       {{ 'listKit.common.reject' | translate }}
     </button>
     <button
+      *ngIf="item.timestampType === 0"
       type="button"
       class="ti-btn ti-btn-success-full modern-btn ts-action-btn"
       [disabled]="actionBusy"
       (click)="approveTime(item)">
       <i class="ri-check-line"></i>
       {{ 'listKit.common.approve' | translate }}
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-primary-full modern-btn ts-action-btn"
+      [disabled]="actionBusy"
+      (click)="saveCorrection(item)">
+      <i class="ri-save-line"></i>
+      บันทึกการแก้ไขเวลา
     </button>
   </div>
 </app-side-drawer>

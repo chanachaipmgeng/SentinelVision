@@ -54,8 +54,8 @@ async def update_position_route(request: Request, positionId: str, position: Pos
     return await update_position(positionId, position.dict(exclude_unset=True), db)
 
 @router.delete("/{positionId}")
-async def delete_position_route(request: Request, positionId: str, db: AsyncSession = Depends(get_db)):
+async def delete_position_route(request: Request, positionId: str, force: bool = False, db: AsyncSession = Depends(get_db)):
     existing = await get_position_by_id(positionId, db)
     await assert_request_permission(request, db, "positions.write", existing.companyId)
-    await delete_position(positionId, db)
+    await delete_position(positionId, db, force=force)
     return {"detail": "Position deleted successfully"}

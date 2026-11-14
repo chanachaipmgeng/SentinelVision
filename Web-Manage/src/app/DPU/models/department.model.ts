@@ -6,6 +6,7 @@ export class DepartmentModel extends BaseModel{
   departmentId: string;
   thName: string;
   engName: string;
+  employeeCount: number;
   constructor(
     data?: Partial<DepartmentModel>,
     translateService? : TranslateService
@@ -15,6 +16,7 @@ export class DepartmentModel extends BaseModel{
     this.departmentId = data?.departmentId ?? '';
     this.thName = data?.thName ?? '';
     this.engName = data?.engName ?? '';
+    this.employeeCount = Number(data?.employeeCount ?? 0);
   }
 
   getName(): string {

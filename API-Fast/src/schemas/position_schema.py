@@ -17,6 +17,7 @@ class PositionUpdate(BaseModel):
 
 class PositionResponse(PositionBase):
     positionId: UUID
+    employeeCount: int = 0
 
     class Config:
         from_attributes = True

@@ -54,8 +54,8 @@ async def update_department_route(request: Request, departmentId: str, departmen
     return await update_department(departmentId, department.dict(exclude_unset=True), db)
 
 @router.delete("/{departmentId}")
-async def delete_department_route(request: Request, departmentId: str, db: AsyncSession = Depends(get_db)):
+async def delete_department_route(request: Request, departmentId: str, force: bool = False, db: AsyncSession = Depends(get_db)):
     existing = await get_department_by_id(departmentId, db)
     await assert_request_permission(request, db, "departments.write", existing.companyId)
-    await delete_department(departmentId, db)
+    await delete_department(departmentId, db, force=force)
     return {"detail": "Department deleted successfully"}

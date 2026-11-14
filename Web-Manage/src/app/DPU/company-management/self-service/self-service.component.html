@@ -53,6 +53,17 @@
     </div>
 
     <div *ngIf="activeTab === 'leave'" class="grid grid-cols-12 gap-4">
+      <div class="col-span-12" *ngIf="leaveBalances.length">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div *ngFor="let b of leaveBalances" class="box modern-card glass card-surface p-3 flex items-center justify-between">
+            <div>
+              <div class="text-xs text-dpu-muted uppercase tracking-wider">{{ b.leaveType }}</div>
+              <div class="text-lg font-bold text-cyan-300 mt-0.5">{{ b.remainingDays }} วัน</div>
+            </div>
+            <span class="badge bg-cyan-500/15 text-cyan-300 text-xs">ใช้ไป {{ b.used ?? 0 }}</span>
+          </div>
+        </div>
+      </div>
       <div class="col-span-12 lg:col-span-5">
         <div class="box modern-card glass card-surface">
           <div class="box-header"><div class="box-title">ขอลา</div></div>
@@ -71,10 +82,6 @@
             </div>
             <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="leaveDraft.reason"></textarea></div>
             <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitLeave()">ส่งคำขอ</button>
-            <div class="text-xs text-dpu-muted" *ngIf="leaveBalances.length">
-              ยอดคงเหลือ:
-              <span *ngFor="let b of leaveBalances; let last = last">{{ b.leaveType }} {{ b.remainingDays }}{{ last ? '' : ' · ' }}</span>
-            </div>
           </div>
         </div>
       </div>

@@ -45,6 +45,12 @@ class CompanyEmployee(Base):
     departmentId: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("department.departmentId"), nullable=False
     )
+    locationId: Mapped[uuid.UUID | None] = mapped_column(
+        "location_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_location.locationId", ondelete="SET NULL"),
+        nullable=True,
+    )
     shiftId: Mapped[uuid.UUID | None] = mapped_column("shift_id", UUID(as_uuid=True), nullable=True)
     employeeId: Mapped[str | None] = mapped_column(String, nullable=True, default="")
     startDate: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

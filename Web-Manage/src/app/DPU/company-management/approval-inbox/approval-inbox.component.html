@@ -30,6 +30,10 @@
         <i class="ri-close-circle-line"></i>
         ไม่อนุมัติ ({{ selectedCount }})
       </button>
+      <button type="button" class="ti-btn ti-btn-outline-light modern-btn" (click)="toggleChainPanel()">
+        <i class="ri-flow-chart"></i>
+        {{ 'approvalChain.title' | translate }}
+      </button>
       <button type="button" class="ti-btn ti-btn-primary-full modern-btn" [disabled]="loading" (click)="reload()">
         <i class="ri-refresh-line" [class.inbox-spin]="loading"></i>
         {{ 'Refresh' | translate }}
@@ -37,6 +41,61 @@
       <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn">{{ 'Out-of-area queue' | translate }}</a>
     </div>
   </header>
+
+  <section *ngIf="showChainPanel" class="modern-card glass p-4 mb-3 space-y-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="p-3 rounded-lg border border-white/10 space-y-3" *ngIf="permissions.has('company.settings')">
+        <h6 class="text-sm font-semibold mb-1">{{ 'approvalChain.chainTitle' | translate }}</h6>
+        <div class="flex flex-wrap items-center gap-2">
+          <select class="form-control flex-1" [(ngModel)]="chainDepth">
+            <option [ngValue]="1">{{ 'approvalChain.level1' | translate }}</option>
+            <option [ngValue]="2">{{ 'approvalChain.level2' | translate }}</option>
+            <option [ngValue]="3">{{ 'approvalChain.level3' | translate }}</option>
+          </select>
+          <button type="button" class="ti-btn ti-btn-primary modern-btn" [disabled]="chainBusy" (click)="saveChainDepth()">
+            {{ 'Save' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-lg border border-white/10 space-y-3">
+        <h6 class="text-sm font-semibold mb-1">{{ 'approvalChain.delegationTitle' | translate }}</h6>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <select class="form-control" [(ngModel)]="delegationForm.delegateMemberId">
+            <option value="">-- {{ 'approvalChain.delegate' | translate }} --</option>
+            <option *ngFor="let m of delegateMembers" [value]="m.id">{{ m.label }}</option>
+          </select>
+          <input type="date" class="form-control" [(ngModel)]="delegationForm.startDate" />
+          <input type="date" class="form-control" [(ngModel)]="delegationForm.endDate" />
+        </div>
+        <div class="flex items-center gap-2">
+          <input
+            type="text"
+            class="form-control flex-1"
+            [(ngModel)]="delegationForm.reason"
+            [placeholder]="'approvalChain.reasonPlaceholder' | translate" />
+          <button
+            type="button"
+            class="ti-btn ti-btn-primary modern-btn"
+            [disabled]="chainBusy || !delegationForm.delegateMemberId || !delegationForm.startDate || !delegationForm.endDate"
+            (click)="addDelegation()">
+            {{ 'Add' | translate }}
+          </button>
+        </div>
+        <div *ngIf="delegations.length" class="space-y-1.5 text-xs">
+          <div *ngFor="let d of delegations" class="flex items-center justify-between px-2 py-1.5 rounded bg-white/5">
+            <span>
+              <strong>{{ d.delegatorName || 'Me' }}</strong> &rarr; <strong>{{ d.delegateName }}</strong>
+              ({{ d.startDate }} ~ {{ d.endDate }})
+            </span>
+            <button type="button" class="text-danger" [disabled]="chainBusy" (click)="removeDelegation(d)">
+              <i class="ri-delete-bin-line"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <app-kpi-grid
     [items]="kpis"
@@ -132,6 +191,9 @@
             <span class="inbox-muted" *ngIf="item.workDate || item.timestamp">
               {{ item.workDate || (item.timestamp | date: 'dd/MM/yy HH:mm') }}
             </span>
+            <span class="badge bg-info/15 text-info text-[11px] ms-1" *ngIf="(item.maxApprovalLevel || 1) > 1">
+              L{{ item.approvalLevel || 1 }}/{{ item.maxApprovalLevel }} {{ item.currentLevelLabel || '' }}
+            </span>
           </div>
           <i class="ri-arrow-right-s-line inbox-card-chevron" aria-hidden="true"></i>
         </button>
@@ -156,12 +218,26 @@
       <div *ngIf="item.locationName"><dt>{{ 'Location' | translate }}</dt><dd>{{ item.locationName }}</dd></div>
       <div *ngIf="item.otMinutes !== null && item.otMinutes !== undefined"><dt>{{ 'OT minutes' | translate }}</dt><dd>{{ item.otMinutes }}</dd></div>
       <div *ngIf="item.statusText"><dt>{{ 'listKit.common.status' | translate }}</dt><dd>{{ item.statusText }}</dd></div>
+      <div *ngIf="(item.maxApprovalLevel || 1) > 1">
+        <dt>{{ 'approvalChain.stage' | translate }}</dt>
+        <dd>Level {{ item.approvalLevel || 1 }} / {{ item.maxApprovalLevel }} ({{ item.currentLevelLabel || 'Approver' }})</dd>
+      </div>
       <div *ngIf="item.createdAt"><dt>{{ 'listKit.approvalInbox.submittedAt' | translate }}</dt><dd>{{ item.createdAt | date: 'medium' }}</dd></div>
       <div *ngIf="item.reason || item.note">
         <dt>{{ 'Note' | translate }}</dt>
         <dd class="inbox-note">{{ item.reason || item.note }}</dd>
       </div>
     </dl>
+    <div *ngIf="item.approvalHistory?.length" class="mt-3 pt-3 border-t border-white/10 space-y-1.5 text-xs">
+      <div class="font-semibold">{{ 'approvalChain.history' | translate }}</div>
+      <div *ngFor="let h of item.approvalHistory" class="px-2 py-1.5 rounded bg-white/5">
+        <div>
+          <strong>L{{ h.level }} ({{ h.roleLabel }})</strong> — {{ h.action }}
+          <span *ngIf="h.approverName">โดย {{ h.approverName }}</span>
+        </div>
+        <div class="text-[11px] text-dpu-muted" *ngIf="h.decidedAt">{{ h.decidedAt | date: 'short' }}</div>
+      </div>
+    </div>
   </div>
 
   <div drawerFooter class="inbox-actions" *ngIf="selected as item">

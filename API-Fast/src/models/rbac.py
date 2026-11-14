@@ -20,6 +20,8 @@ class RbacRoleCode(str, enum.Enum):
     APPROVER = "APPROVER"
     AUDITOR = "AUDITOR"
     DEVICE_OPERATOR = "DEVICE_OPERATOR"
+    SECURITY_GUARD = "SECURITY_GUARD"
+    EMPLOYEE = "EMPLOYEE"
 
 
 class RbacPermission(Base):
@@ -99,6 +101,12 @@ class MemberRoleAssignment(Base):
     departmentId: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("department.departmentId", ondelete="CASCADE"),
+        nullable=True,
+    )
+    locationId: Mapped[uuid.UUID | None] = mapped_column(
+        "location_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_location.locationId", ondelete="SET NULL"),
         nullable=True,
     )
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

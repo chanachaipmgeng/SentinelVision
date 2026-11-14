@@ -78,6 +78,15 @@ class LeaveRequest(Base):
     approvedBy: Mapped[uuid.UUID | None] = mapped_column("approved_by", UUID(as_uuid=True), nullable=True)
     approvedAt: Mapped[datetime | None] = mapped_column("approved_at", DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column("reject_reason", String, nullable=True)
+    approvalLevel: Mapped[int] = mapped_column("approval_level", default=1, server_default="1", nullable=False)
+    maxApprovalLevel: Mapped[int] = mapped_column("max_approval_level", default=1, server_default="1", nullable=False)
+    approvalHistory: Mapped[Any] = mapped_column(
+        "approval_history",
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 

@@ -123,6 +123,19 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
             PERM_CAMERAS_READ,
         }
     ),
+    RbacRoleCode.SECURITY_GUARD.value: frozenset(
+        {
+            PERM_COMPANY_READ,
+            PERM_SENTINEL_MANAGE,
+            PERM_CAMERAS_READ,
+            PERM_ATTENDANCE_READ,
+        }
+    ),
+    RbacRoleCode.EMPLOYEE.value: frozenset(
+        {
+            PERM_COMPANY_READ,
+        }
+    ),
 }
 
 
@@ -182,6 +195,7 @@ async def permissions_for_member(
     company_id: Optional[UUID] = None,
     *,
     department_id: Optional[UUID] = None,
+    location_id: Optional[UUID] = None,
 ) -> set[str]:
     """Resolve effective permission codes for a member in an optional company scope."""
     if is_system_admin_member(member):
@@ -218,6 +232,11 @@ async def permissions_for_member(
             # (or when no department filter was requested — then include for nav/listing).
             if department_id is not None and asg.departmentId != department_id:
                 continue
+        if getattr(asg, "locationId", None) is not None:
+            # Branch/location-scoped assignment only applies when the resource location matches
+            # (or when no location filter was requested — then include for nav/listing).
+            if location_id is not None and asg.locationId != location_id:
+                continue
         perms |= set(role_perms)
     return perms
 
@@ -229,9 +248,10 @@ async def has_permission(
     company_id: Optional[UUID] = None,
     *,
     department_id: Optional[UUID] = None,
+    location_id: Optional[UUID] = None,
 ) -> bool:
     perms = await permissions_for_member(
-        db, member, company_id, department_id=department_id
+        db, member, company_id, department_id=department_id, location_id=location_id
     )
     return permission in perms
 
@@ -258,10 +278,13 @@ async def assert_permission(
     company_id: Optional[UUID] = None,
     *,
     department_id: Optional[UUID] = None,
+    location_id: Optional[UUID] = None,
 ) -> Member:
     if member is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
-    if await has_permission(db, member, permission, company_id, department_id=department_id):
+    if await has_permission(
+        db, member, permission, company_id, department_id=department_id, location_id=location_id
+    ):
         return member
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -282,6 +305,7 @@ async def roles_for_member(
                 "role": RbacRoleCode.SYSTEM_ADMIN.value,
                 "companyId": None,
                 "departmentId": None,
+                "locationId": None,
                 "source": "member.role",
             }
         )
@@ -293,6 +317,7 @@ async def roles_for_member(
                     "role": RbacRoleCode.HR_ADMIN.value,
                     "companyId": str(company_id),
                     "departmentId": None,
+                    "locationId": None,
                     "source": "company_employee.ADMIN_COMPANY",
                 }
             )
@@ -304,6 +329,7 @@ async def roles_for_member(
                 "role": asg.roleCode,
                 "companyId": str(asg.companyId) if asg.companyId else None,
                 "departmentId": str(asg.departmentId) if asg.departmentId else None,
+                "locationId": str(asg.locationId) if getattr(asg, "locationId", None) else None,
                 "source": "member_role_assignment",
             }
         )
@@ -325,28 +351,72 @@ def boss_matches(
     return False
 
 
+async def _can_member_directly_approve(
+    db: AsyncSession,
+    caller: Member,
+    company_id: UUID,
+    subject: CompanyEmployee,
+) -> bool:
+    """Direct RBAC or boss check without delegation lookup."""
+    dept_id = subject.departmentId
+    loc_id = getattr(subject, "locationId", None)
+    if await has_permission(
+        db, caller, PERM_ATTENDANCE_APPROVE, company_id, department_id=dept_id, location_id=loc_id
+    ) or await has_permission(
+        db, caller, PERM_HR_APPROVE, company_id, department_id=dept_id, location_id=loc_id
+    ):
+        return True
+
+    caller_emp = await get_company_employment(db, caller.memberId, company_id)
+    if boss_matches(subject, caller, caller_emp):
+        return True
+    return False
+
+
+async def resolve_delegator_for_approval(
+    db: AsyncSession,
+    caller: Member,
+    company_id: UUID,
+    subject: CompanyEmployee,
+) -> Optional[UUID]:
+    """Return delegator memberId if caller is acting via an active delegation, else None."""
+    from datetime import date as _date
+
+    from ..models.approvals_payroll import ApprovalDelegation
+
+    today = _date.today()
+    rows = (
+        await db.execute(
+            select(ApprovalDelegation).where(
+                ApprovalDelegation.companyId == company_id,
+                ApprovalDelegation.delegateMemberId == caller.memberId,
+                ApprovalDelegation.isActive.is_(True),
+                ApprovalDelegation.startDate <= today,
+                ApprovalDelegation.endDate >= today,
+            )
+        )
+    ).scalars().all()
+    for d in rows:
+        delegator = await db.get(Member, d.delegatorMemberId)
+        if delegator is not None and await _can_member_directly_approve(db, delegator, company_id, subject):
+            return delegator.memberId
+    return None
+
+
 async def can_approve_for_employee(
     db: AsyncSession,
     caller: Member,
     company_id: UUID,
     subject: CompanyEmployee,
 ) -> bool:
-    """Approve gate: RBAC approve permission (honouring department scope) or direct boss."""
+    """Approve gate: RBAC approve permission (honouring dept/branch scope), direct boss, or active delegate."""
     if is_system_admin_member(caller):
         return True
 
-    dept_id = subject.departmentId
-    if await has_permission(
-        db, caller, PERM_ATTENDANCE_APPROVE, company_id, department_id=dept_id
-    ) or await has_permission(
-        db, caller, PERM_HR_APPROVE, company_id, department_id=dept_id
-    ):
-        # Department-scoped managers: only if assignment covers subject's dept or is company-wide.
-        # has_permission already filters by department_id against assignments.
+    if await _can_member_directly_approve(db, caller, company_id, subject):
         return True
 
-    caller_emp = await get_company_employment(db, caller.memberId, company_id)
-    if boss_matches(subject, caller, caller_emp):
+    if await resolve_delegator_for_approval(db, caller, company_id, subject) is not None:
         return True
     return False
 

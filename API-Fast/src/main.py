@@ -48,6 +48,7 @@ from .routes import (
     analytics_routes,
     people_count_routes,
     presence_routes,
+    rbac_routes,
 )
 
 assert_runtime_secrets_configured()
@@ -327,6 +328,9 @@ def _mount_api(prefix: str = "") -> None:
     )
     app.include_router(
         presence_routes.router, prefix=f"{p}/presence", tags=["Person Presence"]
+    )
+    app.include_router(
+        rbac_routes.router, prefix=f"{p}/rbac", tags=["RBAC & Permissions"]
     )
 
 

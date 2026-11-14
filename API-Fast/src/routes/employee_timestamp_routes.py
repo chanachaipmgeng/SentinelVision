@@ -305,3 +305,58 @@ async def approve_timestamp_route(
     return await approve_or_reject_timestamp(
         timestampId, companyId, action, db, approved_by=approved_by
     )
+
+
+@router.post("/company/{companyId}/pin-checkin")
+async def pin_fallback_checkin_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """BL-03: PDPA non-consenting employee fallback check-in via Employee Code + Timestamp Type."""
+    from fastapi import HTTPException
+    from sqlalchemy import select
+    from ..models.company_employee import CompanyEmployee
+    from ..models.member import Member, StatusType
+
+    await assert_request_company_membership(request, db, companyId)
+    body = await request.json()
+    emp_code = str(body.get("employeeCode") or "").strip()
+    if not emp_code:
+        raise HTTPException(status_code=400, detail="employeeCode is required")
+
+    row = (
+        await db.execute(
+            select(CompanyEmployee, Member)
+            .join(Member, Member.memberId == CompanyEmployee.memberId)
+            .where(
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.employeeId == emp_code,
+                CompanyEmployee.deletedAt.is_(None),
+                Member.deletedAt.is_(None),
+                Member.status == StatusType.ENABLE,
+            )
+            .limit(1)
+        )
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Active employee not found for employeeCode")
+
+    ce, member = row
+    ts_type = int(body.get("timestampType") or 1)
+    note = str(body.get("note") or "PIN_FALLBACK").strip()[:200]
+    payload = {
+        "company_employeeId": ce.company_employeeId,
+        "timestampType": ts_type,
+        "latitude": float(body.get("latitude") or 0.0),
+        "longitude": float(body.get("longitude") or 0.0),
+        "note": note,
+    }
+    created = await create_timestamp(payload, companyId, db)
+    return {
+        "status": "OK",
+        "method": "PIN_FALLBACK",
+        "employeeName": f"{member.firstName} {member.lastName}".strip(),
+        "employeeCode": ce.employeeId,
+        "timestampId": str(getattr(created, "timestampId", "")),
+    }

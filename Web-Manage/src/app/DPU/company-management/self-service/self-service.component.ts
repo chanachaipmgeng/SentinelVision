@@ -72,6 +72,8 @@ export class SelfServiceComponent implements OnInit {
   loading = false;
   /** True when signed-in identity is company/HR admin (employee portal audience). */
   isCompanyAdminViewer = false;
+  /** Allows Admin/HR with a linked CompanyEmployee record to toggle into their own Self-Service view. */
+  adminSelfServiceMode = true;
   /** No CompanyEmployee row for this member in the selected company. */
   missingEmployeeRecord = false;
   loadError = '';
@@ -107,7 +109,15 @@ export class SelfServiceComponent implements OnInit {
   /** Show the employee-oriented empty panel instead of admin-looking blank tables. */
   get showEmployeeAudienceEmpty(): boolean {
     if (this.loading) return false;
-    return this.isCompanyAdminViewer || this.missingEmployeeRecord;
+    if (this.missingEmployeeRecord) return true;
+    return this.isCompanyAdminViewer && !this.adminSelfServiceMode;
+  }
+
+  toggleAdminSelfServiceMode(): void {
+    this.adminSelfServiceMode = !this.adminSelfServiceMode;
+    if (this.adminSelfServiceMode && this.companyEmployeeId && this.attendance.length === 0 && this.leaves.length === 0) {
+      this.reload();
+    }
   }
 
   ngOnInit(): void {
@@ -141,12 +151,8 @@ export class SelfServiceComponent implements OnInit {
       next: (emp) => {
         this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
         this.missingEmployeeRecord = !this.companyEmployeeId;
-        if (this.isCompanyAdminViewer) {
-          this.loading = false;
-          return;
-        }
         this.loading = false;
-        if (this.companyEmployeeId) {
+        if (this.companyEmployeeId && (!this.isCompanyAdminViewer || this.adminSelfServiceMode)) {
           this.reload();
         }
       },

@@ -122,6 +122,9 @@
             </a>
           </div>
         }
+        @case ('rbac') {
+          <app-rbac-management-panel (statusFlash)="flash($event)"></app-rbac-management-panel>
+        }
       }
     </main>
   </div>

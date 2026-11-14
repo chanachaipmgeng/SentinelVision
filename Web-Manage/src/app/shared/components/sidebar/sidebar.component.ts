@@ -176,34 +176,17 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   checkUrlChanges(): void {
-
-    this.router.events.subscribe((event) => {
-      if (event instanceof NavigationEnd) {
-        this.ParentActive();
-      }
-    });
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) {
         this.previousUrl = this.currentUrl; // Save the previous URL
-        this.currentUrl = event.url; // Update to the new URL
-
-        // Check if there's a change between /installer and /admin
-        if (
-          (this.previousUrl.includes('/company') && this.currentUrl.includes('/admin')) ||
-          (this.previousUrl.includes('/admin') && this.currentUrl.includes('/company'))
-        ) {
-          console.log('URL changed between /installer and /admin.');
-          // Implement any logic needed when changing between /installer and /admin
-        }
+        this.currentUrl = event.urlAfterRedirects || event.url; // Update to the new URL BEFORE ParentActive
 
         // Update the boolean values
         this.isCommonRoute = this.currentUrl.includes('/admin');
         this.isInstallerRoute = this.currentUrl.includes('/company');
 
-        // Log to console for verification
-        console.log('Current URL:', this.currentUrl);
-        console.log('Previous URL:', this.previousUrl);
-        this.changeMenu()
+        this.ParentActive();
+        this.changeMenu();
       }
     });
   }

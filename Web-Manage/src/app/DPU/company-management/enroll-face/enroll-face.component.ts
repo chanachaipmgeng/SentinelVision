@@ -250,6 +250,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   cameraRetrying = false;
   /** Admin/demo chrome without a live camera stream. */
   adminPreviewMode = false;
+  /** BL-04: lock mode-switcher pills with Admin PIN on shared Kiosk tablets. */
+  modeNavLocked = false;
 
   /** Hybrid punch mode: AUTO (first scan = in, next = out) or explicit CHECK_IN / CHECK_OUT */
   punchMode: KioskPunchMode = 'AUTO';
@@ -2408,8 +2410,80 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     this.cdr.detectChanges();
   }
 
-  /** Surface GPS failures loudly only when `stationModeRequiresGps`. */
+  /** BL-04: Lock/Unlock Kiosk station mode switcher with Admin PIN. */
+  toggleModeNavLock(): void {
+    if (!this.modeNavLocked) {
+      this.modeNavLocked = true;
+      this.notify('ล็อกแถบสลับโหมดหน้าจอ Kiosk แล้ว', 'info');
+      this.cdr.detectChanges();
+      return;
+    }
+    const expectedPin = localStorage.getItem('kioskAdminPin') || '1234';
+    swal({
+      title: 'ปลดล็อกโหมด Kiosk',
+      text: 'กรุณากรอกรหัส PIN ผู้ดูแล (ค่าเริ่มต้น: 1234)',
+      content: { element: 'input', attributes: { type: 'password', placeholder: 'PIN 4-6 หลัก' } } as any,
+      buttons: ['ยกเลิก', 'ปลดล็อก'],
+    }).then((val: string | null) => {
+      if (val === null) return;
+      if (String(val).trim() === expectedPin) {
+        this.modeNavLocked = false;
+        this.notify('ปลดล็อกแถบสลับโหมดแล้ว', 'success');
+      } else {
+        this.notify('รหัส PIN ไม่ถูกต้อง', 'error');
+      }
+      this.cdr.detectChanges();
+    });
+  }
+
+  /** BL-03: Fallback employee-code check-in for staff without PDPA biometric consent. */
+  promptPinFallbackCheckin(): void {
+    if (!this.companyId) return;
+    swal({
+      title: 'ลงเวลาด้วยรหัสพนักงาน (PIN Fallback)',
+      text: 'สำหรับพนักงานที่ยังไม่ยินยอมข้อมูลใบหน้า PDPA — กรอกรหัสพนักงาน',
+      content: { element: 'input', attributes: { type: 'text', placeholder: 'เช่น EMP-001' } } as any,
+      buttons: ['ยกเลิก', 'ลงเวลา'],
+    }).then((code: string | null) => {
+      const empCode = String(code || '').trim();
+      if (!empCode) return;
+      this.http
+        .post<{ employeeName?: string; employeeCode?: string }>(
+          `/timestamps/company/${this.companyId}/pin-checkin`,
+          {
+            employeeCode: empCode,
+            timestampType: this.punchMode === 'CHECK_OUT' ? 2 : 1,
+            latitude: this.location.latitude || 0,
+            longitude: this.location.longitude || 0,
+            note: 'PIN_FALLBACK_KIOSK',
+          },
+        )
+        .subscribe({
+          next: (res) => {
+            this.notify(`ลงเวลาสำเร็จ: ${res?.employeeName || empCode} (PIN Fallback)`, 'success');
+          },
+          error: (err) => {
+            this.notify(err?.error?.detail || 'ไม่พบรหัสพนักงานที่ใช้งานอยู่', 'error');
+          },
+        });
+    });
+  }
+
+  /** Surface GPS failures loudly only when `stationModeRequiresGps`, with company/device fallback. */
   private applyGeoFailure(message: string, detail?: unknown): void {
+    const comp = this.tokenService.getSelectCompany();
+    const fallbackLat = Number(comp?.latitude || this.locationList?.[0]?.latitude || 0);
+    const fallbackLng = Number(comp?.longitude || this.locationList?.[0]?.longitude || 0);
+    if (fallbackLat && fallbackLng) {
+      this.location = { latitude: fallbackLat, longitude: fallbackLng };
+      this.locationReady = true;
+      this.errorMessage = null;
+      this.searchCompanyLocation();
+      this.sendWsSession();
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.locationReady = false;
     if (this.gpsRequired) {
       this.errorMessage = message;

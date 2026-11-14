@@ -8,6 +8,7 @@ export interface RbacRoleAssignment {
   role: string;
   companyId: string | null;
   departmentId: string | null;
+  locationId?: string | null;
   source: string;
 }
 

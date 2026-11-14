@@ -1,7 +1,17 @@
 <app-page-header [title]="'บริการตนเอง'" [activeTitle]="'พนักงาน'" [title1]="'Self-Service'"></app-page-header>
 
 <div class="dpu-list-page ess-page">
-  <app-page-toolbar title="Employee Self-Service"></app-page-toolbar>
+  <app-page-toolbar title="Employee Self-Service">
+    <button
+      *ngIf="isCompanyAdminViewer && !missingEmployeeRecord"
+      type="button"
+      class="ti-btn ti-btn-light text-xs"
+      (click)="toggleAdminSelfServiceMode()"
+    >
+      <i class="ri-user-settings-line me-1"></i>
+      {{ adminSelfServiceMode ? 'สลับไปมุมมอง Admin Info' : 'ใช้งาน Self-Service ของฉัน' }}
+    </button>
+  </app-page-toolbar>
   <p class="text-sm text-dpu-muted mb-3">ดูการลงเวลาของฉัน · ขอลา · ขอแก้เวลา</p>
 
   <div *ngIf="loadError" class="ess-error-banner" role="alert">{{ loadError }}</div>

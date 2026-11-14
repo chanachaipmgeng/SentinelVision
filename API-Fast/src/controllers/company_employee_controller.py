@@ -485,11 +485,62 @@ async def update_company_employee(
 
 # ลบ CompanyEmployee ตาม company_employeeId และ companyId
 async def delete_company_employee(company_employeeId: str, companyId: str, db: AsyncSession):
+    from ..services.pdpa_service import erase_member_personal_data
     from ..utils.soft_delete import mark_deleted
 
     company_employee = await get_company_employee_by_id(company_employeeId, companyId, db)
+    cid_uuid = company_employee.companyId
+    mid_uuid = company_employee.memberId
     mark_deleted(company_employee)
     await db.commit()
+    # BL-05: purge 512-d biometric embeddings & consent immediately on employee removal
+    await erase_member_personal_data(db, cid_uuid, mid_uuid, clear_consent=True)
+
+
+async def offboard_company_employee(
+    company_employeeId: str,
+    companyId: str,
+    status_action: str,
+    db: AsyncSession,
+) -> dict:
+    """Offboard an employee (RESIGNED or SUSPENDED) and purge biometric embeddings."""
+    from ..services.pdpa_service import erase_member_personal_data
+    from ..utils.soft_delete import mark_deleted
+
+    action = (status_action or "RESIGNED").strip().upper()
+    if action not in {"RESIGNED", "SUSPENDED"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="status must be RESIGNED or SUSPENDED",
+        )
+
+    company_employee = await get_company_employee_by_id(company_employeeId, companyId, db)
+    cid_uuid = company_employee.companyId
+    mid_uuid = company_employee.memberId
+    erase_res = await erase_member_personal_data(db, cid_uuid, mid_uuid, clear_consent=True)
+
+    if action == "RESIGNED":
+        mark_deleted(company_employee)
+        other_active = await db.execute(
+            select(CompanyEmployee.company_employeeId).where(
+                CompanyEmployee.memberId == company_employee.memberId,
+                CompanyEmployee.company_employeeId != company_employee.company_employeeId,
+                CompanyEmployee.deletedAt.is_(None),
+            ).limit(1)
+        )
+        if other_active.scalar_one_or_none() is None:
+            member = await db.get(Member, company_employee.memberId)
+            if member is not None:
+                member.status = StatusType.DISABLED  # type: ignore[assignment]
+        await db.commit()
+
+    return {
+        "status": action,
+        "company_employeeId": str(company_employee.company_employeeId),
+        "memberId": str(mid_uuid),
+        "biometricsPurged": True,
+        "facesDeleted": erase_res.get("facesDeleted", 0),
+    }
 
 # ค้นหาบริษัทที่ memberId อยู่
 async def get_companies_by_member(memberId: str, db: AsyncSession):

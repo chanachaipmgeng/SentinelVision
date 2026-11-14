@@ -227,3 +227,22 @@ async def get_import_job_route(companyId: str, jobId: str, db: AsyncSession = De
     if not job or str(job.companyId) != companyId:
         raise HTTPException(status_code=404, detail="Import job not found")
     return job.to_public()
+
+
+@router.post("/company/{companyId}/{company_employeeId}/offboard")
+async def offboard_employee_route(
+    companyId: str,
+    company_employeeId: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..controllers.company_employee_controller import offboard_company_employee
+    from ..security.deps import assert_request_company_membership
+
+    await assert_request_company_membership(request, db, companyId)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    status_action = str((body or {}).get("status") or "RESIGNED")
+    return await offboard_company_employee(company_employeeId, companyId, status_action, db)

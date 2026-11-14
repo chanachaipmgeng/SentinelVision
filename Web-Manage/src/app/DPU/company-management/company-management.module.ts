@@ -106,6 +106,8 @@ export const companyRoutes: Routes = [
         import('./hr-schedule/hr-schedule.component').then((m) => m.HrScheduleComponent),
       children: [
         { path: '', pathMatch: 'full', redirectTo: 'shifts' },
+        { path: 'leave-ot', pathMatch: 'full', redirectTo: 'leaves' },
+        { path: 'payroll', pathMatch: 'full', redirectTo: 'observability' },
         {
           path: 'shifts',
           loadComponent: () =>

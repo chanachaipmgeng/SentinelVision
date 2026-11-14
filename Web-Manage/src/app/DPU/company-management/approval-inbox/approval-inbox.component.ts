@@ -1,13 +1,20 @@
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { forkJoin, Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
+import { PermissionService } from '../../../shared/services/permission.service';
 import { TimestampService } from '../../services/timestamp.service';
-import { ApprovalInboxItem, ApprovalService } from '../../services/approval.service';
+import {
+  ApprovalDelegationItem,
+  ApprovalInboxItem,
+  ApprovalLevelConfig,
+  ApprovalService,
+} from '../../services/approval.service';
 import { KpiGridComponent, KpiItem } from '../../../shared/components/kpi-grid/kpi-grid.component';
 import { SavedViewsBarComponent } from '../../../shared/components/saved-views-bar/saved-views-bar.component';
 import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
@@ -68,6 +75,19 @@ export class ApprovalInboxComponent implements OnInit {
   filtered: ApprovalInboxItem[] = [];
   selectedKeys = new Set<string>();
 
+  showChainPanel = false;
+  chainBusy = false;
+  chainDepth = 1;
+  approvalLevels: ApprovalLevelConfig[] = [];
+  delegations: ApprovalDelegationItem[] = [];
+  delegateMembers: { id: string; label: string }[] = [];
+  delegationForm = {
+    delegateMemberId: '',
+    startDate: '',
+    endDate: '',
+    reason: '',
+  };
+
   get pendingCount(): number {
     return this.items.length;
   }
@@ -83,7 +103,9 @@ export class ApprovalInboxComponent implements OnInit {
   constructor(
     private approvals: ApprovalService,
     private timestamps: TimestampService,
-    private token: TokenService
+    private token: TokenService,
+    private http: HttpClient,
+    public permissions: PermissionService
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
     this.kpis = this.buildKpis();
@@ -91,6 +113,101 @@ export class ApprovalInboxComponent implements OnInit {
 
   ngOnInit(): void {
     this.reload();
+    this.loadChainAndDelegations();
+  }
+
+  toggleChainPanel(): void {
+    this.showChainPanel = !this.showChainPanel;
+    if (this.showChainPanel) {
+      this.loadChainAndDelegations();
+    }
+  }
+
+  loadChainAndDelegations(): void {
+    if (!this.companyId) return;
+    forkJoin({
+      policy: this.approvals.getApprovalPolicy(this.companyId).pipe(catchError(() => of({ levels: [] }))),
+      delegations: this.approvals.listDelegations(this.companyId).pipe(catchError(() => of({ items: [], total: 0 }))),
+      employees: this.http.get<unknown[]>(`/employees/company/${this.companyId}`).pipe(catchError(() => of([]))),
+    }).subscribe({
+      next: (res) => {
+        this.approvalLevels = res.policy.levels || [];
+        this.chainDepth = Math.max(1, Math.min(3, this.approvalLevels.length || 1));
+        this.delegations = res.delegations.items || [];
+        const seen = new Set<string>();
+        this.delegateMembers = [];
+        for (const raw of (Array.isArray(res.employees) ? res.employees : []) as Record<string, unknown>[]) {
+          const m = (raw['member'] as Record<string, unknown>) || raw;
+          const mid = String(m['memberId'] || raw['memberId'] || '');
+          if (!mid || seen.has(mid)) continue;
+          seen.add(mid);
+          const name = `${String(m['firstName'] || '')} ${String(m['lastName'] || '')}`.trim() || String(m['username'] || mid);
+          this.delegateMembers.push({ id: mid, label: name });
+        }
+      },
+    });
+  }
+
+  saveChainDepth(): void {
+    if (!this.companyId || this.chainBusy) return;
+    const levels: ApprovalLevelConfig[] =
+      this.chainDepth === 3
+        ? [
+            { level: 1, role: 'MANAGER', label: 'Line Manager' },
+            { level: 2, role: 'MANAGER', label: 'Department Manager' },
+            { level: 3, role: 'HR_ADMIN', label: 'HR Final' },
+          ]
+        : this.chainDepth === 2
+          ? [
+              { level: 1, role: 'MANAGER', label: 'Line Manager' },
+              { level: 2, role: 'HR_ADMIN', label: 'HR Final' },
+            ]
+          : [{ level: 1, role: 'MANAGER', label: 'Line Manager' }];
+    this.chainBusy = true;
+    this.approvals.saveApprovalPolicy(this.companyId, { requestType: 'ALL', levels }).subscribe({
+      next: (res) => {
+        this.chainBusy = false;
+        this.approvalLevels = res.levels || levels;
+        swal('สำเร็จ', 'บันทึกสายอนุมัติแล้ว', 'success');
+      },
+      error: (err) => {
+        this.chainBusy = false;
+        swal('Error', err?.error?.detail || 'บันทึกสายอนุมัติไม่สำเร็จ', 'error');
+      },
+    });
+  }
+
+  addDelegation(): void {
+    if (!this.companyId || this.chainBusy) return;
+    if (!this.delegationForm.delegateMemberId || !this.delegationForm.startDate || !this.delegationForm.endDate) return;
+    this.chainBusy = true;
+    this.approvals.createDelegation(this.companyId, this.delegationForm).subscribe({
+      next: () => {
+        this.chainBusy = false;
+        this.delegationForm = { delegateMemberId: '', startDate: '', endDate: '', reason: '' };
+        swal('สำเร็จ', 'ตั้งค่าผู้อนุมัติแทนแล้ว', 'success');
+        this.loadChainAndDelegations();
+      },
+      error: (err) => {
+        this.chainBusy = false;
+        swal('Error', err?.error?.detail || 'ตั้งค่าผู้อนุมัติแทนไม่สำเร็จ', 'error');
+      },
+    });
+  }
+
+  removeDelegation(d: ApprovalDelegationItem): void {
+    if (!this.companyId || this.chainBusy) return;
+    this.chainBusy = true;
+    this.approvals.deleteDelegation(this.companyId, d.delegationId).subscribe({
+      next: () => {
+        this.chainBusy = false;
+        this.loadChainAndDelegations();
+      },
+      error: (err) => {
+        this.chainBusy = false;
+        swal('Error', err?.error?.detail || 'ลบผู้อนุมัติแทนไม่สำเร็จ', 'error');
+      },
+    });
   }
 
   reload(): void {

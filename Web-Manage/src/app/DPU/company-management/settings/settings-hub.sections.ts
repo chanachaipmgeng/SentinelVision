@@ -8,7 +8,8 @@ export type SettingsSectionId =
   | 'api-keys'
   | 'scan-actions'
   | 'devices'
-  | 'shifts';
+  | 'shifts'
+  | 'rbac';
 
 export interface SettingsSection {
   id: SettingsSectionId;
@@ -134,6 +135,13 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     hintKey: 'settingsHub.section.shifts.hint',
     icon: 'ri-time-line',
     permission: 'hr.shifts',
+  },
+  {
+    id: 'rbac',
+    labelKey: 'settingsHub.section.rbac',
+    hintKey: 'settingsHub.section.rbac.hint',
+    icon: 'ri-shield-user-line',
+    permission: 'company.settings',
   },
 ];
 

@@ -16,6 +16,8 @@ from ..controllers import hr_controller
 from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding
 from ..models.approvals_payroll import (
+    ApprovalDelegation,
+    ApprovalPolicy,
     ApprovalRequestStatus,
     LeaveBalance,
     OtApprovalRequest,
@@ -41,6 +43,11 @@ from ..security.deps import (
     assert_request_permission,
 )
 from ..services.approval_gate import assert_can_approve_for_employee, can_approve_for_employee
+from ..services.approval_chain_service import (
+    advance_approval_step,
+    get_company_approval_levels,
+    level_label_for,
+)
 from ..services.attendance_summary_service import (
     recompute_company_holiday,
     recompute_leave_range,
@@ -434,6 +441,9 @@ def _serialize_leave(lr: LeaveRequest, emp: Optional[CompanyEmployee]) -> dict:
         "approvedBy": str(lr.approvedBy) if lr.approvedBy else None,
         "approvedAt": lr.approvedAt,
         "rejectReason": lr.rejectReason or "",
+        "approvalLevel": int(getattr(lr, "approvalLevel", 1) or 1),
+        "maxApprovalLevel": int(getattr(lr, "maxApprovalLevel", 1) or 1),
+        "approvalHistory": list(getattr(lr, "approvalHistory", None) or []),
         "createdAt": lr.createdAt,
     }
 
@@ -516,6 +526,7 @@ async def create_leave_request(
     await _assert_no_leave_overlap(db, companyId, emp_id, start_d, end_d)
     await _assert_leave_balance_available(db, companyId, emp_id, leave_type, start_d, end_d)
 
+    levels = await get_company_approval_levels(db, companyId, "LEAVE")
     lr = LeaveRequest(
         companyId=companyId,
         company_employeeId=emp_id,
@@ -524,6 +535,8 @@ async def create_leave_request(
         endDate=end_d,
         reason=reason,
         status="APPROVED" if auto_approve else "PENDING",
+        approvalLevel=len(levels) if auto_approve else 1,
+        maxApprovalLevel=len(levels),
         approvedAt=datetime.now(timezone.utc) if auto_approve else None,
     )
     db.add(lr)
@@ -575,35 +588,37 @@ async def approve_or_reject_leave(
         approve = bool(body.approve if body.approve is not None else True)
 
     prev = (lr.status or "").upper()
-    if approve:
-        lr.status = "APPROVED"
-        lr.rejectReason = None
-        if prev != "APPROVED":
-            bal = await _get_or_create_leave_balance(
-                db, companyId, lr.company_employeeId, lr.leaveType, lr.startDate.year
+    is_final_approved = await advance_approval_step(
+        db,
+        lr,
+        companyId,
+        emp,
+        caller,
+        approve,
+        body.rejectReason,
+        "LEAVE",
+    )
+    if is_final_approved and prev != "APPROVED":
+        bal = await _get_or_create_leave_balance(
+            db, companyId, lr.company_employeeId, lr.leaveType, lr.startDate.year
+        )
+        days = float(_leave_days(lr.startDate, lr.endDate))
+        if float(bal.entitledDays or 0) > 0 and bal.remainingDays < days:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Insufficient leave balance: remaining {bal.remainingDays}, requested {days}",
             )
-            days = float(_leave_days(lr.startDate, lr.endDate))
-            if float(bal.entitledDays or 0) > 0 and bal.remainingDays < days:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Insufficient leave balance: remaining {bal.remainingDays}, requested {days}",
-                )
-            bal.usedDays = float(bal.usedDays or 0) + days
-    else:
-        lr.status = "REJECTED"
-        lr.rejectReason = str(body.rejectReason or "ไม่อนุมัติ").strip()
-    # approvedBy from JWT only — ignore any client body field
-    lr.approvedBy = caller.memberId if caller else None
-    lr.approvedAt = datetime.now(timezone.utc)
+        bal.usedDays = float(bal.usedDays or 0) + days
     await db.commit()
     await db.refresh(lr)
 
-    try:
-        await recompute_leave_range(
-            companyId, lr.company_employeeId, lr.startDate, lr.endDate, db
-        )
-    except Exception:
-        pass
+    if is_final_approved:
+        try:
+            await recompute_leave_range(
+                companyId, lr.company_employeeId, lr.startDate, lr.endDate, db
+            )
+        except Exception:
+            pass
     return _serialize_leave(lr, emp)
 
 
@@ -890,6 +905,9 @@ def _serialize_regularization(row: RegularizationRequest, emp: Optional[CompanyE
         "approvedBy": str(row.approvedBy) if row.approvedBy else None,
         "approvedAt": row.approvedAt,
         "rejectReason": row.rejectReason or "",
+        "approvalLevel": int(getattr(row, "approvalLevel", 1) or 1),
+        "maxApprovalLevel": int(getattr(row, "maxApprovalLevel", 1) or 1),
+        "approvalHistory": list(getattr(row, "approvalHistory", None) or []),
         "createdAt": row.createdAt,
     }
 
@@ -917,6 +935,9 @@ def _serialize_ot(row: OtApprovalRequest, emp: Optional[CompanyEmployee]) -> dic
         "approvedBy": str(row.approvedBy) if row.approvedBy else None,
         "approvedAt": row.approvedAt,
         "rejectReason": row.rejectReason or "",
+        "approvalLevel": int(getattr(row, "approvalLevel", 1) or 1),
+        "maxApprovalLevel": int(getattr(row, "maxApprovalLevel", 1) or 1),
+        "approvalHistory": list(getattr(row, "approvalHistory", None) or []),
         "createdAt": row.createdAt,
     }
 
@@ -992,6 +1013,10 @@ async def approval_inbox(
     )
     emps = await _emps_map(db, emp_ids)
 
+    levels_leave = await get_company_approval_levels(db, companyId, "LEAVE")
+    levels_reg = await get_company_approval_levels(db, companyId, "REGULARIZATION")
+    levels_ot = await get_company_approval_levels(db, companyId, "OT")
+
     items: list[dict] = []
     for lr in leaves:
         emp = emps.get(lr.company_employeeId)
@@ -999,17 +1024,22 @@ async def approval_inbox(
             continue
         payload = _serialize_leave(lr, emp)
         payload["kind"] = "LEAVE"
+        payload["currentLevelLabel"] = level_label_for(levels_leave, payload["approvalLevel"])
         items.append(payload)
     for r in regs:
         emp = emps.get(r.company_employeeId)
         if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
             continue
-        items.append(_serialize_regularization(r, emp))
+        payload = _serialize_regularization(r, emp)
+        payload["currentLevelLabel"] = level_label_for(levels_reg, payload["approvalLevel"])
+        items.append(payload)
     for o in ots:
         emp = emps.get(o.company_employeeId)
         if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
             continue
-        items.append(_serialize_ot(o, emp))
+        payload = _serialize_ot(o, emp)
+        payload["currentLevelLabel"] = level_label_for(levels_ot, payload["approvalLevel"])
+        items.append(payload)
     for p in punches:
         emp = emps.get(p.company_employeeId)
         if emp and caller and not await can_approve_for_employee(db, caller, companyId, emp):
@@ -1133,8 +1163,18 @@ async def create_regularization(
 ):
     await assert_request_company_membership(request, db, companyId)
     emp_id = UUID(str(body.get("company_employeeId") or ""))
-    emp = await db.get(CompanyEmployee, emp_id)
-    if not emp or emp.companyId != companyId or emp.deletedAt is not None:
+    emp = (
+        await db.execute(
+            select(CompanyEmployee)
+            .where(
+                CompanyEmployee.company_employeeId == emp_id,
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+            .options(selectinload(CompanyEmployee.member))
+        )
+    ).scalar_one_or_none()
+    if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     try:
         work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
@@ -1142,6 +1182,7 @@ async def create_regularization(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workDate and requestedTimestamp required") from None
     await assert_date_not_locked(db, companyId, work_d)
+    levels = await get_company_approval_levels(db, companyId, "REGULARIZATION")
     row = RegularizationRequest(
         companyId=companyId,
         company_employeeId=emp_id,
@@ -1150,6 +1191,8 @@ async def create_regularization(
         requestedType=int(body.get("requestedType") or 1),
         reason=str(body.get("reason") or "").strip(),
         status=ApprovalRequestStatus.PENDING.value,
+        approvalLevel=1,
+        maxApprovalLevel=len(levels),
         originalTimestampId=UUID(str(body["originalTimestampId"])) if body.get("originalTimestampId") else None,
     )
     db.add(row)
@@ -1170,20 +1213,28 @@ async def decide_regularization(
     row = await db.get(RegularizationRequest, requestId)
     if not row or row.companyId != companyId:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Regularization request not found")
-    emp = await db.get(CompanyEmployee, row.company_employeeId)
+    emp = (
+        await db.execute(
+            select(CompanyEmployee)
+            .where(CompanyEmployee.company_employeeId == row.company_employeeId)
+            .options(selectinload(CompanyEmployee.member))
+        )
+    ).scalar_one_or_none()
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     await assert_can_approve_for_employee(db, caller, companyId, emp)
     await assert_date_not_locked(db, companyId, row.workDate)
     approve = bool(body.get("approve", True))
-    if approve:
-        row.status = ApprovalRequestStatus.APPROVED.value
-        row.rejectReason = None
-    else:
-        row.status = ApprovalRequestStatus.REJECTED.value
-        row.rejectReason = str(body.get("rejectReason") or "ไม่อนุมัติ").strip()
-    row.approvedBy = caller.memberId if caller else None
-    row.approvedAt = datetime.now(timezone.utc)
+    await advance_approval_step(
+        db,
+        row,
+        companyId,
+        emp,
+        caller,
+        approve,
+        body.get("rejectReason"),
+        "REGULARIZATION",
+    )
     await db.commit()
     await db.refresh(row)
     return _serialize_regularization(row, emp)
@@ -1222,8 +1273,18 @@ async def create_ot_approval(
 ):
     await assert_request_company_membership(request, db, companyId)
     emp_id = UUID(str(body.get("company_employeeId") or ""))
-    emp = await db.get(CompanyEmployee, emp_id)
-    if not emp or emp.companyId != companyId or emp.deletedAt is not None:
+    emp = (
+        await db.execute(
+            select(CompanyEmployee)
+            .where(
+                CompanyEmployee.company_employeeId == emp_id,
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+            .options(selectinload(CompanyEmployee.member))
+        )
+    ).scalar_one_or_none()
+    if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     try:
         work_d = date.fromisoformat(str(body.get("workDate") or "")[:10])
@@ -1239,6 +1300,7 @@ async def create_ot_approval(
     requires = True
     if threshold is not None and ot_minutes <= int(threshold):
         requires = False
+    levels = await get_company_approval_levels(db, companyId, "OT")
     row = OtApprovalRequest(
         companyId=companyId,
         company_employeeId=emp_id,
@@ -1252,6 +1314,8 @@ async def create_ot_approval(
             else ApprovalRequestStatus.PENDING.value
         ),
         requiresApproval=requires,
+        approvalLevel=len(levels) if not requires else 1,
+        maxApprovalLevel=len(levels),
         approvedAt=datetime.now(timezone.utc) if not requires else None,
     )
     db.add(row)
@@ -1272,20 +1336,28 @@ async def decide_ot_approval(
     row = await db.get(OtApprovalRequest, requestId)
     if not row or row.companyId != companyId:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OT approval request not found")
-    emp = await db.get(CompanyEmployee, row.company_employeeId)
+    emp = (
+        await db.execute(
+            select(CompanyEmployee)
+            .where(CompanyEmployee.company_employeeId == row.company_employeeId)
+            .options(selectinload(CompanyEmployee.member))
+        )
+    ).scalar_one_or_none()
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found")
     await assert_can_approve_for_employee(db, caller, companyId, emp)
     await assert_date_not_locked(db, companyId, row.workDate)
     approve = bool(body.get("approve", True))
-    if approve:
-        row.status = ApprovalRequestStatus.APPROVED.value
-        row.rejectReason = None
-    else:
-        row.status = ApprovalRequestStatus.REJECTED.value
-        row.rejectReason = str(body.get("rejectReason") or "ไม่อนุมัติ").strip()
-    row.approvedBy = caller.memberId if caller else None
-    row.approvedAt = datetime.now(timezone.utc)
+    await advance_approval_step(
+        db,
+        row,
+        companyId,
+        emp,
+        caller,
+        approve,
+        body.get("rejectReason"),
+        "OT",
+    )
     await db.commit()
     await db.refresh(row)
     return _serialize_ot(row, emp)
@@ -1375,3 +1447,226 @@ async def close_payroll_period(
     except Exception:
         pass
     return serialize_period(period)
+
+
+# ---------------------------------------------------------------------------
+# BL-07 Multi-level Approval Policy & Delegate Approver
+# ---------------------------------------------------------------------------
+@router.get("/company/{companyId}/approval-policy")
+async def get_approval_policy(
+    companyId: UUID,
+    request: Request,
+    request_type: str = "ALL",
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    levels = await get_company_approval_levels(db, companyId, request_type)
+    return {
+        "companyId": str(companyId),
+        "requestType": (request_type or "ALL").upper(),
+        "levels": levels,
+    }
+
+
+@router.put("/company/{companyId}/approval-policy")
+async def upsert_approval_policy(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import rbac_service
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    await rbac_service.assert_permission(db, caller, rbac_service.PERM_COMPANY_SETTINGS, companyId)
+
+    req_type = str(body.get("requestType") or "ALL").strip().upper()
+    raw_levels = body.get("levels")
+    if not isinstance(raw_levels, list) or not raw_levels:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="levels list is required")
+    if len(raw_levels) > 5:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Maximum 5 approval levels supported")
+
+    normalized_levels = []
+    for idx, lvl in enumerate(raw_levels, start=1):
+        if not isinstance(lvl, dict):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid level item")
+        normalized_levels.append(
+            {
+                "level": idx,
+                "role": str(lvl.get("role") or "MANAGER").strip().upper(),
+                "label": str(lvl.get("label") or f"Level {idx}").strip(),
+            }
+        )
+
+    existing = (
+        await db.execute(
+            select(ApprovalPolicy).where(
+                ApprovalPolicy.companyId == companyId,
+                ApprovalPolicy.requestType == req_type,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        existing = ApprovalPolicy(
+            companyId=companyId,
+            requestType=req_type,
+            levels=normalized_levels,
+            isActive=True,
+        )
+        db.add(existing)
+    else:
+        existing.levels = normalized_levels
+        existing.isActive = True
+    await db.commit()
+    await db.refresh(existing)
+    return {
+        "policyId": str(existing.policyId),
+        "companyId": str(existing.companyId),
+        "requestType": existing.requestType,
+        "levels": existing.levels,
+    }
+
+
+@router.get("/company/{companyId}/approval-delegations")
+async def list_approval_delegations(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..models.member import Member
+
+    await assert_request_company_membership(request, db, companyId)
+    rows = (
+        await db.execute(
+            select(ApprovalDelegation)
+            .where(ApprovalDelegation.companyId == companyId)
+            .order_by(ApprovalDelegation.createdAt.desc())
+            .limit(100)
+        )
+    ).scalars().all()
+
+    member_ids = list({r.delegatorMemberId for r in rows} | {r.delegateMemberId for r in rows})
+    members = (
+        {
+            m.memberId: m
+            for m in (
+                await db.execute(select(Member).where(Member.memberId.in_(member_ids)))
+            ).scalars().all()
+        }
+        if member_ids
+        else {}
+    )
+
+    def _name(mid: UUID) -> str:
+        m = members.get(mid)
+        if not m:
+            return ""
+        return f"{getattr(m, 'firstName', '') or ''} {getattr(m, 'lastName', '') or ''}".strip() or getattr(
+            m, "username", ""
+        )
+
+    items = [
+        {
+            "delegationId": str(r.delegationId),
+            "companyId": str(r.companyId),
+            "delegatorMemberId": str(r.delegatorMemberId),
+            "delegatorName": _name(r.delegatorMemberId),
+            "delegateMemberId": str(r.delegateMemberId),
+            "delegateName": _name(r.delegateMemberId),
+            "startDate": r.startDate.isoformat() if r.startDate else None,
+            "endDate": r.endDate.isoformat() if r.endDate else None,
+            "reason": r.reason or "",
+            "isActive": bool(r.isActive),
+            "createdAt": r.createdAt,
+        }
+        for r in rows
+    ]
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/company/{companyId}/approval-delegations")
+async def create_approval_delegation(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..models.member import Member
+    from ..services import rbac_service
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    if caller is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required")
+
+    delegator_raw = body.get("delegatorMemberId")
+    delegator_id = UUID(str(delegator_raw)) if delegator_raw else caller.memberId
+    if delegator_id != caller.memberId:
+        await rbac_service.assert_permission(db, caller, rbac_service.PERM_COMPANY_SETTINGS, companyId)
+
+    try:
+        delegate_id = UUID(str(body.get("delegateMemberId") or ""))
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="delegateMemberId required") from None
+
+    if delegate_id == delegator_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delegate to self")
+
+    delegate_member = await db.get(Member, delegate_id)
+    if delegate_member is None or delegate_member.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delegate member not found")
+
+    try:
+        start_d = date.fromisoformat(str(body.get("startDate") or "")[:10])
+        end_d = date.fromisoformat(str(body.get("endDate") or "")[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required") from None
+    if end_d < start_d:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
+
+    row = ApprovalDelegation(
+        companyId=companyId,
+        delegatorMemberId=delegator_id,
+        delegateMemberId=delegate_id,
+        startDate=start_d,
+        endDate=end_d,
+        reason=str(body.get("reason") or "").strip() or None,
+        isActive=True,
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    return {
+        "delegationId": str(row.delegationId),
+        "companyId": str(row.companyId),
+        "delegatorMemberId": str(row.delegatorMemberId),
+        "delegateMemberId": str(row.delegateMemberId),
+        "startDate": row.startDate.isoformat(),
+        "endDate": row.endDate.isoformat(),
+        "reason": row.reason or "",
+        "isActive": bool(row.isActive),
+    }
+
+
+@router.delete("/company/{companyId}/approval-delegations/{delegationId}")
+async def delete_approval_delegation(
+    companyId: UUID,
+    delegationId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import rbac_service
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    row = await db.get(ApprovalDelegation, delegationId)
+    if row is None or row.companyId != companyId:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delegation not found")
+    if caller is None or (
+        row.delegatorMemberId != caller.memberId
+        and not await rbac_service.has_permission(db, caller, rbac_service.PERM_COMPANY_SETTINGS, companyId)
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not permitted to remove this delegation")
+
+    await db.delete(row)
+    await db.commit()
+    return {"status": "deleted", "delegationId": str(delegationId)}

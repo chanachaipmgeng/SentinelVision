@@ -4,9 +4,10 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -90,6 +91,17 @@ class RegularizationRequest(Base):
     approvedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
+    approvalLevel: Mapped[int] = mapped_column("approval_level", Integer, nullable=False, default=1, server_default="1")
+    maxApprovalLevel: Mapped[int] = mapped_column(
+        "max_approval_level", Integer, nullable=False, default=1, server_default="1"
+    )
+    approvalHistory: Mapped[Any] = mapped_column(
+        "approval_history",
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
@@ -126,6 +138,17 @@ class OtApprovalRequest(Base):
     approvedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
+    approvalLevel: Mapped[int] = mapped_column("approval_level", Integer, nullable=False, default=1, server_default="1")
+    maxApprovalLevel: Mapped[int] = mapped_column(
+        "max_approval_level", Integer, nullable=False, default=1, server_default="1"
+    )
+    approvalHistory: Mapped[Any] = mapped_column(
+        "approval_history",
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updatedAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
 
@@ -164,4 +187,81 @@ class PayrollPeriod(Base):
             unique=True,
         ),
         Index("payroll_period_company_status_idx", "companyId", "status"),
+    )
+
+
+class ApprovalPolicy(Base):
+    """Multi-level approval chain configuration per company and request type."""
+
+    __tablename__ = "approval_policy"
+
+    policyId: Mapped[uuid.UUID] = mapped_column(
+        "policy_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    requestType: Mapped[str] = mapped_column(
+        "request_type", String(30), nullable=False, default="ALL", server_default="ALL"
+    )
+    levels: Mapped[Any] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
+    isActive: Mapped[bool] = mapped_column(
+        "is_active", Boolean, nullable=False, default=True, server_default="true"
+    )
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("uq_approval_policy_company_type", "companyId", "request_type", unique=True),
+    )
+
+
+class ApprovalDelegation(Base):
+    """Delegate approver assignment when a manager/approver is on leave."""
+
+    __tablename__ = "approval_delegation"
+
+    delegationId: Mapped[uuid.UUID] = mapped_column(
+        "delegation_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    delegatorMemberId: Mapped[uuid.UUID] = mapped_column(
+        "delegator_member_id",
+        UUID(as_uuid=True),
+        ForeignKey("member.memberId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    delegateMemberId: Mapped[uuid.UUID] = mapped_column(
+        "delegate_member_id",
+        UUID(as_uuid=True),
+        ForeignKey("member.memberId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    startDate: Mapped[date] = mapped_column("start_date", Date, nullable=False)
+    endDate: Mapped[date] = mapped_column("end_date", Date, nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    isActive: Mapped[bool] = mapped_column(
+        "is_active", Boolean, nullable=False, default=True, server_default="true"
+    )
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("approval_delegation_company_delegate_idx", "companyId", "delegate_member_id", "is_active"),
+        Index("approval_delegation_company_delegator_idx", "companyId", "delegator_member_id", "is_active"),
     )

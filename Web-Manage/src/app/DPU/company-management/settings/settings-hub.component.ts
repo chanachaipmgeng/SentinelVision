@@ -19,6 +19,7 @@ import { IncidentSlaSettingsPanelComponent } from './panels/incident-sla-setting
 import { NotificationSettingsPanelComponent } from './panels/notification-settings-panel/notification-settings-panel.component';
 import { ScanActionsSummaryPanelComponent } from './panels/scan-actions-summary-panel.component';
 import { SessionSettingsPanelComponent } from './panels/session-settings-panel.component';
+import { RbacManagementPanelComponent } from './panels/rbac-management-panel.component';
 import {
   SHIFT_LINK_CARDS,
   SettingsSection,
@@ -46,6 +47,7 @@ import {
         DevicesSummaryPanelComponent,
         HrSecurityTabComponent,
         HrPdpaTabComponent,
+        RbacManagementPanelComponent,
     ],
     templateUrl: './settings-hub.component.html',
     styleUrls: ['./settings-hub.component.css'],

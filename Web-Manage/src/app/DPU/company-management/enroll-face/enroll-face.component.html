@@ -65,7 +65,7 @@
         <span class="dpu-kiosk__mode-badge">{{ stationMode }}</span>
       </p>
       <h1 class="dpu-kiosk__title">{{ kioskTitle | translate }}</h1>
-      <nav *ngIf="!isKioskDevice" class="dpu-kiosk__mode-nav" aria-label="สลับโหมดสถานีสแกน">
+      <nav *ngIf="!isKioskDevice && !modeNavLocked" class="dpu-kiosk__mode-nav" aria-label="สลับโหมดสถานีสแกน">
         <a routerLink="/company/scan/attendance" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Attendance</a>
         <a routerLink="/company/scan/access-control" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Access</a>
         <a routerLink="/company/scan/watchlist" routerLinkActive="is-active" class="dpu-kiosk__mode-pill">Watchlist</a>
@@ -75,6 +75,24 @@
       </nav>
     </div>
     <div class="dpu-kiosk__top-actions">
+      <button
+        *ngIf="stationMode === 'ATTENDANCE'"
+        type="button"
+        class="dpu-kiosk__home-btn"
+        (click)="promptPinFallbackCheckin()"
+        title="ลงเวลาด้วยรหัสพนักงาน (PDPA Fallback)">
+        <i class="ri-key-2-line" aria-hidden="true"></i>
+        <span>PIN Check-in</span>
+      </button>
+      <button
+        *ngIf="!isKioskDevice"
+        type="button"
+        class="dpu-kiosk__home-btn"
+        (click)="toggleModeNavLock()"
+        [title]="modeNavLocked ? 'ปลดล็อกแถบสลับโหมด (PIN)' : 'ล็อกแถบสลับโหมด Kiosk'">
+        <i [class]="modeNavLocked ? 'ri-lock-2-line' : 'ri-lock-unlock-line'" aria-hidden="true"></i>
+        <span>{{ modeNavLocked ? 'ปลดล็อกโหมด' : 'ล็อกโหมด' }}</span>
+      </button>
       <button
         type="button"
         class="dpu-kiosk__home-btn"

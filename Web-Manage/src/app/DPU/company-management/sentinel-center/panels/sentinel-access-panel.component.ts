@@ -63,12 +63,17 @@ export class SentinelAccessPanelComponent implements OnInit {
   }
 
   remoteUnlockZone(zoneId: string): void {
+    const started = performance.now();
     this.api
       .triggerZone(this.companyId, zoneId, 'Admin Console Remote Unlock')
       .subscribe({
         next: () => {
-          this.toast.emit('ส่งคำสั่งปลดล็อกประตูเรียบร้อยแล้ว');
+          const ms = Math.round(performance.now() - started);
+          this.toast.emit(`ส่งคำสั่งปลดล็อกประตูเรียบร้อยแล้ว (${ms} ms)`);
           this.overviewChanged.emit();
+        },
+        error: () => {
+          this.toast.emit('ไม่สามารถติดต่อ Relay / ปลดล็อกประตูไม่สำเร็จ');
         },
       });
   }

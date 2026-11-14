@@ -30,6 +30,14 @@
       </a>
       <button
         type="button"
+        class="ti-btn ti-btn-light font-semibold text-xs"
+        [disabled]="incidents.length === 0"
+        (click)="exportCsv()"
+      >
+        <i class="ri-download-2-line me-1"></i> Export CSV
+      </button>
+      <button
+        type="button"
         class="ti-btn ti-btn-primary-full font-semibold text-xs"
         (click)="openScanForFilter()"
       >

@@ -14,7 +14,7 @@ import {
   setIncidentSoundEnabled,
   unlockBeepAudio,
 } from '../../../../shared/utils/beep';
-import { accessZoneScanRoute } from '../sentinel.helpers';
+import { accessZoneScanRoute, downloadIncidentsCsv } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';
 import { CameraEventClip, SentinelIncident, SentinelZone } from '../sentinel.models';
 
@@ -377,6 +377,10 @@ export class SentinelAccessLogsPanelComponent implements OnInit, OnDestroy {
     this.toast.emit(`เหตุการณ์ใหม่: ${label}`);
     playIncidentEventSound(newest.eventType);
     this.overviewChanged.emit();
+  }
+
+  exportCsv(): void {
+    downloadIncidentsCsv(this.incidents, 'access-logs');
   }
 
   private pruneSelection(): void {

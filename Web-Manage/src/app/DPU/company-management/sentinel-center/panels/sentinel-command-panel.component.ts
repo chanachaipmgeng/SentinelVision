@@ -5,7 +5,7 @@ import { RouterModule } from '@angular/router';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SentinelApiService } from '../sentinel-api.service';
-import { defaultScanForm, firstFileFromInput } from '../sentinel.helpers';
+import { defaultScanForm, downloadIncidentsCsv, firstFileFromInput } from '../sentinel.helpers';
 import {
   SentinelEventRule,
   SentinelIncident,
@@ -185,6 +185,10 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   /** True when the incident is still actionable (not CLOSED). */
+  exportIncidentsCsv(): void {
+    downloadIncidentsCsv(this.incidents, 'security-incidents');
+  }
+
   canActOnIncident(inc: SentinelIncident): boolean {
     const st = (inc?.status || 'OPEN').toUpperCase();
     return st !== 'CLOSED';

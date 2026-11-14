@@ -157,3 +157,46 @@ export function filterIncidentsByZone(
   if (!id) return rows;
   return rows.filter((inc) => String(inc?.zoneId || '') === id);
 }
+
+/** Export SentinelIncident rows as UTF-8 BOM CSV for Excel/SIEM review. */
+export function downloadIncidentsCsv(
+  incidents: SentinelIncident[] | null | undefined,
+  filenamePrefix: string,
+): void {
+  const list = incidents || [];
+  if (!list.length) return;
+  const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = [
+    'OccurredAt',
+    'Subject',
+    'IdentityType',
+    'Zone',
+    'EventType',
+    'Severity',
+    'Status',
+    'Confidence',
+    'ActionTaken',
+  ].join(',');
+  const rows = list.map((i) =>
+    [
+      esc(i.occurredAt),
+      esc(i.subjectName || 'Unknown'),
+      esc(i.identityType || ''),
+      esc(i.zoneName || ''),
+      esc(i.eventType || ''),
+      esc(i.severity || ''),
+      esc(i.status || 'OPEN'),
+      esc(i.confidencePercent ?? ''),
+      esc(i.actionTaken || ''),
+    ].join(',')
+  );
+  const blob = new Blob(['\uFEFF' + [header, ...rows].join('\r\n')], {
+    type: 'text/csv;charset=utf-8;',
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

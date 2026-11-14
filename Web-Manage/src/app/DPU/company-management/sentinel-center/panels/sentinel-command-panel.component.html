@@ -210,6 +210,14 @@
                     <option value="ASSIGNED">ASSIGNED (มอบหมายแล้ว)</option>
                     <option value="CLOSED">CLOSED (ปิดแล้ว)</option>
                   </select>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-light !py-1 !px-2.5 text-xs font-semibold"
+                    [disabled]="incidents.length === 0"
+                    (click)="exportIncidentsCsv()"
+                  >
+                    <i class="ri-download-2-line me-1"></i> CSV
+                  </button>
                   <a
                     routerLink="/company/access-control/logs"
                     class="text-xs font-semibold text-teal-800 hover:underline"

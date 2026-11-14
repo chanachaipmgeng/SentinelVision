@@ -182,7 +182,7 @@ async def _emit_crowd(
     min_count: int,
     snapshot_url: Optional[str] = None,
 ) -> None:
-    from ..services.sentinel_incident_service import record_incident
+    from src.services.sentinel_incident_service import record_incident
 
     await record_incident(
         db,
@@ -207,7 +207,7 @@ async def _emit_loiter(
     det: dict[str, Any],
     snapshot_url: Optional[str] = None,
 ) -> None:
-    from ..services.sentinel_incident_service import record_incident
+    from src.services.sentinel_incident_service import record_incident
 
     dwell = float(det.get("dwell_seconds") or 0)
     await record_incident(

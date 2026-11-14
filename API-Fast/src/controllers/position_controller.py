@@ -41,7 +41,7 @@ async def get_positions_by_companyId(companyId: str, db: AsyncSession):
     )
     counts = {row[0]: int(row[1]) for row in count_rows.all()}
     for pos in positions:
-        setattr(pos, "employeeCount", counts.get(pos.positionId, 0))
+        pos.employeeCount = counts.get(pos.positionId, 0)  # type: ignore[attr-defined]
     return positions
 
 # สร้าง position ใหม่

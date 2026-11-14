@@ -78,7 +78,6 @@ async def test_search_face_pgvector_presence_rejects_close_runner_up(monkeypatch
     from src.services import face_match_service as fms
 
     db = AsyncMock()
-    company_id = uuid.uuid4()
     mid1 = uuid.uuid4()
     mid2 = uuid.uuid4()
     fe1 = uuid.uuid4()

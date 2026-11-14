@@ -41,7 +41,7 @@ async def get_departments_by_companyId(companyId: str, db: AsyncSession):
     )
     counts = {row[0]: int(row[1]) for row in count_rows.all()}
     for dept in departments:
-        setattr(dept, "employeeCount", counts.get(dept.departmentId, 0))
+        dept.employeeCount = counts.get(dept.departmentId, 0)  # type: ignore[attr-defined]
     return departments
 
 # สร้าง department ใหม่

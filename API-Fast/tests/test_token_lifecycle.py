@@ -534,7 +534,8 @@ def test_token_type_confusion_is_rejected(app, seed):
             # kiosk refresh endpoint refuses member refresh tokens
             r = await c.post("/auth/kiosk/refresh", json={"refreshToken": refresh})
             assert r.status_code == 401
-            # missing body token
+            # missing body token (without refresh cookie)
+            c.cookies.clear()
             r = await c.post("/auth/refresh", json={})
             assert r.status_code == 401 and r.json()["detail"] == "Refresh token required"
             # legacy snake_case field is still accepted

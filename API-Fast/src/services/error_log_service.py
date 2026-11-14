@@ -248,12 +248,12 @@ async def write_error_log(
         ).scalar_one_or_none()
 
         if existing is not None:
-            existing.hitCount = int(existing.hitCount or 1) + 1
-            existing.lastSeenAt = now
+            existing.hitCount = int(existing.hitCount or 1) + 1  # type: ignore[assignment]
+            existing.lastSeenAt = now  # type: ignore[assignment]
             if request_id:
-                existing.requestId = request_id[:64]
+                existing.requestId = request_id[:64]  # type: ignore[assignment]
             if trace_id:
-                existing.traceId = trace_id[:64]
+                existing.traceId = trace_id[:64]  # type: ignore[assignment]
             if safe_detail is not None:
                 existing.detail = safe_detail
             await db.commit()

@@ -543,9 +543,9 @@ async def ot_evidence_report(
         if camera_presence_meta(cam)["presenceRole"] == "OT_AREA":
             ot_cam_ids.add(cam.cameraId)
 
-    sessions = []
+    sessions: list[PersonPresenceSession] = []
     if ot_cam_ids:
-        sessions = (
+        sessions = list((
             await db.execute(
                 select(PersonPresenceSession).where(
                     PersonPresenceSession.companyId == company_id,
@@ -555,7 +555,7 @@ async def ot_evidence_report(
                     PersonPresenceSession.startedAt < day_end_utc,
                 )
             )
-        ).scalars().all()
+        ).scalars().all())
 
     # Default shift end for company (first active shift) — evidence uses 18:00 if none.
     shift = (

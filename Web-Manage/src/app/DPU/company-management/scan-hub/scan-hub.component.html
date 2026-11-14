@@ -190,15 +190,25 @@
           </p>
           <div class="dpu-scan-hub__launches" *ngIf="launchLinks.length; else noLaunch">
             @for (link of launchLinks; track trackLaunch($index, link)) {
-              <button type="button" class="dpu-scan-hub__launch" (click)="launch(link)">
-                <strong>{{ link.label | translate }}</strong>
-                <em>{{ link.stationMode }}</em>
-                <span class="dpu-scan-hub__launch-meta">
-                  <span *ngIf="link.needsZone">zone</span>
-                  <span *ngIf="link.needsEvent">event</span>
-                </span>
-                <i class="ri-arrow-right-s-line"></i>
-              </button>
+              <div class="dpu-scan-hub__launch-wrap flex flex-col gap-1.5">
+                <button type="button" class="dpu-scan-hub__launch w-full" (click)="launch(link)">
+                  <strong>{{ link.label | translate }}</strong>
+                  <em>{{ link.stationMode }}</em>
+                  <span class="dpu-scan-hub__launch-meta">
+                    <span *ngIf="link.needsZone">zone</span>
+                    <span *ngIf="link.needsEvent">event</span>
+                  </span>
+                  <i class="ri-arrow-right-s-line"></i>
+                </button>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-light w-full text-xs"
+                  (click)="copyDirectUrl(link, $event)"
+                >
+                  <i class="ri-links-line me-1"></i>
+                  Copy Direct URL
+                </button>
+              </div>
             }
           </div>
           <ng-template #noLaunch>

@@ -247,6 +247,21 @@ export class DevicesComponent implements OnInit {
       });
   }
 
+  refreshConfig(device: KioskDeviceRow): void {
+    this.http
+      .patch(this.api(`/${device.deviceId}`), {
+        config: {
+          ...(device.config || {}),
+          remoteCommand: 'REFRESH_CONFIG',
+          commandAt: new Date().toISOString(),
+        },
+      })
+      .subscribe({
+        next: () => swal('ส่งคำสั่งแล้ว', `ส่งคำสั่ง Refresh Config ไปยัง ${device.name} แล้ว`, 'success'),
+        error: (err) => swal('Error', err?.error?.detail || 'ส่งคำสั่งไม่สำเร็จ', 'error'),
+      });
+  }
+
   copyKioskUrl(device: KioskDeviceRow): void {
     const mode = (device.stationMode || 'ATTENDANCE').toLowerCase().replace(/_/g, '-');
     const params = new URLSearchParams({ deviceId: device.deviceId });

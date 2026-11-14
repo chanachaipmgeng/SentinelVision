@@ -202,6 +202,14 @@
     <button
       type="button"
       class="ti-btn ti-btn-light modern-btn"
+      (click)="refreshConfig(d)"
+      [disabled]="!!d.revokedAt">
+      <i class="ri-restart-line" aria-hidden="true"></i>
+      <span>Refresh Config</span>
+    </button>
+    <button
+      type="button"
+      class="ti-btn ti-btn-light modern-btn"
       (click)="copyKioskUrl(d)"
       [disabled]="!!d.revokedAt">
       <i class="ri-links-line" aria-hidden="true"></i>

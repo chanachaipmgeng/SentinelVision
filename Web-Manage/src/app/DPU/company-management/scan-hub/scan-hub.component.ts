@@ -242,6 +242,27 @@ export class ScanHubComponent implements OnInit {
     );
   }
 
+  directUrl(link: HubLaunchLink): string {
+    const route = buildScanRoute(link.stationMode, {
+      zoneId: this.config.defaultZoneId,
+      eventId: this.config.defaultEventId,
+    });
+    return `${window.location.origin}/#${route}`;
+  }
+
+  copyDirectUrl(link: HubLaunchLink, event: Event): void {
+    event.stopPropagation();
+    const url = this.directUrl(link);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => (this.saveMessage = `คัดลอกลิงก์ ${link.stationMode} แล้ว`),
+        () => (this.saveMessage = url),
+      );
+      return;
+    }
+    this.saveMessage = url;
+  }
+
   openLegacyKiosk(): void {
     void this.router.navigateByUrl('/company/timestamp-face');
   }

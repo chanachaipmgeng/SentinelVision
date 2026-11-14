@@ -15,7 +15,7 @@ import {
   NotificationTemplatesView,
 } from './notification.models';
 
-type Tab = 'inbox' | 'dead-letter' | 'prefs' | 'templates';
+type Tab = 'inbox' | 'dead-letter' | 'history' | 'prefs' | 'templates';
 
 @Component({
     selector: 'app-notification-center',
@@ -40,6 +40,7 @@ export class NotificationCenterComponent implements OnInit {
   inboxFiltered: InboxNotification[] = [];
   searchTerm = '';
   deadLetter: DeadLetterRow[] = [];
+  outboxHistory: (DeadLetterRow & { status?: string; sentAt?: string | null })[] = [];
   prefs: NotificationPrefs = {
     channelEmail: true,
     channelLine: true,
@@ -84,6 +85,18 @@ export class NotificationCenterComponent implements OnInit {
         },
         error: () => (this.loading = false),
       });
+    } else if (this.activeTab === 'history') {
+      this.http
+        .get<(DeadLetterRow & { status?: string; sentAt?: string | null })[]>(
+          `/notifications/company/${this.companyId}/outbox?limit=100`,
+        )
+        .subscribe({
+          next: (rows) => {
+            this.outboxHistory = rows || [];
+            this.loading = false;
+          },
+          error: () => (this.loading = false),
+        });
     } else if (this.activeTab === 'prefs') {
       this.http.get<NotificationPrefs>(`/notifications/company/${this.companyId}/preferences/me`).subscribe({
         next: (p) => {

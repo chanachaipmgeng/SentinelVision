@@ -24,6 +24,14 @@
     <button
       type="button"
       class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
+      [ngClass]="activeTab === 'history' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
+      (click)="setTab('history')"
+    >
+      Delivery History
+    </button>
+    <button
+      type="button"
+      class="rounded-full px-4 py-1.5 text-sm font-medium transition border"
       [ngClass]="activeTab === 'prefs' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'"
       (click)="setTab('prefs')"
     >
@@ -126,6 +134,52 @@
           </tr>
           <tr *ngIf="deadLetter.length === 0">
             <td colspan="6" class="text-center text-muted">{{ 'No dead-letter rows' | translate }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && activeTab === 'history'" class="box modern-card glass card-surface">
+    <div class="box-header">
+      <h6 class="font-semibold m-0">Delivery History ({{ outboxHistory.length }})</h6>
+    </div>
+    <div class="box-body">
+      <table class="table table-bordered w-full">
+        <thead>
+          <tr>
+            <th>{{ 'Time' | translate }}</th>
+            <th>{{ 'Event' | translate }}</th>
+            <th>{{ 'Channel' | translate }}</th>
+            <th>{{ 'Status' | translate }}</th>
+            <th>{{ 'Attempts' | translate }}</th>
+            <th>{{ 'Error' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of outboxHistory">
+            <td class="text-xs whitespace-nowrap">{{ row.sentAt || row.createdAt | date: 'short' }}</td>
+            <td><code>{{ row.event }}</code></td>
+            <td>{{ row.channel }}</td>
+            <td>
+              <span
+                class="badge text-xs px-2 py-0.5 rounded"
+                [ngClass]="
+                  row.status === 'SENT'
+                    ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+                    : row.status === 'FAILED' || row.status === 'DEAD'
+                    ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
+                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                "
+              >
+                {{ row.status || 'PENDING' }}
+              </span>
+            </td>
+            <td>{{ row.attempts }}</td>
+            <td class="text-danger text-xs">{{ row.lastError || '-' }}</td>
+          </tr>
+          <tr *ngIf="outboxHistory.length === 0">
+            <td colspan="6" class="text-center text-muted">ยังไม่มีประวัติการส่งแจ้งเตือน</td>
           </tr>
         </tbody>
       </table>

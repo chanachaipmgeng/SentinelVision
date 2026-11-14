@@ -49,7 +49,7 @@
       </div>
     </nav>
 
-    <main class="dpu-settings-body" *ngIf="active">
+    <main class="dpu-settings-body" *ngIf="active" (input)="markDirty()" (change)="markDirty()">
       <app-page-toolbar [title]="active.labelKey">
         <ng-container chips>
           <app-stat-chip tone="ok" *ngIf="statusMsg">{{ statusMsg }}</app-stat-chip>

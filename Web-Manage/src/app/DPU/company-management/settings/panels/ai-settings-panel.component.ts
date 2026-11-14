@@ -94,6 +94,14 @@ type PanelStatus = 'idle' | 'saved' | 'error';
             >
               {{ 'settingsHub.ai.save' | translate }}
             </button>
+            <button
+              type="button"
+              class="ti-btn ti-btn-light font-semibold text-xs"
+              [disabled]="busy"
+              (click)="resetDefaults()"
+            >
+              รีเซ็ตค่าเริ่มต้น
+            </button>
             <span class="text-xs font-semibold text-emerald-700" *ngIf="status === 'saved'">
               {{ 'settingsHub.ai.saved' | translate }}
             </span>
@@ -140,6 +148,15 @@ export class AiSettingsPanelComponent implements OnInit {
     this.faceThreshold = Number(s?.faceMatchThreshold ?? 0.4);
     this.cctvOverride = !!s?.cctvCameraIntervalOverride;
     this.cctvInterval = Number(s?.cctvCameraIntervalSeconds ?? 30);
+  }
+
+  resetDefaults(): void {
+    this.faceOverride = false;
+    this.faceThreshold = 0.4;
+    this.cctvOverride = false;
+    this.cctvInterval = 30;
+    this.status = 'idle';
+    this.statusFlash.emit('คืนค่าเริ่มต้นแล้ว (กดบันทึกเพื่อยืนยัน)');
   }
 
   save(): void {

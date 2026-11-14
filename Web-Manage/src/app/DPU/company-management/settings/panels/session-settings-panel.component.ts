@@ -51,6 +51,14 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           >
             {{ 'settingsHub.session.save' | translate }}
           </button>
+          <button
+            type="button"
+            class="ti-btn ti-btn-light font-semibold text-xs"
+            [disabled]="busy"
+            (click)="resetDefaults()"
+          >
+            รีเซ็ตค่าเริ่มต้น
+          </button>
           <span class="text-xs font-semibold text-emerald-700" *ngIf="status === 'saved'">
             {{ 'settingsHub.session.saved' | translate }}
           </span>
@@ -90,6 +98,12 @@ export class SessionSettingsPanelComponent implements OnInit {
       },
       error: () => (this.loading = false),
     });
+  }
+
+  resetDefaults(): void {
+    this.idleMinutes = 0;
+    this.status = 'idle';
+    this.statusFlash.emit('คืนค่าเริ่มต้นแล้ว (กดบันทึกเพื่อยืนยัน)');
   }
 
   save(): void {

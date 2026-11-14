@@ -8,6 +8,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { PermissionService } from '../../../shared/services/permission.service';
+import { HasUnsavedChanges } from '../../../shared/guards/unsaved-changes.guard';
 import { SharedModule } from '../../../shared/shared.module';
 import { HrPdpaTabComponent } from '../hr-schedule/tabs/hr-pdpa-tab.component';
 import { HrSecurityTabComponent } from '../hr-schedule/tabs/hr-security-tab.component';
@@ -50,7 +51,7 @@ import {
     styleUrls: ['./settings-hub.component.css'],
     encapsulation: ViewEncapsulation.None
 })
-export class SettingsHubComponent implements OnInit, OnDestroy {
+export class SettingsHubComponent implements OnInit, OnDestroy, HasUnsavedChanges {
   readonly shiftCards = SHIFT_LINK_CARDS;
 
   sections: SettingsSection[] = [];
@@ -58,6 +59,7 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
   permissionsReady = false;
   statusMsg = '';
   sectionQuery = '';
+  dirty = false;
 
   private sub?: Subscription;
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,7 +84,10 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
           void this.router.navigate(['/company/settings', resolved], { replaceUrl: true });
           return;
         }
-        if (this.active?.id !== resolved) this.statusMsg = '';
+        if (this.active?.id !== resolved) {
+          this.statusMsg = '';
+          this.dirty = false;
+        }
         this.active = this.sections.find((s) => s.id === resolved) ?? null;
       },
     );
@@ -93,7 +98,16 @@ export class SettingsHubComponent implements OnInit, OnDestroy {
     if (this.statusTimer) clearTimeout(this.statusTimer);
   }
 
+  markDirty(): void {
+    this.dirty = true;
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.dirty;
+  }
+
   flash(msg: string): void {
+    this.dirty = false;
     this.statusMsg = msg;
     if (this.statusTimer) clearTimeout(this.statusTimer);
     this.statusTimer = setTimeout(() => {

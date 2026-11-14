@@ -4,6 +4,7 @@ import { InstallManagementComponent } from './company-management.component';
 import { RouterModule, Routes } from '@angular/router';
 
 import { RoleGuard } from '../../shared/services/role.guard';
+import { unsavedChangesGuard } from '../../shared/guards/unsaved-changes.guard';
 
 export const companyRoutes: Routes = [
   {
@@ -231,6 +232,7 @@ export const companyRoutes: Routes = [
     { path: 'company/settings', pathMatch: 'full', redirectTo: 'company/settings/notifications' },
     {
       path: 'company/settings/:section',
+      canDeactivate: [unsavedChangesGuard],
       loadComponent: () =>
         import('./settings/settings-hub.component').then((m) => m.SettingsHubComponent),
     },

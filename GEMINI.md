@@ -13,6 +13,7 @@
   - Sentinel 1:N queries (`search_sentinel_identity_pgvector`) MUST filter `SentinelIdentity.companyId == companyId`, `SentinelIdentity.deletedAt.is_(None)`, `SentinelIdentity.status == 'ACTIVE'`, and active validity windows (`valid_from <= now <= expires_at`).
 - **Kiosk Token & Scope Isolation:** Kiosk WebSocket sessions must validate JWT expiration continuously (not only at handshake) and enforce per-connection rate/concurrency limits. Kiosk tokens (`typ="kiosk"`) are restricted to Kiosk check-in/scan/read endpoints (`_is_kiosk_path_allowed`) and must never be permitted to mutate or delete identities, zones, or company settings.
 - **Secret & Credential Hygiene:** `SECRET_KEY` must be >= 32 chars (`AUTH_FAIL_FAST=true`). Never hardcode default passwords (`1234`) or log tokens, passwords, or raw biometric embeddings.
+- **Soft-Delete Query Consistency:** Every soft-deletable ORM model (`deletedAt`) MUST filter `Model.deletedAt.is_(None)` across **all** list, company-scoped list (`get_*_by_companyId`), get-by-ID, and update queries — never only in `delete_*` — so soft-deleted rows never reappear in UI tables or trigger `404` on follow-up actions.
 
 ## 3. Performance, Testing & Concurrency Invariants
 - **Never Block the Asyncio Event Loop:**
@@ -40,6 +41,10 @@
   - For frontend-only changes in `Web-Manage`, build locally via `npm run build` and **wait for the build to exit 0 before** syncing assets into the running container without rebuilding the Docker image:
     `docker cp Web-Manage/dist/preview/browser/. sentinel-admin:/usr/share/nginx/html/`
     `docker exec sentinel-admin nginx -s reload`
+  - When verifying in an existing browser session after deploying static assets, reload with cache disabled or a cache-busting query string (e.g., `/?v=...#/`) and confirm the newly built `styles-*.css` bundle is loaded.
+- **Header Control Uniformity & Dark-Mode Logo**:
+  - Keep `.sv-search-chip`, `.dpu-header-lang`, `.sv-header-btn`, and `.dpu-header-avatar` in `.app-header` on a single shared height and pill/circle geometry (`2.25rem` on desktop; `2.5rem` on `< 992px` mobile).
+  - In dark mode, explicitly hide `.app-header .dpu-header-brand img.desktop-logo` / `img.toggle-logo` and display `img.toggle-dark` so dark logos never blend into the obsidian header.
 - **Modular Scan/Kiosk Visual & Balance Invariants (`/company/scan/:stationMode`)**:
   - `.dpu-kiosk` MUST use the VaultX Obsidian Glass dark base (`#04080f`–`#070d14`) and bind `[attr.data-station-mode]="stationMode"` to drive per-module `--kiosk-accent` / `--kiosk-accent-rgb` tokens (`ATTENDANCE` cyan, `ACCESS_CONTROL` sky, `WATCHLIST_MONITOR` rose, `VISITOR_CHECKIN` violet, `EVENT_CHECKIN` amber, `UNIFIED_HYBRID` teal).
   - Every non-attendance station mode MUST render a dedicated module summary/status card above "ผลล่าสุด" in `.dpu-kiosk__feed-panel` so the right column remains visually balanced with no empty void.

@@ -22,6 +22,7 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.exceptions import HTTPException
+from starlette.websockets import WebSocketState
 
 from ..config.database import async_session
 from ..controllers.face_controller import (
@@ -97,12 +98,25 @@ def _json_default(obj: Any):
 
 
 async def _send(ws: WebSocket, payload: dict, *, lock: Optional[asyncio.Lock] = None) -> None:
-    text = json.dumps(payload, default=_json_default)
-    if lock is None:
-        await ws.send_text(text)
+    if (
+        getattr(ws, "client_state", WebSocketState.CONNECTED) != WebSocketState.CONNECTED
+        or getattr(ws, "application_state", WebSocketState.CONNECTED) != WebSocketState.CONNECTED
+    ):
         return
-    async with lock:
-        await ws.send_text(text)
+    text = json.dumps(payload, default=_json_default)
+    try:
+        if lock is None:
+            await ws.send_text(text)
+            return
+        async with lock:
+            if (
+                getattr(ws, "client_state", WebSocketState.CONNECTED) != WebSocketState.CONNECTED
+                or getattr(ws, "application_state", WebSocketState.CONNECTED) != WebSocketState.CONNECTED
+            ):
+                return
+            await ws.send_text(text)
+    except (WebSocketDisconnect, RuntimeError):
+        return
 
 
 def _decode_image_b64(raw: str) -> bytes:
@@ -296,6 +310,8 @@ async def _handle_detect(
             },
             lock=send_lock,
         )
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        return
     except Exception as exc:
         logger.warning("WS detect failed: %s", exc)
         try:
@@ -399,6 +415,8 @@ async def _handle_identify(
             },
             lock=send_lock,
         )
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        return
     except Exception as exc:
         logger.exception("WS identify failed")
         await _send(
@@ -684,6 +702,8 @@ async def _handle_checkin(
             },
             lock=send_lock,
         )
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        return
     except Exception as exc:
         logger.exception("WS checkin failed")
         await _send(
@@ -702,8 +722,11 @@ async def _handle_checkin(
 
 
 async def _run_bounded(sem: asyncio.Semaphore, coro) -> None:
-    async with sem:
-        await coro
+    try:
+        async with sem:
+            await coro
+    except (WebSocketDisconnect, asyncio.CancelledError):
+        return
 
 
 # RFC 6455 close code for "policy violation" — used for every auth/limit rejection.

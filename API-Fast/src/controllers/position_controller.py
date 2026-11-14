@@ -14,7 +14,11 @@ async def get_all_positions(db: AsyncSession):
 
 # ดึงข้อมูล position ตาม ID
 async def get_position_by_id(positionId: str, db: AsyncSession):
-    result = await db.execute(select(Position).where(Position.positionId == positionId).options(joinedload(Position.company)))
+    result = await db.execute(
+        select(Position)
+        .where(Position.positionId == positionId, Position.deletedAt.is_(None))
+        .options(joinedload(Position.company))
+    )
     position = result.scalar_one_or_none()
     if not position:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position not found")
@@ -22,7 +26,9 @@ async def get_position_by_id(positionId: str, db: AsyncSession):
 
 # ดึงข้อมูล positions โดยใช้ companyId
 async def get_positions_by_companyId(companyId: str, db: AsyncSession):
-    result = await db.execute(select(Position).where(Position.companyId == companyId))
+    result = await db.execute(
+        select(Position).where(Position.companyId == companyId, Position.deletedAt.is_(None))
+    )
     return result.scalars().all()
 
 # สร้าง position ใหม่
@@ -42,7 +48,7 @@ async def create_position(position_data: dict, db: AsyncSession):
 # อัปเดต position
 async def update_position(positionId: str, position_data: dict, db: AsyncSession):
     position = await db.get(Position, positionId)
-    if not position:
+    if not position or position.deletedAt is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position not found")
 
     # อัปเดตข้อมูล position

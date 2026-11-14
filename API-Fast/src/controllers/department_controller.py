@@ -14,7 +14,11 @@ async def get_all_departments(db: AsyncSession):
 
 # ดึงข้อมูล department ตาม ID
 async def get_department_by_id(departmentId: str, db: AsyncSession):
-    result = await db.execute(select(Department).where(Department.departmentId == departmentId).options(joinedload(Department.company)))
+    result = await db.execute(
+        select(Department)
+        .where(Department.departmentId == departmentId, Department.deletedAt.is_(None))
+        .options(joinedload(Department.company))
+    )
     department = result.scalar_one_or_none()
     if not department:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
@@ -22,7 +26,9 @@ async def get_department_by_id(departmentId: str, db: AsyncSession):
 
 # ดึงข้อมูล departments โดยใช้ companyId
 async def get_departments_by_companyId(companyId: str, db: AsyncSession):
-    result = await db.execute(select(Department).where(Department.companyId == companyId))
+    result = await db.execute(
+        select(Department).where(Department.companyId == companyId, Department.deletedAt.is_(None))
+    )
     return result.scalars().all()
 
 # สร้าง department ใหม่
@@ -42,7 +48,7 @@ async def create_department(department_data: dict, db: AsyncSession):
 # อัปเดต department
 async def update_department(departmentId: str, department_data: dict, db: AsyncSession):
     department = await db.get(Department, departmentId)
-    if not department:
+    if not department or department.deletedAt is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Department not found")
 
     # อัปเดตข้อมูล department

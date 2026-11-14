@@ -158,7 +158,8 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 }
 
 .app-header .header-content-right {
-  gap: 0.15rem;
+  gap: 0.45rem;
+  align-items: center;
 }
 
 .app-header .header-content-right .header-element {
@@ -224,21 +225,26 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
-  padding: 0.15rem;
-  border-radius: 0.55rem;
+  height: 2.25rem;
+  padding: 0.2rem;
+  border-radius: 9999px;
   background: rgba(15, 118, 110, 0.08);
   border: 1px solid rgba(15, 118, 110, 0.14);
 }
 
 .dpu-header-lang button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   border: 0;
   background: transparent;
   color: #64748b;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  padding: 0.32rem 0.5rem;
-  border-radius: 0.4rem;
+  padding: 0 0.6rem;
+  border-radius: 9999px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -255,6 +261,9 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 }
 
 .dpu-header-avatar {
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  object-fit: cover;
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.28), 0 0 0 3px rgba(255, 255, 255, 0.9);
 }
 
@@ -277,9 +286,26 @@ h1, h2, h3, h4, h5, .page-header-title, .main-content h1 {
 }
 
 .header-logo img.desktop-logo,
-.header-logo img.toggle-logo {
+.header-logo img.toggle-logo,
+.header-logo img.desktop-dark,
+.header-logo img.toggle-dark {
   max-height: 1.85rem;
   width: auto;
+}
+
+html[data-theme="dark"] .app-header .dpu-header-brand img.desktop-logo,
+html.dark .app-header .dpu-header-brand img.desktop-logo,
+html[data-theme-mode="dark"] .app-header .dpu-header-brand img.desktop-logo,
+html[data-theme="dark"] .app-header .dpu-header-brand img.toggle-logo,
+html.dark .app-header .dpu-header-brand img.toggle-logo,
+html[data-theme-mode="dark"] .app-header .dpu-header-brand img.toggle-logo {
+  display: none !important;
+}
+
+html[data-theme="dark"] .app-header .dpu-header-brand img.toggle-dark,
+html.dark .app-header .dpu-header-brand img.toggle-dark,
+html[data-theme-mode="dark"] .app-header .dpu-header-brand img.toggle-dark {
+  display: inline-block !important;
 }
 
 /* ---- Sidebar (landing deep teal canvas) ---- */
@@ -1795,9 +1821,9 @@ html.dpu-kiosk-mode .main-content > * {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  height: 2.1rem;
+  height: 2.25rem;
   padding: 0 0.45rem 0 0.75rem;
-  border-radius: 999px;
+  border-radius: 9999px;
   border: 1px solid var(--dpu-border);
   background: var(--dpu-surface);
   color: var(--dpu-muted);
@@ -1819,9 +1845,11 @@ html.dpu-kiosk-mode .main-content > * {
   }
 
   .sv-search-chip {
-    padding: 0 0.6rem;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0;
     justify-content: center;
   }
 }
@@ -1875,8 +1903,23 @@ html.dpu-kiosk-mode .main-content > * {
 
   .app-header .sv-header-btn,
   .app-header .sidemenu-toggle {
-    min-width: 2.75rem;
-    min-height: 2.75rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+  }
+
+  .app-header .dpu-header-lang {
+    height: 2.5rem;
+  }
+
+  .app-header .dpu-header-avatar {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .app-header .header-content-right {
+    gap: 0.4rem;
   }
 
   .ti-modal-box {
@@ -1925,15 +1968,23 @@ html.dpu-kiosk-mode .main-content > * {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.25rem;
+  height: 2.25rem;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 0.55rem;
+  border-radius: 9999px;
   background: rgba(15, 118, 110, 0.06);
   color: rgb(var(--header-prime-color));
+  font-size: 1.125rem;
+  line-height: 1;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sv-header-btn i,
+.sv-header-btn svg {
+  font-size: 1.125rem;
+  line-height: 1;
 }
 
 .sv-header-btn:hover {

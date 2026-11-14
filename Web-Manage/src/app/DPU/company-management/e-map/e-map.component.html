@@ -85,6 +85,19 @@
             <li *ngFor="let pin of pins" class="emap-pin-row">
               <span class="emap-kind" [attr.data-kind]="pin.kind">{{ kindLabel(pin.kind) | translate }}</span>
               <span class="emap-pin-name">{{ pin.name }}</span>
+              <a
+                *ngIf="pin.kind === 'camera'"
+                class="ti-btn ti-btn-sm ti-btn-primary-full modern-btn"
+                [routerLink]="['/company/live-wall']"
+                [queryParams]="{ cameraId: pin.id }">
+                Live
+              </a>
+              <a
+                *ngIf="pin.kind !== 'camera'"
+                class="ti-btn ti-btn-sm ti-btn-light modern-btn"
+                routerLink="/company/access-control/zones">
+                Door
+              </a>
               <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearPin(pin)">
                 {{ 'emap.removePin' | translate }}
               </button>

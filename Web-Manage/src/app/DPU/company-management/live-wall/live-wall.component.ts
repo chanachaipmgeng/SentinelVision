@@ -35,6 +35,9 @@ export class LiveWallComponent implements OnInit {
   useHlsFallback = false;
   loading = false;
   error = '';
+  presetSavedMsg = '';
+  snapshotPreviewUrl: string | null = null;
+  snapshotCameraName = '';
 
   readonly layouts: WallLayout[] = ['1x1', '2x2', '3x3'];
 
@@ -47,9 +50,59 @@ export class LiveWallComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadPreset();
     this.focusId = this.route.snapshot.queryParamMap.get('cameraId');
     if (this.focusId) this.layout = '1x1';
     this.load();
+  }
+
+  savePreset(): void {
+    if (!this.companyId) return;
+    try {
+      localStorage.setItem(
+        `sv_livewall_preset_${this.companyId}`,
+        JSON.stringify({ layout: this.layout, useHlsFallback: this.useHlsFallback }),
+      );
+      this.presetSavedMsg = `บันทึก Preset ${this.layout} แล้ว`;
+      setTimeout(() => (this.presetSavedMsg = ''), 3000);
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private loadPreset(): void {
+    if (!this.companyId) return;
+    try {
+      const raw = localStorage.getItem(`sv_livewall_preset_${this.companyId}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { layout?: WallLayout; useHlsFallback?: boolean };
+      if (parsed.layout && this.layouts.includes(parsed.layout)) {
+        this.layout = parsed.layout;
+      }
+      if (typeof parsed.useHlsFallback === 'boolean') {
+        this.useHlsFallback = parsed.useHlsFallback;
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  snapshotCam(cam: CameraRow): void {
+    if (!this.companyId) return;
+    this.http
+      .post<{ imageBase64: string; contentType: string }>(
+        `/cameras/company/${this.companyId}/cameras/${cam.cameraId}/snapshot`,
+        {},
+      )
+      .subscribe({
+        next: (res) => {
+          this.snapshotCameraName = cam.name;
+          this.snapshotPreviewUrl = `data:${res.contentType};base64,${res.imageBase64}`;
+        },
+        error: (err) => {
+          this.error = err?.error?.detail || `ไม่สามารถดึง Snapshot จาก ${cam.name}`;
+        },
+      });
   }
 
   get slots(): CameraRow[] {

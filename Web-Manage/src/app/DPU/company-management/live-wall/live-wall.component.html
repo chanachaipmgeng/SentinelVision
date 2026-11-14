@@ -20,6 +20,13 @@
         <input type="checkbox" [(ngModel)]="useHlsFallback" />
         {{ 'cctv.liveWall.hlsFallback' | translate }}
       </label>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="savePreset()">
+        <i class="ri-save-line"></i>
+        Save Preset
+      </button>
+      <span *ngIf="presetSavedMsg" class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 text-xs">
+        {{ presetSavedMsg }}
+      </span>
       <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="load()">
         <i class="ri-refresh-line"></i>
         {{ 'Refresh' | translate }}
@@ -50,18 +57,33 @@
       </a>
     </div>
 
+    <div class="box modern-card glass mb-3" *ngIf="snapshotPreviewUrl">
+      <div class="box-header flex items-center justify-between">
+        <h6 class="box-title !mb-0">Snapshot — {{ snapshotCameraName }}</h6>
+        <button type="button" class="ti-btn ti-btn-sm ti-btn-light" (click)="snapshotPreviewUrl = null">ปิด</button>
+      </div>
+      <div class="box-body">
+        <img [src]="snapshotPreviewUrl" [alt]="snapshotCameraName" class="max-h-72 rounded-lg border border-white/10" />
+      </div>
+    </div>
+
     <div class="sv-live-wall__slot" *ngFor="let cam of slots">
       <div class="sv-live-wall__label">
         <div class="flex items-center gap-2">
           <span class="sv-live-dot" [class.is-online]="cam.status === 'online'"></span>
           <strong class="text-slate-100 font-semibold">{{ cam.name }}</strong>
         </div>
-        <span
-          class="badge text-xs px-2 py-0.5 rounded-full"
-          [ngClass]="cam.status === 'online' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'"
-        >
-          {{ cam.status || 'unknown' }}
-        </span>
+        <div class="flex items-center gap-1.5">
+          <button type="button" class="ti-btn ti-btn-sm ti-btn-light !py-0.5 !px-2 text-xs" (click)="snapshotCam(cam)" title="Snapshot">
+            <i class="ri-camera-line"></i>
+          </button>
+          <span
+            class="badge text-xs px-2 py-0.5 rounded-full"
+            [ngClass]="cam.status === 'online' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'"
+          >
+            {{ cam.status || 'unknown' }}
+          </span>
+        </div>
       </div>
       <div class="sv-live-wall__player">
         <app-webrtc-video-surface

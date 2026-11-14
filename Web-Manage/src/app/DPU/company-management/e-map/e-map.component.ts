@@ -9,6 +9,7 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import * as L from 'leaflet';
 import { firstValueFrom } from 'rxjs';
@@ -51,7 +52,7 @@ interface DirtyPin {
 
 @Component({
     selector: 'app-company-e-map',
-    imports: [CommonModule, FormsModule, TranslateModule, PageToolbarComponent, EmptyStateComponent],
+    imports: [CommonModule, FormsModule, RouterLink, TranslateModule, PageToolbarComponent, EmptyStateComponent],
     templateUrl: './e-map.component.html',
     styleUrls: ['../../../shared/styles/dpu-list-page.css', './e-map.component.css'],
     encapsulation: ViewEncapsulation.None

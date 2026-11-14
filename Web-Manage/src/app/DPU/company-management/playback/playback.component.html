@@ -140,6 +140,18 @@
           />
           <span>{{ formatTime(duration) }}</span>
         </div>
+        <div class="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-white/10" *ngIf="clips.length">
+          <span class="text-xs text-dpu-muted">Event Markers:</span>
+          <button
+            type="button"
+            *ngFor="let ev of clips.slice(0, 8)"
+            class="badge text-xs px-2 py-0.5 rounded border cursor-pointer"
+            [ngClass]="selected?.clipId === ev.clipId ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'"
+            (click)="selectClip(ev)"
+          >
+            {{ ev.startedAt | date:'HH:mm:ss' }} · {{ ev.cameraName || ev.cameraId }}
+          </button>
+        </div>
       </ng-container>
     </section>
   </div>

@@ -58,6 +58,21 @@
             </div>
           </div>
         </div>
+        <div class="flex flex-wrap items-center gap-2 pt-3 mt-3 border-t border-white/10">
+          <span class="text-xs text-dpu-muted">ตัวกรองด่วน:</span>
+          <button type="button" class="ti-btn ti-btn-sm rounded-full"
+            [ngClass]="quickFilter === 'all' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setQuickFilter('all')">ทั้งหมด</button>
+          <button type="button" class="ti-btn ti-btn-sm rounded-full"
+            [ngClass]="quickFilter === 'noDept' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setQuickFilter('noDept')">ยังไม่ระบุแผนก</button>
+          <button type="button" class="ti-btn ti-btn-sm rounded-full"
+            [ngClass]="quickFilter === 'noPos' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setQuickFilter('noPos')">ยังไม่ระบุตำแหน่ง</button>
+          <button type="button" class="ti-btn ti-btn-sm rounded-full"
+            [ngClass]="quickFilter === 'noPhoto' ? 'ti-btn-primary-full' : 'ti-btn-light'"
+            (click)="setQuickFilter('noPhoto')">ยังไม่มีรูปโปรไฟล์</button>
+        </div>
       </div>
     </div>
   </div>

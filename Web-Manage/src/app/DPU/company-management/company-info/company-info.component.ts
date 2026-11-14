@@ -57,6 +57,7 @@ export class CompanyInfoComponent implements OnInit, AfterViewInit {
   loading = false;
   saving = false;
   center: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
+  regionalPrefs = { timezone: 'Asia/Bangkok', payrollCutoffDay: 25, dateFormat: 'dd/MM/yyyy' };
 
   get mapCenter(): google.maps.LatLngLiteral {
     return {
@@ -188,6 +189,7 @@ export class CompanyInfoComponent implements OnInit, AfterViewInit {
         this.companyModel = new CompanyModel(result);
         this.tokenService.saveSelectCompany(result);
         this.center = this.mapCenter;
+        this.loadRegionalPrefs();
         this.loading = false;
         setTimeout(() => void this.initPlaceAutocomplete(), 150);
       },
@@ -226,6 +228,7 @@ export class CompanyInfoComponent implements OnInit, AfterViewInit {
       this.saving = true;
       this.comService.update(this.companyModel).subscribe({
         next: () => {
+          this.saveRegionalPrefs();
           this.saving = false;
           swal('สำเร็จ', 'บันทึกข้อมูลบริษัทแล้ว', 'success');
           this.getCompanyInfo();
@@ -241,6 +244,27 @@ export class CompanyInfoComponent implements OnInit, AfterViewInit {
         },
       });
     });
+  }
+
+  private loadRegionalPrefs(): void {
+    try {
+      const raw = localStorage.getItem(`sv_company_prefs_${this.companyId}`);
+      if (raw) {
+        this.regionalPrefs = { ...this.regionalPrefs, ...JSON.parse(raw) };
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private saveRegionalPrefs(): void {
+    try {
+      const cutoff = Math.min(31, Math.max(1, Number(this.regionalPrefs.payrollCutoffDay) || 25));
+      this.regionalPrefs.payrollCutoffDay = cutoff;
+      localStorage.setItem(`sv_company_prefs_${this.companyId}`, JSON.stringify(this.regionalPrefs));
+    } catch {
+      // ignore storage errors
+    }
   }
 
   private toCoord(value: unknown, fallback: number): number {

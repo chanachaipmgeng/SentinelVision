@@ -94,6 +94,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
   /** Total matching rows from server page envelope. */
   serverTotal = 0;
   listLoading = false;
+  quickFilter: 'all' | 'noDept' | 'noPos' | 'noPhoto' = 'all';
   listViewMode: EmpListViewMode = 'cards';
   /** False until user picks a view or we apply a stored/default preference. */
   private listViewPreferenceLocked = false;
@@ -252,7 +253,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
           }
           this.pageIndex = clampPageIndex(this.pageIndex, page.total, this.pageSize);
           this.itemsList = (page.items || []).filter((row): row is EmployeeModel => !!row);
-          this.filterList = this.itemsList;
+          this.applyQuickFilter();
           this.listLoading = false;
           this.cdr.detectChanges();
         },
@@ -261,6 +262,23 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
           swal('Error', 'โหลดรายชื่อพนักงานไม่สำเร็จ', 'error');
         },
       });
+  }
+
+  setQuickFilter(mode: 'all' | 'noDept' | 'noPos' | 'noPhoto'): void {
+    this.quickFilter = mode;
+    this.applyQuickFilter();
+  }
+
+  private applyQuickFilter(): void {
+    if (this.quickFilter === 'noDept') {
+      this.filterList = this.itemsList.filter((e) => !e.department?.departmentId);
+    } else if (this.quickFilter === 'noPos') {
+      this.filterList = this.itemsList.filter((e) => !e.position?.positionId);
+    } else if (this.quickFilter === 'noPhoto') {
+      this.filterList = this.itemsList.filter((e) => !e.member?.picture);
+    } else {
+      this.filterList = this.itemsList;
+    }
   }
 
   goToPage(index: number): void {

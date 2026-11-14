@@ -11,6 +11,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { PositionService } from '../../../services/position.service';
 import { PositionModel } from '../../../models/position.model';
 import { TokenService } from '../../../../shared/services/token.service';
+import { downloadCsv } from '../../../company-management/sentinel-center/sentinel.helpers';
 import swal from 'sweetalert';
 
 @Component({
@@ -247,5 +248,18 @@ export class PositionComponent {
         });
       });
     });
+  }
+
+  exportCsv(): void {
+    downloadCsv(
+      ['PositionID', 'NameTH', 'NameEN', 'EmployeeCount'],
+      this.filteredSource.map((p) => [
+        p.positionId || '',
+        p.thName || '',
+        p.engName || '',
+        p.employeeCount ?? 0,
+      ]),
+      'positions',
+    );
   }
 }

@@ -122,6 +122,37 @@
               </div>
             </div>
           </section>
+
+          <section class="cinfo-section mt-5">
+            <div class="cinfo-section-head">
+              <i class="ri-global-line"></i>
+              <h3>ตั้งค่าภูมิภาคและรอบเงินเดือน</h3>
+            </div>
+            <div class="grid grid-cols-12 gap-3">
+              <div class="col-span-12 md:col-span-4">
+                <label class="form-label" for="company-tz">Timezone หลัก</label>
+                <select id="company-tz" class="form-control" [(ngModel)]="regionalPrefs.timezone">
+                  <option value="Asia/Bangkok">Asia/Bangkok (GMT+7)</option>
+                  <option value="Asia/Singapore">Asia/Singapore (GMT+8)</option>
+                  <option value="Asia/Tokyo">Asia/Tokyo (GMT+9)</option>
+                  <option value="UTC">UTC (GMT+0)</option>
+                </select>
+              </div>
+              <div class="col-span-12 md:col-span-4">
+                <label class="form-label" for="company-cutoff">วันตัดรอบเงินเดือน (1–31)</label>
+                <input id="company-cutoff" type="number" min="1" max="31" class="form-control"
+                  [(ngModel)]="regionalPrefs.payrollCutoffDay">
+              </div>
+              <div class="col-span-12 md:col-span-4">
+                <label class="form-label" for="company-datefmt">รูปแบบวันที่</label>
+                <select id="company-datefmt" class="form-control" [(ngModel)]="regionalPrefs.dateFormat">
+                  <option value="dd/MM/yyyy">dd/MM/yyyy</option>
+                  <option value="yyyy-MM-dd">yyyy-MM-dd</option>
+                  <option value="MM/dd/yyyy">MM/dd/yyyy</option>
+                </select>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>

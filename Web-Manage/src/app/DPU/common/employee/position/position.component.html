@@ -14,6 +14,14 @@
           ariaLabel="ค้นหาตำแหน่ง">
         </app-pill-search>
         <button
+          type="button"
+          class="ti-btn ti-btn-light modern-btn dpu-tool-btn"
+          [disabled]="!filteredSource.length"
+          (click)="exportCsv()">
+          <i class="ri-download-2-line"></i>
+          <span>Export CSV</span>
+        </button>
+        <button
           *ngIf="someSelected"
           type="button"
           class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn"

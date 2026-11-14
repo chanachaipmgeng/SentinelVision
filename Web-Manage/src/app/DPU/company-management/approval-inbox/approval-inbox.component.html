@@ -71,6 +71,16 @@
             <option *ngFor="let k of kinds" [value]="k">{{ kindLabel({ kind: k }) }}</option>
           </select>
         </div>
+        <div class="dpu-filter-toolbar__field">
+          <select
+            class="form-control"
+            [ngModel]="locationFilter"
+            (ngModelChange)="setLocation($event)"
+            aria-label="กรองตามสถานที่">
+            <option value="">ทุกสถานที่</option>
+            <option *ngFor="let l of locations" [value]="l">{{ l }}</option>
+          </select>
+        </div>
       </div>
       <app-saved-views-bar
         class="dpu-filter-toolbar__views"

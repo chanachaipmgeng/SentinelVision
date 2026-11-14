@@ -52,6 +52,7 @@ export class ApprovalInboxComponent implements OnInit {
   items: ApprovalInboxItem[] = [];
   selected?: ApprovalInboxItem;
   kindFilter = '';
+  locationFilter = '';
   kpis: KpiItem[] = [];
   savedFilters: ApprovalInboxViewFilters = { q: '', kind: '' };
   private _searchTerm = '';
@@ -110,11 +111,23 @@ export class ApprovalInboxComponent implements OnInit {
     });
   }
 
+  get locations(): string[] {
+    const set = new Set<string>();
+    for (const item of this.items) {
+      if (item.locationName) set.add(item.locationName);
+    }
+    return Array.from(set).sort();
+  }
+
   applyFilter(preferKey?: string): void {
     const q = (this._searchTerm || '').trim().toLowerCase();
     const kind = this.kindFilter;
+    const loc = this.locationFilter;
     this.filtered = this.items.filter(
-      (x) => (!kind || x.kind === kind) && (!q || this.haystack(x).includes(q))
+      (x) =>
+        (!kind || x.kind === kind) &&
+        (!loc || x.locationName === loc) &&
+        (!q || this.haystack(x).includes(q))
     );
     this.kpis = this.buildKpis();
     this.savedFilters = { q: this._searchTerm || '', kind };
@@ -130,6 +143,11 @@ export class ApprovalInboxComponent implements OnInit {
 
   setKind(kind: string): void {
     this.kindFilter = kind || '';
+    this.applyFilter();
+  }
+
+  setLocation(loc: string): void {
+    this.locationFilter = loc || '';
     this.applyFilter();
   }
 

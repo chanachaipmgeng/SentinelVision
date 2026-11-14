@@ -11,6 +11,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
 import { DepartmentService } from '../../../services/department.service';
 import { DepartmentModel } from '../../../models/department.model';
 import { TokenService } from '../../../../shared/services/token.service';
+import { downloadCsv } from '../../../company-management/sentinel-center/sentinel.helpers';
 import swal from 'sweetalert';
 
 @Component({
@@ -247,5 +248,18 @@ export class DepartmentComponent {
         });
       });
     });
+  }
+
+  exportCsv(): void {
+    downloadCsv(
+      ['DepartmentID', 'NameTH', 'NameEN', 'EmployeeCount'],
+      this.filteredSource.map((d) => [
+        d.departmentId || '',
+        d.thName || '',
+        d.engName || '',
+        d.employeeCount ?? 0,
+      ]),
+      'departments',
+    );
   }
 }

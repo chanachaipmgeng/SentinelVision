@@ -150,6 +150,10 @@
               <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'RIGHT')" aria-label="PTZ Right">▶</button>
               <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'STOP')" aria-label="PTZ Stop">■</button>
             </div>
+            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="togglePrivacyMask(cam)">
+              <i class="ri-eye-off-line" aria-hidden="true"></i>
+              PDPA Mask
+            </button>
             <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="openDetail(cam)">
               <i class="ri-eye-line" aria-hidden="true"></i>
               {{ 'Detail' | translate }}

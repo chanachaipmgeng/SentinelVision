@@ -33,6 +33,8 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
   selectedDwellEventId = '';
   dwellReport: SentinelEventDwellReport | null = null;
   dwellLoading = false;
+  breakoutForm = { eventId: '', roomCode: 'ROOM-A', capacity: 50, subjectName: '' };
+  breakoutStatus = '';
 
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -198,5 +200,29 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
         this.overviewChanged.emit();
       },
     });
+  }
+
+  submitBreakoutCheckin(): void {
+    const eventId = this.breakoutForm.eventId || this.events[0]?.eventId || '';
+    if (!eventId || !this.breakoutForm.roomCode.trim()) {
+      this.toast.emit('กรุณาเลือกงานอีเวนต์และระบุรหัสห้องย่อย');
+      return;
+    }
+    this.api
+      .checkInBreakoutRoom(this.companyId, eventId, {
+        roomCode: this.breakoutForm.roomCode.trim(),
+        capacity: Number(this.breakoutForm.capacity || 50),
+        subjectName: this.breakoutForm.subjectName.trim() || 'Attendee',
+      })
+      .subscribe({
+        next: (res) => {
+          this.breakoutStatus = `Checked in ${res['roomCode']} (${res['occupancy']}/${res['capacity']})`;
+          this.toast.emit(this.breakoutStatus);
+        },
+        error: (err) => {
+          this.breakoutStatus = err?.error?.detail?.message || 'ห้องย่อยเต็มความจุแล้ว (409 EVENT_ROOM_FULL)';
+          this.toast.emit(this.breakoutStatus);
+        },
+      });
   }
 }

@@ -252,4 +252,15 @@ export class SentinelApiService {
   getDrTopology(companyId: string): Observable<Record<string, unknown>> {
     return this.http.get<Record<string, unknown>>(`${this.base(companyId)}/dr/topology`);
   }
+
+  checkInBreakoutRoom(
+    companyId: string,
+    eventId: string,
+    body: { roomCode: string; capacity: number; subjectName: string },
+  ): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(
+      `${this.base(companyId)}/events/${eventId}/sessions/check-in`,
+      body,
+    );
+  }
 }

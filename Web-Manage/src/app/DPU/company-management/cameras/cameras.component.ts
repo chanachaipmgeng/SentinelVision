@@ -600,4 +600,24 @@ export class CamerasComponent implements OnInit {
         },
       });
   }
+
+  togglePrivacyMask(cam: CameraRow): void {
+    if (!this.companyId) return;
+    const existing = ((cam.aiConfig as Record<string, unknown> | null)?.['privacyMasks'] as Array<unknown> | undefined) || [];
+    const nextMasks = existing.length ? [] : [{ x: 0.0, y: 0.0, w: 0.35, h: 0.25 }];
+    this.http
+      .put<{ cameraId: string; privacyMasks: Array<unknown>; count: number }>(
+        `/cameras/company/${this.companyId}/cameras/${cam.cameraId}/privacy-masks`,
+        { privacyMasks: nextMasks }
+      )
+      .subscribe({
+        next: (res) => {
+          cam.aiConfig = { ...(cam.aiConfig || {}), privacyMasks: res.privacyMasks } as CameraAiConfig;
+          swal('PDPA Privacy Mask', res.count ? 'เปิดใช้งาน PDPA Privacy Mask บนมุมภาพแล้ว' : 'ปิด PDPA Privacy Mask แล้ว', 'success');
+        },
+        error: (err) => {
+          swal('Error', err?.error?.detail || 'ไม่สามารถตั้งค่า Privacy Mask ได้', 'error');
+        },
+      });
+  }
 }

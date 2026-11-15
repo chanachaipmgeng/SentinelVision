@@ -414,4 +414,31 @@
       </div>
     </div>
   </div>
+
+  <!-- Multi-Session Breakout Room Capacity Check-in -->
+  <div class="box modern-card glass card-surface mt-4 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div>
+        <h4 class="text-sm font-bold text-slate-100 mb-0.5">Breakout Room Capacity Check-in</h4>
+        <p class="text-xs text-slate-400 mb-0">คุมความจุห้องประชุมย่อยแบบ Real-time ผ่าน Redis</p>
+      </div>
+      <span *ngIf="breakoutStatus" class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-xs px-2.5 py-1">
+        {{ breakoutStatus }}
+      </span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+      <select class="form-control text-xs" [(ngModel)]="breakoutForm.eventId">
+        <option value="">-- เลือกอีเวนต์แรก --</option>
+        <option *ngFor="let ev of events" [value]="ev.eventId">{{ ev.name }}</option>
+      </select>
+      <input class="form-control text-xs" [(ngModel)]="breakoutForm.roomCode" placeholder="Room Code (e.g. ROOM-A)" />
+      <input type="number" class="form-control text-xs" [(ngModel)]="breakoutForm.capacity" min="1" placeholder="Capacity" />
+      <div class="flex gap-2">
+        <input class="form-control text-xs" [(ngModel)]="breakoutForm.subjectName" placeholder="Attendee Name" />
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn text-xs whitespace-nowrap" (click)="submitBreakoutCheckin()">
+          Check-in
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

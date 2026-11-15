@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
@@ -10,7 +11,7 @@ import { PermissionService } from '../../../shared/services/permission.service';
 import { TimestampService } from '../../services/timestamp.service';
 import swal from 'sweetalert';
 
-type Tab = 'attendance' | 'leave' | 'regularization' | 'ot';
+type Tab = 'attendance' | 'leave' | 'regularization' | 'ot' | 'swap';
 
 interface SelfAttendanceRow {
   timestamp?: string;
@@ -60,7 +61,7 @@ interface SelfOtRow {
 
 @Component({
     selector: 'app-employee-self-service',
-    imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
+    imports: [CommonModule, FormsModule, RouterModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
     templateUrl: './self-service.component.html',
     styleUrls: ['./self-service.component.css', '../../../shared/styles/dpu-list-page.css'],
     encapsulation: ViewEncapsulation.None
@@ -95,6 +96,9 @@ export class SelfServiceComponent implements OnInit {
     otMinutes: 60,
     reason: '',
   };
+  shiftSwaps: Array<{ swapId: string; workDate: string; requesterEmployeeId: string; targetEmployeeId: string; status: string; reason?: string }> = [];
+  colleagues: Array<{ company_employeeId: string; employeeId?: string; member?: { firstName?: string; lastName?: string } }> = [];
+  swapDraft = { targetEmployeeId: '', workDate: '', reason: '' };
 
   constructor(
     private http: HttpClient,
@@ -234,6 +238,29 @@ export class SelfServiceComponent implements OnInit {
           },
           error: () => (this.loading = false),
         });
+    } else if (this.activeTab === 'swap') {
+      this.http
+        .get<typeof this.shiftSwaps>(`/hr/company/${this.companyId}/shift-swaps`, {
+          params: { company_employeeId: this.companyEmployeeId },
+        })
+        .subscribe({
+          next: (rows) => {
+            this.shiftSwaps = rows || [];
+            this.loading = false;
+          },
+          error: () => (this.loading = false),
+        });
+      if (!this.colleagues.length) {
+        this.http
+          .get<typeof this.colleagues>(`/hr/company/${this.companyId}/employees`)
+          .subscribe({
+            next: (rows) =>
+              (this.colleagues = (rows || []).filter(
+                (e) => e.company_employeeId !== this.companyEmployeeId
+              )),
+            error: () => undefined,
+          });
+      }
     } else {
       this.loading = false;
     }
@@ -297,6 +324,25 @@ export class SelfServiceComponent implements OnInit {
           this.reload();
         },
         error: (err) => swal('Error', err?.error?.detail || 'ส่งคำขอไม่สำเร็จ', 'error'),
+      });
+  }
+
+  submitShiftSwap(): void {
+    if (!this.companyEmployeeId || !this.swapDraft.targetEmployeeId || !this.swapDraft.workDate) return;
+    this.http
+      .post(`/hr/company/${this.companyId}/shift-swaps`, {
+        requesterEmployeeId: this.companyEmployeeId,
+        targetEmployeeId: this.swapDraft.targetEmployeeId,
+        workDate: this.swapDraft.workDate,
+        reason: this.swapDraft.reason,
+      })
+      .subscribe({
+        next: () => {
+          swal('สำเร็จ', 'ส่งคำขอสลับกะแล้ว รอหัวหน้าอนุมัติ', 'success');
+          this.swapDraft = { targetEmployeeId: '', workDate: '', reason: '' };
+          this.reload();
+        },
+        error: (err) => swal('Error', err?.error?.detail || 'ส่งคำขอสลับกะไม่สำเร็จ', 'error'),
       });
   }
 }

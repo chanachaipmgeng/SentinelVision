@@ -73,6 +73,13 @@ class EmployeeTimestamp(Base):
         "overtime_minutes", Integer, nullable=False, default=0, server_default="0"
     )
     shiftName: Mapped[str | None] = mapped_column("shift_name", String(100), nullable=True)
+    gpsAccuracy: Mapped[float | None] = mapped_column("gps_accuracy", Float, nullable=True)
+    isMockGps: Mapped[bool] = mapped_column(
+        "is_mock_gps", Boolean, nullable=False, default=False, server_default="false"
+    )
+    gpsIntegrityFlag: Mapped[str | None] = mapped_column("gps_integrity_flag", String(64), nullable=True)
+    wifiSsid: Mapped[str | None] = mapped_column("wifi_ssid", String(128), nullable=True)
+    wifiBssid: Mapped[str | None] = mapped_column("wifi_bssid", String(64), nullable=True)
 
     company_employee: Mapped["CompanyEmployee"] = relationship("CompanyEmployee", back_populates="timestamps")
 

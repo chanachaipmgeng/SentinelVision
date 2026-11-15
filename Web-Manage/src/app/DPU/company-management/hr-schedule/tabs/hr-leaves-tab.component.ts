@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../../shared/shared.module';
@@ -18,9 +19,38 @@ export class HrLeavesTabComponent implements OnInit {
   companyId = '';
   employees: HrEmployeeShiftRow[] = [];
   leaves: HrLeave[] = [];
-  newLeave = defaultNewLeave();
+  newLeave: Record<string, unknown> = {
+    ...defaultNewLeave(),
+    leaveUnit: 'FULL_DAY',
+    leaveHours: 4,
+  };
 
-  constructor(private api: HrScheduleApiService, private token: TokenService) {
+  showPolicyPanel = false;
+  policyBusy = false;
+  leavePolicyForm = {
+    leaveType: 'ANNUAL',
+    annualQuotaDays: 6,
+    allowCarryOver: false,
+    maxCarryOverDays: 3,
+    allowHalfDay: true,
+    allowHourly: true,
+    requireMedicalCert: false,
+    medicalCertMinDays: 3,
+  };
+  otPolicyForm = {
+    normalOtRate: 1.0,
+    workdayOtRate: 1.5,
+    holidayWorkRate: 2.0,
+    holidayOtRate: 3.0,
+    dailyWorkMinutes: 480,
+    roundingMinutes: 15,
+  };
+
+  constructor(
+    private api: HrScheduleApiService,
+    private http: HttpClient,
+    private token: TokenService
+  ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
 
@@ -28,10 +58,75 @@ export class HrLeavesTabComponent implements OnInit {
     if (!this.companyId) return;
     this.loadEmployees();
     this.loadLeaves();
+    this.loadPolicies();
   }
 
   private flash(msg: string): void {
     this.status.emit(msg);
+  }
+
+  loadPolicies(): void {
+    this.http.get<{ items: Record<string, unknown>[] }>(`/hr/company/${this.companyId}/leave-policies`).subscribe({
+      next: (res) => {
+        const hit = (res.items || []).find((p) => p['leaveType'] === this.leavePolicyForm.leaveType);
+        if (hit) {
+          this.leavePolicyForm = {
+            leaveType: String(hit['leaveType'] || 'ANNUAL'),
+            annualQuotaDays: Number(hit['annualQuotaDays'] ?? 6),
+            allowCarryOver: Boolean(hit['allowCarryOver']),
+            maxCarryOverDays: Number(hit['maxCarryOverDays'] ?? 0),
+            allowHalfDay: Boolean(hit['allowHalfDay'] ?? true),
+            allowHourly: Boolean(hit['allowHourly'] ?? true),
+            requireMedicalCert: Boolean(hit['requireMedicalCert']),
+            medicalCertMinDays: Number(hit['medicalCertMinDays'] ?? 3),
+          };
+        }
+      },
+      error: () => undefined,
+    });
+    this.http.get<Record<string, unknown>>(`/hr/company/${this.companyId}/ot-policy`).subscribe({
+      next: (res) => {
+        this.otPolicyForm = {
+          normalOtRate: Number(res['normalOtRate'] ?? 1.0),
+          workdayOtRate: Number(res['workdayOtRate'] ?? 1.5),
+          holidayWorkRate: Number(res['holidayWorkRate'] ?? 2.0),
+          holidayOtRate: Number(res['holidayOtRate'] ?? 3.0),
+          dailyWorkMinutes: Number(res['dailyWorkMinutes'] ?? 480),
+          roundingMinutes: Number(res['roundingMinutes'] ?? 15),
+        };
+      },
+      error: () => undefined,
+    });
+  }
+
+  saveLeavePolicy(): void {
+    if (!this.companyId || this.policyBusy) return;
+    this.policyBusy = true;
+    this.http
+      .put(`/hr/company/${this.companyId}/leave-policies/${this.leavePolicyForm.leaveType}`, this.leavePolicyForm)
+      .subscribe({
+        next: () => {
+          this.policyBusy = false;
+          this.flash('บันทึกนโยบายวันลาแล้ว');
+        },
+        error: () => {
+          this.policyBusy = false;
+        },
+      });
+  }
+
+  saveOtPolicy(): void {
+    if (!this.companyId || this.policyBusy) return;
+    this.policyBusy = true;
+    this.http.put(`/hr/company/${this.companyId}/ot-policy`, this.otPolicyForm).subscribe({
+      next: () => {
+        this.policyBusy = false;
+        this.flash('บันทึกอัตรา OT แล้ว');
+      },
+      error: () => {
+        this.policyBusy = false;
+      },
+    });
   }
 
   loadEmployees(): void {
@@ -47,11 +142,11 @@ export class HrLeavesTabComponent implements OnInit {
   }
 
   createLeave(): void {
-    if (!this.newLeave.company_employeeId || !this.newLeave.startDate || !this.newLeave.endDate) {
+    if (!this.newLeave['company_employeeId'] || !this.newLeave['startDate'] || !this.newLeave['endDate']) {
       return;
     }
     this.api.createLeave(this.companyId, this.newLeave).subscribe(() => {
-      this.newLeave = defaultNewLeave();
+      this.newLeave = { ...defaultNewLeave(), leaveUnit: 'FULL_DAY', leaveHours: 4 };
       this.loadLeaves();
       this.flash('บันทึกใบลาเรียบร้อย');
     });

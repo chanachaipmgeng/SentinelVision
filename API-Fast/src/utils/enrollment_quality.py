@@ -23,24 +23,29 @@ def _face_size_ratio(image: np.ndarray, bbox: Union[np.ndarray, list]) -> float:
     return float(area / float(h * w))
 
 
-def _pose_from_kps(kps: Optional[np.ndarray]) -> Tuple[Optional[float], Optional[float]]:
-    """Rough yaw/roll proxies from 5-point InsightFace landmarks (no 3D model).
+def _pose_from_kps(kps: Optional[np.ndarray]) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    """Rough yaw/pitch/roll proxies from 5-point InsightFace landmarks (no 3D model).
 
-    Returns ``(yaw_proxy_deg, roll_deg)`` — large |yaw| means profile; |roll| tilt.
+    Returns ``(yaw_proxy_deg, pitch_proxy_deg, roll_deg)``.
     """
     if kps is None:
-        return None, None
+        return None, None, None
     arr = np.asarray(kps, dtype=np.float32)
     if arr.ndim != 2 or arr.shape[0] < 5:
-        return None, None
+        return None, None, None
     # InsightFace order: left_eye, right_eye, nose, left_mouth, right_mouth
-    left_eye, right_eye, nose = arr[0], arr[1], arr[2]
+    left_eye, right_eye, nose, left_mouth, right_mouth = arr[0], arr[1], arr[2], arr[3], arr[4]
     eye_mid = (left_eye + right_eye) * 0.5
+    mouth_mid = (left_mouth + right_mouth) * 0.5
     eye_dist = float(np.linalg.norm(right_eye - left_eye)) + 1e-6
+    face_v_span = float(max(1.0, abs(mouth_mid[1] - eye_mid[1])))
     # Horizontal offset of nose from eye midpoint / IOD → yaw proxy
     yaw = float(np.degrees(np.arctan2(nose[0] - eye_mid[0], eye_dist)))
+    # Vertical offset of nose relative to eye-mouth midpoint → pitch proxy
+    vert_mid_y = (eye_mid[1] + mouth_mid[1]) * 0.5
+    pitch = float(np.degrees(np.arctan2(nose[1] - vert_mid_y, face_v_span)))
     roll = float(np.degrees(np.arctan2(right_eye[1] - left_eye[1], right_eye[0] - left_eye[0])))
-    return yaw, roll
+    return yaw, pitch, roll
 
 
 def check_enrollment_quality_bgr(
@@ -49,6 +54,7 @@ def check_enrollment_quality_bgr(
     kps: Optional[np.ndarray] = None,
     *,
     blur_threshold: Optional[float] = None,
+    angle: Optional[str] = None,
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """Return ``(ok, reason, scores)`` for enrollment frames."""
     scores: Dict[str, Any] = {}
@@ -73,25 +79,37 @@ def check_enrollment_quality_bgr(
             scores,
         )
 
+    angle_norm = (angle or "FRONT").strip().upper()
     max_yaw = float(getattr(settings, "ENROLL_MAX_YAW_DEG", 25.0) or 25.0)
+    if angle_norm in ("LEFT", "RIGHT"):
+        max_yaw = max(max_yaw, 55.0)
+    max_pitch = 40.0 if angle_norm in ("UP", "DOWN") else 25.0
     max_roll = float(getattr(settings, "ENROLL_MAX_ROLL_DEG", 20.0) or 20.0)
-    yaw, roll = _pose_from_kps(kps)
+    yaw, pitch, roll = _pose_from_kps(kps)
     if yaw is not None:
         scores["yawDeg"] = yaw
-        if abs(yaw) > max_yaw:
-            return (
-                False,
-                f"Face pose too angled for enrollment (|yaw|={abs(yaw):.1f}° > {max_yaw}°).",
-                scores,
-            )
+    if pitch is not None:
+        scores["pitchDeg"] = pitch
     if roll is not None:
         scores["rollDeg"] = roll
-        if abs(roll) > max_roll:
-            return (
-                False,
-                f"Face tilt too high for enrollment (|roll|={abs(roll):.1f}° > {max_roll}°).",
-                scores,
-            )
+    if yaw is not None and abs(yaw) > max_yaw:
+        return (
+            False,
+            f"Face pose too angled for enrollment (|yaw|={abs(yaw):.1f}° > {max_yaw}°).",
+            scores,
+        )
+    if pitch is not None and abs(pitch) > max_pitch:
+        return (
+            False,
+            f"Face pitch too extreme for enrollment (|pitch|={abs(pitch):.1f}° > {max_pitch}°).",
+            scores,
+        )
+    if roll is not None and abs(roll) > max_roll:
+        return (
+            False,
+            f"Face tilt too high for enrollment (|roll|={abs(roll):.1f}° > {max_roll}°).",
+            scores,
+        )
 
     # Det score / sharpness proxy already covered; expose a composite for metrics.
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

@@ -245,6 +245,13 @@ export const companyRoutes: Routes = [
           (m) => m.NotificationCenterComponent
         ),
     },
+    {
+      path: 'company/mobile-checkin',
+      loadComponent: () =>
+        import('./mobile-checkin/mobile-checkin.component').then(
+          (m) => m.MobileCheckinComponent
+        ),
+    },
     ],
   },
 ];

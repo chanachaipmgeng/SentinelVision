@@ -123,6 +123,9 @@ class LeaveRequestCreate(BaseModel):
     startDate: str
     endDate: str
     leaveType: str = "ANNUAL"
+    leaveUnit: str = "FULL_DAY"
+    leaveHours: Optional[float] = None
+    attachmentUrl: Optional[str] = None
     reason: str = ""
     autoApprove: bool = False
 

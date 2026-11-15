@@ -360,3 +360,151 @@ async def pin_fallback_checkin_route(
         "employeeCode": ce.employeeId,
         "timestampId": str(getattr(created, "timestampId", "")),
     }
+
+
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    import math
+
+    r_km = 6371.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r_km * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+@router.post("/company/{companyId}/mobile-checkin")
+async def mobile_field_checkin_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """BL-11: Mobile field check-in with photo, GPS accuracy, Anti-Mock GPS, and Wi-Fi SSID/BSSID."""
+    from datetime import timedelta, timezone
+    from sqlalchemy import select
+    from ..models.company_employee import CompanyEmployee
+    from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp, TimestampType
+    from ..models.member import Member, StatusType
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    body = await request.json()
+
+    emp_id_raw = body.get("company_employeeId")
+    stmt = (
+        select(CompanyEmployee, Member)
+        .join(Member, Member.memberId == CompanyEmployee.memberId)
+        .where(
+            CompanyEmployee.companyId == companyId,
+            CompanyEmployee.deletedAt.is_(None),
+            Member.deletedAt.is_(None),
+            Member.status == StatusType.ENABLE,
+        )
+    )
+    if emp_id_raw:
+        try:
+            emp_uuid = UUID(str(emp_id_raw))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid company_employeeId") from None
+        stmt = stmt.where(CompanyEmployee.company_employeeId == emp_uuid)
+    elif caller:
+        stmt = stmt.where(CompanyEmployee.memberId == caller.memberId)
+    else:
+        raise HTTPException(status_code=400, detail="company_employeeId is required")
+
+    row = (await db.execute(stmt.limit(1))).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Active employee not found")
+
+    ce, member = row
+    lat = float(body.get("latitude") or 0.0)
+    lon = float(body.get("longitude") or 0.0)
+    gps_accuracy = float(body["gpsAccuracy"]) if body.get("gpsAccuracy") is not None else None
+    is_mock_input = bool(body.get("isMockLocation") or body.get("isMockGps"))
+    wifi_ssid = str(body.get("wifiSsid") or "").strip()[:120] or None
+    wifi_bssid = str(body.get("wifiBssid") or "").strip()[:64] or None
+    location_name = str(body.get("locationName") or "Mobile Field Check-In").strip()[:200]
+    ts_type = int(body.get("timestampType") or 1)
+    note = str(body.get("note") or "").strip()[:500]
+    photo = body.get("photoTimestamp")
+
+    flags: list[str] = []
+    if is_mock_input:
+        flags.append("MOCK_LOCATION")
+    if gps_accuracy is not None and (gps_accuracy <= 0 or gps_accuracy > 500):
+        flags.append("LOW_ACCURACY")
+
+    now_utc = datetime.now(timezone.utc)
+    if lat != 0.0 or lon != 0.0:
+        cutoff = now_utc - timedelta(hours=2)
+        prev_ts = (
+            await db.execute(
+                select(EmployeeTimestamp)
+                .where(
+                    EmployeeTimestamp.companyId == companyId,
+                    EmployeeTimestamp.company_employeeId == ce.company_employeeId,
+                    EmployeeTimestamp.timestamp >= cutoff,
+                )
+                .order_by(EmployeeTimestamp.timestamp.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if (
+            prev_ts
+            and prev_ts.latitude is not None
+            and prev_ts.longitude is not None
+            and (prev_ts.latitude != 0.0 or prev_ts.longitude != 0.0)
+        ):
+            dist_km = _haversine_km(float(prev_ts.latitude), float(prev_ts.longitude), lat, lon)
+            prev_time = prev_ts.timestamp
+            if prev_time.tzinfo is None:
+                prev_time = prev_time.replace(tzinfo=timezone.utc)
+            dt_hours = max((now_utc - prev_time).total_seconds() / 3600.0, 1e-4)
+            speed_kmh = dist_km / dt_hours
+            if speed_kmh > 250.0 and dist_km > 5.0:
+                flags.append("IMPOSSIBLE_TRAVEL")
+
+    is_anomalous = len(flags) > 0
+    integrity_flag = ",".join(flags) if is_anomalous else None
+    if is_anomalous:
+        flag_note = f"[GPS ANOMALY: {integrity_flag}]"
+        note = f"{flag_note} {note}".strip() if note else flag_note
+
+    payload = {
+        "company_employeeId": ce.company_employeeId,
+        "timestampType": TimestampType.WARNING.value if is_anomalous else ts_type,
+        "locationName": location_name,
+        "latitude": lat,
+        "longitude": lon,
+        "photoTimestamp": photo,
+        "note": note or None,
+    }
+    created = await create_timestamp(payload, companyId, db)
+    ts_id = getattr(created, "timestampId", None)
+    if ts_id:
+        ts_row = (
+            await db.execute(select(EmployeeTimestamp).where(EmployeeTimestamp.timestampId == ts_id))
+        ).scalar_one_or_none()
+        if ts_row:
+            ts_row.gpsAccuracy = gps_accuracy
+            ts_row.isMockGps = is_anomalous
+            ts_row.gpsIntegrityFlag = integrity_flag
+            ts_row.wifiSsid = wifi_ssid
+            ts_row.wifiBssid = wifi_bssid
+            if is_anomalous:
+                ts_row.timestampType = TimestampType.WARNING
+                ts_row.approvalStatus = ApprovalStatus.PENDING.value
+            await db.commit()
+
+    return {
+        "status": "WARNING" if is_anomalous else "OK",
+        "method": "MOBILE_FIELD",
+        "timestampId": str(ts_id or ""),
+        "employeeName": f"{member.firstName} {member.lastName}".strip(),
+        "employeeCode": ce.employeeId,
+        "isMockGps": is_anomalous,
+        "gpsIntegrityFlag": integrity_flag,
+        "gpsAccuracy": gps_accuracy,
+        "wifiSsid": wifi_ssid,
+        "wifiBssid": wifi_bssid,
+    }

@@ -88,7 +88,15 @@
                 <span class="warn-queue-pulse" aria-hidden="true"></span>
               </div>
               <div class="warn-queue-meta">
-                <div class="warn-queue-name">{{ item.employee.getFullname() }}</div>
+                <div class="warn-queue-name">
+                  {{ item.employee.getFullname() }}
+                  <span
+                    *ngIf="item.isMockGps || item.gpsIntegrityFlag"
+                    class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 ms-1 text-[10px] px-1.5 py-0.5 rounded-full"
+                  >
+                    MOCK / ANOMALY GPS
+                  </span>
+                </div>
                 <div class="warn-queue-sub">
                   <span>{{ item.employee.employeeId || '—' }}</span>
                   <span class="warn-dot">·</span>
@@ -146,7 +154,15 @@
           </div>
 
           <div class="warn-hero-info">
-            <h3 class="warn-emp-name">{{ item.employee.getFullname() }}</h3>
+            <h3 class="warn-emp-name">
+              {{ item.employee.getFullname() }}
+              <span
+                *ngIf="item.isMockGps || item.gpsIntegrityFlag"
+                class="badge bg-rose-500/20 text-rose-300 border border-rose-500/40 ms-2 text-xs px-2 py-0.5 rounded-full"
+              >
+                MOCK / ANOMALY GPS{{ item.gpsIntegrityFlag ? ': ' + item.gpsIntegrityFlag : '' }}
+              </span>
+            </h3>
             <div class="warn-chip-row">
               <span class="warn-info-chip"><i class="ri-barcode-line"></i>{{ item.employee.employeeId || '—' }}</span>
               <span class="warn-info-chip"><i class="ri-building-line"></i>{{ item.employee.department.getName() || '—' }}</span>

@@ -24,6 +24,10 @@
   - Outbox notifications (SMTP / HTTP webhooks) MUST run asynchronously or in a thread pool with `SELECT ... FOR UPDATE SKIP LOCKED` to support multi-replica API deployments safely.
 - **Bounded Queries:** List and search endpoints on high-growth tables (`employee_timestamp`, `audit_log`, `notification_outbox`, `sentinel_incident_log`, `sentinel_identity`) MUST enforce server-side pagination (`limit` / `offset` or cursor) with composite indexes.
 - **Timezone Consistency:** Business day boundaries (e.g., dashboard stats, kiosk attendance, muster roll, cutoff ticks) MUST use a consistent configured timezone (`Asia/Bangkok` / company timezone) rather than mixing naive `datetime.utcnow()` and aware timestamps.
+- **Model-First & Permission-Signature Verification (Backend & Tests):**
+  - Before writing SQLAlchemy queries, serializers, or pytest fixtures, inspect the exact ORM model (`API-Fast/src/models/`) for column/attribute names, NOT NULL constraints, and whether `deletedAt` exists (e.g., `WorkShift.name`, `Member.username`/`passwordHash`/`RoleType`, `CompanyEmployee.positionId`, `AttendanceDaily.employeeId`/`otMinutes`, and `EmployeeTimestamp` has no `deletedAt`).
+  - Always pass `assert_request_permission(request, db, perm_code, companyId)` (`perm_code` before `companyId`) and use `world.auth("admin_a")` in `API-Fast/tests/` instead of nonexistent `*.admin_headers` attributes.
+  - Verify backend changes with `ruff check .`, `python -m mypy --no-incremental`, and `python -m pytest -q -p no:cacheprovider`.
 
 ## 4. Schema, Gateway & Deployment Workflow
 - **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.
@@ -61,3 +65,5 @@
   - Clicking a module in Column 1 (`selectModule`) MUST prefer the first non-`/company/scan/` management route so operators stay inside the 2-column Console rather than jumping directly into fullscreen Kiosk mode.
 - **File Editing Line Endings**:
   - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.
+  - Never write `open(p, 'wb').write(open(p, 'rb').read()...)` on the same path (opening `'wb'` truncates the file before `'rb'` reads it); always read into a variable first, then write.
+  - In Windows PowerShell 5.1, chain dependent commands with `; if ($?) { ... }` instead of `&&`.

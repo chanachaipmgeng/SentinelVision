@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../shared/shared.module';
@@ -22,6 +23,7 @@ export class ReportsComponent implements OnInit {
   previewLoading = false;
   previewRows: TimestampModel[] = [];
   previewTotal = 0;
+  payrollSummaryRows: Array<Record<string, unknown>> = [];
   employees: Array<{ company_employeeId: string; label: string }> = [];
   draft = {
     startDate: '',
@@ -34,7 +36,8 @@ export class ReportsComponent implements OnInit {
   constructor(
     private token: TokenService,
     private timestamps: TimestampService,
-    private employeesApi: EmployeeService
+    private employeesApi: EmployeeService,
+    private http: HttpClient
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
@@ -105,6 +108,25 @@ export class ReportsComponent implements OnInit {
           this.previewLoading = false;
         },
       });
+    if (this.draft.startDate && this.draft.endDate) {
+      const params: Record<string, string> = {
+        startDate: this.draft.startDate,
+        endDate: this.draft.endDate,
+      };
+      if (this.draft.company_employeeId) {
+        params['company_employeeId'] = this.draft.company_employeeId;
+      }
+      this.http
+        .get<{ items: Array<Record<string, unknown>> }>(`/hr/company/${this.companyId}/payroll-summary`, { params })
+        .subscribe({
+          next: (res) => {
+            this.payrollSummaryRows = res.items || [];
+          },
+          error: () => {
+            this.payrollSummaryRows = [];
+          },
+        });
+    }
   }
 
   export(): void {

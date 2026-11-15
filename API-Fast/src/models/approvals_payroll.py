@@ -265,3 +265,128 @@ class ApprovalDelegation(Base):
         Index("approval_delegation_company_delegate_idx", "companyId", "delegate_member_id", "is_active"),
         Index("approval_delegation_company_delegator_idx", "companyId", "delegator_member_id", "is_active"),
     )
+
+
+class LeavePolicy(Base):
+    """BL-08 Leave Policy: seniority quota tiers, carry-over, half-day/hourly, medical cert."""
+
+    __tablename__ = "leave_policy"
+
+    policyId: Mapped[uuid.UUID] = mapped_column(
+        "policy_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    leaveType: Mapped[str] = mapped_column("leave_type", String(30), nullable=False)
+    displayName: Mapped[str] = mapped_column("display_name", String(100), nullable=False, default="")
+    annualQuotaDays: Mapped[float] = mapped_column("annual_quota_days", Float, nullable=False, default=6.0)
+    seniorityTiers: Mapped[Any] = mapped_column(
+        "seniority_tiers",
+        JSONB,
+        nullable=False,
+        server_default=text("'[]'::jsonb"),
+        default=list,
+    )
+    allowCarryOver: Mapped[bool] = mapped_column(
+        "allow_carry_over", Boolean, nullable=False, default=False, server_default="false"
+    )
+    maxCarryOverDays: Mapped[float] = mapped_column(
+        "max_carry_over_days", Float, nullable=False, default=0.0, server_default="0"
+    )
+    allowHalfDay: Mapped[bool] = mapped_column(
+        "allow_half_day", Boolean, nullable=False, default=True, server_default="true"
+    )
+    allowHourly: Mapped[bool] = mapped_column(
+        "allow_hourly", Boolean, nullable=False, default=True, server_default="true"
+    )
+    requireMedicalCert: Mapped[bool] = mapped_column(
+        "require_medical_cert", Boolean, nullable=False, default=False, server_default="false"
+    )
+    medicalCertMinDays: Mapped[float] = mapped_column(
+        "medical_cert_min_days", Float, nullable=False, default=3.0, server_default="3"
+    )
+    isActive: Mapped[bool] = mapped_column(
+        "is_active", Boolean, nullable=False, default=True, server_default="true"
+    )
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("uq_leave_policy_company_type", "companyId", "leave_type", unique=True),
+    )
+
+
+class OtRatePolicy(Base):
+    """BL-08 Thai labor law OT rate multipliers (1.0x, 1.5x, 2.0x, 3.0x)."""
+
+    __tablename__ = "ot_rate_policy"
+
+    policyId: Mapped[uuid.UUID] = mapped_column(
+        "policy_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    normalOtRate: Mapped[float] = mapped_column("normal_ot_rate", Float, nullable=False, default=1.0, server_default="1.0")
+    workdayOtRate: Mapped[float] = mapped_column("workday_ot_rate", Float, nullable=False, default=1.5, server_default="1.5")
+    holidayWorkRate: Mapped[float] = mapped_column("holiday_work_rate", Float, nullable=False, default=2.0, server_default="2.0")
+    holidayOtRate: Mapped[float] = mapped_column("holiday_ot_rate", Float, nullable=False, default=3.0, server_default="3.0")
+    dailyWorkMinutes: Mapped[int] = mapped_column("daily_work_minutes", Integer, nullable=False, default=480, server_default="480")
+    roundingMinutes: Mapped[int] = mapped_column("rounding_minutes", Integer, nullable=False, default=15, server_default="15")
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ShiftSwapRequest(Base):
+    """BL-10 Employee shift swap request between two colleagues on a work date."""
+
+    __tablename__ = "shift_swap_request"
+
+    swapId: Mapped[uuid.UUID] = mapped_column(
+        "swap_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    requesterEmployeeId: Mapped[uuid.UUID] = mapped_column(
+        "requester_employee_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    targetEmployeeId: Mapped[uuid.UUID] = mapped_column(
+        "target_employee_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    workDate: Mapped[date] = mapped_column("work_date", Date, nullable=False)
+    requesterShiftId: Mapped[uuid.UUID | None] = mapped_column("requester_shift_id", UUID(as_uuid=True), nullable=True)
+    targetShiftId: Mapped[uuid.UUID | None] = mapped_column("target_shift_id", UUID(as_uuid=True), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=ApprovalRequestStatus.PENDING.value, server_default="PENDING"
+    )
+    approvedBy: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    approvedAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    rejectReason: Mapped[str | None] = mapped_column(String, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("shift_swap_company_status_idx", "companyId", "status"),
+    )

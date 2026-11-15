@@ -301,6 +301,11 @@ def _timestamp_payload(time: EmployeeTimestamp) -> dict:
         "lateMinutes": int(getattr(time, "lateMinutes", 0) or 0),
         "overtimeMinutes": int(getattr(time, "overtimeMinutes", 0) or 0),
         "shiftName": getattr(time, "shiftName", None),
+        "gpsAccuracy": getattr(time, "gpsAccuracy", None),
+        "isMockGps": bool(getattr(time, "isMockGps", False)),
+        "gpsIntegrityFlag": getattr(time, "gpsIntegrityFlag", None),
+        "wifiSsid": getattr(time, "wifiSsid", None),
+        "wifiBssid": getattr(time, "wifiBssid", None),
     }
 
 

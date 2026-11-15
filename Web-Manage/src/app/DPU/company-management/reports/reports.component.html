@@ -182,4 +182,51 @@
       </div>
     </div>
   </div>
+
+  <!-- Payroll Summary & OT Rate Breakdown (1.0x / 1.5x / 2.0x / 3.0x) -->
+  <div class="col-span-12" *ngIf="payrollSummaryRows.length > 0">
+    <div class="box modern-card glass">
+      <div class="box-header flex items-center justify-between border-b border-white/10 p-4">
+        <div class="box-title text-slate-100 font-bold flex items-center gap-2">
+          <i class="ri-money-dollar-circle-line text-emerald-400"></i>
+          Payroll Summary &amp; OT Rate Breakdown (1.0x / 1.5x / 2.0x / 3.0x)
+        </div>
+        <span class="text-xs text-slate-400">{{ payrollSummaryRows.length }} employees</span>
+      </div>
+      <div class="box-body p-0 overflow-x-auto">
+        <table class="table whitespace-nowrap min-w-full text-xs">
+          <thead>
+            <tr>
+              <th class="text-start">รหัส</th>
+              <th class="text-start">ชื่อ-นามสกุล</th>
+              <th class="text-end">มาทำงาน (วัน)</th>
+              <th class="text-end">ขาด (วัน)</th>
+              <th class="text-end">สาย (นาที)</th>
+              <th class="text-end">ลา (ชม.)</th>
+              <th class="text-end">OT 1.0x (น.)</th>
+              <th class="text-end">OT 1.5x (น.)</th>
+              <th class="text-end">OT 2.0x (น.)</th>
+              <th class="text-end">OT 3.0x (น.)</th>
+              <th class="text-end">OT ถ่วงน้ำหนัก (ชม.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of payrollSummaryRows">
+              <td>{{ row['employeeId'] || '—' }}</td>
+              <td>{{ row['employeeName'] || '—' }}</td>
+              <td class="text-end">{{ row['presentDays'] }}</td>
+              <td class="text-end">{{ row['absentDays'] }}</td>
+              <td class="text-end">{{ row['lateMinutes'] }}</td>
+              <td class="text-end">{{ row['leaveHours'] }}</td>
+              <td class="text-end">{{ row['ot10Minutes'] }}</td>
+              <td class="text-end">{{ row['ot15Minutes'] }}</td>
+              <td class="text-end">{{ row['ot20Minutes'] }}</td>
+              <td class="text-end">{{ row['ot30Minutes'] }}</td>
+              <td class="text-end font-semibold text-emerald-300">{{ row['weightedOtHours'] }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>

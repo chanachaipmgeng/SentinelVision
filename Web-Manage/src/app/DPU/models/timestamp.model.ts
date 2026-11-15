@@ -24,6 +24,11 @@ export class TimestampModel extends BaseModel {
   lateMinutes?: number
   overtimeMinutes?: number
   shiftName?: string
+  gpsAccuracy?: number | null
+  isMockGps?: boolean
+  gpsIntegrityFlag?: string | null
+  wifiSsid?: string | null
+  wifiBssid?: string | null
   employee: EmployeeModel
   constructor(
     data?: Partial<TimestampModel>,
@@ -50,6 +55,11 @@ export class TimestampModel extends BaseModel {
     this.lateMinutes = Number(data?.lateMinutes || 0)
     this.overtimeMinutes = Number(data?.overtimeMinutes || 0)
     this.shiftName = data?.shiftName || ""
+    this.gpsAccuracy = data?.gpsAccuracy ?? null
+    this.isMockGps = Boolean(data?.isMockGps)
+    this.gpsIntegrityFlag = data?.gpsIntegrityFlag ?? null
+    this.wifiSsid = data?.wifiSsid ?? null
+    this.wifiBssid = data?.wifiBssid ?? null
     this.employee = new EmployeeModel(data?.employee, this.translateService)
   }
 

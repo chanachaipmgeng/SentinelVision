@@ -170,3 +170,139 @@
     </div>
   </div>
 </div>
+
+<!-- BL-10: Monthly Roster Calendar & Rotating Shift Generator -->
+<div class="mt-5 p-5 rounded-xl border border-white/10 bg-slate-900/60 shadow-lg backdrop-blur-md">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+    <h6 class="font-bold text-slate-100 flex items-center gap-2 mb-0">
+      <i class="ri-calendar-schedule-line text-cyan-400"></i> ปฏิทินตารางเวรประจำเดือน (Monthly Roster & Rotating Shifts)
+    </h6>
+    <div class="flex flex-wrap items-center gap-2">
+      <input
+        type="month"
+        class="form-control form-control-sm !w-auto !bg-slate-950/70 !border-white/10 !text-slate-200"
+        [(ngModel)]="rosterMonth"
+        (ngModelChange)="loadRoster()"
+      />
+      <select
+        class="form-control form-control-sm !w-auto !bg-slate-950/70 !border-white/10 !text-slate-200"
+        [(ngModel)]="genShiftId"
+      >
+        <option value="">หมุนเวียนทุกกะ ({{ shifts.length }})</option>
+        <option *ngFor="let s of shifts" [value]="s.shiftId">{{ s.name }}</option>
+      </select>
+      <input
+        type="number"
+        min="1"
+        max="14"
+        class="form-control form-control-sm !w-20 !bg-slate-950/70 !border-white/10 !text-slate-200"
+        [(ngModel)]="genWorkDays"
+        title="จำนวนวันทำงานต่อรอบ"
+      />
+      <span class="text-xs text-slate-400">ทำ /</span>
+      <input
+        type="number"
+        min="0"
+        max="7"
+        class="form-control form-control-sm !w-20 !bg-slate-950/70 !border-white/10 !text-slate-200"
+        [(ngModel)]="genOffDays"
+        title="จำนวนวันหยุดต่อรอบ"
+      />
+      <span class="text-xs text-slate-400">หยุด</span>
+      <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer">
+        <input type="checkbox" class="form-check-input !rounded" [(ngModel)]="genFlexible" />
+        <span>Flexible</span>
+      </label>
+      <button type="button" class="btn-vault px-3 py-1.5 rounded-lg text-xs font-semibold" (click)="generateRotatingRoster()">
+        <i class="ri-magic-line me-1"></i> สร้างตารางเวรหมุนเวียน
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive max-h-96 overflow-auto">
+    <table class="table whitespace-nowrap min-w-full text-xs">
+      <thead>
+        <tr class="border-b border-white/10 bg-black/30 text-slate-400">
+          <th class="py-2 px-3 sticky left-0 bg-slate-950 z-10">พนักงาน</th>
+          <th *ngFor="let d of rosterDays" class="py-2 px-2 text-center font-mono">{{ d.slice(8, 10) }}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/5">
+        <tr *ngFor="let emp of employees" class="hover:bg-white/[0.02]">
+          <td class="py-2 px-3 font-medium text-slate-100 sticky left-0 bg-slate-950/95 z-10">
+            {{ emp.member?.firstName }} {{ emp.member?.lastName }}
+          </td>
+          <td *ngFor="let d of rosterDays" class="py-1.5 px-1 text-center">
+            <select
+              class="form-control form-control-sm !px-1.5 !py-0.5 !text-[11px] !bg-slate-950/80 !border-white/10 !text-slate-200 min-w-[76px]"
+              [ngModel]="getRosterValue(emp.company_employeeId, d)"
+              (ngModelChange)="updateRosterCell(emp.company_employeeId, d, $event)"
+            >
+              <option value="">--</option>
+              <option value="__OFF__">OFF</option>
+              <option *ngFor="let s of shifts" [value]="s.shiftId">{{ s.name }}</option>
+            </select>
+          </td>
+        </tr>
+        <tr *ngIf="employees.length === 0">
+          <td [attr.colspan]="rosterDays.length + 1" class="text-center text-slate-400 py-6">ยังไม่มีพนักงานในบริษัท</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BL-10: Shift Swap Approval Queue -->
+<div class="mt-5 p-5 rounded-xl border border-white/10 bg-slate-900/60 shadow-lg backdrop-blur-md">
+  <h6 class="font-bold text-slate-100 flex items-center gap-2 mb-4">
+    <i class="ri-swap-line text-cyan-400"></i> คำขอสลับกะทำงาน (Shift Swap Requests)
+  </h6>
+  <div class="table-responsive">
+    <table class="table whitespace-nowrap min-w-full">
+      <thead>
+        <tr class="border-b border-white/10 bg-black/30 text-slate-400 text-xs uppercase tracking-wider">
+          <th class="text-start py-3 px-3">วันที่</th>
+          <th class="text-start py-3 px-3">ผู้ขอสลับกะ</th>
+          <th class="text-start py-3 px-3">สลับกับพนักงาน</th>
+          <th class="text-start py-3 px-3">เหตุผล</th>
+          <th class="text-start py-3 px-3">สถานะ</th>
+          <th class="text-end py-3 px-3">จัดการ</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/5">
+        <tr *ngFor="let sw of shiftSwaps" class="border-b border-white/5">
+          <td class="py-3 px-3 font-mono text-xs text-slate-200">{{ sw.workDate }}</td>
+          <td class="py-3 px-3 text-slate-100">{{ employeeNameById(sw.requesterEmployeeId) }}</td>
+          <td class="py-3 px-3 text-slate-100">{{ employeeNameById(sw.targetEmployeeId) }}</td>
+          <td class="py-3 px-3 text-slate-300 text-xs">{{ sw.reason || '—' }}</td>
+          <td class="py-3 px-3">
+            <span
+              class="badge px-2 py-0.5 rounded-full text-xs"
+              [ngClass]="{
+                'bg-amber-500/15 text-amber-300': sw.status === 'PENDING',
+                'bg-emerald-500/15 text-emerald-300': sw.status === 'APPROVED',
+                'bg-rose-500/15 text-rose-300': sw.status === 'REJECTED'
+              }"
+            >
+              {{ sw.status }}
+            </span>
+          </td>
+          <td class="text-end py-3 px-3">
+            <ng-container *ngIf="sw.status === 'PENDING'">
+              <button type="button" class="ti-btn ti-btn-sm ti-btn-success me-1 !px-2.5 !py-1" (click)="decideShiftSwap(sw.swapId, 'APPROVED')">
+                อนุมัติ
+              </button>
+              <button type="button" class="ti-btn ti-btn-sm ti-btn-danger !px-2.5 !py-1" (click)="decideShiftSwap(sw.swapId, 'REJECTED')">
+                ปฏิเสธ
+              </button>
+            </ng-container>
+            <span *ngIf="sw.status !== 'PENDING'" class="text-xs text-slate-400">ดำเนินการแล้ว</span>
+          </td>
+        </tr>
+        <tr *ngIf="shiftSwaps.length === 0">
+          <td colspan="6" class="text-center text-slate-400 py-6">ยังไม่มีคำขอสลับกะ</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

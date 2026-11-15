@@ -236,3 +236,36 @@ async def delete_encoding_route(
 ):
     await assert_encoding_company_access(request, db, faceEncodingId)
     return await delete_face_encoding(faceEncodingId, db)
+
+
+@router.post("/check-quality")
+async def check_face_quality_route(
+    file: UploadFile = File(...),
+    angle: Optional[str] = Form("FRONT"),
+    _auth=_face_auth,
+):
+    """BL-09: Pre-check brightness, sharpness, face ratio, and 5-angle pose (yaw/pitch/roll)."""
+    import cv2
+    import numpy as np
+
+    from ..utils.enrollment_quality import check_enrollment_quality_bgr
+    from ..utils.face_gpu_queue import run_on_face_gpu
+
+    raw = await file.read()
+    arr = np.frombuffer(raw, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        return {"ok": False, "reason": "Invalid image file", "scores": {}}
+
+    def _inspect():
+        from ..utils.face_engine import _get_app
+
+        app = _get_app()
+        faces = app.get(img)
+        if not faces:
+            return False, "No face detected", {}
+        best = max(faces, key=lambda f: float((f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])))
+        return check_enrollment_quality_bgr(img, best.bbox, getattr(best, "kps", None), angle=angle)
+
+    ok, reason, scores = await run_on_face_gpu(_inspect)
+    return {"ok": bool(ok), "reason": reason, "scores": scores, "angle": (angle or "FRONT").upper()}

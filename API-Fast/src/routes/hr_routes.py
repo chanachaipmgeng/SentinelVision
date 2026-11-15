@@ -20,13 +20,16 @@ from ..models.approvals_payroll import (
     ApprovalPolicy,
     ApprovalRequestStatus,
     LeaveBalance,
+    LeavePolicy,
     OtApprovalRequest,
+    OtRatePolicy,
     PayrollPeriod,
     PayrollPeriodStatus,
     RegularizationRequest,
+    ShiftSwapRequest,
 )
 from ..models.employee_timestamp import ApprovalStatus, EmployeeTimestamp
-from ..models.hr_schedule import CompanyHoliday, LeaveRequest, WorkShift
+from ..models.hr_schedule import CompanyHoliday, LeaveRequest, ShiftRosterEntry, WorkShift
 from ..models.member import Member
 from ..schemas.hr_schema import (
     AssignShiftBody,
@@ -433,6 +436,9 @@ def _serialize_leave(lr: LeaveRequest, emp: Optional[CompanyEmployee]) -> dict:
         "employeeName": full_name,
         "department": (dept.thName if dept else "") or "",
         "leaveType": lr.leaveType,
+        "leaveUnit": getattr(lr, "leaveUnit", "FULL_DAY") or "FULL_DAY",
+        "leaveHours": getattr(lr, "leaveHours", None),
+        "attachmentUrl": getattr(lr, "attachmentUrl", None),
         "startDate": lr.startDate.isoformat() if lr.startDate else None,
         "endDate": lr.endDate.isoformat() if lr.endDate else None,
         "reason": lr.reason or "",
@@ -519,8 +525,35 @@ async def create_leave_request(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endDate must be >= startDate")
 
     leave_type = str(body.leaveType or "ANNUAL").strip().upper()
+    leave_unit = str(getattr(body, "leaveUnit", "FULL_DAY") or "FULL_DAY").strip().upper()
+    leave_hours = getattr(body, "leaveHours", None)
+    attachment_url = (getattr(body, "attachmentUrl", None) or "").strip() or None
     reason = str(body.reason or "").strip()
     auto_approve = bool(body.autoApprove)
+
+    from ..services.ot_leave_engine_service import compute_leave_units
+
+    days_equiv, hours_equiv = compute_leave_units(start_d, end_d, leave_unit, leave_hours)
+
+    pol = (
+        await db.execute(
+            select(LeavePolicy).where(
+                LeavePolicy.companyId == companyId,
+                LeavePolicy.leaveType == leave_type,
+                LeavePolicy.isActive.is_(True),
+            )
+        )
+    ).scalar_one_or_none()
+    if pol is not None:
+        if leave_unit == "HALF_DAY" and not pol.allowHalfDay:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Half-day leave is not allowed for this leave type")
+        if leave_unit == "HOURLY" and not pol.allowHourly:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Hourly leave is not allowed for this leave type")
+        if pol.requireMedicalCert and days_equiv >= float(pol.medicalCertMinDays or 3.0) and not attachment_url:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Medical certificate attachment required for >= {pol.medicalCertMinDays} days",
+            )
 
     await assert_range_not_locked(db, companyId, start_d, end_d)
     await _assert_no_leave_overlap(db, companyId, emp_id, start_d, end_d)
@@ -531,6 +564,9 @@ async def create_leave_request(
         companyId=companyId,
         company_employeeId=emp_id,
         leaveType=leave_type,
+        leaveUnit=leave_unit,
+        leaveHours=hours_equiv if leave_unit in ("HALF_DAY", "HOURLY") else None,
+        attachmentUrl=attachment_url,
         startDate=start_d,
         endDate=end_d,
         reason=reason,
@@ -542,7 +578,7 @@ async def create_leave_request(
     db.add(lr)
     if auto_approve:
         bal = await _get_or_create_leave_balance(db, companyId, emp_id, leave_type, start_d.year)
-        bal.usedDays = float(bal.usedDays or 0) + float(_leave_days(start_d, end_d))
+        bal.usedDays = float(bal.usedDays or 0) + float(days_equiv)
     await db.commit()
     await db.refresh(lr)
     if auto_approve:
@@ -599,10 +635,17 @@ async def approve_or_reject_leave(
         "LEAVE",
     )
     if is_final_approved and prev != "APPROVED":
+        from ..services.ot_leave_engine_service import compute_leave_units
+
         bal = await _get_or_create_leave_balance(
             db, companyId, lr.company_employeeId, lr.leaveType, lr.startDate.year
         )
-        days = float(_leave_days(lr.startDate, lr.endDate))
+        days, _ = compute_leave_units(
+            lr.startDate,
+            lr.endDate,
+            getattr(lr, "leaveUnit", "FULL_DAY"),
+            getattr(lr, "leaveHours", None),
+        )
         if float(bal.entitledDays or 0) > 0 and bal.remainingDays < days:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -1670,3 +1713,570 @@ async def delete_approval_delegation(
     await db.delete(row)
     await db.commit()
     return {"status": "deleted", "delegationId": str(delegationId)}
+
+
+# ---------------------------------------------------------------------------
+# BL-08 Leave Policy & OT Rate Engine (1.0x / 1.5x / 2.0x / 3.0x)
+# ---------------------------------------------------------------------------
+@router.get("/company/{companyId}/leave-policies")
+async def list_leave_policies(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    rows = (
+        await db.execute(
+            select(LeavePolicy)
+            .where(LeavePolicy.companyId == companyId)
+            .order_by(LeavePolicy.leaveType.asc())
+        )
+    ).scalars().all()
+    items = [
+        {
+            "policyId": str(r.policyId),
+            "companyId": str(r.companyId),
+            "leaveType": r.leaveType,
+            "displayName": r.displayName or r.leaveType,
+            "annualQuotaDays": float(r.annualQuotaDays),
+            "seniorityTiers": list(r.seniorityTiers or []),
+            "allowCarryOver": bool(r.allowCarryOver),
+            "maxCarryOverDays": float(r.maxCarryOverDays or 0),
+            "allowHalfDay": bool(r.allowHalfDay),
+            "allowHourly": bool(r.allowHourly),
+            "requireMedicalCert": bool(r.requireMedicalCert),
+            "medicalCertMinDays": float(r.medicalCertMinDays or 3.0),
+            "isActive": bool(r.isActive),
+        }
+        for r in rows
+    ]
+    return {"items": items, "total": len(items)}
+
+
+@router.put("/company/{companyId}/leave-policies/{leaveType}")
+async def upsert_leave_policy(
+    companyId: UUID,
+    leaveType: str,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import rbac_service
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    await rbac_service.assert_permission(db, caller, rbac_service.PERM_HR_LEAVES, companyId)
+
+    lt = leaveType.strip().upper()
+    row = (
+        await db.execute(
+            select(LeavePolicy).where(
+                LeavePolicy.companyId == companyId,
+                LeavePolicy.leaveType == lt,
+            )
+        )
+    ).scalar_one_or_none()
+    tiers = body.get("seniorityTiers")
+    norm_tiers = tiers if isinstance(tiers, list) else []
+
+    if row is None:
+        row = LeavePolicy(
+            companyId=companyId,
+            leaveType=lt,
+            displayName=str(body.get("displayName") or lt).strip(),
+            annualQuotaDays=float(body.get("annualQuotaDays", 6.0)),
+            seniorityTiers=norm_tiers,
+            allowCarryOver=bool(body.get("allowCarryOver", False)),
+            maxCarryOverDays=float(body.get("maxCarryOverDays", 0.0)),
+            allowHalfDay=bool(body.get("allowHalfDay", True)),
+            allowHourly=bool(body.get("allowHourly", True)),
+            requireMedicalCert=bool(body.get("requireMedicalCert", False)),
+            medicalCertMinDays=float(body.get("medicalCertMinDays", 3.0)),
+            isActive=bool(body.get("isActive", True)),
+        )
+        db.add(row)
+    else:
+        if "displayName" in body:
+            row.displayName = str(body["displayName"] or lt).strip()
+        if "annualQuotaDays" in body:
+            row.annualQuotaDays = float(body["annualQuotaDays"])
+        if "seniorityTiers" in body:
+            row.seniorityTiers = norm_tiers
+        if "allowCarryOver" in body:
+            row.allowCarryOver = bool(body["allowCarryOver"])
+        if "maxCarryOverDays" in body:
+            row.maxCarryOverDays = float(body["maxCarryOverDays"])
+        if "allowHalfDay" in body:
+            row.allowHalfDay = bool(body["allowHalfDay"])
+        if "allowHourly" in body:
+            row.allowHourly = bool(body["allowHourly"])
+        if "requireMedicalCert" in body:
+            row.requireMedicalCert = bool(body["requireMedicalCert"])
+        if "medicalCertMinDays" in body:
+            row.medicalCertMinDays = float(body["medicalCertMinDays"])
+        if "isActive" in body:
+            row.isActive = bool(body["isActive"])
+
+    await db.commit()
+    await db.refresh(row)
+    return {
+        "policyId": str(row.policyId),
+        "companyId": str(row.companyId),
+        "leaveType": row.leaveType,
+        "displayName": row.displayName,
+        "annualQuotaDays": float(row.annualQuotaDays),
+        "seniorityTiers": list(row.seniorityTiers or []),
+        "allowCarryOver": bool(row.allowCarryOver),
+        "maxCarryOverDays": float(row.maxCarryOverDays),
+        "allowHalfDay": bool(row.allowHalfDay),
+        "allowHourly": bool(row.allowHourly),
+        "requireMedicalCert": bool(row.requireMedicalCert),
+        "medicalCertMinDays": float(row.medicalCertMinDays),
+        "isActive": bool(row.isActive),
+    }
+
+
+@router.get("/company/{companyId}/ot-policy")
+async def get_ot_rate_policy(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.ot_leave_engine_service import get_or_default_ot_policy
+
+    await assert_request_company_membership(request, db, companyId)
+    return await get_or_default_ot_policy(db, companyId)
+
+
+@router.put("/company/{companyId}/ot-policy")
+async def upsert_ot_rate_policy(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services import rbac_service
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    await rbac_service.assert_permission(db, caller, rbac_service.PERM_COMPANY_SETTINGS, companyId)
+
+    row = (
+        await db.execute(select(OtRatePolicy).where(OtRatePolicy.companyId == companyId))
+    ).scalar_one_or_none()
+    if row is None:
+        row = OtRatePolicy(
+            companyId=companyId,
+            normalOtRate=float(body.get("normalOtRate", 1.0)),
+            workdayOtRate=float(body.get("workdayOtRate", 1.5)),
+            holidayWorkRate=float(body.get("holidayWorkRate", 2.0)),
+            holidayOtRate=float(body.get("holidayOtRate", 3.0)),
+            dailyWorkMinutes=int(body.get("dailyWorkMinutes", 480)),
+            roundingMinutes=int(body.get("roundingMinutes", 15)),
+        )
+        db.add(row)
+    else:
+        if "normalOtRate" in body:
+            row.normalOtRate = float(body["normalOtRate"])
+        if "workdayOtRate" in body:
+            row.workdayOtRate = float(body["workdayOtRate"])
+        if "holidayWorkRate" in body:
+            row.holidayWorkRate = float(body["holidayWorkRate"])
+        if "holidayOtRate" in body:
+            row.holidayOtRate = float(body["holidayOtRate"])
+        if "dailyWorkMinutes" in body:
+            row.dailyWorkMinutes = int(body["dailyWorkMinutes"])
+        if "roundingMinutes" in body:
+            row.roundingMinutes = int(body["roundingMinutes"])
+
+    await db.commit()
+    await db.refresh(row)
+    return {
+        "policyId": str(row.policyId),
+        "companyId": str(row.companyId),
+        "normalOtRate": float(row.normalOtRate),
+        "workdayOtRate": float(row.workdayOtRate),
+        "holidayWorkRate": float(row.holidayWorkRate),
+        "holidayOtRate": float(row.holidayOtRate),
+        "dailyWorkMinutes": int(row.dailyWorkMinutes),
+        "roundingMinutes": int(row.roundingMinutes),
+    }
+
+
+@router.get("/company/{companyId}/payroll-summary")
+async def get_payroll_summary(
+    companyId: UUID,
+    request: Request,
+    startDate: str,
+    endDate: str,
+    company_employeeId: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.ot_leave_engine_service import build_payroll_summary
+
+    await assert_request_company_access(request, db, companyId)
+    try:
+        start_d = date.fromisoformat(startDate[:10])
+        end_d = date.fromisoformat(endDate[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required") from None
+    return await build_payroll_summary(db, companyId, start_d, end_d, company_employeeId)
+
+
+def _serialize_roster_entry(row: ShiftRosterEntry, shift_map: dict[UUID, WorkShift]) -> dict:
+    shift = shift_map.get(row.shiftId) if row.shiftId else None
+    return {
+        "rosterId": str(row.rosterId),
+        "companyId": str(row.companyId),
+        "company_employeeId": str(row.company_employeeId),
+        "workDate": row.workDate.isoformat(),
+        "shiftId": str(row.shiftId) if row.shiftId else None,
+        "shiftName": shift.name if shift else None,
+        "startTime": shift.startTime if shift else None,
+        "endTime": shift.endTime if shift else None,
+        "isDayOff": bool(row.isDayOff),
+        "isFlexible": bool(row.isFlexible),
+        "note": row.note,
+    }
+
+
+def _serialize_shift_swap(row: ShiftSwapRequest) -> dict:
+    return {
+        "swapId": str(row.swapId),
+        "companyId": str(row.companyId),
+        "requesterEmployeeId": str(row.requesterEmployeeId),
+        "targetEmployeeId": str(row.targetEmployeeId),
+        "workDate": row.workDate.isoformat(),
+        "requesterShiftId": str(row.requesterShiftId) if row.requesterShiftId else None,
+        "targetShiftId": str(row.targetShiftId) if row.targetShiftId else None,
+        "reason": row.reason,
+        "status": row.status,
+        "approvedBy": str(row.approvedBy) if row.approvedBy else None,
+        "approvedAt": row.approvedAt.isoformat() if row.approvedAt else None,
+        "rejectReason": row.rejectReason,
+        "createdAt": row.createdAt.isoformat() if row.createdAt else None,
+    }
+
+
+@router.get("/company/{companyId}/roster")
+async def get_company_roster(
+    companyId: UUID,
+    request: Request,
+    startDate: str,
+    endDate: str,
+    company_employeeId: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    try:
+        start_d = date.fromisoformat(startDate[:10])
+        end_d = date.fromisoformat(endDate[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required") from None
+
+    stmt = (
+        select(ShiftRosterEntry)
+        .where(
+            ShiftRosterEntry.companyId == companyId,
+            ShiftRosterEntry.workDate >= start_d,
+            ShiftRosterEntry.workDate <= end_d,
+        )
+        .order_by(ShiftRosterEntry.workDate.asc())
+    )
+    if company_employeeId:
+        stmt = stmt.where(ShiftRosterEntry.company_employeeId == company_employeeId)
+    rows = (await db.execute(stmt)).scalars().all()
+    shifts = (
+        await db.execute(
+            select(WorkShift).where(WorkShift.companyId == companyId, WorkShift.deletedAt.is_(None))
+        )
+    ).scalars().all()
+    shift_map = {s.shiftId: s for s in shifts}
+    return [_serialize_roster_entry(r, shift_map) for r in rows]
+
+
+@router.put("/company/{companyId}/roster")
+async def upsert_company_roster(
+    companyId: UUID,
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import timedelta
+
+    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
+
+    entries = list(body.get("entries") or [])
+    generate = body.get("generate")
+    if isinstance(generate, dict):
+        try:
+            g_start = date.fromisoformat(str(generate["startDate"])[:10])
+            g_end = date.fromisoformat(str(generate["endDate"])[:10])
+        except (KeyError, ValueError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid generate startDate/endDate required") from None
+        emp_ids = generate.get("employeeIds") or []
+        pattern_ids = generate.get("patternShiftIds") or []
+        work_days = max(1, int(generate.get("workDays") or 5))
+        off_days = max(0, int(generate.get("offDays") or 2))
+        is_flexible = bool(generate.get("isFlexible", False))
+        cycle_len = work_days + off_days
+        cur = g_start
+        day_idx = 0
+        while cur <= g_end:
+            for e_idx, emp_id in enumerate(emp_ids):
+                pos = (day_idx + e_idx) % cycle_len if cycle_len > 0 else 0
+                is_off = pos >= work_days
+                shift_id = None
+                if not is_off and pattern_ids:
+                    cycle_num = (day_idx + e_idx) // cycle_len if cycle_len > 0 else 0
+                    shift_id = pattern_ids[cycle_num % len(pattern_ids)]
+                entries.append(
+                    {
+                        "company_employeeId": emp_id,
+                        "workDate": cur.isoformat(),
+                        "shiftId": shift_id,
+                        "isDayOff": is_off,
+                        "isFlexible": is_flexible,
+                    }
+                )
+            cur += timedelta(days=1)
+            day_idx += 1
+
+    if not entries:
+        return {"updated": 0}
+
+    updated = 0
+    for item in entries:
+        try:
+            emp_uuid = UUID(str(item["company_employeeId"]))
+            w_date = date.fromisoformat(str(item["workDate"])[:10])
+        except (KeyError, ValueError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid roster entry") from None
+        emp = (
+            await db.execute(
+                select(CompanyEmployee).where(
+                    CompanyEmployee.company_employeeId == emp_uuid,
+                    CompanyEmployee.companyId == companyId,
+                    CompanyEmployee.deletedAt.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if not emp:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee {emp_uuid} not found")
+
+        shift_uuid = UUID(str(item["shiftId"])) if item.get("shiftId") else None
+        is_off = bool(item.get("isDayOff", False))
+        is_flex = bool(item.get("isFlexible", False))
+        note = item.get("note")
+
+        existing = (
+            await db.execute(
+                select(ShiftRosterEntry).where(
+                    ShiftRosterEntry.companyId == companyId,
+                    ShiftRosterEntry.company_employeeId == emp_uuid,
+                    ShiftRosterEntry.workDate == w_date,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing:
+            existing.shiftId = None if is_off else shift_uuid
+            existing.isDayOff = is_off
+            existing.isFlexible = is_flex
+            if "note" in item:
+                existing.note = note
+        else:
+            db.add(
+                ShiftRosterEntry(
+                    companyId=companyId,
+                    company_employeeId=emp_uuid,
+                    workDate=w_date,
+                    shiftId=None if is_off else shift_uuid,
+                    isDayOff=is_off,
+                    isFlexible=is_flex,
+                    note=note,
+                )
+            )
+        updated += 1
+
+    await db.commit()
+    return {"updated": updated}
+
+
+@router.get("/company/{companyId}/shift-swaps")
+async def list_shift_swaps(
+    companyId: UUID,
+    request: Request,
+    company_employeeId: Optional[UUID] = None,
+    swapStatus: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    stmt = (
+        select(ShiftSwapRequest)
+        .where(ShiftSwapRequest.companyId == companyId)
+        .order_by(ShiftSwapRequest.createdAt.desc())
+    )
+    if company_employeeId:
+        stmt = stmt.where(
+            (ShiftSwapRequest.requesterEmployeeId == company_employeeId)
+            | (ShiftSwapRequest.targetEmployeeId == company_employeeId)
+        )
+    if swapStatus:
+        stmt = stmt.where(ShiftSwapRequest.status == swapStatus.upper())
+    rows = (await db.execute(stmt)).scalars().all()
+    return [_serialize_shift_swap(r) for r in rows]
+
+
+@router.post("/company/{companyId}/shift-swaps", status_code=status.HTTP_201_CREATED)
+async def create_shift_swap(
+    companyId: UUID,
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_membership(request, db, companyId)
+    try:
+        req_emp_id = UUID(str(body["requesterEmployeeId"]))
+        tgt_emp_id = UUID(str(body["targetEmployeeId"]))
+        w_date = date.fromisoformat(str(body["workDate"])[:10])
+    except (KeyError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="requesterEmployeeId, targetEmployeeId, and workDate are required",
+        ) from None
+
+    if req_emp_id == tgt_emp_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot swap shift with yourself")
+
+    emps = (
+        await db.execute(
+            select(CompanyEmployee).where(
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.deletedAt.is_(None),
+                CompanyEmployee.company_employeeId.in_([req_emp_id, tgt_emp_id]),
+            )
+        )
+    ).scalars().all()
+    emp_map = {e.company_employeeId: e for e in emps}
+    if req_emp_id not in emp_map or tgt_emp_id not in emp_map:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found in company")
+
+    roster_rows = (
+        await db.execute(
+            select(ShiftRosterEntry).where(
+                ShiftRosterEntry.companyId == companyId,
+                ShiftRosterEntry.workDate == w_date,
+                ShiftRosterEntry.company_employeeId.in_([req_emp_id, tgt_emp_id]),
+            )
+        )
+    ).scalars().all()
+    roster_map = {r.company_employeeId: r for r in roster_rows}
+
+    req_shift = (
+        UUID(str(body["requesterShiftId"]))
+        if body.get("requesterShiftId")
+        else (roster_map[req_emp_id].shiftId if req_emp_id in roster_map else emp_map[req_emp_id].shiftId)
+    )
+    tgt_shift = (
+        UUID(str(body["targetShiftId"]))
+        if body.get("targetShiftId")
+        else (roster_map[tgt_emp_id].shiftId if tgt_emp_id in roster_map else emp_map[tgt_emp_id].shiftId)
+    )
+
+    swap = ShiftSwapRequest(
+        companyId=companyId,
+        requesterEmployeeId=req_emp_id,
+        targetEmployeeId=tgt_emp_id,
+        workDate=w_date,
+        requesterShiftId=req_shift,
+        targetShiftId=tgt_shift,
+        reason=body.get("reason"),
+        status=ApprovalRequestStatus.PENDING.value,
+    )
+    db.add(swap)
+    await db.commit()
+    await db.refresh(swap)
+    return _serialize_shift_swap(swap)
+
+
+@router.post("/company/{companyId}/shift-swaps/{swapId}/approval")
+async def decide_shift_swap(
+    companyId: UUID,
+    swapId: UUID,
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, "hr.shifts", companyId)
+    swap = (
+        await db.execute(
+            select(ShiftSwapRequest).where(
+                ShiftSwapRequest.swapId == swapId,
+                ShiftSwapRequest.companyId == companyId,
+            )
+        )
+    ).scalar_one_or_none()
+    if not swap:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shift swap request not found")
+
+    decision = str(body.get("status") or "").upper()
+    if decision not in {ApprovalRequestStatus.APPROVED.value, ApprovalRequestStatus.REJECTED.value}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="status must be APPROVED or REJECTED")
+
+    actor = getattr(request.state, "user", None)
+    actor_id = getattr(actor, "memberId", None)
+    swap.status = decision
+    swap.approvedBy = actor_id
+    swap.approvedAt = datetime.now(timezone.utc)
+    if decision == ApprovalRequestStatus.REJECTED.value:
+        swap.rejectReason = body.get("rejectReason")
+    else:
+        # Swap roster entries on workDate (creating entries if missing)
+        existing_rows = (
+            await db.execute(
+                select(ShiftRosterEntry).where(
+                    ShiftRosterEntry.companyId == companyId,
+                    ShiftRosterEntry.workDate == swap.workDate,
+                    ShiftRosterEntry.company_employeeId.in_(
+                        [swap.requesterEmployeeId, swap.targetEmployeeId]
+                    ),
+                )
+            )
+        ).scalars().all()
+        by_emp = {r.company_employeeId: r for r in existing_rows}
+        req_entry = by_emp.get(swap.requesterEmployeeId)
+        tgt_entry = by_emp.get(swap.targetEmployeeId)
+
+        if req_entry:
+            req_entry.shiftId = swap.targetShiftId
+            req_entry.isDayOff = swap.targetShiftId is None
+        else:
+            db.add(
+                ShiftRosterEntry(
+                    companyId=companyId,
+                    company_employeeId=swap.requesterEmployeeId,
+                    workDate=swap.workDate,
+                    shiftId=swap.targetShiftId,
+                    isDayOff=swap.targetShiftId is None,
+                    note=f"Swapped with {swap.targetEmployeeId}",
+                )
+            )
+
+        if tgt_entry:
+            tgt_entry.shiftId = swap.requesterShiftId
+            tgt_entry.isDayOff = swap.requesterShiftId is None
+        else:
+            db.add(
+                ShiftRosterEntry(
+                    companyId=companyId,
+                    company_employeeId=swap.targetEmployeeId,
+                    workDate=swap.workDate,
+                    shiftId=swap.requesterShiftId,
+                    isDayOff=swap.requesterShiftId is None,
+                    note=f"Swapped with {swap.requesterEmployeeId}",
+                )
+            )
+
+    await db.commit()
+    await db.refresh(swap)
+    return _serialize_shift_swap(swap)

@@ -554,6 +554,9 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       }
       return 'ใบหน้าเล็กเกินไป — เข้าใกล้กล้อง';
     }
+    if (/pitch/i.test(raw)) {
+      return 'ก้ม/เงยหน้ามากเกินไป — มองตรงกล้อง';
+    }
     if (/yaw|angled|pose/i.test(raw)) {
       return 'หันหน้าตรงขึ้น — มุมใบหน้าเยอะเกินไป';
     }

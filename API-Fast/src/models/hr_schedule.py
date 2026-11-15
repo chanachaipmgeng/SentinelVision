@@ -71,6 +71,11 @@ class LeaveRequest(Base):
         nullable=False,
     )
     leaveType: Mapped[str] = mapped_column("leave_type", String(30), nullable=False, default="ANNUAL")
+    leaveUnit: Mapped[str] = mapped_column(
+        "leave_unit", String(20), nullable=False, default="FULL_DAY", server_default="FULL_DAY"
+    )
+    leaveHours: Mapped[float | None] = mapped_column("leave_hours", Float, nullable=True)
+    attachmentUrl: Mapped[str | None] = mapped_column("attachment_url", String(500), nullable=True)
     startDate: Mapped[date] = mapped_column("start_date", Date, nullable=False)
     endDate: Mapped[date] = mapped_column("end_date", Date, nullable=False)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -92,6 +97,54 @@ class LeaveRequest(Base):
 
     __table_args__ = (
         Index("leave_request_company_dates_idx", "companyId", "start_date", "end_date", "status"),
+    )
+
+
+class ShiftRosterEntry(Base):
+    """BL-10 Monthly/weekly roster entry per employee and work date."""
+
+    __tablename__ = "shift_roster_entry"
+
+    rosterId: Mapped[uuid.UUID] = mapped_column(
+        "roster_id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    company_employeeId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company_employee.company_employeeId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    workDate: Mapped[date] = mapped_column("work_date", Date, nullable=False)
+    shiftId: Mapped[uuid.UUID | None] = mapped_column(
+        "shift_id",
+        UUID(as_uuid=True),
+        ForeignKey("work_shift.shiftId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    isDayOff: Mapped[bool] = mapped_column(
+        "is_day_off", Boolean, nullable=False, default=False, server_default="false"
+    )
+    isFlexible: Mapped[bool] = mapped_column(
+        "is_flexible", Boolean, nullable=False, default=False, server_default="false"
+    )
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_shift_roster_company_emp_date",
+            "companyId",
+            "company_employeeId",
+            "work_date",
+            unique=True,
+        ),
     )
 
 

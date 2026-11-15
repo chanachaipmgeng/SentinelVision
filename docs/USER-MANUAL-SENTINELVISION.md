@@ -55,6 +55,8 @@
 
 ---
 
+![หน้าจอเข้าสู่ระบบ SentinelVision](images/manual/01-login.png)
+
 ## 3. แดชบอร์ดภาพรวมองค์กรและการลงเวลา (Executive Attendance Dashboard)
 
 ![แดชบอร์ดภาพรวมองค์กร](./screenshots/02-dashboard.png)
@@ -65,6 +67,8 @@
 - **กราฟแนวโน้มการเข้างาน 7 วันย้อนหลัง:** แสดงสัดส่วนการเข้างานตรงเวลาและมาสายรายวันแบบโต้ตอบได้
 
 ---
+
+![แดชบอร์ดภาพรวมองค์กรและการลงเวลา](images/manual/02-dashboard.png)
 
 ## 4. ศูนย์บัญชาการ SentinelVision (Command Center, Incident SLA & 1:N Scan)
 
@@ -82,6 +86,8 @@
 
 ---
 
+![ศูนย์บัญชาการ SentinelVision และ Multi-Region DR](images/manual/03-sentinel-center.png)
+
 ## 5. การจัดการบัญชีเฝ้าระวัง Watchlist / Blacklist / VIP
 
 ![การจัดการบัญชีเฝ้าระวัง Watchlist / Blacklist / VIP](./screenshots/04-sentinel-watchlist.png)
@@ -95,6 +101,8 @@
 3. ในตารางด้านขวา สามารถกรองดูตามหมวดหมู่ อัปเดตใบหน้าใหม่ หรือลบรายการได้ทันที
 
 ---
+
+![แท็บ Watchlist / Blacklist & VIP](images/manual/04-sentinel-watchlist.png)
 
 ## 6. การควบคุมประตูอัจฉริยะ, Tailgating AI, Anti-Passback, Health Check & Wiegand/OSDP
 
@@ -112,6 +120,8 @@
 
 ---
 
+![แท็บ Access Control & โซนประตู](images/manual/05-sentinel-access-control.png)
+
 ## 7. ระบบบัตรผู้มาติดต่อด้วยใบหน้า & QR Self-Service (Visitor Face Pass)
 
 ![ระบบบัตรผู้มาติดต่อด้วยใบหน้า Visitor Face Pass](./screenshots/06-sentinel-visitors.png)
@@ -123,6 +133,8 @@
 
 ---
 
+![แท็บผู้มาติดต่อ (Visitor Pass)](images/manual/06-sentinel-visitors.png)
+
 ## 8. การจัดการงานอีเวนต์ สัมมนา และค้นหาที่นั่งด้วยใบหน้า (Smart Events & Seat Lookup)
 
 ![การจัดการงานอีเวนต์และค้นหาที่นั่งด้วยใบหน้า](./screenshots/07-sentinel-events.png)
@@ -133,6 +145,8 @@
 3. **การสแกนหน้างาน:** เมื่อผู้ร่วมงานสแกนใบหน้าที่จุด Kiosk ระบบจะแสดงข้อความต้อนรับพร้อมหมายเลขที่นั่งทันที และอัปเดตยอด **Checked-In / Registered** แบบเรียลไทม์
 
 ---
+
+![แท็บงานอีเวนต์ & Breakout Room Capacity Check-in](images/manual/07-sentinel-events-breakout.png)
 
 ## 9. บัญชีรวมพลฉุกเฉิน Fire Alarm Fail-Safe, Batch Vector Re-Index & Edge Sync
 
@@ -149,6 +163,8 @@
 
 ---
 
+![บัญชีรวมพลฉุกเฉิน (Muster Roll)](images/manual/14b-muster-roll.png)
+
 ## 10. การจัดการกะเวลาทำงาน โควตาลา OT Engine, Roster Swap, Anti-Mock GPS & PDPA
 
 ![การจัดการกะเวลาทำงาน วันหยุด และการลา](./screenshots/09-hr-schedule.png)
@@ -162,6 +178,8 @@
 
 ---
 
+![การจัดการกะเวลาทำงาน โควตาลา และ OT Engine](images/manual/09-hr-schedule.png)
+
 ## 11. จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่มเรียลไทม์ & Offline HMAC Sync Kiosk
 
 ![จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่ม Multi-Face Kiosk](./screenshots/10-face-kiosk.png)
@@ -171,6 +189,8 @@
 2. เชื่อมต่อผ่าน **WebSocket (`/face/ws/kiosk`)** ความหน่วงต่ำ พร้อมวาดกรอบใบหน้าแบบกลุ่ม (Multi-Person HUD Overlay), Walk-by Detection, และ Anti-Spoof / Mask Check
 3. **Offline-First Kiosk HMAC Sync (`BL-12`):** เมื่อเครือข่ายขาดหาย เครื่อง Kiosk จะแคชเวกเตอร์จาก Edge Sync Manifest และบันทึกการสแกนลง Local Queue เมื่อกลับมาออนไลน์จะส่งซิงค์ผ่าน `POST /timestamp/company/{companyId}/offline-sync` พร้อมลายเซ็น **`X-DPU-Signature-256`** (HMAC-SHA256) และ `X-DPU-Timestamp` ป้องกันการปลอมแปลงและ Replay Attack
 
+
+![จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่มเรียลไทม์ (Kiosk)](images/manual/20-kiosk-attendance.png)
 
 ## 12. ฟีเจอร์ระดับ Enterprise (Phases 1–10)
 
@@ -192,6 +212,8 @@
    - ติดตามสถานะการจำลองข้อมูลข้ามภูมิภาคผ่าน Multi-Region DR Strip โดยทุกคำขอ Replication (`/sentinel/dr/replicate`) ผ่านการยืนยันตัวตนด้วยลายเซ็น HMAC-SHA256 (`X-Sentinel-DR-Sig`) และป้องกันข้อมูลซ้ำด้วย Redis Idempotency Keys
 
 
+![Investigation Graph & SentinelVision AI Copilot](images/manual/08-sentinel-investigation-graph.png)
+
 ## 13. การจัดการองค์กร แผนก ตำแหน่ง พนักงาน และสถานที่ตั้ง (`/company/company-*`)
 
 - **ข้อมูลบริษัท (`/company/company-info`)**: แก้ไขชื่อองค์กร, เลขทะเบียน, ที่อยู่, โซนเวลาเริ่มต้น (`Asia/Bangkok`) และโมดูลที่เปิดใช้งาน
@@ -204,6 +226,10 @@
 
 ---
 
+![ข้อมูลบริษัท](images/manual/10a-company-info.png)
+
+![ทะเบียนพนักงาน & 5-Angle Face Enrollment](images/manual/10b-company-employees.png)
+
 ## 14. การลงเวลา การอนุมัติ รายงาน และ Employee Self-Service (ESS)
 
 - **ศูนย์รวมจุดสแกน (`/company/scan-hub`)**: รวมลิงก์เปิด Kiosk ทุกโหมด (`ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`) พร้อมปุ่มคัดลอก Direct URL สำหรับติดตั้งบนเครื่อง Kiosk แยกจุด
@@ -213,6 +239,16 @@
 - **พอร์ทัลพนักงาน (`/company/self-service`)**: ให้พนักงานดูประวัติการลงเวลาของตนเอง ยื่นคำขอลา/OT/สลับกะ และติดตามสถานะการอนุมัติ
 
 ---
+
+![ศูนย์รวมจุดสแกน (Scan Hub)](images/manual/11-scan-hub.png)
+
+![ประวัติการลงเวลา](images/manual/12a-timestamp-log.png)
+
+![กล่องอนุมัติ (Approval Inbox)](images/manual/12b-approval-inbox.png)
+
+![รายงาน (Reports)](images/manual/13a-reports.png)
+
+![พอร์ทัลพนักงาน (Employee Self-Service)](images/manual/13b-self-service.png)
 
 ## 15. หน้าจอเฉพาะทาง Access / Watchlist / Visitors / Events & Scan Hub
 
@@ -229,6 +265,8 @@
 
 ---
 
+![จัดการโซนประตู (Access Zones)](images/manual/14a-access-zones.png)
+
 ## 16. ระบบกล้องวงจรปิด Live Wall, NVR Playback, E-Map, Face Monitor & Presence
 
 - **จัดการกล้อง (`/company/cameras`)**: เพิ่ม/แก้ไขกล้อง RTSP, กด **Discover ONVIF** เพื่อค้นหากล้องในวง LAN อัตโนมัติ, ควบคุมทิศทาง **PTZ**, และตั้งค่า **PDPA Privacy Mask** (เบลอโซนอ่อนไหวบนภาพกล้อง)
@@ -238,6 +276,18 @@
 - **Face Monitor (`/company/face-monitor`) & Presence (`/company/presence`)**: ติดตามการตรวจจับใบหน้าแบบเรียลไทม์จากกล้อง CCTV และสรุปยอดคนในอาคารแยกตามโซน
 
 ---
+
+![จัดการกล้อง ONVIF, PTZ & PDPA Privacy Mask](images/manual/15-cameras-onvif-pdpa.png)
+
+![Live Wall](images/manual/16a-live-wall.png)
+
+![NVR Playback & AI-Marker Timeline](images/manual/16b-nvr-playback.png)
+
+![Floor E-Map](images/manual/16c-e-map.png)
+
+![Face Monitor](images/manual/17a-face-monitor.png)
+
+![Presence & Dwell-Time Intelligence](images/manual/17b-presence.png)
 
 ## 17. ความปลอดภัย Audit Log, อุปกรณ์ Kiosk, การแจ้งเตือน, AI Copilot & System Admin
 
@@ -253,3 +303,13 @@
   - `/admin/admin-manage`: จัดการสิทธิ์ผู้ดูแลระบบแพลตฟอร์ม
   - `/admin/system-setting`: ตั้งค่าระบบส่วนกลาง
   - `/admin/error-logs`: ตรวจสอบบันทึกข้อผิดพลาดของระบบ (Error Logs)
+
+![Audit Log Hash-Chain Verified](images/manual/18-audit-log-verified.png)
+
+![จัดการอุปกรณ์ Kiosk](images/manual/19a-devices.png)
+
+![ศูนย์แจ้งเตือน (Notification Center)](images/manual/19b-notification-center.png)
+
+![โปรไฟล์ & ความปลอดภัย 2FA](images/manual/19c-profile-security.png)
+
+![ตั้งค่าบริษัท](images/manual/19d-company-settings.png)

@@ -1,0 +1,34 @@
+# Enable single NVIDIA GPU (GPU 0) for API & Worker. Requires NVIDIA driver + Container Toolkit.
+#   docker compose -f docker-compose.yml -f docker-compose.gpu-single.yml up -d --remove-orphans
+services:
+  api:
+    environment:
+      FACE_DEVICE: "cuda:0"
+      FACE_DEVICES: "cuda:0"
+      FACE_GPU_WORKERS: "${FACE_GPU_WORKERS:-3}"
+      CUDA_VISIBLE_DEVICES: "0"
+      NVIDIA_VISIBLE_DEVICES: "0"
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  worker:
+    environment:
+      PEOPLE_YOLO_PROVIDERS: ${PEOPLE_YOLO_PROVIDERS:-CUDAExecutionProvider,CPUExecutionProvider}
+      CUDA_VISIBLE_DEVICES: "0"
+      NVIDIA_VISIBLE_DEVICES: "0"
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

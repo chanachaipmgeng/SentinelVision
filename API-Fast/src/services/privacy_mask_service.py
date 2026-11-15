@@ -34,7 +34,10 @@ def apply_privacy_masks_to_bgr(
     """Apply Gaussian blur over normalized [x, y, w, h] privacy zones on a BGR image."""
     if frame is None or frame.size == 0 or not masks:
         return frame
-    import cv2  # lazy import so lightweight test runners don't fail if unused
+    try:
+        import cv2  # lazy import so lightweight test runners don't fail if unused
+    except ImportError:
+        cv2 = None  # type: ignore[assignment]
 
     out = frame.copy()
     fh, fw = out.shape[:2]
@@ -46,5 +49,13 @@ def apply_privacy_masks_to_bgr(
         if x2 - x1 < 4 or y2 - y1 < 4:
             continue
         roi = out[y1:y2, x1:x2]
-        out[y1:y2, x1:x2] = cv2.GaussianBlur(roi, (51, 51), 0)
+        blurred = cv2.GaussianBlur(roi, (51, 51), 0) if cv2 is not None else None
+        if isinstance(blurred, np.ndarray) and blurred.shape == roi.shape:
+            out[y1:y2, x1:x2] = blurred
+        else:
+            # Fallback when cv2 is mocked in full-suite tests or absent
+            out[y1:y2, x1:x2] = np.broadcast_to(
+                roi.mean(axis=(0, 1), keepdims=True).astype(out.dtype),
+                roi.shape,
+            )
     return out

@@ -31,11 +31,14 @@
   - Verify backend changes with `ruff check .`, `python -m mypy --no-incremental`, and `python -m pytest -q -p no:cacheprovider`.
 - **PostgreSQL Session GUC & Redis Cache Safety:** Wrap optional session-level `SET LOCAL` tuning (e.g., `hnsw.iterative_scan`) in `db.begin_nested()` (`SAVEPOINT`) with `AsyncMock` safety so test mocks and non-pgvector engines never abort transactions. Always invalidate `sv:modcfg:{companyId}` / `sv:zones:{companyId}` on every write/delete path.
 - **Single-Line OCR Regex Guard:** In OCR text parsers (`id_ocr_service.py`), never use `\s` inside single-line capture groups (use explicit `' '`) so matches never bleed across newlines.
+- **CI Strict `mypy` & `cv2` Mock-Safe Testing:**
+  - Explicitly annotate local SQLAlchemy `select(...)` variables (e.g. `prev_q: Any = (...)`) when `.where(...)` uses inline conditional expressions so strict CI `mypy` (`[var-annotated]`) passes cleanly.
+  - Because some unit tests (`test_kiosk_blacklist_exposure.py`, `test_sentinel_search_gate.py`) assign `sys.modules["cv2"] = MagicMock()`, any service lazy-importing `cv2` (`privacy_mask_service.py`) MUST validate `isinstance(result, np.ndarray) and result.shape == expected_shape` and provide a pure-NumPy fallback.
 
 ## 4. Schema, Gateway & Deployment Workflow
 - **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.
 - **Nginx Gateway Prefix Sync:** Whenever a new top-level router prefix is added in `API-Fast/src/main.py` (e.g., `/sentinel`), add that prefix to the FastAPI regex location block in `docker/nginx/default.conf`, `default.dual-gpu.conf`, and `default.quad-gpu.conf`.
-- **Docker Rebuild Matrix:** Source code is baked into images. Rebuild `api` (and `api-gpu1` on dual-GPU), `admin`, and `nginx` as appropriate, then verify `/health` and `/ready`.
+- **Docker Rebuild Matrix (GPU-First `api-gpu`):** `docker-compose.yml` runs **`api-gpu`** (`sentinel-api-gpu`, with network alias `api`) and GPU-enabled **`worker`** (`CUDA_VISIBLE_DEVICES=0`, `FACE_DEVICE=cuda:0`) by default. Source code is baked into images; rebuild `api-gpu` (and `api-gpu1` only when using the dual-GPU `docker-compose.gpu.yml` overlay), `admin`, and `nginx` as appropriate, then verify `/health` and `/ready` (`devices: ["cuda:0"]`).
 
 ## 5. Frontend Architecture & UI/UX Design System Guardrails
 - **VaultX Obsidian Glass & Theme Token Invariants**:

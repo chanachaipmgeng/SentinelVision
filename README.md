@@ -19,10 +19,12 @@ docker compose up --build
 
 | URL | บริการ |
 |-----|--------|
-| `http://localhost/` | SentinelVision Admin Console (`Web-Manage` — Angular 17) |
-| `http://localhost/company/sentinel-center` | **SentinelVision Security & Access Command Center** (Watchlist, Access Zones, Visitor Pass, Smart Events, Muster Roll & 1:N Scanner) |
+| `http://localhost/` | SentinelVision Admin Console (`Web-Manage` — Angular 17, VaultX Obsidian Glass + Two-Column Dual-Rail Sidebar) |
+| `http://localhost/company/sentinel-center` | **SentinelVision Security & Access Command Center** (Watchlist, Access Zones, Visitor Pass, Smart Events, Muster Roll, Investigation Graph & 1:N Scanner) |
+| `http://localhost/company/scan-hub` / `/company/scan/:stationMode` | **Modular Kiosk Scan Stations** (6 โหมด: `ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`, `UNIFIED_HYBRID` + MediaPipe Edge Hand Gesture) |
 | `http://localhost/company/timestamp-face` | Kiosk สแกนใบหน้าแบบ Multi-person Realtime (WebSocket; จับคู่อุปกรณ์ด้วยรหัสครั้งเดียวที่ `/kiosk/pair`) |
 | `http://localhost/company/hr-schedule` | ศูนย์จัดการกะงาน / ใบลา / วันหยุด / PDPA / Kiosk & 2FA / Payroll Webhook & Cloud Metrics |
+| Floating **Ask AI** Dock | **AI Copilot (`app-ask-dock`)** รองรับ SSE Streaming (`/sentinel/company/{companyId}/assistant/chat`) + Silero VAD Voice Input (`@ricky0123/vad-web`) |
 | `http://localhost/docs` | API Swagger (เมื่อตั้ง `EXPOSE_API_DOCS=true`) |
 | `http://localhost/health` / `/ready` / `/metrics` | Liveness, Readiness และ Prometheus Histograms (`dpu_face_gpu_latency_ms`, `dpu_pgvector_search_ms`) |
 
@@ -30,21 +32,23 @@ docker compose up --build
 
 | Doc | Contents |
 |-----|----------|
+| [docs/wiki/Home.md](docs/wiki/Home.md) | **SentinelVision Wiki** (สารบัญวิกิระบบ, สถาปัตยกรรม, Edge AI, UI/UX & Operations) |
 | [GEMINI.md](GEMINI.md) | **กฎสถาปัตยกรรมและมาตรฐานวิศวกรรมระดับ Enterprise (SentinelVision v4.0)** |
 | [docs/SENTINELVISION-ROADMAP.md](docs/SENTINELVISION-ROADMAP.md) | **แผนแม่บทและสถาปัตยกรรม SentinelVision (Phase 1–6 Complete)** |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | โครงสร้างระบบ, Dual `pgvector` HNSW Pipeline, Security, Access Control & Outbox Architecture |
-| [docs/API.md](docs/API.md) | สรุป Endpoint ทั้งหมด (Auth/2FA/SSO, Face, SentinelVision Security/Access/Events, Attendance, HR/PDPA) |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | โครงสร้างระบบ, Dual `pgvector` HNSW Pipeline, Edge AI, AI Copilot & Investigation Graph |
+| [docs/API.md](docs/API.md) | สรุป Endpoint ทั้งหมด (Auth/2FA/SSO, Face, SentinelVision Security/Access/Events/Graph/Copilot, Attendance, HR/PDPA) |
+| [docs/USER-MANUAL-SENTINELVISION.md](docs/USER-MANUAL-SENTINELVISION.md) | คู่มือการใช้งานระบบ SentinelVision สำหรับผู้ดูแลและผู้ปฏิบัติงาน |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | สรุปสถานะ **Enterprise & SentinelVision Roadmap (Phase 1–6 Completed)** |
 | [docs/DEPLOY-SERVER.md](docs/DEPLOY-SERVER.md) | **คู่มือติดตั้งบนเซิร์ฟเวอร์** (clone / Docker / GPU·CPU / seed mock) |
 | [docs/SETUP.md](docs/SETUP.md) | ติดตั้งบนเครื่องพัฒนา / Docker / env |
-| [docs/RUNBOOK.md](docs/RUNBOOK.md) | คู่มือดูแลระบบ (RPO/RTO, GPU, Face Core, Alembic Migrations `0001..0006`) |
+| [docs/RUNBOOK.md](docs/RUNBOOK.md) | คู่มือดูแลระบบ (RPO/RTO, GPU, Face Core, Alembic Migrations `0001..0035`) |
 
 ## Layout
 
 ```
 docker-compose.yml
-docker/                 # nginx single/dual/quad-GPU gateway + DB init
-API-Fast/               # FastAPI v4.0.0 + InsightFace + pgvector + Alembic (0001..0006)
-Web-Manage/             # Angular 17 SentinelVision console + HR/PDPA + realtime face kiosk
-docs/                   # Architecture, API, SentinelVision Roadmap, Capacity & Runbook docs
+docker/                 # nginx single/dual/quad-GPU gateway + DB init + CSP runtime
+API-Fast/               # FastAPI v4.0.0 + InsightFace + pgvector + Alembic (0001..0035)
+Web-Manage/             # Angular 17 SentinelVision console + Edge AI WASM assets (public/) + realtime face kiosk
+docs/                   # Architecture, API, Wiki (docs/wiki/), Roadmap, Capacity & Runbook docs
 ```

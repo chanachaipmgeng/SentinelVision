@@ -1,5 +1,10 @@
 # Project docs
 
+- **[SentinelVision Wiki](wiki/Home.md)** — วิกิสรุประบบ, สถาปัตยกรรม Edge AI / Copilot, UI Shell & Scan Stations, และ Operations
+- [GEMINI.md](../GEMINI.md) — กฎสถาปัตยกรรมและมาตรฐานวิศวกรรม SentinelVision v4.0
+- [SENTINELVISION-ROADMAP](SENTINELVISION-ROADMAP.md) — แผนแม่บทและสถาปัตยกรรม SentinelVision (Phase 1–6)
+- [USER-MANUAL-SENTINELVISION](USER-MANUAL-SENTINELVISION.md) — คู่มือการใช้งานระบบ SentinelVision
+- [RUNBOOK](RUNBOOK.md) — คู่มือดูแลระบบ (RPO/RTO, GPU, Face Core, Alembic `0001..0035`)
 - [SETUP](SETUP.md) — run the stack (local / Docker Desktop) + optional Face Core BFF
 - [DEPLOY-SERVER](DEPLOY-SERVER.md) — คู่มือติดตั้งบนเซิร์ฟเวอร์ + seed mock data
 - [SECRETS-REMEDIATION](SECRETS-REMEDIATION.md) — inventory ของ secret/PII ที่เคยอยู่ใน git, ขั้นตอน `git filter-repo`, key rotation checklist, re-clone notice

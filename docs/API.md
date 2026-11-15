@@ -158,3 +158,13 @@ All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company author
 | GET | `/sentinel/company/{companyId}/incidents` | JWT | Paginated security & access incident log (`eventType`, `severity`, `limit`, `offset`). |
 | POST | `/sentinel/company/{companyId}/incidents/{incidentId}/acknowledge` | JWT | Acknowledge a `WARNING` or `CRITICAL` security incident. |
 | GET | `/sentinel/company/{companyId}/edge-sync` | JWT / Kiosk | Offline-First Edge Kiosk embedding manifest (`manifestVersion`, `employeeVectorsCount`, `sentinelVectorsCount`, `totalActiveVectors`, `activeZones`). |
+| GET/PUT | `/sentinel/company/{companyId}/module-config` | JWT | Get or update enabled SentinelVision modules for the company (`moduleGroups` / dual-rail sidebar visibility). |
+| GET | `/sentinel/company/{companyId}/graph` | JWT | Security Investigation Graph (nodes & edges linking company cameras, access zones, identities, and incidents). |
+| POST | `/sentinel/company/{companyId}/assistant/chat` | JWT | AI Copilot SSE chat stream (`question`, `history`); uses `GOOGLE_API_KEY` or falls back to live PostgreSQL company summaries. |
+| GET | `/sentinel/company/{companyId}/muster` | JWT | Live Emergency Muster Roll (on-site employees/visitors/incidents). |
+| GET/PUT | `/sentinel/company/{companyId}/siem-settings` | JWT | Configure SIEM webhook forwarding for security incidents (`POST .../siem-settings/test` sends a test event). |
+| POST | `/sentinel/company/{companyId}/zones/{zoneId}/evaluate-access` | JWT / Kiosk | Evaluate zone access rules without manual override; `POST .../edge-unlock` logs/validates offline edge relay unlock. |
+| POST | `/sentinel/company/{companyId}/health-check` | JWT | Run SentinelVision subsystem health check (`POST .../reindex-vectors` & `GET .../reindex-status` manage pgvector HNSW reindex). |
+| POST | `/sentinel/company/{companyId}/fire-alarm` | JWT | Trigger or reset (`POST .../fire-alarm/reset`) emergency muster / fire-alarm state for the company. |
+| GET/PUT | `/sentinel/company/{companyId}/incident-sla-settings` | JWT | Configure SLA escalation thresholds for unacknowledged security incidents. |
+| POST | `/sentinel/company/{companyId}/incidents/bulk-acknowledge` | JWT | Bulk-acknowledge incidents (`POST .../incidents/bulk-close`, `POST .../incidents/{incidentId}/assign`, `POST .../incidents/{incidentId}/close` for workflow triage). |

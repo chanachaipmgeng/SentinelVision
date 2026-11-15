@@ -37,8 +37,15 @@ On a dual-GPU host the GPU overlay runs **two API processes** (`sentinel-api` on
 |-----------|------|------|
 | Gateway | `docker/nginx/` | Reverse proxy (`client_max_body_size 500m`; proxies `/auth`, `/members`, `/companys`, `/company-locations`, `/departments`, `/positions`, `/employees`, `/timestamp`, `/face`, `/hr`, `/sentinel`, `/notifications`, `/system`, `/dashboard`, `/api`, `/images`, `/enrolled_images`). |
 | API | `API-Fast/` | FastAPI v4.0.0: Auth (JWT + RFC 6238 TOTP 2FA + OIDC SSO + Scoped Kiosk Tokens), Unified 1:N Face Recognition + Passive Anti-Spoofing, Watchlist/Blacklist Silent Alarm, Smart Access Control + IoT Relay Webhook, Visitor Pass + Automated PDPA Expiry Sweeper, Smart Events Check-in, Emergency Muster Roll, Multi-Shift HR, and Signed Webhooks. |
-| Admin UI | `Web-Manage/` | Angular 19 company/admin console + 6-tab SentinelVision Security Center (`/company/sentinel-center`) + 6-tab HR/PDPA/Cloud console (`/company/hr-schedule`) + realtime face kiosk (`/company/timestamp-face`). |
-| Database | `pgvector/pgvector:pg16` | Relational data + `face_encoding.embedding vector(512)` & `sentinel_identity.embedding vector(512)` with HNSW cosine indexes. |
+| Admin UI | `Web-Manage/` | Angular 17 company/admin console (`VaultX Obsidian Glass`, Two-Column Dual-Rail Sidebar with `< 992px` off-canvas drawer) + SentinelVision Security Center (`/company/sentinel-center` incl. Investigation Graph) + HR/PDPA/Cloud console (`/company/hr-schedule`) + 6 Modular Scan Stations (`/company/scan/:stationMode`) + Floating AI Copilot (`app-ask-dock` + Silero VAD) + Browser Edge AI WASM assets (`Web-Manage/public/`). |
+| Database | `pgvector/pgvector:pg16` | Relational data + `face_encoding.embedding vector(512)` & `sentinel_identity.embedding vector(512)` with HNSW cosine indexes (Alembic `0001..0035`). |
+
+## Browser Edge AI, AI Copilot & Investigation Graph
+
+- **Same-Origin Edge AI Assets (`Web-Manage/public/`):** `angular.json` ignores `**/models/**` under `src/assets`, so MediaPipe (`@mediapipe/tasks-vision`), ONNX Runtime Web (`onnxruntime-web`), `hand_landmarker.task`, and Silero VAD (`@ricky0123/vad-web`) are served from `Web-Manage/public/` (`/mediapipe/*`, `/ort/*`, `/models/*`). Nginx CSP (`docker/nginx/entrypoint/30-dpu-runtime.sh`) permits `'wasm-unsafe-eval'` and `microphone=(self)`.
+- **MediaPipe Gesture on Kiosk (`KioskGestureService`):** Opt-in, throttled (~4 Hz) hand-gesture recognition on Kiosk stations without blocking InsightFace WebSocket frames.
+- **Security Investigation Graph (`/sentinel/company/{companyId}/graph`):** Company-scoped node/edge graph linking cameras, zones, identities, and incidents.
+- **AI Copilot (`app-ask-dock` → `POST /sentinel/company/{companyId}/assistant/chat`):** SSE-streamed operational Q&A backed by `GOOGLE_API_KEY` with automatic fallback to live PostgreSQL company summaries when no API key is configured.
 
 ## Unified Biometric, Security & Attendance Pipeline
 

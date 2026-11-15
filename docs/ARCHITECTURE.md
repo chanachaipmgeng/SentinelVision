@@ -73,3 +73,23 @@ Role-99 (platform system admin) console face login uses a dedicated gallery key 
 | Identify / login | `POST /auth/login/face` → `search_system_admin_face_pgvector` (local only) | Next cutover: Face Core identify on `system`; login threshold/ambiguity stay stricter than enroll |
 
 Admin Manage (`/admin/admin-manage`) shows PDPA consent dialog **before** grant (no silent auto-grant) and list badges for consent + face count.
+
+
+## Enterprise Scale, Security & Integration Architecture (Phases 1–10)
+
+- **SCIM 2.0 & HRIS Connectors**: Supports inbound SCIM 2.0 provisioning and Workday / SAP SuccessFactors / BambooHR connectors. Document numbers from OCR/SCIM are masked via `mask_document_number()` before persistence or logging.
+- **Redis Hot Cache & Multi-Replica Safety**: Caches company module configuration (`sv:modcfg:{companyId}`) and zone metadata (`sv:zones:{companyId}`) with immediate invalidation on write/delete. Outbox notifications use `SELECT ... FOR UPDATE SKIP LOCKED` to coordinate safely across multiple API replicas.
+- **Non-Blocking GPU Inference & TensorRT FP16**: All InsightFace inference is dispatched through `run_on_face_gpu(...)` and image decoding (`cv2.imdecode`) runs on `get_decode_executor()`, supporting CUDA and TensorRT FP16 execution providers without blocking the FastAPI asyncio event loop.
+- **ONVIF Discovery, PTZ & PDPA Privacy Mask**: Provides ONVIF network camera discovery, PTZ controls, and per-camera privacy mask zones (`PDPA Mask`) to redact sensitive regions.
+- **NVR AI-Marker Timeline & Incident WebSocket**: Streams real-time incidents over WebSocket and surfaces AI incident markers directly on NVR playback timelines.
+- **Breakout Room Capacity Check-in**: Tracks per-room capacity limits and live occupancy for event breakout sessions in `/company/sentinel-center`.
+- **Multi-Region Disaster Recovery (`/sentinel/dr/replicate`)**: Verifies cross-region replication payloads with HMAC-SHA256 (`X-Sentinel-DR-Sig`, `hmac.compare_digest`) and deduplicates via Redis idempotency keys (`ttl_seconds=86400`).
+
+## Testing & Verification
+
+- **Backend Static Analysis & Unit/Integration Tests (`API-Fast/`)**:
+  - Lint: `ruff check .`
+  - Type check: `python -m mypy --no-incremental`
+  - Test suite: `python -m pytest -q -p no:cacheprovider` (53 passed)
+- **Frontend Production Build (`Web-Manage/`)**:
+  - Build: `npm run build` (Angular 17 production bundle synced to `sentinel-admin`)

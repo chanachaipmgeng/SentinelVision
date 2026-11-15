@@ -164,3 +164,23 @@
 1. รองรับโหมดการทำงานเฉพาะทาง 6 รูปแบบ (`ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`, `UNIFIED_HYBRID`)
 2. เชื่อมต่อผ่าน **WebSocket (`/face/ws/kiosk`)** ความหน่วงต่ำ พร้อมวาดกรอบใบหน้าแบบกลุ่ม (Multi-Person HUD Overlay), Walk-by Detection, และ Anti-Spoof / Mask Check
 3. **Offline-First Kiosk HMAC Sync (`BL-12`):** เมื่อเครือข่ายขาดหาย เครื่อง Kiosk จะแคชเวกเตอร์จาก Edge Sync Manifest และบันทึกการสแกนลง Local Queue เมื่อกลับมาออนไลน์จะส่งซิงค์ผ่าน `POST /timestamp/company/{companyId}/offline-sync` พร้อมลายเซ็น **`X-DPU-Signature-256`** (HMAC-SHA256) และ `X-DPU-Timestamp` ป้องกันการปลอมแปลงและ Replay Attack
+
+
+## 12. ฟีเจอร์ระดับ Enterprise (Phases 1–10)
+
+ส่วนเสริมระดับองค์กรที่เพิ่มเข้ามาใน SentinelVision v4.0 ครอบคลุมการตรวจสอบความปลอดภัย การเชื่อมต่อระบบบุคคล การจัดการกล้องและวิดีโอ และความต่อเนื่องทางธุรกิจ:
+
+1. **Audit Log Integrity Verification (`/company/audit-log`)**
+   - กดปุ่ม **Verify Integrity** เพื่อตรวจสอบความถูกต้องของ Hash-chain (`audit_log`) แบบเรียลไทม์ ระบบรองรับทั้งเรกคอร์ดใหม่และเรกคอร์ดย้อนหลัง (Legacy fallback) โดยแสดงสถานะ `VERIFIED` พร้อมจำนวนรายการที่ตรวจสอบแล้ว
+2. **HRIS / Identity Connectors & SCIM 2.0**
+   - เชื่อมต่อระบบ HRIS ภายนอก (Workday, SAP SuccessFactors, BambooHR) และรองรับโปรโตคอล SCIM 2.0 สำหรับซิงค์ข้อมูลพนักงานเข้าสู่ `CompanyEmployee` / `Member` อัตโนมัติ พร้อมปิดบังข้อมูลส่วนบุคคล (PDPA masking) สำหรับเลขบัตรประชาชนและพาสปอร์ต
+3. **ONVIF Camera Discovery, PTZ & PDPA Privacy Mask (`/company/cameras`)**
+   - ใช้ปุ่ม **Discover ONVIF** เพื่อค้นหากล้อง IP ในเครือข่ายอัตโนมัติ ควบคุมทิศทางกล้อง (PTZ) และกำหนดกรอบ **PDPA Privacy Mask** (Blur/Blackout) บนพื้นที่อ่อนไหวของภาพกล้อง
+4. **NVR AI-Marker Timeline Scrubber**
+   - ในหน้าดูวิดีโอบันทึกย้อนหลัง (NVR Playback) แถบไทม์ไลน์จะแสดงเครื่องหมายเหตุการณ์ AI (Incident Markers) ตามเวลาที่เกิดเหตุ เพื่อให้ผู้ดูแลระบบกดข้ามไปยังช่วงเวลาสำคัญได้ทันที
+5. **Visitor Invite, ID OCR & Guest Self-Check-in Portal**
+   - สร้างลิงก์/QR เชิญผู้มาติดต่อล่วงหน้า รองรับการสแกนบัตรประชาชนหรือพาสปอร์ตด้วย OCR (บันทึกเฉพาะข้อมูลที่ปิดบังตาม PDPA) และเปิดให้ผู้มาติดต่อลงทะเบียนด้วยตนเองผ่าน Guest Portal
+6. **Breakout Room Capacity Check-in (`/company/sentinel-center` — แท็บ Events)**
+   - กำหนดห้องย่อย (Breakout Rooms) ภายใต้ Event พร้อมเพดานความจุสูงสุด (Capacity) และติดตามยอดผู้เข้าร่วมแบบเรียลไทม์เมื่อสแกนเช็กอินเข้าห้องย่อย
+7. **Multi-Region Disaster Recovery (DR) Replication**
+   - ติดตามสถานะการจำลองข้อมูลข้ามภูมิภาคผ่าน Multi-Region DR Strip โดยทุกคำขอ Replication (`/sentinel/dr/replicate`) ผ่านการยืนยันตัวตนด้วยลายเซ็น HMAC-SHA256 (`X-Sentinel-DR-Sig`) และป้องกันข้อมูลซ้ำด้วย Redis Idempotency Keys

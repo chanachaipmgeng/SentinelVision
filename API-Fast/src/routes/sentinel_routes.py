@@ -282,6 +282,83 @@ async def trigger_zone_door_relay(
     return await ctrl.trigger_zone(db, companyId, zoneId, body)
 
 
+@router.post("/company/{companyId}/zones/{zoneId}/evaluate-access")
+async def evaluate_zone_access_route(
+    companyId: UUID,
+    zoneId: UUID,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.evaluate_zone_access(db, companyId, zoneId, body)
+
+
+@router.post("/company/{companyId}/zones/{zoneId}/edge-unlock")
+async def edge_unlock_zone_route(
+    companyId: UUID,
+    zoneId: UUID,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.edge_unlock_zone(db, companyId, zoneId, body)
+
+
+@router.post("/company/{companyId}/health-check")
+async def run_company_health_check_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.run_company_health_check(db, companyId)
+
+
+@router.post("/company/{companyId}/reindex-vectors")
+async def reindex_company_vectors_route(
+    companyId: UUID,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.reindex_company_vectors(db, companyId, body)
+
+
+@router.get("/company/{companyId}/reindex-status")
+async def get_reindex_status_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.get_reindex_status(db, companyId)
+
+
+@router.post("/company/{companyId}/fire-alarm")
+async def trigger_company_fire_alarm(
+    companyId: UUID,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.trigger_fire_alarm(db, companyId, body)
+
+
+@router.post("/company/{companyId}/fire-alarm/reset")
+async def reset_company_fire_alarm(
+    companyId: UUID,
+    request: Request,
+    body: Optional[dict] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.reset_fire_alarm(db, companyId, body)
+
+
 @router.get("/company/{companyId}/events")
 async def list_sentinel_events(
     companyId: UUID,

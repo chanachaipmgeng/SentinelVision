@@ -7,7 +7,33 @@ export interface SentinelZone {
   scheduleStart?: string;
   scheduleEnd?: string;
   require2FA?: boolean;
+  direction?: 'ENTRY' | 'EXIT' | 'BIDIRECTIONAL' | string;
+  antiPassbackEnabled?: boolean;
+  antiPassbackMinutes?: number;
+  doorHeldMaxSeconds?: number;
+  edgeProtocol?: 'WEBHOOK' | 'WIEGAND' | 'OSDP' | string;
+  edgeBridgeUrl?: string | null;
+  osdpAddress?: number;
   allowedIdentityTypes?: string[];
+}
+
+export interface SentinelReindexResult {
+  companyId?: string;
+  targetModel?: string;
+  employeeVectors?: number;
+  sentinelVectors?: number;
+  processedCount?: number;
+  status?: string;
+  completedAt?: string | null;
+}
+
+export interface SentinelHealthCheckResult {
+  companyId?: string;
+  checkedCameras?: number;
+  offlineCameras?: Array<{ cameraId: string; name: string; status?: string }>;
+  checkedZones?: number;
+  doorHeldOpen?: Array<{ zoneId: string; zoneName: string; openSeconds: number }>;
+  checkedAt?: string;
 }
 
 export interface SentinelIncident {

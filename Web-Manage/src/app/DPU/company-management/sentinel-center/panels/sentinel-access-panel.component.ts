@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import swal from 'sweetalert';
 import { TokenService } from '../../../../shared/services/token.service';
 import { buildZoneAllowedIdentityTypes, defaultZoneForm } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';
@@ -76,6 +77,50 @@ export class SentinelAccessPanelComponent implements OnInit {
           this.toast.emit('ไม่สามารถติดต่อ Relay / ปลดล็อกประตูไม่สำเร็จ');
         },
       });
+  }
+
+  triggerFireAlarmAll(): void {
+    swal({
+      title: 'ยืนยันปลดล็อกประตูฉุกเฉินทุกโซน?',
+      text: 'ระบบจะสั่งเปิดประตูที่ใช้งานอยู่ทั้งหมดพร้อมกันทันที (Fire Alarm Fail-Safe)',
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'ปลดล็อกทุกประตู'],
+      dangerMode: true,
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.api.triggerFireAlarm(this.companyId).subscribe({
+        next: (res) => {
+          const count = Number(res?.['unlockedCount'] ?? this.zones.length);
+          this.toast.emit(`ปลดล็อกประตูฉุกเฉินทั้งหมด ${count} โซนเรียบร้อยแล้ว`);
+          this.overviewChanged.emit();
+        },
+        error: () => this.toast.emit('ไม่สามารถส่งคำสั่ง Fire Alarm ได้'),
+      });
+    });
+  }
+
+  runHealthCheck(): void {
+    this.api.runHealthCheck(this.companyId).subscribe({
+      next: (res) => {
+        const offline = Array.isArray(res?.['offlineCameras']) ? res['offlineCameras'].length : 0;
+        const held = Array.isArray(res?.['doorHeldOpen']) ? res['doorHeldOpen'].length : 0;
+        this.toast.emit(`Health Check เสร็จสิ้น: กล้องออฟไลน์ ${offline} ตัว, ประตูเปิดค้าง ${held} จุด`);
+        this.overviewChanged.emit();
+      },
+      error: () => this.toast.emit('ไม่สามารถรัน Health Check ได้'),
+    });
+  }
+
+  resetFireAlarmAll(): void {
+    this.api.resetFireAlarm(this.companyId).subscribe({
+      next: () => {
+        this.toast.emit('รีเซ็ตสถานะ Fire Alarm กลับสู่โหมดปกติแล้ว');
+        this.overviewChanged.emit();
+      },
+      error: () => {
+        this.toast.emit('ไม่สามารถรีเซ็ตสถานะ Fire Alarm ได้');
+      },
+    });
   }
 
   deleteZone(zoneId: string): void {

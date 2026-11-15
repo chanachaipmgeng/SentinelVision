@@ -950,3 +950,93 @@ async def put_company_sso_policy(
 ):
     await assert_company_access(db, member, companyId)
     return await save_sso_policy(db, companyId, body.model_dump())
+
+
+class SamlAcsRequest(BaseModel):
+    companyId: UUID
+    SAMLResponse: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    groups: Optional[List[str]] = None
+
+
+def _extract_saml_assertion_claims(body: SamlAcsRequest) -> tuple[str, dict]:
+    email = (body.email or "").strip().lower()
+    name = (body.name or "").strip()
+    groups = list(body.groups or [])
+
+    if body.SAMLResponse:
+        import base64
+        import re
+
+        try:
+            raw_xml = base64.b64decode(body.SAMLResponse, validate=False).decode("utf-8", errors="ignore")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="Invalid base64 SAMLResponse") from exc
+
+        if not email:
+            m_nameid = re.search(r"<(?:\w+:)?NameID[^>]*>([^<]+@[^<]+)</(?:\w+:)?NameID>", raw_xml, re.IGNORECASE)
+            if m_nameid:
+                email = m_nameid.group(1).strip().lower()
+        if not name:
+            m_cn = re.search(r"<(?:\w+:)?Attribute[^>]*Name=[\"'](?:name|displayName|cn)[\"'][^>]*>\s*<(?:\w+:)?AttributeValue[^>]*>([^<]+)</", raw_xml, re.IGNORECASE)
+            if m_cn:
+                name = m_cn.group(1).strip()
+
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="SAML assertion missing valid email / NameID")
+
+    claims = {
+        "email": email,
+        "name": name or email.split("@")[0],
+        "groups": groups,
+        "iss": "saml2",
+        "sub": email,
+    }
+    return email, claims
+
+
+@router.post("/sso/saml/acs", response_model=Token)
+async def sso_saml_acs(
+    body: SamlAcsRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """BL-17: SAML 2.0 Assertion Consumer Service with JIT provisioning."""
+    email, claims = _extract_saml_assertion_claims(body)
+    result = await db.execute(select(Member).where(func.lower(Member.email) == email))
+    member = result.scalars().first()
+    provisioned = False
+    if member is None:
+        member = await jit_provision_member(db, claims=claims, email=email, company_id=str(body.companyId))
+        provisioned = True
+    elif getattr(member, "deletedAt", None) is not None:
+        raise HTTPException(status_code=404, detail="No active member linked to this SAML email")
+
+    assert_not_locked(member)
+    status_val = getattr(member.status, "value", member.status)
+    if status_val in (0, "DISABLED"):
+        raise HTTPException(status_code=403, detail="Account disabled")
+
+    register_success(member)
+    await db.commit()
+    await db.refresh(member)
+    if provisioned:
+        await _audit_sso(
+            actor=member,
+            action="SSO_JIT_PROVISIONED",
+            path="/auth/sso/saml/acs",
+            status_code=200,
+            company_id=body.companyId,
+            entity_type="member",
+            entity_id=str(member.memberId),
+            detail={"protocol": "saml2", "email": email},
+        )
+    await _audit_sso(
+        actor=member,
+        action="SSO_LOGIN_OK",
+        path="/auth/sso/saml/acs",
+        status_code=200,
+        detail={"protocol": "saml2", "email": email},
+    )
+    return _attach_session_cookies(response, _tokens(member))

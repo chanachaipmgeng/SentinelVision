@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import math
 from pathlib import Path
 import shutil
-from typing import Optional
+import time
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, UploadFile, status
+import httpx
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..models.camera import Camera
 from ..models.company_employee import CompanyEmployee
 from ..models.face_encoding import FaceEncoding
 from ..models.sentinel import (
@@ -19,6 +23,7 @@ from ..models.sentinel import (
     SentinelIdentity,
     SentinelIncidentLog,
 )
+from ..services.notification_service import NotificationOutbox
 from ..security.deps import current_member_var
 from ..services.company_module_service import get_company_module_config
 from ..services.outbox_crypto import seal_relay_secret
@@ -374,6 +379,24 @@ async def create_zone(db: AsyncSession, company_id: UUID, body: dict) -> dict:
         require2FA=bool(body.get("require2FA", False)),
         relayWebhookUrl=str(body.get("relayWebhookUrl") or "").strip() or None,
         relaySecret=seal_relay_secret(str(body.get("relaySecret") or "").strip() or None),
+        direction=(
+            str(body.get("direction") or "BIDIRECTIONAL").strip().upper()
+            if str(body.get("direction") or "BIDIRECTIONAL").strip().upper()
+            in {"ENTRY", "EXIT", "BIDIRECTIONAL"}
+            else "BIDIRECTIONAL"
+        ),
+        antiPassbackEnabled=bool(body.get("antiPassbackEnabled", False)),
+        antiPassbackMinutes=max(1, int(body.get("antiPassbackMinutes") or 5)),
+        doorHeldMaxSeconds=max(5, int(body.get("doorHeldMaxSeconds") or 30)),
+        doorOpenSince=parse_iso_dt(body.get("doorOpenSince")),
+        edgeProtocol=(
+            str(body.get("edgeProtocol") or "WEBHOOK").strip().upper()
+            if str(body.get("edgeProtocol") or "WEBHOOK").strip().upper()
+            in {"WEBHOOK", "WIEGAND", "OSDP"}
+            else "WEBHOOK"
+        ),
+        edgeBridgeUrl=str(body.get("edgeBridgeUrl") or "").strip() or None,
+        osdpAddress=max(0, min(126, int(body.get("osdpAddress") or 0))),
         isActive=bool(body.get("isActive", True)),
     )
     db.add(zone)
@@ -411,6 +434,26 @@ async def update_zone(db: AsyncSession, company_id: UUID, zone_id: UUID, body: d
         zone.relaySecret = seal_relay_secret(str(body.get("relaySecret") or "").strip() or None)
     if "isActive" in body:
         zone.isActive = bool(body["isActive"])
+    if "direction" in body:
+        d_val = str(body.get("direction") or "BIDIRECTIONAL").strip().upper()
+        if d_val in {"ENTRY", "EXIT", "BIDIRECTIONAL"}:
+            zone.direction = d_val
+    if "antiPassbackEnabled" in body:
+        zone.antiPassbackEnabled = bool(body["antiPassbackEnabled"])
+    if "antiPassbackMinutes" in body and body.get("antiPassbackMinutes") is not None:
+        zone.antiPassbackMinutes = max(1, int(body["antiPassbackMinutes"]))
+    if "doorHeldMaxSeconds" in body and body.get("doorHeldMaxSeconds") is not None:
+        zone.doorHeldMaxSeconds = max(5, int(body["doorHeldMaxSeconds"]))
+    if "doorOpenSince" in body:
+        zone.doorOpenSince = parse_iso_dt(body.get("doorOpenSince"))
+    if "edgeProtocol" in body:
+        proto = str(body.get("edgeProtocol") or "WEBHOOK").strip().upper()
+        if proto in {"WEBHOOK", "WIEGAND", "OSDP"}:
+            zone.edgeProtocol = proto
+    if "edgeBridgeUrl" in body:
+        zone.edgeBridgeUrl = str(body.get("edgeBridgeUrl") or "").strip() or None
+    if "osdpAddress" in body and body.get("osdpAddress") is not None:
+        zone.osdpAddress = max(0, min(126, int(body["osdpAddress"])))
     if "locationId" in body:
         loc_raw = body.get("locationId")
         zone.locationId = UUID(str(loc_raw)) if loc_raw else None
@@ -487,6 +530,101 @@ async def trigger_zone(
         "unlocked": True,
         "relayDispatched": relay_ok,
         "zone": serialize_zone(zone),
+        "incident": serialize_incident(inc),
+    }
+
+
+async def trigger_fire_alarm(
+    db: AsyncSession, company_id: UUID, body: Optional[dict] = None
+) -> dict:
+    """BL-13: Unlock all active access zones simultaneously on Fire Alarm signal."""
+    import asyncio
+
+    zones = (
+        await db.execute(
+            select(SentinelAccessZone).where(
+                SentinelAccessZone.companyId == company_id,
+                SentinelAccessZone.deletedAt.is_(None),
+                SentinelAccessZone.isActive.is_(True),
+            )
+        )
+    ).scalars().all()
+
+    actor = current_member_var.get()
+    actor_name = (
+        f"{actor.firstName or ''} {actor.lastName or ''}".strip() or actor.username
+        if actor
+        else str((body or {}).get("source") or "Fire Alarm Panel")
+    )
+    reason = str((body or {}).get("reason") or "Emergency Fire Alarm Fail-Safe")
+
+    async def _unlock_one(z: SentinelAccessZone) -> dict:
+        dispatched = False
+        if z.relayWebhookUrl:
+            dispatched = await dispatch_relay_webhook_async(
+                z.relayWebhookUrl,
+                z.relaySecret,
+                {
+                    "event": "door.fire_alarm_unlock",
+                    "companyId": str(company_id),
+                    "zoneId": str(z.zoneId),
+                    "zoneCode": z.code,
+                    "zoneName": z.name,
+                    "triggeredBy": actor_name,
+                    "reason": reason,
+                },
+            )
+        return {
+            "zoneId": str(z.zoneId),
+            "zoneCode": z.code,
+            "zoneName": z.name,
+            "unlocked": True,
+            "relayDispatched": dispatched,
+        }
+
+    results = await asyncio.gather(*[_unlock_one(z) for z in zones]) if zones else []
+    inc, _ = await record_incident(
+        db,
+        company_id=company_id,
+        event_type="FIRE_ALARM_TRIGGERED",
+        severity="CRITICAL",
+        member_id=actor.memberId if actor else None,
+        subject_name=actor_name,
+        identity_type="EMERGENCY_SYSTEM",
+        action_taken=f"ALL_DOORS_UNLOCKED ({len(results)} zones) — {reason}",
+    )
+    return {
+        "status": "FIRE_ALARM_ACTIVE",
+        "totalZones": len(results),
+        "unlockedCount": len(results),
+        "results": list(results),
+        "incident": serialize_incident(inc),
+    }
+
+
+async def reset_fire_alarm(
+    db: AsyncSession, company_id: UUID, body: Optional[dict] = None
+) -> dict:
+    """BL-13: Log Fire Alarm reset and restore normal access control."""
+    actor = current_member_var.get()
+    actor_name = (
+        f"{actor.firstName or ''} {actor.lastName or ''}".strip() or actor.username
+        if actor
+        else "Security Console"
+    )
+    reason = str((body or {}).get("reason") or "All clear — normal operation restored")
+    inc, _ = await record_incident(
+        db,
+        company_id=company_id,
+        event_type="FIRE_ALARM_RESET",
+        severity="INFO",
+        member_id=actor.memberId if actor else None,
+        subject_name=actor_name,
+        identity_type="EMERGENCY_SYSTEM",
+        action_taken=f"NORMAL_OPERATION_RESTORED — {reason}",
+    )
+    return {
+        "status": "NORMAL",
         "incident": serialize_incident(inc),
     }
 
@@ -675,4 +813,379 @@ async def edge_sync_manifest(db: AsyncSession, company_id: UUID) -> dict:
         "totalActiveVectors": int(emp_vectors) + int(sentinel_vectors),
         "activeZones": [serialize_zone(z) for z in zones],
         "generatedAt": datetime.now(timezone.utc),
+    }
+
+
+_REINDEX_STATUS_BY_COMPANY: dict[str, dict[str, Any]] = {}
+
+
+def _l2_normalize_vector(raw: Any) -> Optional[list[float]]:
+    if raw is None:
+        return None
+    vec = [float(x) for x in raw]
+    if not vec:
+        return None
+    norm = math.sqrt(sum(v * v for v in vec))
+    if norm <= 0.0:
+        return vec
+    return [v / norm for v in vec]
+
+
+async def evaluate_zone_access(
+    db: AsyncSession,
+    company_id: UUID,
+    zone_id: UUID,
+    body: Optional[dict] = None,
+) -> dict:
+    """BL-14: Tailgating AI detection (peopleCount > 1) & Anti-Passback enforcement."""
+    zone = await db.get(SentinelAccessZone, zone_id)
+    if not zone or zone.companyId != company_id or zone.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access zone not found")
+
+    payload = body or {}
+    direction = str(payload.get("direction") or getattr(zone, "direction", None) or "ENTRY").strip().upper()
+    if direction not in {"ENTRY", "EXIT", "BIDIRECTIONAL"}:
+        direction = "ENTRY"
+    people_count = max(1, int(payload.get("peopleCount") or 1))
+    subject_name = str(payload.get("subjectName") or "Unknown").strip() or "Unknown"
+    member_raw = payload.get("memberId")
+    identity_raw = payload.get("identityId")
+    member_id = UUID(str(member_raw)) if member_raw else None
+    identity_id = UUID(str(identity_raw)) if identity_raw else None
+    now = datetime.now(timezone.utc)
+
+    incidents: list[dict] = []
+    tailgating_detected = people_count > 1
+    if tailgating_detected:
+        inc, _ = await record_incident(
+            db,
+            company_id=company_id,
+            event_type="TAILGATING_DETECTED",
+            severity="HIGH",
+            identity_id=identity_id,
+            member_id=member_id,
+            subject_name=subject_name,
+            zone_id=zone.zoneId,
+            zone_name=zone.name,
+            direction=direction,
+            action_taken=f"Detected {people_count} people in single badge/face scan",
+            commit=False,
+        )
+        incidents.append(serialize_incident(inc))
+
+    apb_violation = False
+    apb_enabled = bool(getattr(zone, "antiPassbackEnabled", False))
+    apb_minutes = max(1, int(getattr(zone, "antiPassbackMinutes", 5) or 5))
+    if apb_enabled and direction == "ENTRY" and (member_id or identity_id):
+        since = now - timedelta(minutes=apb_minutes)
+        stmt = (
+            select(SentinelIncidentLog)
+            .where(
+                SentinelIncidentLog.companyId == company_id,
+                SentinelIncidentLog.zoneId == zone.zoneId,
+                SentinelIncidentLog.occurredAt >= since,
+                SentinelIncidentLog.eventType.in_(("ACCESS_GRANTED", "ACCESS_SCAN_ENTRY", "ANTI_PASSBACK_VIOLATION")),
+            )
+            .order_by(SentinelIncidentLog.occurredAt.desc())
+            .limit(5)
+        )
+        if member_id:
+            stmt = stmt.where(SentinelIncidentLog.memberId == member_id)
+        else:
+            stmt = stmt.where(SentinelIncidentLog.identityId == identity_id)
+        recent = (await db.execute(stmt)).scalars().first()
+        if recent is not None and (getattr(recent, "direction", None) or "ENTRY").upper() == "ENTRY":
+            apb_violation = True
+            inc, _ = await record_incident(
+                db,
+                company_id=company_id,
+                event_type="ANTI_PASSBACK_VIOLATION",
+                severity="MEDIUM",
+                identity_id=identity_id,
+                member_id=member_id,
+                subject_name=subject_name,
+                zone_id=zone.zoneId,
+                zone_name=zone.name,
+                direction=direction,
+                action_taken=f"Consecutive ENTRY within {apb_minutes}m without EXIT",
+                commit=False,
+            )
+            incidents.append(serialize_incident(inc))
+
+    allowed = not apb_violation
+    if allowed and not tailgating_detected and (member_id or identity_id):
+        await record_incident(
+            db,
+            company_id=company_id,
+            event_type="ACCESS_SCAN_ENTRY" if direction == "ENTRY" else "ACCESS_SCAN_EXIT",
+            severity="INFO",
+            identity_id=identity_id,
+            member_id=member_id,
+            subject_name=subject_name,
+            zone_id=zone.zoneId,
+            zone_name=zone.name,
+            direction=direction,
+            action_taken=f"{direction} recorded",
+            commit=False,
+        )
+
+    await db.commit()
+    return {
+        "zoneId": str(zone.zoneId),
+        "zoneName": zone.name,
+        "direction": direction,
+        "peopleCount": people_count,
+        "allowed": allowed,
+        "tailgatingDetected": tailgating_detected,
+        "antiPassbackViolation": apb_violation,
+        "incidents": incidents,
+        "evaluatedAt": now,
+    }
+
+
+async def run_company_health_check(db: AsyncSession, company_id: UUID) -> dict:
+    """BL-15: Camera RTSP offline & Door held-open monitor."""
+    now = datetime.now(timezone.utc)
+    stale_cutoff = now - timedelta(minutes=3)
+
+    cameras = (
+        await db.execute(
+            select(Camera).where(Camera.companyId == company_id)
+        )
+    ).scalars().all()
+
+    offline_cameras: list[dict] = []
+    for cam in cameras:
+        cam_status = str(getattr(cam, "status", "") or "").strip().lower()
+        last_ping = getattr(cam, "lastPingAt", None)
+        if last_ping is not None and last_ping.tzinfo is None:
+            last_ping = last_ping.replace(tzinfo=timezone.utc)
+        is_offline = cam_status == "offline" or (last_ping is not None and last_ping < stale_cutoff)
+        if is_offline:
+            inc, _ = await record_incident(
+                db,
+                company_id=company_id,
+                event_type="CAMERA_OFFLINE",
+                severity="HIGH",
+                subject_name=cam.name,
+                zone_id=getattr(cam, "zoneId", None),
+                camera_id=cam.cameraId,
+                action_taken=f"Camera {cam.name} offline or stale heartbeat",
+                commit=False,
+            )
+            offline_cameras.append({
+                "cameraId": str(cam.cameraId),
+                "name": cam.name,
+                "status": cam.status,
+                "incidentId": str(inc.incidentId),
+            })
+
+    zones = (
+        await db.execute(
+            select(SentinelAccessZone).where(
+                SentinelAccessZone.companyId == company_id,
+                SentinelAccessZone.deletedAt.is_(None),
+                SentinelAccessZone.isActive.is_(True),
+            )
+        )
+    ).scalars().all()
+
+    held_open_doors: list[dict] = []
+    for z in zones:
+        opened_at = getattr(z, "doorOpenSince", None)
+        if opened_at is None:
+            continue
+        if opened_at.tzinfo is None:
+            opened_at = opened_at.replace(tzinfo=timezone.utc)
+        max_sec = max(5, int(getattr(z, "doorHeldMaxSeconds", 30) or 30))
+        open_seconds = int((now - opened_at).total_seconds())
+        if open_seconds > max_sec:
+            def _make_outbox(
+                zone_obj: SentinelAccessZone = z,
+                secs: int = open_seconds,
+                limit: int = max_sec,
+            ) -> NotificationOutbox:
+                return NotificationOutbox(
+                    companyId=company_id,
+                    event="DOOR_HELD_OPEN",
+                    channel="WEBHOOK",
+                    payload={
+                        "companyId": str(company_id),
+                        "zoneId": str(zone_obj.zoneId),
+                        "zoneName": zone_obj.name,
+                        "openSeconds": secs,
+                        "thresholdSeconds": limit,
+                    },
+                    status="pending",
+                )
+
+            inc, _ = await record_incident(
+                db,
+                company_id=company_id,
+                event_type="DOOR_HELD_OPEN",
+                severity="HIGH",
+                subject_name=z.name,
+                zone_id=z.zoneId,
+                zone_name=z.name,
+                action_taken=f"Door held open {open_seconds}s (limit {max_sec}s)",
+                outbox_factory=_make_outbox,
+                commit=False,
+            )
+            held_open_doors.append({
+                "zoneId": str(z.zoneId),
+                "zoneName": z.name,
+                "openSeconds": open_seconds,
+                "thresholdSeconds": max_sec,
+                "incidentId": str(inc.incidentId),
+            })
+
+    await db.commit()
+    return {
+        "companyId": str(company_id),
+        "checkedCameras": len(cameras),
+        "offlineCameras": offline_cameras,
+        "checkedZones": len(zones),
+        "doorHeldOpen": held_open_doors,
+        "checkedAt": now,
+    }
+
+
+async def reindex_company_vectors(
+    db: AsyncSession,
+    company_id: UUID,
+    body: Optional[dict] = None,
+) -> dict:
+    """BL-16: Batch normalize & version-tag active 512-d embeddings."""
+    payload = body or {}
+    target_model = str(payload.get("targetModel") or "buffalo_l-512d-norm-v2").strip() or "buffalo_l-512d-norm-v2"
+
+    emp_rows = (
+        await db.execute(
+            select(FaceEncoding)
+            .join(CompanyEmployee, CompanyEmployee.memberId == FaceEncoding.memberId)
+            .where(
+                CompanyEmployee.companyId == company_id,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+        )
+    ).scalars().all()
+
+    emp_count = 0
+    for enc in emp_rows:
+        normed = _l2_normalize_vector(getattr(enc, "embedding", None))
+        if normed is not None:
+            enc.embedding = normed
+        enc.modelVersion = target_model
+        emp_count += 1
+
+    sentinel_rows = (
+        await db.execute(
+            select(SentinelIdentity).where(
+                SentinelIdentity.companyId == company_id,
+                SentinelIdentity.deletedAt.is_(None),
+                SentinelIdentity.status == "ACTIVE",
+                SentinelIdentity.embedding.is_not(None),
+            )
+        )
+    ).scalars().all()
+
+    sentinel_count = 0
+    for ident in sentinel_rows:
+        normed = _l2_normalize_vector(getattr(ident, "embedding", None))
+        if normed is not None:
+            ident.embedding = normed
+            sentinel_count += 1
+
+    await db.commit()
+    now = datetime.now(timezone.utc)
+    result = {
+        "companyId": str(company_id),
+        "targetModel": target_model,
+        "employeeVectors": emp_count,
+        "sentinelVectors": sentinel_count,
+        "processedCount": emp_count + sentinel_count,
+        "status": "COMPLETED",
+        "completedAt": now,
+    }
+    _REINDEX_STATUS_BY_COMPANY[str(company_id)] = result
+    return result
+
+
+async def get_reindex_status(db: AsyncSession, company_id: UUID) -> dict:
+    cached = _REINDEX_STATUS_BY_COMPANY.get(str(company_id))
+    if cached:
+        return cached
+    manifest = await edge_sync_manifest(db, company_id)
+    return {
+        "companyId": str(company_id),
+        "targetModel": manifest["embeddingModel"],
+        "employeeVectors": manifest["employeeVectorsCount"],
+        "sentinelVectors": manifest["sentinelVectorsCount"],
+        "processedCount": manifest["totalActiveVectors"],
+        "status": "IDLE",
+        "completedAt": None,
+    }
+
+
+async def edge_unlock_zone(
+    db: AsyncSession,
+    company_id: UUID,
+    zone_id: UUID,
+    body: Optional[dict] = None,
+) -> dict:
+    """BL-17: Wiegand-26 / OSDP RS-485 edge bridge unlock dispatch."""
+    zone = await db.get(SentinelAccessZone, zone_id)
+    if not zone or zone.companyId != company_id or zone.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access zone not found")
+
+    payload_in = body or {}
+    protocol = str(getattr(zone, "edgeProtocol", None) or payload_in.get("protocol") or "WEBHOOK").strip().upper()
+    if protocol not in {"WEBHOOK", "WIEGAND", "OSDP"}:
+        protocol = "WEBHOOK"
+    bridge_url = getattr(zone, "edgeBridgeUrl", None) or getattr(zone, "relayWebhookUrl", None)
+    osdp_addr = int(getattr(zone, "osdpAddress", 0) or 0)
+    card_number = int(payload_in.get("cardNumber") or 1001)
+    facility_code = int(payload_in.get("facilityCode") or 42)
+    duration_ms = max(500, min(30000, int(payload_in.get("durationMs") or 3000)))
+
+    edge_frame: dict[str, Any] = {
+        "zoneId": str(zone.zoneId),
+        "zoneCode": zone.code,
+        "protocol": protocol,
+        "durationMs": duration_ms,
+    }
+    if protocol == "WIEGAND":
+        edge_frame["wiegandBits"] = 26
+        edge_frame["facilityCode"] = facility_code
+        edge_frame["cardNumber"] = card_number
+    elif protocol == "OSDP":
+        edge_frame["osdpAddress"] = osdp_addr
+        edge_frame["osdpCommand"] = "osdp_OUT"
+        edge_frame["outputNo"] = 0
+
+    t0 = time.perf_counter()
+    dispatched = False
+    error_detail: Optional[str] = None
+    if bridge_url:
+        try:
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                resp = await client.post(bridge_url, json=edge_frame)
+                dispatched = 200 <= resp.status_code < 300
+                if not dispatched:
+                    error_detail = f"HTTP {resp.status_code}"
+        except Exception as exc:
+            error_detail = str(exc)
+    else:
+        dispatched = True
+
+    latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+    return {
+        "zoneId": str(zone.zoneId),
+        "protocol": protocol,
+        "osdpAddress": osdp_addr if protocol == "OSDP" else None,
+        "bridgeUrl": bridge_url,
+        "dispatched": dispatched,
+        "latencyMs": latency_ms,
+        "frame": edge_frame,
+        "error": error_detail,
     }

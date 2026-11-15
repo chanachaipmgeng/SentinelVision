@@ -284,6 +284,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   degradedMode = false;
   offlineQueuedCount = 0;
   reconcilingOffline = false;
+  offlineHmacKey = '';
 
   captureMessage = 'โหมด stream — WebSocket + คิว GPU ลงเวลาหลายคนแบบเรียลไทม์';
   activeFaceCount = 0;
@@ -695,6 +696,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     this.loadModuleStationDefaults();
     this.loadZoneAndEventOptions();
     this.loadConsentPolicy();
+    this.loadOfflineHmacKey();
     this.refreshOfflineQueueCount();
     this.bindOnlineListeners();
     this.startVideo();
@@ -748,6 +750,33 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     }
   }
 
+  private loadOfflineHmacKey(): void {
+    if (!this.companyId) return;
+    const cacheKey = `sv_offline_hmac_${this.companyId}`;
+    try {
+      this.offlineHmacKey = sessionStorage.getItem(cacheKey) || '';
+    } catch {
+      this.offlineHmacKey = '';
+    }
+    this.http
+      .get<{ hmacKey?: string }>(
+        `${environment.baseUrl}/timestamp/company/${this.companyId}/offline-sync-key`,
+      )
+      .subscribe({
+        next: (res) => {
+          if (res?.hmacKey) {
+            this.offlineHmacKey = res.hmacKey;
+            try {
+              sessionStorage.setItem(cacheKey, res.hmacKey);
+            } catch {
+              /* ignore storage errors */
+            }
+          }
+        },
+        error: () => undefined,
+      });
+  }
+
   private async enqueueOfflinePunch(payload: {
     images: string[];
     latitude: number;
@@ -760,19 +789,22 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     totpOrPin?: string | null;
   }): Promise<void> {
     try {
-      await this.offlineQueue.enqueue({
-        companyId: this.companyId,
-        images: payload.images,
-        latitude: payload.latitude,
-        longitude: payload.longitude,
-        punchType: payload.punchType,
-        stationMode: this.stationMode,
-        zoneId: payload.zoneId,
-        eventId: payload.eventId,
-        enableDoorRelay: payload.enableDoorRelay,
-        totpOrPin: payload.totpOrPin,
-        note: payload.note,
-      });
+      await this.offlineQueue.enqueue(
+        {
+          companyId: this.companyId,
+          images: payload.images,
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          punchType: payload.punchType,
+          stationMode: this.stationMode,
+          zoneId: payload.zoneId,
+          eventId: payload.eventId,
+          enableDoorRelay: payload.enableDoorRelay,
+          totpOrPin: payload.totpOrPin,
+          note: payload.note,
+        },
+        this.offlineHmacKey,
+      );
       await this.refreshOfflineQueueCount();
       this.notify(this.translate.instant('Queued while offline'), 'warning');
     } catch {
@@ -799,6 +831,27 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     this.cdr.detectChanges();
     for (const row of rows) {
       try {
+        if (row.hmacSignature && row.capturedAtMs && (row.employeeCode || row.totpOrPin)) {
+          await new Promise<void>((resolve, reject) => {
+            this.http
+              .post(`${environment.baseUrl}/timestamp/company/${row.companyId}/offline-sync`, {
+                clientId: row.id,
+                capturedAtMs: row.capturedAtMs,
+                hmacSignature: row.hmacSignature,
+                punchType: row.punchType,
+                employeeCode: row.employeeCode || row.totpOrPin,
+                latitude: row.latitude,
+                longitude: row.longitude,
+                note: row.note || 'Face kiosk offline HMAC sync',
+              })
+              .subscribe({
+                next: () => resolve(),
+                error: (err) => reject(err),
+              });
+          });
+          await this.offlineQueue.remove(row.id);
+          continue;
+        }
         const formData = new FormData();
         row.images.forEach((dataUrl, index) => {
           formData.append('files', this.dataURLtoFile(dataUrl, `offline_${row.id}_${index}.jpg`));

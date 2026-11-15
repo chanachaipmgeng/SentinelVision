@@ -146,7 +146,13 @@ async def build_muster_roll(
             else False
         )
         if not is_check_in:
-            # Last punch is CHECK_OUT (or other) → not open presence; keep PRESENT if already present.
+            # Last punch is CHECK_OUT (or other) -> person exited; remove from active muster roll.
+            if punch_type == TimestampType.CHECK_OUT or (
+                getattr(punch_type, "value", punch_type) == TimestampType.CHECK_OUT.value
+                if punch_type is not None
+                else False
+            ):
+                by_id.pop(emp_id, None)
             continue
         emp = ts.company_employee
         if not emp:
@@ -181,10 +187,19 @@ async def build_muster_roll(
 
     seen_ident: set[str] = set()
     for vlog in visitor_logs:
+        key = str(vlog.identityId or vlog.memberId or vlog.incidentId)
+        direction = str(getattr(vlog, "direction", "") or "").upper()
+        # BL-13: If latest access event is EXIT, deduct subject from active muster roll.
+        if direction == "EXIT":
+            if vlog.memberId:
+                # Find employee key if present by memberId or identityId
+                by_id.pop(str(vlog.identityId or ""), None)
+            by_id.pop(key, None)
+            seen_ident.add(key)
+            continue
         # Skip pure employee access rows already covered by attendance/presence.
         if (vlog.identityType or "").upper() == "EMPLOYEE" and vlog.memberId:
             continue
-        key = str(vlog.identityId or vlog.memberId or vlog.incidentId)
         if key in seen_ident or key in by_id:
             continue
         seen_ident.add(key)

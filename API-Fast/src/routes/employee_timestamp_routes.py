@@ -203,6 +203,30 @@ async def get_all_timestamps_route(
     )
 
 
+def _company_offline_hmac_key(company_id: UUID) -> str:
+    import hashlib
+    import hmac
+    from ..config.settings import settings
+
+    secret = (settings.SECRET_KEY or "sentinel-dev-secret").encode("utf-8")
+    return hmac.new(secret, f"kiosk-offline:{company_id}".encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+@router.get("/company/{companyId}/offline-sync-key")
+async def get_offline_sync_key_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """BL-12: Return company-scoped HMAC-SHA256 key for Kiosk offline IndexedDB queue signing."""
+    await assert_request_company_membership(request, db, companyId)
+    return {
+        "hmacKey": _company_offline_hmac_key(companyId),
+        "maxSkewMinutes": 5,
+        "maxAgeHours": 72,
+    }
+
+
 # ดึงข้อมูลการลงเวลาของพนักงานจาก timestampId
 @router.get("/company/{companyId}/{timestampId}", response_model=EmployeeTimestampResponse)
 async def get_timestamp_by_id_route(
@@ -507,4 +531,116 @@ async def mobile_field_checkin_route(
         "gpsAccuracy": gps_accuracy,
         "wifiSsid": wifi_ssid,
         "wifiBssid": wifi_bssid,
+    }
+
+
+@router.post("/company/{companyId}/offline-sync")
+async def offline_sync_punch_route(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """BL-12: Verify HMAC-SHA256 signed offline Kiosk punch and persist idempotently with original capturedAtMs."""
+    import hashlib
+    import hmac
+    from datetime import timezone
+    from sqlalchemy import select
+    from ..models.company_employee import CompanyEmployee
+    from ..models.employee_timestamp import EmployeeTimestamp, TimestampType
+    from ..models.member import Member, StatusType
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    body = await request.json()
+
+    client_id = str(body.get("clientId") or "").strip()[:80]
+    hmac_sig = str(body.get("hmacSignature") or "").strip().lower()
+    punch_type_raw = str(body.get("punchType") or "CHECK_IN").strip().upper()
+    try:
+        captured_at_ms = int(body["capturedAtMs"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Valid capturedAtMs is required") from None
+
+    if not client_id or not hmac_sig:
+        raise HTTPException(status_code=400, detail="clientId and hmacSignature are required")
+
+    key_hex = _company_offline_hmac_key(companyId)
+    canonical = f"{companyId}|{client_id}|{captured_at_ms}|{punch_type_raw}".encode("utf-8")
+    expected_sig = hmac.new(bytes.fromhex(key_hex), canonical, hashlib.sha256).hexdigest().lower()
+    if not hmac.compare_digest(expected_sig, hmac_sig):
+        raise HTTPException(status_code=403, detail="Invalid offline HMAC signature")
+
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    if captured_at_ms - now_ms > 5 * 60 * 1000:
+        raise HTTPException(status_code=400, detail="Offline timestamp is too far in the future")
+    if now_ms - captured_at_ms > 72 * 3600 * 1000:
+        raise HTTPException(status_code=400, detail="Offline punch expired (>72h)")
+
+    existing = (
+        await db.execute(
+            select(EmployeeTimestamp).where(
+                EmployeeTimestamp.companyId == companyId,
+                EmployeeTimestamp.clientEventId == client_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return {
+            "status": "DUPLICATE",
+            "timestampId": str(existing.timestampId),
+            "clientId": client_id,
+        }
+
+    emp_stmt = (
+        select(CompanyEmployee, Member)
+        .join(Member, Member.memberId == CompanyEmployee.memberId)
+        .where(
+            CompanyEmployee.companyId == companyId,
+            CompanyEmployee.deletedAt.is_(None),
+            Member.deletedAt.is_(None),
+            Member.status == StatusType.ENABLE,
+        )
+    )
+    if body.get("company_employeeId"):
+        emp_stmt = emp_stmt.where(CompanyEmployee.company_employeeId == UUID(str(body["company_employeeId"])))
+    elif body.get("employeeCode"):
+        emp_stmt = emp_stmt.where(CompanyEmployee.employeeId == str(body["employeeCode"]).strip())
+    elif caller:
+        emp_stmt = emp_stmt.where(CompanyEmployee.memberId == caller.memberId)
+
+    row = (await db.execute(emp_stmt.limit(1))).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Active employee not found for offline sync")
+    ce, member = row
+
+    ts_map = {
+        "CHECK_IN": TimestampType.CHECK_IN,
+        "CHECK_OUT": TimestampType.CHECK_OUT,
+        "BREAK_OUT": TimestampType.BREAK_OUT,
+        "BREAK_IN": TimestampType.BREAK_IN,
+    }
+    ts_enum = ts_map.get(punch_type_raw, TimestampType.CHECK_IN)
+    captured_dt = datetime.fromtimestamp(captured_at_ms / 1000.0, tz=timezone.utc).replace(tzinfo=None)
+
+    ts_row = EmployeeTimestamp(
+        company_employeeId=ce.company_employeeId,
+        companyId=companyId,
+        timestamp=captured_dt,
+        timestampType=ts_enum,
+        locationName=str(body.get("locationName") or "Offline Kiosk Sync").strip()[:200],
+        latitude=float(body.get("latitude") or 0.0),
+        longitude=float(body.get("longitude") or 0.0),
+        note=str(body.get("note") or f"OFFLINE_SYNC:{client_id}").strip()[:500],
+        clientEventId=client_id,
+        isOfflineSync=True,
+    )
+    db.add(ts_row)
+    await db.commit()
+    await db.refresh(ts_row)
+    return {
+        "status": "SYNCED",
+        "timestampId": str(ts_row.timestampId),
+        "clientId": client_id,
+        "employeeName": f"{member.firstName} {member.lastName}".strip(),
+        "capturedAt": captured_dt.isoformat(),
+        "isOfflineSync": True,
     }

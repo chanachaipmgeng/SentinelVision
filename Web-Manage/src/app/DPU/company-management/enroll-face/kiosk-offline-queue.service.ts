@@ -12,8 +12,11 @@ export interface OfflinePunchPayload {
   eventId?: string | null;
   enableDoorRelay?: boolean;
   totpOrPin?: string | null;
+  employeeCode?: string | null;
   note: string;
   createdAt: number;
+  capturedAtMs?: number;
+  hmacSignature?: string;
   attempts: number;
   lastError?: string;
 }
@@ -51,16 +54,62 @@ export class KioskOfflineQueueService {
 
   async enqueue(
     payload: Omit<OfflinePunchPayload, 'id' | 'createdAt' | 'attempts'>,
+    hmacKeyHex?: string,
   ): Promise<OfflinePunchPayload> {
+    const nowMs = Date.now();
+    const id = `punch_${nowMs}_${Math.random().toString(36).slice(2, 10)}`;
+    const capturedAtMs = payload.capturedAtMs ?? nowMs;
+    const hmacSignature =
+      payload.hmacSignature ||
+      (hmacKeyHex
+        ? await this.signPayload(hmacKeyHex, payload.companyId, id, capturedAtMs, payload.punchType)
+        : '');
     const row: OfflinePunchPayload = {
       ...payload,
-      id: `punch_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
-      createdAt: Date.now(),
+      id,
+      createdAt: nowMs,
+      capturedAtMs,
+      hmacSignature,
       attempts: 0,
     };
     const db = await this.openDb();
     await this.idbReq(db.transaction(STORE, 'readwrite').objectStore(STORE).put(row));
     return row;
+  }
+
+  async signPayload(
+    hmacKeyHex: string,
+    companyId: string,
+    clientId: string,
+    capturedAtMs: number,
+    punchType: string,
+  ): Promise<string> {
+    if (typeof crypto === 'undefined' || !crypto.subtle || !hmacKeyHex) {
+      return '';
+    }
+    try {
+      const keyBytes = new Uint8Array(
+        (hmacKeyHex.match(/.{1,2}/g) || []).map((b) => parseInt(b, 16)),
+      );
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyBytes,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+      );
+      const canonical = `${companyId}|${clientId}|${capturedAtMs}|${String(punchType || 'CHECK_IN').toUpperCase()}`;
+      const sigBuf = await crypto.subtle.sign(
+        'HMAC',
+        cryptoKey,
+        new TextEncoder().encode(canonical),
+      );
+      return Array.from(new Uint8Array(sigBuf))
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      return '';
+    }
   }
 
   async list(): Promise<OfflinePunchPayload[]> {

@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -80,10 +80,21 @@ class EmployeeTimestamp(Base):
     gpsIntegrityFlag: Mapped[str | None] = mapped_column("gps_integrity_flag", String(64), nullable=True)
     wifiSsid: Mapped[str | None] = mapped_column("wifi_ssid", String(128), nullable=True)
     wifiBssid: Mapped[str | None] = mapped_column("wifi_bssid", String(64), nullable=True)
+    clientEventId: Mapped[str | None] = mapped_column("client_event_id", String(80), nullable=True)
+    isOfflineSync: Mapped[bool] = mapped_column(
+        "is_offline_sync", Boolean, nullable=False, default=False, server_default="false"
+    )
 
     company_employee: Mapped["CompanyEmployee"] = relationship("CompanyEmployee", back_populates="timestamps")
 
     __table_args__ = (
         Index("employee_timestamp_company_ts_idx", "companyId", "timestamp"),
         Index("employee_timestamp_emp_ts_idx", "company_employeeId", "timestamp"),
+        Index(
+            "uq_emp_ts_company_client_event",
+            "companyId",
+            "client_event_id",
+            unique=True,
+            postgresql_where=text("client_event_id IS NOT NULL"),
+        ),
     )

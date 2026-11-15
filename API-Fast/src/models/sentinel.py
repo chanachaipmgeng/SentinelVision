@@ -96,6 +96,28 @@ class SentinelAccessZone(Base):
     require2FA: Mapped[bool] = mapped_column("require_2fa", Boolean, nullable=False, default=False)
     relayWebhookUrl: Mapped[str | None] = mapped_column("relay_webhook_url", String(255), nullable=True)
     relaySecret: Mapped[str | None] = mapped_column("relay_secret", String(512), nullable=True)
+    direction: Mapped[str] = mapped_column(
+        "direction", String(20), nullable=False, default="BIDIRECTIONAL", server_default="BIDIRECTIONAL"
+    )
+    antiPassbackEnabled: Mapped[bool] = mapped_column(
+        "anti_passback_enabled", Boolean, nullable=False, default=False, server_default="false"
+    )
+    antiPassbackMinutes: Mapped[int] = mapped_column(
+        "anti_passback_minutes", Integer, nullable=False, default=15, server_default="15"
+    )
+    doorHeldMaxSeconds: Mapped[int] = mapped_column(
+        "door_held_max_seconds", Integer, nullable=False, default=30, server_default="30"
+    )
+    doorOpenSince: Mapped[datetime | None] = mapped_column(
+        "door_open_since", DateTime(timezone=True), nullable=True
+    )
+    edgeProtocol: Mapped[str] = mapped_column(
+        "edge_protocol", String(20), nullable=False, default="WEBHOOK", server_default="WEBHOOK"
+    )
+    edgeBridgeUrl: Mapped[str | None] = mapped_column("edge_bridge_url", String(255), nullable=True)
+    osdpAddress: Mapped[int] = mapped_column(
+        "osdp_address", Integer, nullable=False, default=0, server_default="0"
+    )
     isActive: Mapped[bool] = mapped_column("is_active", Boolean, nullable=False, default=True)
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
@@ -157,6 +179,7 @@ class SentinelIncidentLog(Base):
     identityType: Mapped[str | None] = mapped_column("identity_type", String(30), nullable=True)
     zoneId: Mapped[uuid.UUID | None] = mapped_column("zone_id", UUID(as_uuid=True), nullable=True)
     zoneName: Mapped[str | None] = mapped_column("zone_name", String(120), nullable=True)
+    direction: Mapped[str | None] = mapped_column("direction", String(20), nullable=True)
     cameraId: Mapped[uuid.UUID | None] = mapped_column(
         "camera_id",
         UUID(as_uuid=True),

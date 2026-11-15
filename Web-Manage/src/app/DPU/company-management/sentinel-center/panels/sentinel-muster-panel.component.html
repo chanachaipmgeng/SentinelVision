@@ -41,6 +41,27 @@
               >
                 <i class="ri-refresh-line me-1"></i> อัปเดต Edge Manifest ล่าสุด
               </button>
+
+              <button
+                type="button"
+                class="ti-btn ti-btn-outline-info w-full py-2 font-semibold text-xs"
+                [disabled]="reindexing"
+                (click)="runVectorReindex()"
+              >
+                <i class="ri-database-2-line me-1"></i>
+                {{ reindexing ? 'กำลัง Re-Index Vector...' : 'Batch Vector Re-Index (512-d)' }}
+              </button>
+
+              <div *ngIf="reindexResult" class="text-xs bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-emerald-200 font-semibold">สถานะ Re-Index:</span>
+                  <span class="font-bold text-emerald-300">{{ reindexResult['status'] }}</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                  <span>จำนวนที่ประมวลผล:</span>
+                  <span>{{ reindexResult['processedCount'] }} vectors ({{ reindexResult['targetModel'] }})</span>
+                </div>
+              </div>
             </div>
 
             <!-- Live Building Occupancy / Emergency Muster Roll -->
@@ -62,6 +83,14 @@
                   <span class="badge bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 px-3 py-1 text-xs font-bold">
                     ปลอดภัยแล้ว {{ safeCount }} / {{ musterItems.length }}
                   </span>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-danger font-semibold"
+                    (click)="triggerFireAlarm()"
+                  >
+                    <i class="ri-alarm-warning-line me-1"></i>
+                    Fire Alarm
+                  </button>
                   <button
                     type="button"
                     class="ti-btn ti-btn-sm ti-btn-light"

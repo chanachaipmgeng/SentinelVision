@@ -107,7 +107,13 @@ export function defaultZoneForm(): {
   allowVip: boolean;
   allowVisitor: boolean;
   require2FA: boolean;
+  direction: string;
   relayWebhookUrl: string;
+  antiPassbackEnabled: boolean;
+  antiPassbackMinutes: number;
+  edgeProtocol: string;
+  edgeBridgeUrl: string;
+  osdpAddress: number;
 } {
   return {
     name: '',
@@ -119,7 +125,13 @@ export function defaultZoneForm(): {
     allowVip: true,
     allowVisitor: true,
     require2FA: false,
+    direction: 'BIDIRECTIONAL',
     relayWebhookUrl: '',
+    antiPassbackEnabled: false,
+    antiPassbackMinutes: 5,
+    edgeProtocol: 'WEBHOOK',
+    edgeBridgeUrl: '',
+    osdpAddress: 0,
   };
 }
 

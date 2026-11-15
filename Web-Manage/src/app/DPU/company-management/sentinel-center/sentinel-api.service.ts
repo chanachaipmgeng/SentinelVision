@@ -82,6 +82,26 @@ export class SentinelApiService {
     return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/zones/${zoneId}/trigger`, { reason });
   }
 
+  triggerFireAlarm(companyId: string, reason = 'Emergency Fire Alarm Fail-Safe'): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/fire-alarm`, { reason });
+  }
+
+  resetFireAlarm(companyId: string, reason = 'All clear — normal operation restored'): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/fire-alarm/reset`, { reason });
+  }
+
+  runHealthCheck(companyId: string): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/health-check`, {});
+  }
+
+  reindexVectors(companyId: string, targetModel = 'buffalo_l-512d-norm-v2'): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/reindex-vectors`, { targetModel });
+  }
+
+  edgeUnlockZone(companyId: string, zoneId: string, body: Record<string, unknown> = {}): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(`${this.base(companyId)}/zones/${zoneId}/edge-unlock`, body);
+  }
+
   deleteZone(companyId: string, zoneId: string): Observable<Record<string, unknown>> {
     return this.http.delete<Record<string, unknown>>(`${this.base(companyId)}/zones/${zoneId}`);
   }

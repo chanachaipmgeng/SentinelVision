@@ -70,13 +70,21 @@
                   <label class="form-label text-xs font-semibold">รหัสประตู</label>
                   <input class="form-control" [(ngModel)]="zoneForm.code" placeholder="GATE-01" />
                 </div>
-                <div class="col-span-12">
+                <div class="col-span-12 sm:col-span-7">
                   <label class="form-label text-xs font-semibold">โหมดการทำงานหลัก</label>
                   <select class="form-control" [(ngModel)]="zoneForm.stationMode">
                     <option value="ACCESS_CONTROL">ACCESS_CONTROL (สแกนเปิดประตู)</option>
                     <option value="ATTENDANCE">ATTENDANCE (ลงเวลา + เปิดประตู)</option>
                     <option value="WATCHLIST_MONITOR">WATCHLIST_MONITOR (กล้องเฝ้าระวัง)</option>
                     <option value="EVENT_CHECKIN">EVENT_CHECKIN (จุดต้อนรับงานอีเวนต์)</option>
+                  </select>
+                </div>
+                <div class="col-span-12 sm:col-span-5">
+                  <label class="form-label text-xs font-semibold">ทิศทางจุดสแกน</label>
+                  <select class="form-control" [(ngModel)]="zoneForm.direction">
+                    <option value="BIDIRECTIONAL">BIDIRECTIONAL (เข้า-ออก)</option>
+                    <option value="ENTRY">ENTRY (ขาเข้า)</option>
+                    <option value="EXIT">EXIT (ขาออก)</option>
                   </select>
                 </div>
                 <div class="col-span-6">
@@ -129,6 +137,34 @@
                   </label>
                 </div>
                 <div class="col-span-12">
+                  <label class="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="zoneForm.antiPassbackEnabled" />
+                    <span class="font-semibold text-amber-300">
+                      เปิดใช้ Anti-Passback (ป้องกันเข้าซ้ำโดยไม่ผ่านประตูออก)
+                    </span>
+                  </label>
+                </div>
+                <div class="col-span-6">
+                  <label class="form-label text-xs font-semibold">Edge Hardware Protocol</label>
+                  <select class="form-select" [(ngModel)]="zoneForm.edgeProtocol">
+                    <option value="WEBHOOK">WEBHOOK (HTTP)</option>
+                    <option value="WIEGAND">WIEGAND-26</option>
+                    <option value="OSDP">OSDP (RS-485)</option>
+                  </select>
+                </div>
+                <div class="col-span-6" *ngIf="zoneForm.edgeProtocol === 'OSDP'">
+                  <label class="form-label text-xs font-semibold">OSDP Address (0-126)</label>
+                  <input type="number" min="0" max="126" class="form-control" [(ngModel)]="zoneForm.osdpAddress" />
+                </div>
+                <div class="col-span-12" *ngIf="zoneForm.edgeProtocol !== 'WEBHOOK'">
+                  <label class="form-label text-xs font-semibold">Edge Bridge Controller URL</label>
+                  <input
+                    class="form-control"
+                    [(ngModel)]="zoneForm.edgeBridgeUrl"
+                    placeholder="http://edge-bridge.local:8090/unlock"
+                  />
+                </div>
+                <div class="col-span-12">
                   <button
                     type="button"
                     class="btn-vault w-full py-2.5 font-semibold text-sm"
@@ -168,12 +204,35 @@
                 <h6 class="font-bold text-base text-slate-100 mb-0">
                   รายการโซนประตูและจุดควบคุมทั้งหมด ({{ zones.length }})
                 </h6>
-                <a
-                  routerLink="/company/access-control/logs"
-                  class="text-xs font-semibold text-cyan-400 hover:underline"
-                >
-                  ดูประวัติผ่านประตู →
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-danger font-semibold"
+                    (click)="triggerFireAlarmAll()"
+                  >
+                    <i class="ri-alarm-warning-line me-1"></i> Fire Alarm: ปลดล็อกทุกประตู
+                  </button>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-light font-semibold"
+                    (click)="resetFireAlarmAll()"
+                  >
+                    <i class="ri-shield-check-line me-1"></i> รีเซ็ต Alarm
+                  </button>
+                  <button
+                    type="button"
+                    class="ti-btn ti-btn-sm ti-btn-outline-info font-semibold"
+                    (click)="runHealthCheck()"
+                  >
+                    <i class="ri-heart-pulse-line me-1"></i> Health Check
+                  </button>
+                  <a
+                    routerLink="/company/access-control/logs"
+                    class="text-xs font-semibold text-cyan-400 hover:underline ms-1"
+                  >
+                    ดูประวัติผ่านประตู →
+                  </a>
+                </div>
               </div>
               <div
                 tabindex="0"

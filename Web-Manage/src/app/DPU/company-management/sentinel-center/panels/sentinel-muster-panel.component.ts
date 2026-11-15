@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import swal from 'sweetalert';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import { downloadMusterCsv } from '../sentinel.helpers';
@@ -15,6 +16,8 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
 
   companyId = '';
   edgeManifest: SentinelEdgeManifest | null = null;
+  reindexResult: Record<string, unknown> | null = null;
+  reindexing = false;
   musterItems: SentinelMusterRollItem[] = [];
   musterTotal = 0;
   musterWorkDate: string | null = null;
@@ -54,6 +57,41 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
   loadEdgeManifest(): void {
     if (!this.companyId) return;
     this.api.getEdgeSync(this.companyId).subscribe((res) => (this.edgeManifest = res));
+  }
+
+  runVectorReindex(): void {
+    if (!this.companyId || this.reindexing) return;
+    this.reindexing = true;
+    this.api.reindexVectors(this.companyId).subscribe({
+      next: (res) => {
+        this.reindexResult = res;
+        this.reindexing = false;
+        this.loadEdgeManifest();
+      },
+      error: () => {
+        this.reindexing = false;
+      },
+    });
+  }
+
+  triggerFireAlarm(): void {
+    swal({
+      title: 'เปิดโหมดฉุกเฉิน Fire Alarm?',
+      text: 'ระบบจะปลดล็อกประตูทุกโซนอัตโนมัติเพื่อให้ทุกคนอพยพไปยังจุดรวมพล',
+      icon: 'warning',
+      buttons: ['ยกเลิก', 'ปลดล็อกทุกประตู'],
+      dangerMode: true,
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.api.triggerFireAlarm(this.companyId, 'Muster Roll Emergency Evacuation').subscribe({
+        next: (res) => {
+          const count = Number(res?.['unlockedCount'] ?? 0);
+          swal('ปลดล็อกแล้ว', `สั่งปลดล็อกประตูทุกโซน (${count} โซน) เรียบร้อย`, 'success');
+          this.refreshMuster();
+        },
+        error: () => swal('Error', 'ไม่สามารถส่งคำสั่ง Fire Alarm ได้', 'error'),
+      });
+    });
   }
 
   refreshMuster(): void {

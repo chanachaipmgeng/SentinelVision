@@ -111,7 +111,7 @@ async def write_audit(
     detail_copy: dict[str, Any] = dict(detail) if isinstance(detail, dict) else {}
 
     async with async_session() as db:
-        prev_q = (
+        prev_q: Any = (
             select(AuditLog.detail)
             .where(AuditLog.companyId == cid_uuid if cid_uuid else AuditLog.companyId.is_(None))
             .order_by(AuditLog.occurredAt.desc(), AuditLog.id.desc())

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>คู่มือการใช้งานระบบ SentinelVision v4.0 — Unified Biometric Identity, Attendance & Smart Security Platform</title>
+  <title>คู่มือการใช้งานระบบ SentinelVision v4.6.0 — Unified Biometric Identity, Attendance & Smart Security Platform</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -104,9 +104,9 @@
 </head>
 <body>
   <header class="hero">
-    <span class="badge">SentinelVision v4.0 • Enterprise User Manual</span>
-    <h1>คู่มือการใช้งานระบบ SentinelVision v4.0</h1>
-    <p>แพลตฟอร์มระบุตัวตนด้วยใบหน้าอัจฉริยะ ลงเวลาเข้า-ออกงาน ควบคุมประตูอัตโนมัติ แจ้งเตือนบุคคลเฝ้าระวัง (Watchlist/Blacklist/VIP) ระบบผู้มาติดต่อ และงานอีเวนต์ครบวงจร</p>
+    <span class="badge">SentinelVision v4.6.0 • Enterprise User Manual (Sprints 1–6)</span>
+    <h1>คู่มือการใช้งานระบบ SentinelVision v4.6.0</h1>
+    <p>แพลตฟอร์มระบุตัวตนด้วยใบหน้าอัจฉริยะ 512-d ลงเวลาเข้า-ออกงาน (Offline HMAC &amp; Anti-Mock GPS) ควบคุมประตูอัจฉริยะ (Tailgating AI, Anti-Passback, Wiegand/OSDP) แจ้งเตือน Watchlist/Blacklist/VIP ระบบผู้มาติดต่อ งานอีเวนต์ และ Enterprise SSO (OIDC/SAML 2.0)</p>
   </header>
 
   <main class="container">
@@ -162,8 +162,9 @@
         <img src="./screenshots/05-sentinel-access.png" alt="การควบคุมประตูและโซนพื้นที่อัจฉริยะ" />
       </div>
       <ol class="steps">
-        <li>สร้างโซนประตู กำหนดระดับความเข้มงวด (<code>LOW</code> ถึง <code>CRITICAL</code>) และกลุ่มบุคคลที่ได้รับอนุญาตให้ผ่าน</li>
-        <li>กดปุ่ม <strong>สั่งปลดล็อกประตู (Remote Unlock)</strong> เพื่อส่งสัญญาณเปิดประตูระยะไกลพร้อมบันทึก Audit Trail</li>
+        <li>สร้างโซนประตู กำหนดทิศทาง (<code>ENTRY</code> / <code>EXIT</code> / <code>BIDIRECTIONAL</code>), ช่วงเวลาเปิด-ปิด และเปิดใช้ <strong>Anti-Passback</strong> / <strong>Tailgating AI</strong></li>
+        <li>เลือก <strong>Edge Hardware Protocol</strong> (<code>WEBHOOK</code>, <code>WIEGAND-26</code>, <code>OSDP RS-485</code>) และกด <strong>Health Check</strong> เพื่อตรวจกล้อง RTSP ออฟไลน์หรือประตูเปิดค้าง</li>
+        <li>รองรับปุ่ม <strong>Fire Alarm: ปลดล็อกทุกประตู</strong> (Fail-Safe) และ <strong>รีเซ็ต Alarm</strong> พร้อมบันทึก Audit Trail</li>
       </ol>
     </section>
 
@@ -195,9 +196,9 @@
         <img src="./screenshots/08-sentinel-muster.png" alt="บัญชีรวมพลฉุกเฉินและเส้นทางข้ามกล้อง" />
       </div>
       <ol class="steps">
-        <li><strong>Emergency Muster Roll:</strong> ตรวจสอบรายชื่อพนักงานและผู้มาติดต่อที่ยังอยู่ในอาคารยามฉุกเฉิน</li>
-        <li><strong>Cross-Camera Person Journey Trail:</strong> ค้นหาไทม์ไลน์การเดินผ่านจุดสแกนต่างๆ ของบุคคลภายในองค์กร</li>
-        <li><strong>Edge AI Offline Sync:</strong> ดึง Manifest เวกเตอร์ใบหน้า 512 มิติไปแคชบนกล่อง Edge AI เพื่อทำงานแบบ Offline</li>
+        <li><strong>Emergency Muster Roll:</strong> ตรวจสอบรายชื่อพนักงานและผู้มาติดต่อที่ยังอยู่ในอาคารยามฉุกเฉิน พร้อมเช็คชื่อปลอดภัยและ Export CSV</li>
+        <li><strong>Batch Vector Re-Index (512-d):</strong> กดประมวลผลและปรับมาตรฐาน L2-norm ให้เวกเตอร์ใบหน้าทั้งหมดแบบ batch</li>
+        <li><strong>Edge AI Offline Sync:</strong> ดึง Manifest เวกเตอร์ใบหน้า 512 มิติไปแคชบนกล่อง Edge AI เพื่อทำงานแบบ Offline พร้อม Offline HMAC Sync</li>
       </ol>
     </section>
 

@@ -1304,6 +1304,27 @@ body.dpu-landing-body .page::before {
   background: var(--dpu-brand-soft) !important;
 }
 
+.ti-btn.ti-btn-sm:not(.ti-btn-icon) {
+  width: auto !important;
+  height: auto !important;
+  min-height: 2rem;
+  padding: 0.375rem 0.75rem !important;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-header .main-header-container {
+  padding-inline-end: 1rem !important;
+}
+
 /* ---- Form labels ---- */
 .form-label {
   font-weight: 600;
@@ -2827,11 +2848,11 @@ html[data-theme-mode="dark"] .table tbody tr:hover {
   html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-sidebar .main-sidebar-header {
     width: 17.5rem !important;
   }
-  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-header {
+  html:not(.dpu-kiosk-mode):not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .app-header {
     padding-inline-start: 17.5rem !important;
   }
-  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .content,
-  html:not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .footer {
+  html:not(.dpu-kiosk-mode):not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .content,
+  html:not(.dpu-kiosk-mode):not([data-toggled="icon-overlay-close"]):not([data-toggled="icon-click-closed"]):not([data-toggled="icon-hover-closed"]):not([data-toggled="close-menu-close"]):not([data-nav-layout="horizontal"]) .footer {
     margin-inline-start: 17.5rem !important;
   }
 }
@@ -3054,4 +3075,13 @@ html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-rose-300,
 html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-rose-400,
 html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-rose-400 {
   color: #be123c !important;
+}
+
+/* ---- Kiosk fullscreen offset override (wins over 17.5rem dual-rail rule) ---- */
+html.dpu-kiosk-mode .content,
+html.dpu-kiosk-mode .main-content,
+html.dpu-kiosk-mode .footer {
+  margin-inline-start: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
 }

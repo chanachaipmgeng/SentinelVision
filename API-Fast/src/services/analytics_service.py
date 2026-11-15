@@ -88,19 +88,30 @@ async def get_hour_day_heatmap(
 
     async def _add_from_ts_expr(ts_col, where_clause) -> None:
         # ISODOW: Mon=1 … Sun=7 → weekday 0–6
-        local_ts = func.timezone(BANGKOK_TZ, ts_col)
-        weekday_expr = (func.extract("isodow", local_ts) - 1).label("weekday")
-        hour_expr = func.extract("hour", local_ts).label("hour")
-        stmt = (
-            select(
-                weekday_expr,
-                hour_expr,
-                func.count().label("cnt"),
+        def _build_stmt(local_expr):
+            weekday_expr = (func.extract("isodow", local_expr) - 1).label("weekday")
+            hour_expr = func.extract("hour", local_expr).label("hour")
+            return (
+                select(
+                    weekday_expr,
+                    hour_expr,
+                    func.count().label("cnt"),
+                )
+                .where(where_clause)
+                .group_by(weekday_expr, hour_expr)
             )
-            .where(where_clause)
-            .group_by(weekday_expr, hour_expr)
-        )
-        rows = (await db.execute(stmt)).all()
+
+        try:
+            rows = (await db.execute(_build_stmt(func.timezone(BANGKOK_TZ, ts_col)))).all()
+        except Exception as exc:
+            if "time zone" not in str(exc).lower():
+                raise
+            await db.rollback()
+            rows = (
+                await db.execute(
+                    _build_stmt(func.timezone("UTC", ts_col) + text("interval '7 hours'"))
+                )
+            ).all()
         for r in rows:
             key = (int(r.weekday), int(r.hour))
             cells[key] = cells.get(key, 0) + int(r.cnt or 0)

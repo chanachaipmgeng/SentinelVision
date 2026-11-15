@@ -74,3 +74,51 @@ Web-Manage/playwright-report/
 Web-Manage/blob-report/
 Web-Manage/playwright/.cache/
 
+
+# Secrets, keys, certificates & credentials (never commit)
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets/
+*.secret
+*credentials*.json
+*service-account*.json
+*service_account*.json
+docker/nginx/ssl/
+docker/nginx/certs/
+
+# Python caches, test & coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# Local databases & dumps
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+
+# Logs, temp & swap files
+logs/
+API-Fast/logs/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# AI agent local state (keep repo skills)
+.gemini/*
+!.gemini/skills/
+.claude/

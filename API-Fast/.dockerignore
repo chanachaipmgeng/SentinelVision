@@ -17,3 +17,15 @@ import_jobs
 trained_model.yml
 face_encodings.pkl
 dataset.rar
+
+.mypy_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+*.log
+*.pem
+*.key
+*.crt
+*.db
+*.sqlite

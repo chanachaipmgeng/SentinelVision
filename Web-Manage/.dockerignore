@@ -7,3 +7,12 @@ dist
 .editorconfig
 Dockerfile
 .dockerignore
+
+.env
+.env.*
+src/assets/config.json
+test-results
+playwright-report
+blob-report
+playwright/.cache
+*.log

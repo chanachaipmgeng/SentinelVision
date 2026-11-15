@@ -339,9 +339,8 @@ export class AskDockComponent implements OnDestroy {
       let buffer = '';
       let currentEvent = 'token';
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+        const value = chunk.value;
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';

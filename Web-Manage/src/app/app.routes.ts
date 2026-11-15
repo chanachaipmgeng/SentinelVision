@@ -36,6 +36,13 @@ export const App_Route: Route[] = [
       import('./authentication/sso-callback/sso-callback.component').then((m) => m.SsoCallbackComponent),
   },
   {
+    path: 'visitor-invite/:token',
+    loadComponent: () =>
+      import('./authentication/visitor-invite/public-visitor-invite.component').then(
+        (m) => m.PublicVisitorInviteComponent,
+      ),
+  },
+  {
     path: 'auth/change-password',
     canActivate: [AuthGuard],
     loadComponent: () =>

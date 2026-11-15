@@ -1921,6 +1921,29 @@ async def get_payroll_summary(
     return await build_payroll_summary(db, companyId, start_d, end_d, company_employeeId)
 
 
+@router.get("/company/{companyId}/payroll-connectors/{connector}")
+async def export_payroll_connector(
+    companyId: UUID,
+    connector: str,
+    request: Request,
+    startDate: str,
+    endDate: str,
+    company_employeeId: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.hris_connector_service import format_payroll_for_connector
+    from ..services.ot_leave_engine_service import build_payroll_summary
+
+    await assert_request_company_access(request, db, companyId)
+    try:
+        start_d = date.fromisoformat(startDate[:10])
+        end_d = date.fromisoformat(endDate[:10])
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Valid startDate and endDate required") from None
+    summary = await build_payroll_summary(db, companyId, start_d, end_d, company_employeeId)
+    return format_payroll_for_connector(summary, connector)
+
+
 def _serialize_roster_entry(row: ShiftRosterEntry, shift_map: dict[UUID, WorkShift]) -> dict:
     shift = shift_map.get(row.shiftId) if row.shiftId else None
     return {

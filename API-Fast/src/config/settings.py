@@ -155,6 +155,13 @@ class Settings(BaseSettings):
     DB_MAX_OVERFLOW: int = 20
     DB_POOL_RECYCLE: int = 1800
     HNSW_EF_SEARCH: int = 40
+    HNSW_ITERATIVE_SCAN: str = "relaxed_order"
+    CACHE_TTL_SECONDS: int = 300
+    # Multi-Region DR Active-Active settings
+    REGION_ID: str = "ap-southeast-1"
+    PEER_REGION_URLS: str = ""
+    DR_REPLICATION_SECRET: str = ""
+    DR_MAX_LAG_SECONDS: int = 30
     # OpenTelemetry tracing (B6). Off unless an OTLP endpoint is set; the standard OTEL_* env
     # names are honoured by the SDK too, these only document the knobs and allow .env usage.
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""

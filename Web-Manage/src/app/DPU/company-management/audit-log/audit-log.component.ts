@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
@@ -8,7 +8,6 @@ import {
   DataTableComponent,
   DataTableSortChange,
 } from '../../../shared/components/data-table/data-table.component';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
 import { SharedModule } from '../../../shared/shared.module';
@@ -45,13 +44,13 @@ interface AuditRow {
         SharedModule,
         PageToolbarComponent,
         PillSearchComponent,
-        EmptyStateComponent,
         DataTableComponent,
         NotificationSettingsPanelComponent,
     ],
     templateUrl: './audit-log.component.html',
     styleUrls: ['../../../shared/styles/dpu-list-page.css'],
-    encapsulation: ViewEncapsulation.None
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AuditLogComponent implements OnInit, OnDestroy {
   rows: AuditRow[] = [];
@@ -62,6 +61,8 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   sortBy: string | null = 'occurredAt';
   sortDir: SortDir | null = 'desc';
   companyId = '';
+  verifyingIntegrity = false;
+  integrityResult: { valid: boolean; checkedCount: number; brokenAtId?: string | null; reason?: string | null } | null = null;
   filters = {
     q: '',
     actor: '',
@@ -82,7 +83,11 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     { key: 'ip', header: 'IP' },
   ];
 
-  constructor(private http: HttpClient, private token: TokenService) {
+  constructor(
+    private http: HttpClient,
+    private token: TokenService,
+    private cdr: ChangeDetectorRef
+  ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
 
@@ -141,11 +146,13 @@ export class AuditLogComponent implements OnInit, OnDestroy {
           this.pageIndex = clampPageIndex(this.pageIndex, page.total, this.pageSize);
           this.rows = page.items || [];
           this.loading = false;
+          this.cdr.markForCheck();
         },
         error: () => {
           this.loading = false;
           this.rows = [];
           this.total = 0;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -174,5 +181,28 @@ export class AuditLogComponent implements OnInit, OnDestroy {
     a.download = 'audit-log.csv';
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  verifyIntegrity(): void {
+    if (!this.companyId || this.verifyingIntegrity) return;
+    this.verifyingIntegrity = true;
+    this.cdr.markForCheck();
+    this.http
+      .get<{ valid: boolean; checkedCount: number; brokenAtId?: string | null; reason?: string | null }>(
+        `/sentinel/company/${this.companyId}/audit-verify`,
+        { params: { limit: '500' } }
+      )
+      .subscribe({
+        next: (res) => {
+          this.integrityResult = res;
+          this.verifyingIntegrity = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.integrityResult = { valid: false, checkedCount: 0, reason: 'Request failed' };
+          this.verifyingIntegrity = false;
+          this.cdr.markForCheck();
+        },
+      });
   }
 }

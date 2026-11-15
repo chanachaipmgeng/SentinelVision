@@ -263,6 +263,13 @@ async def record_incident(
         except Exception as exc:
             logger.warning("Failed to schedule incident clip export: %s", exc)
 
+    try:
+        from .incident_ws_hub import publish_incident_event
+
+        await publish_incident_event(company_id, serialize_incident(inc))
+    except Exception as exc:
+        logger.debug("WebSocket incident broadcast skipped: %s", exc)
+
     return inc, True
 
 

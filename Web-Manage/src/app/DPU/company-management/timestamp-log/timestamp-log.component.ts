@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterModule } from '@angular/router';
@@ -54,7 +54,8 @@ const FACE_PLACEHOLDER = './assets/images/faces/1.jpg';
         './timestamp-log.component.css',
         '../../../shared/styles/dpu-filter-toolbar.css',
     ],
-    encapsulation: ViewEncapsulation.None
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TimestampLogComponent implements OnInit, OnDestroy {
   readonly pageSize = 10;
@@ -153,7 +154,8 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     private tokenService: TokenService,
     private employeeService: EmployeeService,
     private route: ActivatedRoute,
-    private authedImages: AuthedImageService
+    private authedImages: AuthedImageService,
+    private cdr: ChangeDetectorRef
   ) {
     this.empSelect =
       this.route.snapshot.paramMap.get('company_employeeId') || '';
@@ -201,9 +203,11 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
             : undefined;
           this.selectModel = kept;
           if (!kept) this.drawerOpen = false;
+          this.cdr.markForCheck();
         },
         error: () => {
           this.loading = false;
+          this.cdr.markForCheck();
           swal('Error', 'โหลดข้อมูลการลงเวลาไม่สำเร็จ', 'error');
         },
       });
@@ -238,9 +242,11 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
+          this.cdr.markForCheck();
         },
         error: () => {
           this.exporting = false;
+          this.cdr.markForCheck();
           swal('Error', 'ส่งออกรายงานไม่สำเร็จ', 'error');
         },
       });
@@ -250,6 +256,7 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     this.employeeService.getLists(this.companyId).subscribe({
       next: (result) => {
         this.empList = result;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -342,11 +349,13 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
     this.timeService.update(this.companyId, item).subscribe({
       next: () => {
         this.actionBusy = false;
+        this.cdr.markForCheck();
         swal('สำเร็จ', 'บันทึกการแก้ไขเวลาเรียบร้อยแล้ว', 'success');
         this.getTimestamp();
       },
       error: (err) => {
         this.actionBusy = false;
+        this.cdr.markForCheck();
         swal('Error', err?.error?.detail || 'บันทึกการแก้ไขไม่สำเร็จ', 'error');
       },
     });
@@ -366,11 +375,13 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
       this.timeService.update(this.companyId, item).subscribe({
         next: () => {
           this.actionBusy = false;
+          this.cdr.markForCheck();
           swal('สำเร็จ', 'อนุมัติแล้ว', 'success');
           this.getTimestamp();
         },
         error: () => {
           this.actionBusy = false;
+          this.cdr.markForCheck();
           swal('Error', 'อนุมัติไม่สำเร็จ', 'error');
         },
       });
@@ -392,11 +403,13 @@ export class TimestampLogComponent implements OnInit, OnDestroy {
       this.timeService.update(this.companyId, item).subscribe({
         next: () => {
           this.actionBusy = false;
+          this.cdr.markForCheck();
           swal('สำเร็จ', 'บันทึกเป็น Absent แล้ว', 'success');
           this.getTimestamp();
         },
         error: () => {
           this.actionBusy = false;
+          this.cdr.markForCheck();
           swal('Error', 'บันทึกไม่สำเร็จ', 'error');
         },
       });

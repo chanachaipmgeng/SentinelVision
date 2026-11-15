@@ -168,3 +168,12 @@ All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company author
 | POST | `/sentinel/company/{companyId}/fire-alarm` | JWT | Trigger or reset (`POST .../fire-alarm/reset`) emergency muster / fire-alarm state for the company. |
 | GET/PUT | `/sentinel/company/{companyId}/incident-sla-settings` | JWT | Configure SLA escalation thresholds for unacknowledged security incidents. |
 | POST | `/sentinel/company/{companyId}/incidents/bulk-acknowledge` | JWT | Bulk-acknowledge incidents (`POST .../incidents/bulk-close`, `POST .../incidents/{incidentId}/assign`, `POST .../incidents/{incidentId}/close` for workflow triage). |
+| GET | `/sentinel/company/{companyId}/audit-verify` | JWT | Verify SHA-256 hash-chain integrity of `audit_log` entries for the company. |
+| WS | `/sentinel/ws/incidents/{companyId}` | JWT | Real-time security & watchlist incident WebSocket push (backed by Redis Pub/Sub). |
+| POST | `/sentinel/company/{companyId}/zones/{zoneId}/door-telemetry` | JWT / Kiosk | Report door open/closed sensor telemetry (`DOOR_FORCED_OPEN` / `DOOR_HELD_OPEN` alerting & Mantrap state). |
+| POST | `/sentinel/company/{companyId}/visitors/invite` | JWT | Issue HMAC-signed Guest Self-Service pre-registration link (`GET/POST /sentinel/public/visitor-invite/{token}`). |
+| POST | `/sentinel/public/visitor-invite/{token}/ocr-document` | Invite Token | Extract & PDPA-mask Thai National ID (Mod-11) or Passport MRZ (7-3-1) fields (`POST /sentinel/company/{companyId}/visitors/ocr-document` for reception). |
+| GET/POST/PATCH/DELETE | `/scim/v2/company/{companyId}/Users` | `scim.write` / JWT | RFC 7643/7644 SCIM 2.0 user provisioning with PDPA deprovision erasure. |
+| POST | `/cameras/company/{companyId}/cameras/discover-onvif` | JWT | Discover ONVIF cameras via WS-Discovery (`POST .../cameras/{cameraId}/ptz` for PTZ `ContinuousMove`/`Stop`). |
+| GET | `/hr/company/{companyId}/payroll-connectors/{connector}` | JWT | Export payroll summary for `SAP_CSV`, `WORKDAY_JSON`, `PEAK_CSV`, or `FLOWACCOUNT_CSV`. |
+| GET | `/sentinel/company/{companyId}/dr/topology` | JWT | Inspect Active-Active Multi-Region DR role, WAL LSN, replica count & peer regions (`POST /sentinel/dr/replicate` for HMAC-signed peer cache sync). |

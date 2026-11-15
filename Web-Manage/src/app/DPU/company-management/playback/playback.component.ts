@@ -55,6 +55,7 @@ export class PlaybackComponent implements OnInit, OnDestroy {
   objectUrl = '';
   currentTime = 0;
   duration = 0;
+  timelineCategory: 'ALL' | 'INCIDENT' | 'EVENT' | 'CONTINUOUS' = 'ALL';
 
   constructor(
     private http: HttpClient,
@@ -278,5 +279,40 @@ export class PlaybackComponent implements OnInit, OnDestroy {
       URL.revokeObjectURL(this.objectUrl);
       this.objectUrl = '';
     }
+  }
+
+  get timelineMarkers(): Array<{
+    clip: VideoClipRow;
+    leftPct: number;
+    tone: 'rose' | 'amber' | 'cyan';
+    label: string;
+  }> {
+    const filtered = this.clips.filter((c) => {
+      if (this.timelineCategory === 'INCIDENT') return !!c.incidentId;
+      if (this.timelineCategory === 'EVENT') return c.kind === 'event';
+      if (this.timelineCategory === 'CONTINUOUS') return c.kind === 'continuous_ref';
+      return true;
+    });
+    if (!filtered.length) return [];
+    const times = filtered.map((c) => new Date(c.startedAt).getTime()).filter((t) => Number.isFinite(t));
+    const minT = times.length ? Math.min(...times) : 0;
+    const maxT = times.length ? Math.max(...times) : 0;
+    const span = Math.max(1, maxT - minT);
+
+    return filtered.map((clip, idx) => {
+      const ts = new Date(clip.startedAt).getTime();
+      const leftPct =
+        times.length <= 1 || !Number.isFinite(ts)
+          ? Math.min(96, Math.max(2, ((idx + 1) / (filtered.length + 1)) * 96))
+          : Math.min(96, Math.max(2, ((ts - minT) / span) * 94 + 2));
+      const tone: 'rose' | 'amber' | 'cyan' = clip.incidentId
+        ? 'rose'
+        : clip.kind === 'event'
+          ? 'amber'
+          : 'cyan';
+      const camName = clip.cameraName || 'Camera';
+      const label = `${camName} · ${clip.incidentId ? 'AI Incident' : clip.kind} · ${clip.startedAt}`;
+      return { clip, leftPct, tone, label };
+    });
   }
 }

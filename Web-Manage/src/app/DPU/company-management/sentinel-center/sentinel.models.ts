@@ -185,3 +185,39 @@ export interface SentinelEventDwellReport {
   eventName?: string | null;
   people: SentinelEventPersonDwell[];
 }
+
+export interface AuditChainVerification {
+  companyId: string;
+  valid: boolean;
+  checkedCount: number;
+  brokenAtId?: string | null;
+  reason?: string | null;
+}
+
+export interface VisitorInviteResult {
+  inviteToken: string;
+  invitePath: string;
+  expiresAt: string;
+}
+
+export interface VisitorOcrDocument {
+  documentType: 'THAI_ID' | 'PASSPORT';
+  documentNumberMasked: string;
+  fullName?: string | null;
+  nationality?: string | null;
+  issuingCountry?: string | null;
+  dateOfBirth?: string | null;
+  expiryDate?: string | null;
+  checksumValid: boolean;
+}
+
+export interface DrTopology {
+  regionId: string;
+  dbMode: string;
+  inRecovery: boolean;
+  walLsn?: string | null;
+  connectedReplicas: number;
+  maxLagSecondsSla: number;
+  peerRegions: string[];
+  timestamp: string;
+}

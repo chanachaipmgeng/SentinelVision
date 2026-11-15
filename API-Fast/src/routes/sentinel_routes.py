@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -598,3 +598,227 @@ async def get_edge_sync_manifest(
 ):
     await assert_request_company_access(request, db, companyId)
     return await ctrl.edge_sync_manifest(db, companyId)
+
+
+@router.get("/company/{companyId}/audit-verify")
+async def verify_company_audit_chain(
+    companyId: UUID,
+    request: Request,
+    limit: int = Query(500, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.audit_service import verify_audit_chain
+
+    await assert_request_company_access(request, db, companyId)
+    return await verify_audit_chain(db, companyId, limit=limit)
+
+
+@router.post("/company/{companyId}/zones/{zoneId}/door-telemetry")
+async def post_zone_door_telemetry(
+    companyId: UUID,
+    zoneId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await assert_request_company_access(request, db, companyId)
+    return await ctrl.report_door_telemetry(db, companyId, zoneId, body or {})
+
+
+@router.post("/company/{companyId}/visitors/invite")
+async def create_visitor_invite(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.visitor_invite_service import create_visitor_invite_token
+
+    await assert_request_company_access(request, db, companyId)
+    payload = body or {}
+    return create_visitor_invite_token(
+        company_id=companyId,
+        visitor_name=str(payload.get("visitorName") or ""),
+        host_name=payload.get("hostName"),
+        purpose=payload.get("purpose"),
+        valid_hours=int(payload.get("validHours") or 12),
+        invite_ttl_hours=int(payload.get("inviteTtlHours") or 72),
+    )
+
+
+@router.get("/public/visitor-invite/{token}")
+async def get_public_visitor_invite(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.pdpa_service import get_consent_policy
+    from ..services.visitor_invite_service import verify_visitor_invite_token
+
+    invite = verify_visitor_invite_token(token)
+    policy = await get_consent_policy(db, invite["companyId"])
+    return {
+        "visitorName": invite["visitorName"],
+        "hostName": invite["hostName"],
+        "purpose": invite["purpose"],
+        "validHours": invite["validHours"],
+        "expiresAt": invite["expiresAt"],
+        "consentPolicy": policy,
+    }
+
+
+@router.post("/public/visitor-invite/{token}/complete")
+async def complete_public_visitor_invite(
+    token: str,
+    consentAccepted: bool = Form(...),
+    phoneNumber: Optional[str] = Form(None),
+    photo: Optional[UploadFile] = File(None),
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import datetime, timedelta, timezone
+    from fastapi import HTTPException
+    from ..services.visitor_invite_service import verify_visitor_invite_token
+
+    if not consentAccepted:
+        raise HTTPException(status_code=400, detail="PDPA biometric consent is required")
+    invite = verify_visitor_invite_token(token)
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=int(invite["validHours"]))
+    created = await ctrl.create_identity(
+        db,
+        invite["companyId"],
+        {
+            "identityType": "VISITOR",
+            "fullName": invite["visitorName"],
+            "hostName": invite["hostName"],
+            "purpose": invite["purpose"],
+            "phoneNumber": phoneNumber,
+            "validFrom": now.isoformat(),
+            "expiresAt": expires_at.isoformat(),
+            "consentAccepted": True,
+        },
+    )
+    if photo is not None:
+        created = await ctrl.enroll_identity_face(
+            db, invite["companyId"], UUID(created["identityId"]), photo
+        )
+    return {"registered": True, "identity": created}
+
+
+@router.post("/public/visitor-invite/{token}/ocr-document")
+async def ocr_public_visitor_document(
+    token: str,
+    file: Optional[UploadFile] = File(None),
+    ocrText: Optional[str] = Form(None),
+    documentType: str = Form("AUTO"),
+):
+    from ..services.id_ocr_service import extract_document_from_image
+    from ..services.visitor_invite_service import verify_visitor_invite_token
+
+    verify_visitor_invite_token(token)
+    img_bytes = await file.read() if file is not None else None
+    parsed = await extract_document_from_image(
+        image_bytes=img_bytes,
+        ocr_text=ocrText,
+        document_type=documentType,
+    )
+    return {"ok": True, "document": parsed}
+
+
+@router.post("/company/{companyId}/visitors/ocr-document")
+async def ocr_company_visitor_document(
+    companyId: UUID,
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    ocrText: Optional[str] = Form(None),
+    documentType: str = Form("AUTO"),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.id_ocr_service import extract_document_from_image
+
+    await assert_request_company_access(request, db, companyId)
+    img_bytes = await file.read() if file is not None else None
+    parsed = await extract_document_from_image(
+        image_bytes=img_bytes,
+        ocr_text=ocrText,
+        document_type=documentType,
+    )
+    return {"ok": True, "companyId": str(companyId), "document": parsed}
+
+
+@router.websocket("/ws/incidents/{companyId}")
+async def sentinel_incidents_ws(websocket: WebSocket, companyId: UUID):
+    """Real-time security/watchlist incident push stream for Security Command Center."""
+    from ..config.database import async_session
+    from ..models.member import Member, StatusType
+    from ..security.deps import assert_company_access
+    from ..security.jwt import decode_token
+    from ..services.incident_ws_hub import incident_ws_hub
+
+    token = websocket.query_params.get("token") or websocket.cookies.get("dpu_access_token")
+    if not token:
+        auth_header = websocket.headers.get("authorization") or ""
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
+    if not token:
+        await websocket.close(code=4401)
+        return
+
+    try:
+        payload = decode_token(token)
+        member_id = UUID(str(payload.get("sub")))
+    except Exception:
+        await websocket.close(code=4401)
+        return
+
+    async with async_session() as db:
+        member = await db.get(Member, member_id)
+        if not member or member.deletedAt is not None or member.status != StatusType.ENABLE:
+            await websocket.close(code=4401)
+            return
+        try:
+            await assert_company_access(db, member, companyId)
+        except Exception:
+            await websocket.close(code=4403)
+            return
+
+    await websocket.accept()
+    await incident_ws_hub.subscribe(companyId, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await incident_ws_hub.unsubscribe(companyId, websocket)
+
+
+@router.get("/company/{companyId}/dr/topology")
+async def get_dr_topology(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.dr_replication_service import get_region_topology
+
+    await assert_request_company_access(request, db, companyId)
+    return await get_region_topology(db)
+
+
+@router.post("/dr/replicate")
+async def receive_dr_replication(request: Request):
+    import json
+    from fastapi import HTTPException
+    from ..services.dr_replication_service import (
+        apply_incoming_replication_event,
+        verify_replication_signature,
+    )
+
+    raw_body = await request.body()
+    sig = request.headers.get("X-Sentinel-DR-Sig")
+    if not verify_replication_signature(raw_body, sig):
+        raise HTTPException(status_code=401, detail="Invalid DR replication signature")
+    try:
+        envelope = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed replication JSON") from None
+    return await apply_incoming_replication_event(envelope)

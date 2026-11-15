@@ -38,3 +38,26 @@ flowchart LR
 | **Phase 4** | Smart Events & Seminar Check-in with Seat/Table Lookup | `src/models/sentinel.py` (`SentinelEvent`), `src/routes/sentinel_routes.py` | ✅ Completed |
 | **Phase 5** | Live Building Occupancy / Emergency Muster Roll & 2FA Zone Enforcement | `GET /sentinel/company/{companyId}/overview`, `POST /sentinel/company/{companyId}/scan` | ✅ Completed |
 | **Phase 6** | Offline-First Edge Sync Manifest, Single-Origin Nginx Routing & Modern UX/UI Console | `Web-Manage/src/app/DPU/company-management/sentinel-center/`, `docker/nginx/default*.conf` | ✅ Completed |
+
+---
+
+## 3. Phase 7: Enterprise Scale & Performance Hardening (Completed)
+
+| Track | Capability | Key Files | Status |
+| :--- | :--- | :--- | :--- |
+| **Vector Recall** | `hnsw.iterative_scan` (`relaxed_order`) with `SAVEPOINT` fallback + centralized `_apply_hnsw_session_params` | `API-Fast/src/services/face_match_service.py`, `API-Fast/src/config/settings.py` | ✅ Completed |
+| **Hot-Path Cache** | Redis JSON cache (`sv:modcfg:*`, `sv:zones:*`) + multi-replica Kiosk scan debounce (`kiosk_scan_debounce_check`) | `API-Fast/src/services/cache_service.py`, `company_module_service.py`, `sentinel_controller.py` | ✅ Completed |
+| **Governance** | Tamper-evident SHA-256 hash-chained `audit_log` + `GET /sentinel/company/{companyId}/audit-verify` | `API-Fast/src/services/audit_service.py`, `API-Fast/src/routes/sentinel_routes.py` | ✅ Completed |
+| **SCIM 2.0 Sync** | RFC 7643/7644 `/scim/v2/company/{companyId}/Users` provisioning + PDPA deprovision erasure + `scim.write` API key scope | `API-Fast/src/services/scim_service.py`, `API-Fast/src/routes/scim_routes.py`, `docker/nginx/snippets/gateway.conf` | ✅ Completed |
+| **Realtime Alerts** | Watchlist/Security Incident WebSocket push (`/sentinel/ws/incidents/{companyId}`) + Redis Pub/Sub + Command Center live toast | `API-Fast/src/services/incident_ws_hub.py`, `Web-Manage/.../sentinel-center.component.ts` | ✅ Completed |
+| **Frontend Speed** | `ChangeDetectionStrategy.OnPush` on Attendance Logs, Live Wall, Audit Log & `DataTableComponent` + `@angular/cdk/scrolling` Virtual Scroll + Adaptive Sub-Stream | `Web-Manage/src/app/shared/components/data-table/`, `Web-Manage/src/app/DPU/company-management/{timestamp-log,live-wall,audit-log}/` | ✅ Completed |
+| **Branch RBAC** | `allowed_location_ids` branch/location row-level scope resolution for multi-branch managers | `API-Fast/src/services/rbac_service.py` | ✅ Completed |
+| **ONVIF & PTZ** | Pure-Python WS-Discovery (`239.255.255.250:3702`) + ONVIF PTZ `ContinuousMove`/`Stop` endpoints | `API-Fast/src/services/onvif_service.py`, `API-Fast/src/routes/camera_routes.py` | ✅ Completed |
+| **Door Telemetry** | Bidirectional door-sensor telemetry (`POST /sentinel/company/{companyId}/zones/{zoneId}/door-telemetry`) with `DOOR_FORCED_OPEN` & `DOOR_HELD_OPEN` alerting | `API-Fast/src/controllers/sentinel_controller.py`, `API-Fast/src/routes/sentinel_routes.py` | ✅ Completed |
+| **Visitor Self-Reg** | HMAC-signed Guest Self-Service Pre-Registration (`POST /visitors/invite`, `GET/POST /public/visitor-invite/{token}`) with PDPA consent & face enrollment | `API-Fast/src/services/visitor_invite_service.py`, `API-Fast/src/routes/sentinel_routes.py` | ✅ Completed |
+| **Mantrap Interlock** | Hardware Mantrap / Airlock interlock (`check_mantrap_interlock`) blocking unlock/entry (`409 MANTRAP_INTERLOCK_ACTIVE`) & logging `MANTRAP_INTERLOCK_BLOCKED` when paired door is open | `API-Fast/src/controllers/sentinel_controller.py` | ✅ Completed |
+| **HRIS Connectors** | Native HRIS/Payroll connector exports (`SAP_CSV`, `WORKDAY_JSON`, `PEAK_CSV`, `FLOWACCOUNT_CSV`) via `GET /hr/company/{companyId}/payroll-connectors/{connector}` | `API-Fast/src/services/hris_connector_service.py`, `API-Fast/src/routes/hr_routes.py` | ✅ Completed |
+| **Thai ID / Passport OCR** | Thai National ID (Mod-11 checksum) & ICAO 9303 TD3 Passport MRZ (7-3-1 check digits) OCR/parser with PDPA masking for Visitor Self-Service & Reception | `API-Fast/src/services/id_ocr_service.py`, `API-Fast/src/routes/sentinel_routes.py` | ✅ Completed |
+| **Multi-Region DR** | Active-Active Multi-Region DR topology (`GET /sentinel/company/{companyId}/dr/topology`) & HMAC-signed replication receiver (`POST /sentinel/dr/replicate`) with idempotent Redis cache invalidation | `API-Fast/src/services/dr_replication_service.py`, `API-Fast/src/config/settings.py`, `API-Fast/src/routes/sentinel_routes.py` | ✅ Completed |
+| **Enterprise UI** | Console UI integration for Audit Hash-Chain Verify, HRIS Connectors (`SAP`/`Workday`/`PEAK`/`FlowAccount`), ONVIF Discovery & PTZ, Visitor Invite/OCR, and Multi-Region DR Topology | `Web-Manage/src/app/DPU/company-management/{audit-log,reports,cameras,sentinel-center}/` | ✅ Completed |
+| **Guest Portal & NVR Scrubber** | Public Guest Self-Service Pre-Registration Portal (`/#/visitor-invite/:token` with PDPA & OCR) + Unified NVR AI-Marker Timeline Scrubber | `Web-Manage/src/app/authentication/visitor-invite/`, `Web-Manage/src/app/DPU/company-management/playback/` | ✅ Completed |

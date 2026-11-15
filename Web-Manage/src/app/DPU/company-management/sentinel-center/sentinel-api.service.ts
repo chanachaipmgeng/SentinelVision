@@ -215,4 +215,41 @@ export class SentinelApiService {
       `/presence/company/${companyId}/events/${eventId}/dwell`,
     );
   }
+
+  verifyAuditChain(companyId: string, limit = 500): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(
+      `${this.base(companyId)}/audit-verify`,
+      { params: { limit: String(limit) } },
+    );
+  }
+
+  createVisitorInvite(
+    companyId: string,
+    body: {
+      visitorName: string;
+      hostName?: string;
+      purpose?: string;
+      validHours?: number;
+      inviteTtlHours?: number;
+    },
+  ): Observable<{ inviteToken: string; invitePath: string; expiresAt: string }> {
+    return this.http.post<{ inviteToken: string; invitePath: string; expiresAt: string }>(
+      `${this.base(companyId)}/visitors/invite`,
+      body,
+    );
+  }
+
+  ocrVisitorDocument(
+    companyId: string,
+    formData: FormData,
+  ): Observable<{ ok: boolean; companyId: string; document: Record<string, unknown> }> {
+    return this.http.post<{ ok: boolean; companyId: string; document: Record<string, unknown> }>(
+      `${this.base(companyId)}/visitors/ocr-document`,
+      formData,
+    );
+  }
+
+  getDrTopology(companyId: string): Observable<Record<string, unknown>> {
+    return this.http.get<Record<string, unknown>>(`${this.base(companyId)}/dr/topology`);
+  }
 }

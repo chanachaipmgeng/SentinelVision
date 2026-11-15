@@ -69,6 +69,30 @@
             </button>
           </div>
         </div>
+
+        <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-300">HRIS Connector:</span>
+            <select
+              class="form-control !w-auto !py-1.5 !text-xs !bg-slate-950/70 !border-white/10 !text-slate-200"
+              [(ngModel)]="draft.hrisConnector"
+            >
+              <option value="SAP_CSV">SAP HCM (.csv)</option>
+              <option value="WORKDAY_JSON">Workday (.json)</option>
+              <option value="PEAK_CSV">PEAK Account (.csv)</option>
+              <option value="FLOWACCOUNT_CSV">FlowAccount (.csv)</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            class="ti-btn ti-btn-outline-info modern-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+            [disabled]="busy"
+            (click)="exportHrisConnector()"
+          >
+            <i class="ri-links-line"></i>
+            ส่งออก HRIS
+          </button>
+        </div>
       </div>
     </div>
   </div>

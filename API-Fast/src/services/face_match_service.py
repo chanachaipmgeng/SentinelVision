@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import inspect
 import time
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import or_, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.settings import settings
@@ -15,6 +17,31 @@ from ..models.face_encoding import FaceEncoding
 from ..models.member import Member, RoleType, StatusType
 from ..models.sentinel import SentinelIdentity
 from .observability import observe_face_match, observe_face_match_decision
+
+_ALLOWED_ITERATIVE_SCAN_MODES = {"off", "strict_order", "relaxed_order"}
+
+
+async def _apply_hnsw_session_params(db: AsyncSession) -> None:
+    """Apply pgvector HNSW tuning parameters for the current transaction.
+
+    Uses a SAVEPOINT when enabling ``hnsw.iterative_scan`` so deployments on
+    pgvector < 0.8.0 fall back cleanly without aborting the outer transaction.
+    """
+    await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+    mode = (getattr(settings, "HNSW_ITERATIVE_SCAN", "") or "").strip().lower()
+    if mode in _ALLOWED_ITERATIVE_SCAN_MODES and mode != "off":
+        begin_nested = getattr(db, "begin_nested", None)
+        if callable(begin_nested):
+            ctx = begin_nested()
+            if inspect.iscoroutine(ctx):
+                ctx.close()
+                return
+            if hasattr(ctx, "__aenter__"):
+                try:
+                    async with ctx:
+                        await db.execute(text(f"SET LOCAL hnsw.iterative_scan = {mode}"))
+                except DBAPIError:
+                    pass
 
 
 async def search_face_pgvector(
@@ -31,7 +58,7 @@ async def search_face_pgvector(
     matched_member_id: Optional[str] = None
     try:
         distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
-        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        await _apply_hnsw_session_params(db)
         stmt = (
             select(
                 FaceEncoding.faceEncodingId,
@@ -93,7 +120,7 @@ async def search_face_pgvector_presence(
     matched_member_id: Optional[str] = None
     try:
         distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
-        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        await _apply_hnsw_session_params(db)
         stmt = (
             select(
                 FaceEncoding.faceEncodingId,
@@ -154,7 +181,7 @@ async def search_system_admin_face_pgvector(
     matched_member_id: Optional[str] = None
     try:
         distance_expr = FaceEncoding.embedding.cosine_distance(target_encoding)
-        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        await _apply_hnsw_session_params(db)
         stmt = (
             select(
                 FaceEncoding.faceEncodingId,
@@ -209,7 +236,7 @@ async def search_sentinel_identity_pgvector(
     try:
         now = datetime.now(timezone.utc)
         distance_expr = SentinelIdentity.embedding.cosine_distance(target_encoding)
-        await db.execute(text(f"SET LOCAL hnsw.ef_search = {int(settings.HNSW_EF_SEARCH)}"))
+        await _apply_hnsw_session_params(db)
         stmt = select(
             SentinelIdentity,
             distance_expr.label("distance"),

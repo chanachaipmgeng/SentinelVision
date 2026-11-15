@@ -42,6 +42,7 @@ export class SentinelCommandPanelComponent implements OnInit {
     hasSiemWebhookSecret: false,
   };
   siemSaving = false;
+  drTopology: Record<string, unknown> | null = null;
 
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -53,6 +54,14 @@ export class SentinelCommandPanelComponent implements OnInit {
     this.loadEvents();
     this.loadIncidents();
     this.loadSiemSettings();
+    this.loadDrTopology();
+  }
+
+  loadDrTopology(): void {
+    this.api.getDrTopology(this.companyId).subscribe({
+      next: (res) => (this.drTopology = res),
+      error: () => undefined,
+    });
   }
 
   loadSiemSettings(): void {

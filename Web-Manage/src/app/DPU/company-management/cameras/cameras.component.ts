@@ -104,6 +104,8 @@ export class CamerasComponent implements OnInit {
   detailOpen = false;
   selected: CameraRow | null = null;
   importing = false;
+  discoveringOnvif = false;
+  onvifDevices: Array<{ xaddr: string; host?: string; scopes?: string[] }> = [];
   peopleMetrics: PeopleMetrics | null = null;
 
   /** ROI editor state */
@@ -562,5 +564,40 @@ export class CamerasComponent implements OnInit {
   cameraPeopleLabel(cam: CameraRow): string {
     if (cam.aiConfig?.peopleEnabled) return 'cctv.cameras.peopleOn';
     return 'cctv.cameras.peopleOff';
+  }
+
+  discoverOnvif(): void {
+    if (!this.companyId || this.discoveringOnvif) return;
+    this.discoveringOnvif = true;
+    this.http
+      .post<{ devices: Array<{ xaddr: string; host?: string; scopes?: string[] }>; count: number }>(
+        `/cameras/company/${this.companyId}/cameras/discover-onvif`,
+        { timeoutSeconds: 2.0 }
+      )
+      .subscribe({
+        next: (res) => {
+          this.discoveringOnvif = false;
+          this.onvifDevices = res.devices || [];
+          if (!this.onvifDevices.length) {
+            swal('ONVIF Discovery', 'ไม่พบกล้อง ONVIF ในเครือข่าย LAN นี้', 'info');
+          }
+        },
+        error: (err) => {
+          this.discoveringOnvif = false;
+          swal('ONVIF Error', err?.error?.detail || 'ไม่สามารถสแกน ONVIF ได้', 'error');
+        },
+      });
+  }
+
+  sendPtz(cam: CameraRow, action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'ZOOM_IN' | 'ZOOM_OUT' | 'STOP'): void {
+    if (!this.companyId) return;
+    this.http
+      .post(`/cameras/company/${this.companyId}/cameras/${cam.cameraId}/ptz`, { action, speed: 0.5 })
+      .subscribe({
+        next: () => undefined,
+        error: (err) => {
+          swal('PTZ Error', err?.error?.detail || 'ไม่สามารถสั่ง PTZ กล้องนี้ได้', 'error');
+        },
+      });
   }
 }

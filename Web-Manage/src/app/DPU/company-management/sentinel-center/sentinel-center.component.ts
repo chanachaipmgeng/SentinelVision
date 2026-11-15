@@ -268,6 +268,8 @@ export class SentinelCenterComponent implements OnInit {
   overview: SentinelOverview | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
+  private incidentWs: WebSocket | null = null;
+  private wsClosedByComponent = false;
 
   constructor(
     private api: SentinelApiService,
@@ -317,6 +319,44 @@ export class SentinelCenterComponent implements OnInit {
 
     if (this.companyId) {
       this.reloadOverview();
+      this.connectIncidentStream();
+    }
+    this.destroyRef.onDestroy(() => {
+      this.wsClosedByComponent = true;
+      this.incidentWs?.close();
+      this.incidentWs = null;
+    });
+  }
+
+  private connectIncidentStream(): void {
+    if (!this.companyId || typeof WebSocket === 'undefined') return;
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${proto}//${window.location.host}/sentinel/ws/incidents/${this.companyId}`;
+    try {
+      const ws = new WebSocket(url);
+      this.incidentWs = ws;
+      ws.onmessage = (evt: MessageEvent) => {
+        try {
+          const msg = JSON.parse(String(evt.data || '{}'));
+          if (msg?.type === 'incident') {
+            this.reloadOverview();
+            const subj = msg?.data?.subjectName || msg?.data?.eventType || 'Security Alert';
+            const sev = msg?.data?.severity ? `[${msg.data.severity}] ` : '';
+            this.showToast(`${sev}${subj}`);
+          }
+        } catch {
+          // ignore malformed frames
+        }
+      };
+      ws.onclose = () => {
+        if (!this.wsClosedByComponent) {
+          setTimeout(() => {
+            if (!this.wsClosedByComponent) this.connectIncidentStream();
+          }, 5000);
+        }
+      };
+    } catch {
+      // fallback silently when WS is unavailable
     }
   }
 

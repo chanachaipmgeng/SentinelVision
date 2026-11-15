@@ -3,7 +3,6 @@ import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../shared/shared.module';
-import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { TimestampService } from '../../services/timestamp.service';
 import { EmployeeService } from '../../services/employee.service';
@@ -12,7 +11,7 @@ import swal from 'sweetalert';
 
 @Component({
     selector: 'app-company-reports',
-    imports: [CommonModule, FormsModule, SharedModule, PageToolbarComponent],
+    imports: [CommonModule, FormsModule, SharedModule],
     templateUrl: './reports.component.html',
     styleUrls: ['../../../shared/styles/dpu-list-page.css'],
     encapsulation: ViewEncapsulation.None
@@ -31,6 +30,7 @@ export class ReportsComponent implements OnInit {
     company_employeeId: '',
     mode: 'raw' as 'raw' | 'payroll',
     format: 'xlsx' as 'xlsx' | 'csv',
+    hrisConnector: 'SAP_CSV' as 'SAP_CSV' | 'WORKDAY_JSON' | 'PEAK_CSV' | 'FLOWACCOUNT_CSV',
   };
 
   constructor(
@@ -156,6 +156,45 @@ export class ReportsComponent implements OnInit {
         error: () => {
           this.busy = false;
           swal('Error', 'ส่งออกรายงานไม่สำเร็จ', 'error');
+        },
+      });
+  }
+
+  exportHrisConnector(): void {
+    if (!this.companyId || !this.draft.startDate || !this.draft.endDate || this.busy) return;
+    this.busy = true;
+    const params: Record<string, string> = {
+      startDate: this.draft.startDate,
+      endDate: this.draft.endDate,
+    };
+    if (this.draft.company_employeeId) {
+      params['company_employeeId'] = this.draft.company_employeeId;
+    }
+    this.http
+      .get<Record<string, unknown>>(
+        `/hr/company/${this.companyId}/payroll-connectors/${this.draft.hrisConnector}`,
+        { params }
+      )
+      .subscribe({
+        next: (res) => {
+          this.busy = false;
+          const contentType = String(res['contentType'] || 'application/json');
+          const filename = String(res['filename'] || `payroll_${this.draft.hrisConnector.toLowerCase()}.dat`);
+          const raw =
+            typeof res['csv'] === 'string'
+              ? res['csv']
+              : JSON.stringify(res['workers'] ?? res, null, 2);
+          const blob = new Blob([raw], { type: contentType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        error: () => {
+          this.busy = false;
+          swal('Error', 'ส่งออกข้อมูล HRIS Connector ไม่สำเร็จ', 'error');
         },
       });
   }

@@ -442,3 +442,35 @@ def permission_codes_for_roles(role_codes: Iterable[str]) -> set[str]:
     for code in role_codes:
         out |= set(ROLE_PERMISSIONS.get(code, frozenset()))
     return out
+
+
+_UNRESTRICTED_LOCATION_ROLES = {"SYSTEM_ADMIN", "COMPANY_ADMIN", "HR_ADMIN"}
+
+
+async def allowed_location_ids(
+    db: AsyncSession,
+    member: Optional[Member],
+    company_id: UUID,
+) -> Optional[set[UUID]]:
+    """Return allowed branch/location UUIDs for ``member`` in ``company_id``, or ``None`` if unrestricted.
+
+    System admins, legacy company admins, and ``COMPANY_ADMIN`` / ``HR_ADMIN`` role holders
+    have unrestricted access across all company branches (``None``). Branch-scoped operators
+    with an assigned ``CompanyEmployee.locationId`` are restricted to that location.
+    """
+    if is_system_admin_member(member):
+        return None
+    if member is None:
+        return set()
+
+    emp = await get_company_employment(db, member.memberId, company_id)
+    if emp is not None and is_legacy_company_admin(emp.companyRoleType):
+        return None
+
+    role_codes = await roles_for_member(db, member, company_id)
+    if any(r in _UNRESTRICTED_LOCATION_ROLES for r in role_codes):
+        return None
+
+    if emp is not None and emp.locationId is not None:
+        return {emp.locationId}
+    return None

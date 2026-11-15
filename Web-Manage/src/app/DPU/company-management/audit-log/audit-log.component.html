@@ -15,6 +15,22 @@
         </button>
         <button
           type="button"
+          class="ti-btn ti-btn-outline-info modern-btn"
+          (click)="verifyIntegrity()"
+          [disabled]="verifyingIntegrity || !companyId"
+        >
+          <i class="ri-shield-check-line me-1"></i>
+          {{ verifyingIntegrity ? 'กำลังตรวจ...' : 'Verify Hash-Chain' }}
+        </button>
+        <span
+          *ngIf="integrityResult"
+          class="badge px-2.5 py-1.5 text-xs font-semibold"
+          [ngClass]="integrityResult.valid ? 'bg-success/20 text-success border border-success/40' : 'bg-danger/20 text-danger border border-danger/40'"
+        >
+          {{ integrityResult.valid ? 'VERIFIED' : 'TAMPERED' }} ({{ integrityResult.checkedCount }})
+        </span>
+        <button
+          type="button"
           class="ti-btn ti-btn-primary-full modern-btn"
           (click)="exportCsv()"
           [disabled]="!rows.length"

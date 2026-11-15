@@ -40,6 +40,7 @@ from .routes import (
     system_routes,
     dashboard_routes,
     notification_routes,
+    scim_routes,
     hr_routes,
     sentinel_routes,
     camera_routes,
@@ -331,6 +332,9 @@ def _mount_api(prefix: str = "") -> None:
     )
     app.include_router(
         rbac_routes.router, prefix=f"{p}/rbac", tags=["RBAC & Permissions"]
+    )
+    app.include_router(
+        scim_routes.router, prefix=f"{p}/scim", tags=["SCIM 2.0 Provisioning"]
     )
 
 

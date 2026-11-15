@@ -107,7 +107,9 @@ async def test_write_audit_persists_company_id_directly():
         assert row.actorRole == "ADMIN_SYSTEM"
         assert row.action == "POST"
         assert row.statusCode == "200"
-        assert row.detail == {"source": "test"}
+        assert isinstance(row.detail, dict)
+        assert row.detail["source"] == "test"
+        assert row.detail["_integrity"]["algo"] == "sha256-v1"
     finally:
         await _cleanup(member.memberId, company_id)
         await engine.dispose()

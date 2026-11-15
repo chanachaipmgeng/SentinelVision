@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -25,7 +25,8 @@ type WallLayout = '1x1' | '2x2' | '3x3';
     ],
     templateUrl: './live-wall.component.html',
     styleUrl: './live-wall.component.css',
-    encapsulation: ViewEncapsulation.None
+    encapsulation: ViewEncapsulation.None,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LiveWallComponent implements OnInit {
   companyId = '';
@@ -45,6 +46,7 @@ export class LiveWallComponent implements OnInit {
     private http: HttpClient,
     private token: TokenService,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
   ) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
   }
@@ -98,9 +100,11 @@ export class LiveWallComponent implements OnInit {
         next: (res) => {
           this.snapshotCameraName = cam.name;
           this.snapshotPreviewUrl = `data:${res.contentType};base64,${res.imageBase64}`;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.error = err?.error?.detail || `ไม่สามารถดึง Snapshot จาก ${cam.name}`;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -123,10 +127,12 @@ export class LiveWallComponent implements OnInit {
       next: (rows) => {
         this.cameras = rows || [];
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.loading = false;
         this.error = err?.error?.detail || 'Failed to load cameras';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -136,10 +142,21 @@ export class LiveWallComponent implements OnInit {
     if (layout !== '1x1') this.focusId = null;
   }
 
+  /** Multi-camera grids (2x2, 3x3) prefer low-bitrate sub-streams when available. */
+  isGridMode(): boolean {
+    return this.layout !== '1x1' && !this.focusId;
+  }
+
   streamSrc(cam: CameraRow): string {
+    const ext = cam as CameraRow & {
+      subWhepPath?: string;
+      subHlsPath?: string;
+      subStreamPath?: string;
+    };
+    const grid = this.isGridMode();
     if (this.useHlsFallback) {
-      return cam.hlsPath || '';
+      return (grid && (ext.subHlsPath || ext.subStreamPath)) || cam.hlsPath || '';
     }
-    return cam.whepPath || '';
+    return (grid && (ext.subWhepPath || ext.subStreamPath)) || cam.whepPath || '';
   }
 }

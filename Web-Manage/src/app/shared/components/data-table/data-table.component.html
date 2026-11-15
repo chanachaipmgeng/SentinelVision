@@ -26,7 +26,7 @@
           </th>
         </tr>
       </thead>
-      <tbody *ngIf="rows?.length; else empty">
+      <tbody *ngIf="rows?.length && !virtualScroll; else maybeVirtual">
         <tr *ngFor="let row of rows; trackBy: trackRow">
           <td *ngFor="let col of columns" [ngClass]="cellClass(row, col)">
             <ng-container *ngIf="cellTemplate; else plain">
@@ -39,6 +39,33 @@
         </tr>
       </tbody>
     </table>
+    <ng-template #maybeVirtual>
+      <cdk-virtual-scroll-viewport
+        *ngIf="rows?.length && virtualScroll; else empty"
+        [itemSize]="itemSize"
+        class="w-full"
+        style="height: 480px;"
+      >
+        <div
+          *cdkVirtualFor="let row of rows; trackBy: trackRow"
+          class="flex items-center border-b border-white/10 px-3"
+          [style.height.px]="itemSize"
+        >
+          <div
+            *ngFor="let col of columns"
+            class="flex-1 truncate text-xs"
+            [ngClass]="cellClass(row, col)"
+          >
+            <ng-container *ngIf="cellTemplate; else plainV">
+              <ng-container
+                *ngTemplateOutlet="cellTemplate; context: { $implicit: row, column: col, row: row }"
+              ></ng-container>
+            </ng-container>
+            <ng-template #plainV>{{ cellValue(row, col) }}</ng-template>
+          </div>
+        </div>
+      </cdk-virtual-scroll-viewport>
+    </ng-template>
   </div>
 
   <ng-template #empty>

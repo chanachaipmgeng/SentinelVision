@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, ContentChild, EventEmitter, Input, Output, TemplateRef } from '@angular/core';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ChangeDetectionStrategy, Component, ContentChild, EventEmitter, Input, Output, TemplateRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SimplePagerComponent } from '../simple-pager/simple-pager.component';
 import { SortDir } from '../../utils/data-table-query';
@@ -25,9 +26,10 @@ export interface DataTableSortChange {
  */
 @Component({
     selector: 'app-data-table',
-    imports: [CommonModule, FormsModule, SimplePagerComponent],
+    imports: [CommonModule, ScrollingModule, FormsModule, SimplePagerComponent],
     templateUrl: './data-table.component.html',
-    styleUrls: ['./data-table.component.css']
+    styleUrls: ['./data-table.component.css'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DataTableComponent<T = unknown> {
   @Input() columns: DataTableColumn<T>[] = [];
@@ -45,6 +47,9 @@ export class DataTableComponent<T = unknown> {
   @Input() trackByKey: keyof T | string = 'id';
   /** Show the built-in search field above the table. */
   @Input() showSearch = true;
+  /** Enable CDK virtual scrolling for high-row pages. */
+  @Input() virtualScroll = false;
+  @Input() itemSize = 48;
 
   @Output() pageIndexChange = new EventEmitter<number>();
   @Output() sortChange = new EventEmitter<DataTableSortChange>();

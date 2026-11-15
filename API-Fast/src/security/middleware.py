@@ -91,6 +91,11 @@ _API_KEY_SCOPE_RES = (
         re.compile(rf"^/sentinel/company/({_UUID})/incidents(?:/|$)"),
         frozenset({"GET"}),
     ),
+    (
+        "scim.write",
+        re.compile(rf"^/scim/v2/company/({_UUID})/(?:Users|ServiceProviderConfig)(?:/|$)"),
+        frozenset({"GET", "POST", "PUT", "PATCH", "DELETE"}),
+    ),
 )
 # D1: approval decision / inbox paths — require approve permission (or membership for boss fallback).
 # Self-service create/list paths stay on membership only.
@@ -121,6 +126,8 @@ _OPEN_PREFIXES = (
     "/auth/sso/saml/acs",
     "/auth/send-reset-password",
     "/auth/reset-password",
+    "/sentinel/public/visitor-invite",
+    "/sentinel/dr/replicate",
     "/health",
     "/ready",
 )

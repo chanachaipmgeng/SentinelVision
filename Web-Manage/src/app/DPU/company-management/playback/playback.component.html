@@ -75,6 +75,41 @@
   <div *ngIf="loading" class="text-muted py-8 text-center">{{ 'Loading...' | translate }}</div>
   <div *ngIf="error" class="alert alert-danger" role="alert">{{ error }}</div>
 
+  <!-- Unified NVR AI-Marker Timeline Scrubber -->
+  <div *ngIf="!loading && clips.length" class="box modern-card glass card-surface mb-4 p-3.5">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+      <div class="flex items-center gap-3 text-xs">
+        <span class="font-bold text-slate-100"><i class="ri-timeline-view me-1 text-cyan-400"></i>NVR AI-Marker Timeline</span>
+        <span class="inline-flex items-center gap-1 text-rose-300"><span class="w-2 h-2 rounded-full bg-rose-500"></span>AI Incident</span>
+        <span class="inline-flex items-center gap-1 text-amber-300"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Event</span>
+        <span class="inline-flex items-center gap-1 text-cyan-300"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>Continuous</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button type="button" class="ti-btn modern-btn !py-1 !px-2 text-xs" [ngClass]="timelineCategory === 'ALL' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="timelineCategory = 'ALL'">All</button>
+        <button type="button" class="ti-btn modern-btn !py-1 !px-2 text-xs" [ngClass]="timelineCategory === 'INCIDENT' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="timelineCategory = 'INCIDENT'">AI Incident</button>
+        <button type="button" class="ti-btn modern-btn !py-1 !px-2 text-xs" [ngClass]="timelineCategory === 'EVENT' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="timelineCategory = 'EVENT'">Event</button>
+        <button type="button" class="ti-btn modern-btn !py-1 !px-2 text-xs" [ngClass]="timelineCategory === 'CONTINUOUS' ? 'ti-btn-primary-full' : 'ti-btn-light'" (click)="timelineCategory = 'CONTINUOUS'">Continuous</button>
+      </div>
+    </div>
+    <div class="relative h-9 rounded-lg bg-slate-950/80 border border-white/10 overflow-hidden">
+      <div class="absolute inset-x-3 top-1/2 -translate-y-1/2 h-1 rounded bg-slate-800"></div>
+      <button
+        *ngFor="let m of timelineMarkers"
+        type="button"
+        (click)="selectClip(m.clip)"
+        [style.left.%]="m.leftPct"
+        [title]="m.label"
+        class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-slate-950 transition-transform hover:scale-125"
+        [ngClass]="{
+          'bg-rose-500': m.tone === 'rose',
+          'bg-amber-400': m.tone === 'amber',
+          'bg-cyan-400': m.tone === 'cyan',
+          'ring-2 ring-white scale-125': selected?.clipId === m.clip.clipId
+        }"
+      ></button>
+    </div>
+  </div>
+
   <div class="sv-playback" *ngIf="!loading">
     <aside class="sv-playback__list modern-card glass">
       <h3 class="sv-playback__list-title">{{ 'cctv.playback.clips' | translate }}</h3>

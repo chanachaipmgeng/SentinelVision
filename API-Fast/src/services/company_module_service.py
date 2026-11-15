@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.sentinel import SentinelAccessZone, SentinelEvent
 from ..models.system_setting import SystemSetting
+from .cache_service import cache_delete, cache_get_json, cache_set_json
 
 ALL_PLATFORM_MODULES = (
     "CORE",
@@ -253,10 +254,20 @@ async def _assert_event_belongs(db: AsyncSession, company_id: UUID, event_id: Op
         raise HTTPException(status_code=400, detail="defaultEventId does not belong to this company")
 
 
+def _modules_cache_key(company_id: str | UUID) -> str:
+    return f"sv:modcfg:{company_id}"
+
+
 async def get_company_module_config(db: AsyncSession, company_id: str | UUID) -> dict:
+    cache_key = _modules_cache_key(company_id)
+    cached = await cache_get_json(cache_key)
+    if isinstance(cached, dict):
+        return cached
     row = await db.get(SystemSetting, modules_config_key(company_id))
     stored = row.value if row and isinstance(row.value, dict) else None
-    return merge_module_config(stored)
+    merged = merge_module_config(stored)
+    await cache_set_json(cache_key, merged)
+    return merged
 
 
 async def save_company_module_config(
@@ -275,4 +286,5 @@ async def save_company_module_config(
     else:
         db.add(SystemSetting(key=key, value=clean))
     await db.commit()
+    await cache_delete(_modules_cache_key(cid))
     return merge_module_config(clean)

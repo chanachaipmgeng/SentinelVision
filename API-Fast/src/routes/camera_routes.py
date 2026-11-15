@@ -89,3 +89,42 @@ async def snapshot_camera(
 ):
     await assert_request_permission(request, db, "cameras.read", companyId)
     return await camera_service.snapshot_camera(db, companyId, cameraId)
+
+
+@router.post("/company/{companyId}/cameras/discover-onvif")
+async def discover_onvif_cameras(
+    companyId: UUID,
+    request: Request,
+    body: dict | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.onvif_service import discover_onvif_devices
+
+    await assert_request_permission(request, db, "cameras.manage", companyId)
+    timeout_s = float((body or {}).get("timeoutSeconds") or 2.0)
+    devices = await discover_onvif_devices(timeout_seconds=timeout_s)
+    return {"devices": devices, "count": len(devices)}
+
+
+@router.post("/company/{companyId}/cameras/{cameraId}/ptz")
+async def control_camera_ptz(
+    companyId: UUID,
+    cameraId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.onvif_service import send_ptz_command
+
+    await assert_request_permission(request, db, "cameras.manage", companyId)
+    cam = await camera_service.get_company_camera(db, companyId, cameraId)
+    payload = body or {}
+    return await send_ptz_command(
+        cam,
+        action=str(payload.get("action") or "move"),
+        profile_token=str(payload.get("profileToken") or "Profile_1"),
+        pan=float(payload.get("pan") or 0.0),
+        tilt=float(payload.get("tilt") or 0.0),
+        zoom=float(payload.get("zoom") or 0.0),
+        onvif_url=payload.get("onvifUrl"),
+    )

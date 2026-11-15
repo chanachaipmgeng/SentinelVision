@@ -354,3 +354,19 @@
               </div>
             </div>
           </div>
+
+          <!-- Multi-Region DR Active-Active Topology Strip -->
+          <div *ngIf="drTopology" class="box modern-card glass card-surface mt-4 p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div class="flex flex-wrap items-center gap-3 text-slate-200">
+              <span class="font-bold text-cyan-300"><i class="ri-global-line me-1"></i>Multi-Region DR</span>
+              <span>Region: <code>{{ drTopology['regionId'] }}</code></span>
+              <span class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5">
+                {{ drTopology['dbMode'] }}
+              </span>
+              <span *ngIf="drTopology['walLsn']">WAL LSN: <code>{{ drTopology['walLsn'] }}</code></span>
+              <span>Replicas: <strong>{{ drTopology['connectedReplicas'] }}</strong></span>
+            </div>
+            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="loadDrTopology()">
+              <i class="ri-refresh-line me-1"></i>Refresh DR
+            </button>
+          </div>

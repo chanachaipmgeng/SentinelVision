@@ -38,6 +38,15 @@
         <i class="ri-settings-3-line" aria-hidden="true"></i>
         {{ 'settingsHub.navTitle' | translate }}
       </a>
+      <button
+        type="button"
+        class="ti-btn ti-btn-light modern-btn"
+        (click)="discoverOnvif()"
+        [disabled]="discoveringOnvif"
+      >
+        <i class="ri-radar-line" aria-hidden="true"></i>
+        {{ discoveringOnvif ? 'Scanning...' : 'Discover ONVIF' }}
+      </button>
       <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="openCreate()">
         <i class="ri-add-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.add' | translate }}
@@ -45,6 +54,21 @@
     </ng-container>
   </app-page-toolbar>
   <p class="text-sm text-dpu-muted mb-3">{{ 'cctv.cameras.subtitle' | translate }}</p>
+
+  <div class="box modern-card glass card-surface mb-4" *ngIf="onvifDevices.length">
+    <div class="box-header flex items-center justify-between p-3 border-b border-white/10">
+      <h3 class="box-title text-dpu-ink font-bold !mb-0 text-sm">ONVIF Devices Discovered ({{ onvifDevices.length }})</h3>
+      <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="onvifDevices = []">Clear</button>
+    </div>
+    <div class="box-body p-3 flex flex-wrap gap-2">
+      <span
+        *ngFor="let dev of onvifDevices"
+        class="badge bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 px-2.5 py-1 text-xs"
+      >
+        {{ dev.host || dev.xaddr }} · <code>{{ dev.xaddr }}</code>
+      </span>
+    </div>
+  </div>
 
   <div class="box modern-card glass card-surface mb-4" *ngIf="peopleMetrics?.totals as t">
     <div class="box-header flex items-center justify-between">
@@ -119,6 +143,13 @@
             </div>
           </div>
           <div class="sv-camera-row__actions" (click)="$event.stopPropagation()">
+            <div class="flex items-center gap-1 mr-1" title="ONVIF PTZ">
+              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'LEFT')" aria-label="PTZ Left">◀</button>
+              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'UP')" aria-label="PTZ Up">▲</button>
+              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'DOWN')" aria-label="PTZ Down">▼</button>
+              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'RIGHT')" aria-label="PTZ Right">▶</button>
+              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs" (click)="sendPtz(cam, 'STOP')" aria-label="PTZ Stop">■</button>
+            </div>
             <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="openDetail(cam)">
               <i class="ri-eye-line" aria-hidden="true"></i>
               {{ 'Detail' | translate }}

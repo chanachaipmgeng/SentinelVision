@@ -13,6 +13,7 @@
   - Sentinel 1:N queries (`search_sentinel_identity_pgvector`) MUST filter `SentinelIdentity.companyId == companyId`, `SentinelIdentity.deletedAt.is_(None)`, `SentinelIdentity.status == 'ACTIVE'`, and active validity windows (`valid_from <= now <= expires_at`).
 - **Kiosk Token & Scope Isolation:** Kiosk WebSocket sessions must validate JWT expiration continuously (not only at handshake) and enforce per-connection rate/concurrency limits. Kiosk tokens (`typ="kiosk"`) are restricted to Kiosk check-in/scan/read endpoints (`_is_kiosk_path_allowed`) and must never be permitted to mutate or delete identities, zones, or company settings.
 - **Secret & Credential Hygiene:** `SECRET_KEY` must be >= 32 chars (`AUTH_FAIL_FAST=true`). Never hardcode default passwords (`1234`) or log tokens, passwords, or raw biometric embeddings.
+- **PDPA PII Masking & Signed Replication:** Never persist or log raw 13-digit Thai National IDs or full Passport numbers from OCR/SCIM; always mask via `mask_document_number()`. Cross-region DR endpoints (`/sentinel/dr/replicate`) must verify HMAC-SHA256 (`X-Sentinel-DR-Sig`) with constant-time `hmac.compare_digest` and deduplicate via Redis idempotency keys (`kiosk_scan_debounce_check("dr", event_id, ttl_seconds=86400)`).
 - **Soft-Delete Query Consistency:** Every soft-deletable ORM model (`deletedAt`) MUST filter `Model.deletedAt.is_(None)` across **all** list, company-scoped list (`get_*_by_companyId`), get-by-ID, and update queries — never only in `delete_*` — so soft-deleted rows never reappear in UI tables or trigger `404` on follow-up actions.
 
 ## 3. Performance, Testing & Concurrency Invariants
@@ -28,6 +29,8 @@
   - Before writing SQLAlchemy queries, serializers, or pytest fixtures, inspect the exact ORM model (`API-Fast/src/models/`) for column/attribute names, NOT NULL constraints, and whether `deletedAt` exists (e.g., `WorkShift.name`, `Member.username`/`passwordHash`/`RoleType`, `CompanyEmployee.positionId`, `AttendanceDaily.employeeId`/`otMinutes`, and `EmployeeTimestamp` has no `deletedAt`).
   - Always pass `assert_request_permission(request, db, perm_code, companyId)` (`perm_code` before `companyId`) and use `world.auth("admin_a")` in `API-Fast/tests/` instead of nonexistent `*.admin_headers` attributes.
   - Verify backend changes with `ruff check .`, `python -m mypy --no-incremental`, and `python -m pytest -q -p no:cacheprovider`.
+- **PostgreSQL Session GUC & Redis Cache Safety:** Wrap optional session-level `SET LOCAL` tuning (e.g., `hnsw.iterative_scan`) in `db.begin_nested()` (`SAVEPOINT`) with `AsyncMock` safety so test mocks and non-pgvector engines never abort transactions. Always invalidate `sv:modcfg:{companyId}` / `sv:zones:{companyId}` on every write/delete path.
+- **Single-Line OCR Regex Guard:** In OCR text parsers (`id_ocr_service.py`), never use `\s` inside single-line capture groups (use explicit `' '`) so matches never bleed across newlines.
 
 ## 4. Schema, Gateway & Deployment Workflow
 - **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.

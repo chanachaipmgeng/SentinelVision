@@ -27,6 +27,9 @@ export class SentinelVisitorsPanelComponent implements OnInit {
   identities: SentinelIdentity[] = [];
   selectedIdentityPhoto: File | null = null;
   visitorForm = defaultVisitorForm();
+  inviteResult: { inviteToken: string; invitePath: string; expiresAt: string } | null = null;
+  ocrBusy = false;
+  ocrResult: Record<string, unknown> | null = null;
 
   constructor(private api: SentinelApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -149,6 +152,51 @@ export class SentinelVisitorsPanelComponent implements OnInit {
         this.toast.emit('ลบรายการเรียบร้อยแล้ว');
         this.loadIdentities();
         this.overviewChanged.emit();
+      },
+    });
+  }
+
+  issueInviteLink(): void {
+    const name = String(this.visitorForm.fullName || '').trim();
+    if (!name) {
+      this.toast.emit('กรุณาระบุชื่อผู้มาติดต่อก่อนสร้างลิงก์เชิญ');
+      return;
+    }
+    this.api
+      .createVisitorInvite(this.companyId, {
+        visitorName: name,
+        hostName: String(this.visitorForm.organization || '') || undefined,
+        purpose: String(this.visitorForm.visitPurpose || '') || undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.inviteResult = res;
+          this.toast.emit('สร้างลิงก์ลงทะเบียนล่วงหน้า (HMAC) สำเร็จ');
+        },
+        error: () => this.toast.emit('ไม่สามารถสร้างลิงก์เชิญได้'),
+      });
+  }
+
+  onOcrFileSelected(event: Event): void {
+    const file = firstFileFromInput(event);
+    if (!file || !this.companyId || this.ocrBusy) return;
+    this.ocrBusy = true;
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('documentType', 'AUTO');
+    this.api.ocrVisitorDocument(this.companyId, fd).subscribe({
+      next: (res) => {
+        this.ocrBusy = false;
+        this.ocrResult = res.document || null;
+        const fullName = String(res.document?.['fullName'] || '').trim();
+        if (fullName) {
+          this.visitorForm.fullName = fullName;
+        }
+        this.toast.emit('สแกนเอกสารบัตรประชาชน/พาสปอร์ตสำเร็จ');
+      },
+      error: () => {
+        this.ocrBusy = false;
+        this.toast.emit('ไม่สามารถอ่านข้อมูลจากเอกสารได้');
       },
     });
   }

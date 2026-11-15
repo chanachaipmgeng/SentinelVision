@@ -25,6 +25,7 @@ from ..models.sentinel import (
 )
 from ..services.notification_service import NotificationOutbox
 from ..security.deps import current_member_var
+from ..services.cache_service import cache_delete, cache_get_json, cache_set_json
 from ..services.company_module_service import get_company_module_config
 from ..services.outbox_crypto import seal_relay_secret
 from ..services.sentinel_muster_service import build_muster_roll
@@ -323,7 +324,15 @@ async def enroll_identity_face(
             temp_path.unlink(missing_ok=True)
 
 
+def _zones_cache_key(company_id: UUID) -> str:
+    return f"sv:zones:{company_id}"
+
+
 async def list_zones(db: AsyncSession, company_id: UUID) -> list[dict]:
+    cache_key = _zones_cache_key(company_id)
+    cached = await cache_get_json(cache_key)
+    if isinstance(cached, list):
+        return cached
     rows = (
         await db.execute(
             select(SentinelAccessZone)
@@ -334,7 +343,9 @@ async def list_zones(db: AsyncSession, company_id: UUID) -> list[dict]:
             .order_by(SentinelAccessZone.createdAt.asc())
         )
     ).scalars().all()
-    return [serialize_zone(z) for z in rows]
+    out = [serialize_zone(z) for z in rows]
+    await cache_set_json(cache_key, out)
+    return out
 
 
 async def create_zone(db: AsyncSession, company_id: UUID, body: dict) -> dict:
@@ -402,6 +413,7 @@ async def create_zone(db: AsyncSession, company_id: UUID, body: dict) -> dict:
     db.add(zone)
     await db.commit()
     await db.refresh(zone)
+    await cache_delete(_zones_cache_key(company_id))
     return serialize_zone(zone)
 
 
@@ -467,6 +479,7 @@ async def update_zone(db: AsyncSession, company_id: UUID, zone_id: UUID, body: d
 
     await db.commit()
     await db.refresh(zone)
+    await cache_delete(_zones_cache_key(company_id))
     return serialize_zone(zone)
 
 
@@ -477,7 +490,59 @@ async def delete_zone(db: AsyncSession, company_id: UUID, zone_id: UUID) -> dict
     zone.deletedAt = datetime.now(timezone.utc)
     zone.isActive = False
     await db.commit()
+    await cache_delete(_zones_cache_key(company_id))
     return {"deleted": True, "zoneId": str(zone_id)}
+
+
+async def check_mantrap_interlock(
+    db: AsyncSession,
+    company_id: UUID,
+    zone: SentinelAccessZone,
+    interlock_zone_id: Optional[UUID | str],
+    *,
+    subject_name: str = "Mantrap Guard",
+    member_id: Optional[UUID] = None,
+    identity_id: Optional[UUID] = None,
+) -> None:
+    """Block unlocking/entry if the paired mantrap interlock zone is currently open."""
+    if not interlock_zone_id:
+        return
+    try:
+        paired_id = interlock_zone_id if isinstance(interlock_zone_id, UUID) else UUID(str(interlock_zone_id))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid interlockZoneId",
+        ) from None
+    if paired_id == zone.zoneId:
+        return
+
+    paired = await db.get(SentinelAccessZone, paired_id)
+    if not paired or paired.companyId != company_id or paired.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paired interlock zone not found")
+
+    if getattr(paired, "doorOpenSince", None) is not None:
+        await record_incident(
+            db,
+            company_id=company_id,
+            event_type="MANTRAP_INTERLOCK_BLOCKED",
+            severity="HIGH",
+            identity_id=identity_id,
+            member_id=member_id,
+            subject_name=subject_name,
+            zone_id=zone.zoneId,
+            zone_name=zone.name,
+            action_taken=f"Blocked unlock: paired mantrap door '{paired.name}' is currently open",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "MANTRAP_INTERLOCK_ACTIVE",
+                "message": f"Mantrap interlock active: paired door '{paired.name}' is open",
+                "pairedZoneId": str(paired.zoneId),
+                "pairedZoneName": paired.name,
+            },
+        )
 
 
 async def trigger_zone(
@@ -494,6 +559,15 @@ async def trigger_zone(
         else "Admin Console"
     )
     reason = str((body or {}).get("reason") or "Remote console unlock")
+
+    await check_mantrap_interlock(
+        db,
+        company_id,
+        zone,
+        (body or {}).get("interlockZoneId"),
+        subject_name=actor_name,
+        member_id=actor.memberId if actor else None,
+    )
 
     relay_ok = False
     if zone.relayWebhookUrl:
@@ -852,6 +926,15 @@ async def evaluate_zone_access(
     identity_raw = payload.get("identityId")
     member_id = UUID(str(member_raw)) if member_raw else None
     identity_id = UUID(str(identity_raw)) if identity_raw else None
+    await check_mantrap_interlock(
+        db,
+        company_id,
+        zone,
+        payload.get("interlockZoneId"),
+        subject_name=subject_name,
+        member_id=member_id,
+        identity_id=identity_id,
+    )
     now = datetime.now(timezone.utc)
 
     incidents: list[dict] = []
@@ -1188,4 +1271,75 @@ async def edge_unlock_zone(
         "latencyMs": latency_ms,
         "frame": edge_frame,
         "error": error_detail,
+    }
+
+
+async def report_door_telemetry(
+    db: AsyncSession,
+    company_id: UUID,
+    zone_id: UUID,
+    body: dict[str, Any],
+) -> dict[str, Any]:
+    """Bidirectional door-sensor telemetry: detect Door-Forced-Open (DFO) & Door-Held-Open (DHO)."""
+    zone = await db.get(SentinelAccessZone, zone_id)
+    if not zone or zone.companyId != company_id or zone.deletedAt is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access zone not found")
+
+    state = str((body or {}).get("state") or "CLOSED").strip().upper()
+    if state not in {"OPEN", "CLOSED", "FORCED"}:
+        raise HTTPException(status_code=400, detail="state must be OPEN, CLOSED, or FORCED")
+    forced = bool((body or {}).get("forced", False)) or state == "FORCED"
+    now = datetime.now(timezone.utc)
+
+    alarm_type: Optional[str] = None
+    held_seconds = 0.0
+
+    if state == "CLOSED" and not forced:
+        zone.doorOpenSince = None
+    else:
+        if zone.doorOpenSince is None:
+            zone.doorOpenSince = now
+        held_seconds = max(0.0, (now - zone.doorOpenSince).total_seconds())
+        max_held = max(5, int(getattr(zone, "doorHeldMaxSeconds", 30) or 30))
+
+        if forced:
+            alarm_type = "DOOR_FORCED_OPEN"
+            await record_incident(
+                db,
+                company_id=company_id,
+                event_type="DOOR_FORCED_OPEN",
+                severity="CRITICAL",
+                subject_name=zone.name,
+                identity_type="DOOR_SENSOR",
+                zone_id=zone.zoneId,
+                zone_name=zone.name,
+                action_taken="FORCED_ENTRY_DETECTED",
+                commit=False,
+            )
+        elif held_seconds > max_held:
+            alarm_type = "DOOR_HELD_OPEN"
+            await record_incident(
+                db,
+                company_id=company_id,
+                event_type="DOOR_HELD_OPEN",
+                severity="HIGH",
+                subject_name=zone.name,
+                identity_type="DOOR_SENSOR",
+                zone_id=zone.zoneId,
+                zone_name=zone.name,
+                action_taken=f"DOOR_HELD_OPEN_{int(held_seconds)}S",
+                commit=False,
+            )
+
+    await db.commit()
+    await db.refresh(zone)
+    await cache_delete(_zones_cache_key(company_id))
+    return {
+        "zoneId": str(zone.zoneId),
+        "zoneName": zone.name,
+        "state": state,
+        "forced": forced,
+        "heldSeconds": round(held_seconds, 2),
+        "doorOpenSince": zone.doorOpenSince.isoformat() if zone.doorOpenSince else None,
+        "alarmTriggered": alarm_type,
     }

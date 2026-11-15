@@ -55,13 +55,17 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  api:
+  api-gpu:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile
-    container_name: sentinel-api
+    container_name: sentinel-api-gpu
     expose:
       - "8000"
+    networks:
+      default:
+        aliases:
+          - api
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
@@ -96,11 +100,12 @@ services:
       OIDC_SCOPES: "${OIDC_SCOPES:-openid profile email}"
       # Quote required: unquoted cuda:0,cuda:1 is invalid / truncated YAML.
       FACE_DEVICES: "${FACE_DEVICES:-cuda:0}"
-      FACE_GPU_WORKERS: "${FACE_GPU_WORKERS:-1}"
+      FACE_GPU_WORKERS: "${FACE_GPU_WORKERS:-3}"
       EXPOSE_API_DOCS: ${EXPOSE_API_DOCS:-false}
       # InsightFace device: cuda:0 (default) or cpu — matches AI_VISION worker pattern
       FACE_DEVICE: "${FACE_DEVICE:-cuda:0}"
-      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      CUDA_VISIBLE_DEVICES: "${CUDA_VISIBLE_DEVICES:-0}"
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-0}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
       # B7: outbox / retention / import processing run in the `worker` service below.
       # true = single-container dev: run the same job loops inside the API process.
@@ -138,6 +143,14 @@ services:
       mediamtx:
         condition: service_started
     restart: unless-stopped
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     security_opt:
       - no-new-privileges:true
     logging:
@@ -145,8 +158,7 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    # GPU passthrough: use docker-compose.gpu.yml when Docker Desktop exposes NVIDIA
-    #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d api
+    # GPU passthrough enabled by default on api-gpu.
     # Liveness only: migrate + face workers finish before uvicorn listens, so /health
     # becoming 200 already implies schema head. Use a long start_period so InsightFace
     # CPU warmup on cold CI runners cannot flip depends_on to unhealthy prematurely.
@@ -177,9 +189,11 @@ services:
       IMAGE_BLUR_THRESHOLD_IMPORT: ${IMAGE_BLUR_THRESHOLD_IMPORT:-0}
       IMAGE_BRIGHTNESS_MIN: ${IMAGE_BRIGHTNESS_MIN:-40}
       IMAGE_BRIGHTNESS_MAX: ${IMAGE_BRIGHTNESS_MAX:-220}
-      FACE_DEVICE: cpu
-      FACE_DEVICES: cpu
-      NVIDIA_VISIBLE_DEVICES: ""
+      FACE_DEVICE: "${FACE_DEVICE:-cuda:0}"
+      FACE_DEVICES: "${FACE_DEVICES:-cuda:0}"
+      CUDA_VISIBLE_DEVICES: "${CUDA_VISIBLE_DEVICES:-0}"
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-0}
+      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
       WORKER_JOBS: ${WORKER_JOBS:-outbox,retention,imports,attendance_summary,cctv,people}
       WORKER_METRICS_PORT: "9108"
       WORKER_IMPORT_POLL_SECONDS: ${WORKER_IMPORT_POLL_SECONDS:-2}
@@ -198,7 +212,7 @@ services:
       WORKER_PEOPLE_MAX_CONCURRENT: ${WORKER_PEOPLE_MAX_CONCURRENT:-1}
       WORKER_PEOPLE_PAUSE_WHEN_KIOSK_PENDING: ${WORKER_PEOPLE_PAUSE_WHEN_KIOSK_PENDING:-4}
       WORKER_PEOPLE_MAX_QUEUE_PENDING: ${WORKER_PEOPLE_MAX_QUEUE_PENDING:-24}
-      WORKER_PEOPLE_KIOSK_METRICS_URLS: ${WORKER_PEOPLE_KIOSK_METRICS_URLS:-http://api:8000/metrics}
+      WORKER_PEOPLE_KIOSK_METRICS_URLS: ${WORKER_PEOPLE_KIOSK_METRICS_URLS:-http://api-gpu:8000/metrics}
       PEOPLE_YOLO_ONNX_PATH: ${PEOPLE_YOLO_ONNX_PATH:-models/yolov8n.onnx}
       PEOPLE_YOLO_CONFIDENCE: ${PEOPLE_YOLO_CONFIDENCE:-0.4}
       PEOPLE_YOLO_PROVIDERS: ${PEOPLE_YOLO_PROVIDERS:-CUDAExecutionProvider,CPUExecutionProvider}
@@ -235,10 +249,18 @@ services:
         condition: service_healthy
       # service_started (not healthy): API migrate + InsightFace warmup can exceed
       # compose depends_on wait on cold CI hosts; worker jobs retry on empty schema.
-      api:
+      api-gpu:
         condition: service_started
       mediamtx:
         condition: service_started
+    gpus: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     stop_grace_period: 45s
     restart: unless-stopped
     security_opt:
@@ -326,7 +348,7 @@ services:
       HSTS_MAX_AGE: ${HSTS_MAX_AGE:-}
     depends_on:
       # Match worker: do not block gateway start on API /health during cold warmup.
-      api:
+      api-gpu:
         condition: service_started
       admin:
         condition: service_started

@@ -201,12 +201,16 @@ async def verify_audit_chain(
             verified += 1
         expected_prev = stored_hash
 
+    intact = len(broken_ids) == 0
     return {
         "companyId": str(company_id),
         "checked": len(ordered),
+        "checkedCount": len(ordered),
         "verified": verified,
         "legacyUnchained": legacy_unchained,
         "brokenCount": len(broken_ids),
         "brokenIds": broken_ids[:20],
-        "intact": len(broken_ids) == 0,
+        "brokenAtId": broken_ids[0] if broken_ids else None,
+        "intact": intact,
+        "valid": intact,
     }

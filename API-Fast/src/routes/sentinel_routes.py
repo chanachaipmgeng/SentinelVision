@@ -435,6 +435,29 @@ async def delete_sentinel_event(
     return await ctrl.delete_event(db, companyId, eventId)
 
 
+@router.post("/company/{companyId}/events/{eventId}/sessions/check-in")
+async def checkin_event_breakout_session(
+    companyId: UUID,
+    eventId: UUID,
+    request: Request,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_session_service import check_in_breakout_room
+
+    await assert_request_company_access(request, db, companyId)
+    id_raw = body.get("identityId")
+    return await check_in_breakout_room(
+        db,
+        company_id=companyId,
+        event_id=eventId,
+        room_code=str(body.get("roomCode") or ""),
+        capacity=int(body.get("capacity") or 50),
+        subject_name=str(body.get("subjectName") or "Attendee"),
+        identity_id=UUID(str(id_raw)) if id_raw else None,
+    )
+
+
 @router.post("/company/{companyId}/scan")
 async def unified_sentinel_scan(
     companyId: UUID,

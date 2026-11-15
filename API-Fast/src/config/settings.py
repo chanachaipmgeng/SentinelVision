@@ -162,6 +162,9 @@ class Settings(BaseSettings):
     PEER_REGION_URLS: str = ""
     DR_REPLICATION_SECRET: str = ""
     DR_MAX_LAG_SECONDS: int = 30
+    # Optional TensorRT FP16 Execution Provider for InsightFace/ONNX Runtime
+    FACE_TENSORRT_ENABLED: bool = False
+    FACE_TENSORRT_CACHE_DIR: str = "/tmp/sv_trt_cache"
     # OpenTelemetry tracing (B6). Off unless an OTLP endpoint is set; the standard OTEL_* env
     # names are honoured by the SDK too, these only document the knobs and allow .env usage.
     OTEL_EXPORTER_OTLP_ENDPOINT: str = ""

@@ -177,3 +177,5 @@ All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company author
 | POST | `/cameras/company/{companyId}/cameras/discover-onvif` | JWT | Discover ONVIF cameras via WS-Discovery (`POST .../cameras/{cameraId}/ptz` for PTZ `ContinuousMove`/`Stop`). |
 | GET | `/hr/company/{companyId}/payroll-connectors/{connector}` | JWT | Export payroll summary for `SAP_CSV`, `WORKDAY_JSON`, `PEAK_CSV`, or `FLOWACCOUNT_CSV`. |
 | GET | `/sentinel/company/{companyId}/dr/topology` | JWT | Inspect Active-Active Multi-Region DR role, WAL LSN, replica count & peer regions (`POST /sentinel/dr/replicate` for HMAC-signed peer cache sync). |
+| POST | `/sentinel/company/{companyId}/events/{eventId}/sessions/check-in` | JWT | Enforce breakout room capacity via Redis (`409 EVENT_ROOM_FULL`) and record `EVENT_SESSION_CHECKIN`. |
+| PUT | `/cameras/company/{companyId}/cameras/{cameraId}/privacy-masks` | JWT | Persist normalized `[x, y, w, h]` PDPA privacy mask regions into `Camera.aiConfig.privacyMasks`. |

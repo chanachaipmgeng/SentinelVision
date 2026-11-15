@@ -128,3 +128,24 @@ async def control_camera_ptz(
         zoom=float(payload.get("zoom") or 0.0),
         onvif_url=payload.get("onvifUrl"),
     )
+
+
+@router.put("/company/{companyId}/cameras/{cameraId}/privacy-masks")
+async def update_camera_privacy_masks(
+    companyId: UUID,
+    cameraId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.privacy_mask_service import validate_privacy_masks
+
+    await assert_request_permission(request, db, "cameras.manage", companyId)
+    cam = await camera_service.get_company_camera(db, companyId, cameraId)
+    masks = validate_privacy_masks(list((body or {}).get("privacyMasks") or []))
+    cfg = dict(cam.aiConfig or {})
+    cfg["privacyMasks"] = masks
+    cam.aiConfig = cfg
+    await db.commit()
+    await db.refresh(cam)
+    return {"cameraId": str(cam.cameraId), "privacyMasks": masks, "count": len(masks)}

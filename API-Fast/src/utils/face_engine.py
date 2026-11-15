@@ -91,6 +91,18 @@ def _resolve_providers_and_ctx(device: str) -> Tuple[List[str], int]:
         gpu_id = 0
         if ":" in device:
             gpu_id = int(device.split(":")[1])
+        if getattr(settings, "FACE_TENSORRT_ENABLED", False):
+            try:
+                import onnxruntime as ort
+
+                if "TensorrtExecutionProvider" in set(ort.get_available_providers()):
+                    return [
+                        "TensorrtExecutionProvider",
+                        "CUDAExecutionProvider",
+                        "CPUExecutionProvider",
+                    ], gpu_id
+            except Exception:
+                pass
         return ["CUDAExecutionProvider", "CPUExecutionProvider"], gpu_id
 
     return ["CPUExecutionProvider"], -1
@@ -110,9 +122,22 @@ def get_face_app(device: Optional[str] = None, *, det_size: Optional[int] = None
         if cached is not None:
             return cached
         providers, ctx_id = _resolve_providers_and_ctx(device)
-        provider_options = None
-        if ctx_id >= 0 and providers and providers[0] == "CUDAExecutionProvider":
-            provider_options = [{"device_id": ctx_id}, {}]
+        provider_options: Optional[List[dict]] = None
+        if ctx_id >= 0 and providers:
+            if providers[0] == "TensorrtExecutionProvider":
+                cache_dir = getattr(settings, "FACE_TENSORRT_CACHE_DIR", "/tmp/sv_trt_cache")
+                provider_options = [
+                    {
+                        "device_id": ctx_id,
+                        "trt_fp16_enable": True,
+                        "trt_engine_cache_enable": True,
+                        "trt_engine_cache_path": cache_dir,
+                    },
+                    {"device_id": ctx_id},
+                    {},
+                ]
+            elif providers[0] == "CUDAExecutionProvider":
+                provider_options = [{"device_id": ctx_id}, {}]
         print(
             f"Loading InsightFace buffalo_l device={device} providers={providers} "
             f"ctx_id={ctx_id} provider_options={provider_options} det={size}",

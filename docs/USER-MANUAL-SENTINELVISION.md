@@ -1,8 +1,8 @@
-# คู่มือการใช้งานระบบ SentinelVision v4.6.0 (Unified Biometric Identity, Attendance & Smart Security Platform)
+# คู่มือการใช้งานระบบ SentinelVision v6.0.1 (Unified Biometric Identity, Attendance & Smart Security Platform)
 
-> **เวอร์ชันเอกสาร:** 4.6.0 (Sprints 1–6 Complete)  
+> **เวอร์ชันเอกสาร:** 6.0.1 (Enterprise Phases 1–10, GPU-First `api-gpu`, Edge AI & Copilot)  
 > **Repository:** `https://github.com/chanachaipmgeng/SentinelVision.git`  
-> **เทคโนโลยีหลัก:** FastAPI v4.0 (Python 3.11) + InsightFace `buffalo_l` (512-d) + PostgreSQL `pgvector` (HNSW) + Angular 20 Console & Multi-Face WebSocket Kiosk
+> **เทคโนโลยีหลัก:** FastAPI v4.0 (Python 3.11, CUDA 12.8 GPU-First) + InsightFace `buffalo_l` (512-d) + PostgreSQL `pgvector` (HNSW) + Angular Console & Multi-Face WebSocket Kiosk
 
 ---
 
@@ -18,6 +18,12 @@
 9. [บัญชีรวมพลฉุกเฉิน Fire Alarm Fail-Safe, Batch Vector Re-Index & Edge Sync](#9-บัญชีรวมพลฉุกเฉิน-fire-alarm-fail-safe-batch-vector-re-index--edge-sync)
 10. [การจัดการกะเวลาทำงาน โควตาลา OT Engine, Roster Swap, Anti-Mock GPS & PDPA](#10-การจัดการกะเวลาทำงาน-โควตาลา-ot-engine-roster-swap-anti-mock-gps--pdpa)
 11. [จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่มเรียลไทม์ & Offline HMAC Sync Kiosk](#11-จุดลงเวลาและตรวจสอบใบหน้าแบบกลุ่มเรียลไทม์--offline-hmac-sync-kiosk)
+12. [ฟีเจอร์ระดับ Enterprise (Phases 1–10)](#12-ฟีเจอร์ระดับ-enterprise-phases-110)
+13. [การจัดการองค์กร แผนก ตำแหน่ง พนักงาน และสถานที่ตั้ง (`/company/company-*`)](#13-การจัดการองค์กร-แผนก-ตำแหน่ง-พนักงาน-และสถานที่ตั้ง-companycompany-)
+14. [การลงเวลา การอนุมัติ รายงาน และ Employee Self-Service (ESS)](#14-การลงเวลา-การอนุมัติ-รายงาน-และ-employee-self-service-ess)
+15. [หน้าจอเฉพาะทาง Access / Watchlist / Visitors / Events & Scan Hub](#15-หน้าจอเฉพาะทาง-access--watchlist--visitors--events--scan-hub)
+16. [ระบบกล้องวงจรปิด Live Wall, NVR Playback, E-Map, Face Monitor & Presence](#16-ระบบกล้องวงจรปิด-live-wall-nvr-playback-e-map-face-monitor--presence)
+17. [ความปลอดภัย Audit Log, อุปกรณ์ Kiosk, การแจ้งเตือน, AI Copilot & System Admin](#17-ความปลอดภัย-audit-log-อุปกรณ์-kiosk-การแจ้งเตือน-ai-copilot--system-admin)
 
 ---
 
@@ -184,3 +190,66 @@
    - กำหนดห้องย่อย (Breakout Rooms) ภายใต้ Event พร้อมเพดานความจุสูงสุด (Capacity) และติดตามยอดผู้เข้าร่วมแบบเรียลไทม์เมื่อสแกนเช็กอินเข้าห้องย่อย
 7. **Multi-Region Disaster Recovery (DR) Replication**
    - ติดตามสถานะการจำลองข้อมูลข้ามภูมิภาคผ่าน Multi-Region DR Strip โดยทุกคำขอ Replication (`/sentinel/dr/replicate`) ผ่านการยืนยันตัวตนด้วยลายเซ็น HMAC-SHA256 (`X-Sentinel-DR-Sig`) และป้องกันข้อมูลซ้ำด้วย Redis Idempotency Keys
+
+
+## 13. การจัดการองค์กร แผนก ตำแหน่ง พนักงาน และสถานที่ตั้ง (`/company/company-*`)
+
+- **ข้อมูลบริษัท (`/company/company-info`)**: แก้ไขชื่อองค์กร, เลขทะเบียน, ที่อยู่, โซนเวลาเริ่มต้น (`Asia/Bangkok`) และโมดูลที่เปิดใช้งาน
+- **จัดการแผนก (`/company/company-department`)**: สร้าง/แก้ไข/ลบแผนก, ค้นหา และส่งออกข้อมูลแผนกเป็น CSV
+- **จัดการตำแหน่ง (`/company/company-position`)**: สร้าง/แก้ไข/ลบตำแหน่งงาน และส่งออกข้อมูลเป็น CSV
+- **ทะเบียนพนักงาน & ใบหน้า (`/company/company-emp`)**:
+  - เพิ่ม/แก้ไขข้อมูลพนักงาน, นำเข้าพนักงานจำนวนมาก (Batch Excel/CSV Import), และกรองตามแผนก/ตำแหน่ง/สถานะ
+  - **5-Angle Face Quality Gate Enrollment**: ลงทะเบียนใบหน้าพนักงาน 5 มุม พร้อมตรวจสอบความคมชัด ความสว่าง และมุมเอียงของใบหน้าก่อนบันทึกเวกเตอร์ 512 มิติ
+- **สถานที่ตั้ง / สาขา (`/company/company-location`)**: กำหนดพิกัด GPS Geofencing, รัศมีที่อนุญาต และ Wi-Fi BSSID สำหรับการลงเวลาผ่านมือถือ
+
+---
+
+## 14. การลงเวลา การอนุมัติ รายงาน และ Employee Self-Service (ESS)
+
+- **ศูนย์รวมจุดสแกน (`/company/scan-hub`)**: รวมลิงก์เปิด Kiosk ทุกโหมด (`ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`) พร้อมปุ่มคัดลอก Direct URL สำหรับติดตั้งบนเครื่อง Kiosk แยกจุด
+- **ประวัติการลงเวลา (`/company/timestamp-log`) & รายการแจ้งเตือน/ผิดปกติ (`/company/warning-timestamp-log`)**: ตรวจสอบบันทึกเวลาเข้า-ออกงาน ภาพถ่ายขณะสแกน คะแนนความมั่นใจ (Confidence) รายการมาสาย/ออกก่อน/นอกพื้นที่ และส่งออก CSV/Excel
+- **กล่องอนุมัติ (`/company/approval-inbox`)**: อนุมัติหรือปฏิเสธคำขอลา, คำขอ OT, การสลับกะ (Roster Swap) และการแก้ไขเวลาทำงานแบบ Multi-level Approval Chain พร้อมตัวกรองตามสถานที่ตั้ง
+- **รายงาน (`/company/reports`)**: สรุปรายงานเวลาทำงานรายวัน/รายเดือน ชั่วโมง OT และสถิติการเข้างาน
+- **พอร์ทัลพนักงาน (`/company/self-service`)**: ให้พนักงานดูประวัติการลงเวลาของตนเอง ยื่นคำขอลา/OT/สลับกะ และติดตามสถานะการอนุมัติ
+
+---
+
+## 15. หน้าจอเฉพาะทาง Access / Watchlist / Visitors / Events & Scan Hub
+
+นอกเหนือจากหน้า Command Center รวม (`/company/sentinel-center`) ระบบแยกหน้าจอจัดการเฉพาะทางตามเมนู Dual-Rail Sidebar เพื่อให้ทีมปฏิบัติการเข้าถึงได้รวดเร็ว:
+
+- **Access Control (`/company/scan/access-control`, `/company/access-control/zones`, `/logs`, `/settings`)**:
+  - จัดการโซนประตู ตารางเวลาเปิด-ปิดประตู อัปเดตสถานะ Relay Latency (ms) ส่งออก Access Logs เป็น CSV และตั้งค่านโยบาย Tailgating / Anti-Passback
+- **Watchlist & Blacklist (`/company/scan/watchlist`, `/company/watchlist/identities`, `/incidents`, `/settings`)**:
+  - จัดการรายชื่อเฝ้าระวัง พร้อมวันหมดอายุ (Expiration), บันทึกปิดเคส Incident Resolution Note และตั้งค่าระดับความไวในการแจ้งเตือน
+- **Visitors (`/company/scan/visitor`, `/company/visitors/passes`, `/muster-roll`, `/settings` และ `/visitor-invite/:token`)**:
+  - ออกบัตร Visitor Pass, พิมพ์บัตร, ส่งลิงก์เชิญล่วงหน้า (`/visitor-invite/:token`) ให้ผู้มาติดต่อสแกนบัตรประชาชน/พาสปอร์ต (OCR + PDPA masking) และลงทะเบียนด้วยตนเอง รวมถึงหน้า **Muster Roll (`/company/visitors/muster-roll`)** สำหรับเช็กชื่อรวมพลฉุกเฉินและส่งออก CSV
+- **Events (`/company/scan/event`, `/company/events/campaigns`, `/checkins`, `/settings`)**:
+  - สร้างแคมเปญอีเวนต์ จัดการผู้ลงทะเบียน ค้นหาที่นั่งด้วยใบหน้า คุมความจุห้องประชุมย่อย (**Breakout Room Capacity Check-in**) และส่งออก Event Dwell CSV
+
+---
+
+## 16. ระบบกล้องวงจรปิด Live Wall, NVR Playback, E-Map, Face Monitor & Presence
+
+- **จัดการกล้อง (`/company/cameras`)**: เพิ่ม/แก้ไขกล้อง RTSP, กด **Discover ONVIF** เพื่อค้นหากล้องในวง LAN อัตโนมัติ, ควบคุมทิศทาง **PTZ**, และตั้งค่า **PDPA Privacy Mask** (เบลอโซนอ่อนไหวบนภาพกล้อง)
+- **Live Wall (`/company/live-wall`)**: แสดงภาพสดหลายช่องพร้อมกัน (WebRTC/HLS ผ่าน MediaMTX) รองรับการสลับ Layout Preset และถ่ายภาพ Snapshot
+- **NVR Playback (`/company/playback`)**: ดูวิดีโอบันทึกย้อนหลังพร้อมแถบ **AI-Marker Timeline Scrubber** เพื่อกระโดดไปยังช่วงเวลาที่เกิดเหตุการณ์ AI ได้ทันที
+- **E-Map (`/company/e-map`)**: แผนผังตำแหน่งกล้องและประตูแบบโต้ตอบ พร้อมปุ่มเปิดดูภาพสด (Quick Live) และสั่งปลดล็อกประตู (Quick Door Link)
+- **Face Monitor (`/company/face-monitor`) & Presence (`/company/presence`)**: ติดตามการตรวจจับใบหน้าแบบเรียลไทม์จากกล้อง CCTV และสรุปยอดคนในอาคารแยกตามโซน
+
+---
+
+## 17. ความปลอดภัย Audit Log, อุปกรณ์ Kiosk, การแจ้งเตือน, AI Copilot & System Admin
+
+- **Audit Log (`/company/audit-log`)**: บันทึกการเปลี่ยนแปลงสำคัญทั้งหมดแบบ Append-only พร้อมปุ่ม **Verify Hash-Chain** (`VERIFIED`) เพื่อพิสูจน์ว่าไม่มีการแก้ไขข้อมูลย้อนหลัง
+- **จัดการอุปกรณ์ (`/company/devices` และ `/kiosk/pair`)**: ลงทะเบียนและจับคู่เครื่อง Kiosk ด้วย Pairing Code (`/kiosk/pair`), หมุนเวียน Key และเพิกถอนอุปกรณ์ที่ไม่ได้ใช้งาน
+- **ศูนย์แจ้งเตือน (`/company/notification-center`)**: ตรวจสอบประวัติการส่งแจ้งเตือน (Delivery History) ผ่าน LINE Messaging API, SMTP Email และ Webhook Outbox
+- **โปรไฟล์ & ความปลอดภัย (`/company/profile-security`)**: เปลี่ยนรหัสผ่าน และเปิดใช้งาน Two-Factor Authentication (2FA/TOTP)
+- **ตั้งค่าบริษัท (`/company/settings`)**: ค้นหาการตั้งค่า (Settings Search Filter), รีเซ็ตค่าเริ่มต้น, เตือนเมื่อมีการเปลี่ยนแปลงที่ยังไม่บันทึก (Unsaved Changes Guard), ตั้งค่าภูมิภาค, SCIM 2.0 / HRIS Connectors และ Multi-Region DR Status
+- **Investigation Graph & AI Copilot**: แท็บกราฟความสัมพันธ์ใน Sentinel Center และปุ่ม **Ask AI** สำหรับถาม-ตอบสรุปเหตุการณ์และข้อมูลองค์กรแบบเรียลไทม์
+- **System Admin Console (`/admin/*`)** (สำหรับผู้ดูแลระบบระดับ Platform):
+  - `/admin/member-manage`: จัดการผู้ใช้งานทั้งหมดข้ามองค์กร
+  - `/admin/manage-companys`: สร้าง/ระงับ/จัดการโควตาของแต่ละบริษัท (Multi-tenant)
+  - `/admin/admin-manage`: จัดการสิทธิ์ผู้ดูแลระบบแพลตฟอร์ม
+  - `/admin/system-setting`: ตั้งค่าระบบส่วนกลาง
+  - `/admin/error-logs`: ตรวจสอบบันทึกข้อผิดพลาดของระบบ (Error Logs)

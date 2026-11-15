@@ -729,6 +729,6 @@ async def purge_presence_retention(db: AsyncSession, company_id: UUID) -> dict[s
         )
     )
     return {
-        "sightingsRemoved": int(sight_res.rowcount or 0),
-        "sessionsRemoved": int(sess_res.rowcount or 0),
+        "sightingsRemoved": int(getattr(sight_res, "rowcount", 0) or 0),
+        "sessionsRemoved": int(getattr(sess_res, "rowcount", 0) or 0),
     }

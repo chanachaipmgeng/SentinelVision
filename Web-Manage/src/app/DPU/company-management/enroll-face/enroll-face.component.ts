@@ -2475,7 +2475,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     swal({
       title: 'ปลดล็อกโหมด Kiosk',
       text: 'กรุณากรอกรหัส PIN ผู้ดูแล (ค่าเริ่มต้น: 1234)',
-      content: { element: 'input', attributes: { type: 'password', placeholder: 'PIN 4-6 หลัก' } } as any,
+      content: { element: 'input', attributes: { type: 'password', placeholder: 'PIN 4-6 หลัก' } } as never,
       buttons: ['ยกเลิก', 'ปลดล็อก'],
     }).then((val: string | null) => {
       if (val === null) return;
@@ -2495,7 +2495,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     swal({
       title: 'ลงเวลาด้วยรหัสพนักงาน (PIN Fallback)',
       text: 'สำหรับพนักงานที่ยังไม่ยินยอมข้อมูลใบหน้า PDPA — กรอกรหัสพนักงาน',
-      content: { element: 'input', attributes: { type: 'text', placeholder: 'เช่น EMP-001' } } as any,
+      content: { element: 'input', attributes: { type: 'text', placeholder: 'เช่น EMP-001' } } as never,
       buttons: ['ยกเลิก', 'ลงเวลา'],
     }).then((code: string | null) => {
       const empCode = String(code || '').trim();

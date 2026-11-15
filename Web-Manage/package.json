@@ -13,7 +13,11 @@
     "test:ci": "ng test --configuration ci",
     "test:e2e:smoke": "playwright test e2e/smoke.spec.ts e2e/kiosk-session.spec.ts",
     "lint": "eslint \"src/**/*.ts\" \"src/**/*.html\"",
-    "build:prod": "ng build --configuration production"
+    "build:prod": "ng build --configuration production",
+    "sync-mediapipe": "node scripts/sync-mediapipe-assets.js",
+    "sync-ort": "node scripts/sync-ort-assets.js",
+    "fetch-hand-model": "node scripts/fetch-hand-model.js",
+    "fetch-silero-vad": "node scripts/fetch-silero-vad.js"
   },
   "private": true,
   "dependencies": {
@@ -29,6 +33,7 @@
     "@angular/platform-browser": "^20.3.35",
     "@angular/platform-browser-dynamic": "^20.3.35",
     "@angular/router": "^20.3.35",
+    "@mediapipe/tasks-vision": "^0.10.35",
     "@ng-select/ng-select": "^15.2.0",
     "@ngx-translate/core": "^16.0.4",
     "@ngx-translate/http-loader": "^16.0.1",
@@ -49,6 +54,7 @@
     "ngx-colors": "^3.5.3",
     "ngx-echarts": "^20.0.2",
     "ngx-toastr": "^19.1.0",
+    "onnxruntime-web": "^1.31.1",
     "postcss": "^8.4.32",
     "postcss-cli": "^11.0.0",
     "postcss-import": "^16.0.0",

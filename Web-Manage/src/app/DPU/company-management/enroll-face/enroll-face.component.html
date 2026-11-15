@@ -96,6 +96,15 @@
       <button
         type="button"
         class="dpu-kiosk__home-btn"
+        (click)="toggleGestureControl()"
+        [attr.aria-pressed]="gestureControlEnabled"
+        [title]="gestureControlEnabled ? 'ปิดสั่งการด้วยท่ามือ' : 'เปิดสั่งการด้วยท่ามือไร้สัมผัส (MediaPipe)'">
+        <i class="ri-hand-heart-line" aria-hidden="true"></i>
+        <span>{{ gestureControlEnabled ? (gestureStatusLabel || 'Gesture ON') : 'Gesture' }}</span>
+      </button>
+      <button
+        type="button"
+        class="dpu-kiosk__home-btn"
         (click)="toggleLargeText()"
         [attr.aria-pressed]="largeTextMode"
         [attr.title]="(largeTextMode ? 'kiosk.largeText.on' : 'kiosk.largeText.off') | translate"

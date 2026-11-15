@@ -20,6 +20,8 @@ import { EmployeeService } from '../../DPU/services/employee.service';
 import { environment } from '../../../environments/environment';
 import { playCaptureBeep, playFaceFoundBeep, unlockBeepAudio } from '../../shared/utils/beep';
 import { speakText, unlockSpeech } from '../../shared/utils/tts';
+import { ConstellationComponent } from '../../shared/components/constellation/constellation.component';
+import { HorizonGlowComponent } from '../../shared/components/horizon-glow/horizon-glow.component';
 
 type LoginMode = 'password' | 'face';
 type FaceScanPhase =
@@ -33,7 +35,7 @@ type FaceScanPhase =
 
 @Component({
     selector: 'app-login',
-    imports: [SharedModule, CommonModule, RouterModule, FormsModule, ReactiveFormsModule, TranslateModule],
+    imports: [SharedModule, CommonModule, RouterModule, FormsModule, ReactiveFormsModule, TranslateModule, ConstellationComponent, HorizonGlowComponent],
     providers: [AuthService, { provide: ToastrService, useClass: ToastrService }],
     templateUrl: './login.component.html',
     styleUrl: './login.component.scss'

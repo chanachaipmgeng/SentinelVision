@@ -63,7 +63,15 @@
   - Maintain the `17.5rem` (`4.5rem` module rail + `13rem` sub-screens panel) desktop width and synchronized `.app-header` / `.content` / `.footer` offsets in `Web-Manage/src/assets/css/dpu-theme.css`.
   - Derive Column 1 (`moduleGroups`) strictly from `enabledModules` + RBAC permission filtering and hide modules with zero visible items.
   - Clicking a module in Column 1 (`selectModule`) MUST prefer the first non-`/company/scan/` management route so operators stay inside the 2-column Console rather than jumping directly into fullscreen Kiosk mode.
+  - Under `@media (max-width: 991.98px)`, keep `.app-sidebar` off-canvas (`transform: translateX(-100%)` / `visibility: hidden` / `pointer-events: none` for `html:not([data-toggled="open"])`) so it never overlaps `.app-header` or `.content` on initial load.
+  - Align JS breakpoint checks (`SidebarComponent.ngOnInit()`, `HeaderComponent.toggleSidebar()`) strictly to `window.innerWidth < 992` (matching CSS `991.98px` / `992px`), initialize `data-toggled="close"` on `< 992px` load unless already `open`, and only strip `data-toggled` in `selectModule()` on desktop (`>= 992px`) icon-collapsed states.
 - **File Editing Line Endings**:
   - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.
   - Never write `open(p, 'wb').write(open(p, 'rb').read()...)` on the same path (opening `'wb'` truncates the file before `'rb'` reads it); always read into a variable first, then write.
   - In Windows PowerShell 5.1, chain dependent commands with `; if ($?) { ... }` instead of `&&`.
+- **Browser Edge AI & WASM Asset Serving (`Web-Manage/public/`)**:
+  - `Web-Manage/angular.json` ignores `**/models/**` under `src/assets`. Same-origin browser AI assets (`/mediapipe/*`, `/ort/*`, `/models/*`) MUST be served from `Web-Manage/public/` (mapped to `/`) and populated via `npm run sync-mediapipe`, `npm run sync-ort`, `npm run fetch-hand-model`, and `npm run fetch-silero-vad`.
+  - Keep browser-side MediaPipe Gesture (`KioskGestureService`) opt-in and throttled (~4 Hz) so it never competes with InsightFace WebSocket frames on low-power Kiosk hardware.
+  - Keep ambient canvas effects (`ConstellationComponent`, `HorizonGlowComponent`) scoped to Login / Landing / Kiosk idle — never mount them behind dense admin data tables.
+- **Copilot & Investigation Graph Tenancy**:
+  - `/sentinel/company/{companyId}/graph` and `/sentinel/company/{companyId}/assistant/chat` MUST enforce `assert_request_company_access` and fall back gracefully to live PostgreSQL company summaries when `GOOGLE_API_KEY` is unset.

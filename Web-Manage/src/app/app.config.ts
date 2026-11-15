@@ -1,6 +1,7 @@
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
-import { RouterModule, RouterOutlet, provideRouter } from '@angular/router';
+import { RouterModule, RouterOutlet, provideRouter, withViewTransitions } from '@angular/router';
 import { provideAnimations } from '@angular/platform-browser/animations'
+import { preferReducedMotion } from './shared/utils/motion';
 
 import { App_Route } from './app.routes';
 import { ColorPickerModule, ColorPickerService } from 'ngx-color-picker';
@@ -33,7 +34,20 @@ export const httpInterceptorProviders = [
 ];
 
 export const appConfig: ApplicationConfig = {
-  providers: [provideHttpClient(withInterceptorsFromDi()), provideRouter(App_Route), RouterOutlet, ColorPickerModule, ColorPickerService, provideAnimations(),
+  providers: [
+    provideHttpClient(withInterceptorsFromDi()),
+    provideRouter(
+      App_Route,
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: ({ transition }) => {
+          if (preferReducedMotion()) {
+            transition.skipTransition();
+          }
+        },
+      }),
+    ),
+    RouterOutlet, ColorPickerModule, ColorPickerService, provideAnimations(),
   importProvidersFrom(RouterModule.forRoot(App_Route, { initialNavigation: 'enabledNonBlocking', useHash: true }), TranslateModule.forRoot(provideTranslation()), ToastrModule.forRoot({
     timeOut: 15000, // 15 seconds
     closeButton: true,

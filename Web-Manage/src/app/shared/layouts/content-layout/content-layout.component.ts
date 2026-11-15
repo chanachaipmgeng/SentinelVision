@@ -16,6 +16,7 @@ import { HoverEffectSidebarDirective } from '../../directives/hover-effect-sideb
 import { CommandPaletteComponent } from '../../components/command-palette/command-palette.component';
 import { NotificationDrawerComponent } from '../../components/notification-drawer/notification-drawer.component';
 import { OfflineBannerComponent } from '../../components/offline-banner/offline-banner.component';
+import { AskDockComponent } from '../../components/ask-dock/ask-dock.component';
 
 const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 
@@ -32,6 +33,7 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
       CommandPaletteComponent,
       NotificationDrawerComponent,
       OfflineBannerComponent,
+      AskDockComponent,
     ],
     templateUrl: './content-layout.component.html',
     styleUrl: './content-layout.component.scss',

@@ -16,7 +16,8 @@ export type SentinelTab =
   | 'access-settings'
   | 'visitors'
   | 'events'
-  | 'muster';
+  | 'muster'
+  | 'graph';
 
 /** Access Control `:section` values under `/company/access-control/:section`. */
 export type AccessControlSection = 'zones' | 'logs' | 'settings';

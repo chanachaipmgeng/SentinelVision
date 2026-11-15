@@ -31,6 +31,7 @@ import { SentinelKpiRowComponent } from './panels/sentinel-kpi-row.component';
 import { SentinelMusterPanelComponent } from './panels/sentinel-muster-panel.component';
 import { SentinelVisitorsPanelComponent } from './panels/sentinel-visitors-panel.component';
 import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-panel.component';
+import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.component';
 
 /**
  * SentinelVision shell — KPI banner + workspace nav + panel host.
@@ -52,6 +53,7 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         SentinelVisitorsPanelComponent,
         SentinelEventsPanelComponent,
         SentinelMusterPanelComponent,
+        SentinelGraphPanelComponent,
     ],
     template: `
     <app-page-header
@@ -154,6 +156,15 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
               <i class="ri-Broadcast-line"></i>
               <span>เช็คยอดคนในอาคาร &amp; Edge AI</span>
             </button>
+            <button
+              type="button"
+              class="sv-nav-tab"
+              [class.sv-nav-tab--active]="activeTab === 'graph'"
+              (click)="setTab('graph')"
+            >
+              <i class="ri-node-tree"></i>
+              <span>Investigation Graph</span>
+            </button>
           </nav>
           <div *ngIf="moduleScoped" class="flex flex-wrap items-center justify-between gap-3 w-full">
             <div class="flex items-center gap-2 text-sm font-bold text-slate-100">
@@ -234,6 +245,9 @@ import { SentinelWatchlistPanelComponent } from './panels/sentinel-watchlist-pan
         </div>
         <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'muster'">
           <app-sentinel-muster-panel [overview]="overview"></app-sentinel-muster-panel>
+        </div>
+        <div class="box-body space-y-6 sv-contain-region" *ngIf="activeTab === 'graph'">
+          <app-sentinel-graph-panel></app-sentinel-graph-panel>
         </div>
       </div>
     </div>

@@ -2861,6 +2861,20 @@ html[data-theme-mode="dark"] .table tbody tr:hover {
   .app-sidebar .main-sidebar-header {
     width: 17.5rem !important;
   }
+  html:not([data-toggled="open"]) .app-sidebar {
+    transform: translateX(-100%) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  html[dir="rtl"]:not([data-toggled="open"]) .app-sidebar {
+    transform: translateX(100%) !important;
+  }
+  html[data-toggled="open"] .app-sidebar {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 105 !important;
+  }
 }
 
 /* ---- Light Mode Surface & Contrast Layer (Admin Console only; excludes Kiosk, Auth, Landing) ---- */
@@ -3084,4 +3098,40 @@ html.dpu-kiosk-mode .footer {
   margin-inline-start: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;
+}
+
+/* ---- Micro-interactions: Spotlight & Magnetic (ported from AI_Portfolio) ---- */
+.spotlight-host {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-host::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(20, 184, 166, 0.16),
+    transparent 70%
+  );
+}
+
+.spotlight-host.is-spotlight::after {
+  opacity: 1;
+}
+
+.magnetic-host {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-host::after,
+  .magnetic-host {
+    transition: none;
+  }
 }

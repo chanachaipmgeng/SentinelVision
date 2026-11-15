@@ -17,6 +17,28 @@ import {
 } from './sentinel.models';
 
 /** All `/sentinel/company/{id}/*` HttpClient paths. */
+export interface SentinelGraphNode {
+  id: string;
+  name: string;
+  category: number;
+  symbolSize: number;
+  meta: Record<string, unknown>;
+}
+
+export interface SentinelInvestigationGraph {
+  categories: { name: string }[];
+  nodes: SentinelGraphNode[];
+  links: { source: string; target: string; relation: string }[];
+  stats: {
+    zones: number;
+    cameras: number;
+    identities: number;
+    incidents: number;
+    totalNodes: number;
+    totalLinks: number;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class SentinelApiService {
   constructor(private http: HttpClient) {}
@@ -27,6 +49,10 @@ export class SentinelApiService {
 
   getOverview(companyId: string): Observable<SentinelOverview> {
     return this.http.get<SentinelOverview>(`${this.base(companyId)}/overview`);
+  }
+
+  getInvestigationGraph(companyId: string, days = 7): Observable<SentinelInvestigationGraph> {
+    return this.http.get<SentinelInvestigationGraph>(`${this.base(companyId)}/graph?days=${days}`);
   }
 
   getMuster(

@@ -8,6 +8,8 @@ import { Subscription, combineLatest } from 'rxjs';
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
 import { AuthedImageService } from '../../../shared/services/authed-image.service';
+import { AudioSfxService } from '../../../shared/services/audio-sfx.service';
+import { KioskGestureService } from '../../../shared/services/kiosk-gesture.service';
 import { SharedModule } from '../../../shared/shared.module';
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
@@ -280,6 +282,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
 
   /** E6 kiosk large-text mode (html.dpu-kiosk-large-text). */
   largeTextMode = false;
+  /** Touchless MediaPipe hand-gesture control (opt-in). */
+  gestureControlEnabled = false;
+  gestureStatusLabel: string | null = null;
+  scanPaused = false;
   /** E8 degraded when GPU queue is backed up. */
   degradedMode = false;
   offlineQueuedCount = 0;
@@ -393,6 +399,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     private offlineQueue: KioskOfflineQueueService,
     private localeFormat: LocaleFormatService,
     private translate: TranslateService,
+    public readonly audioSfx: AudioSfxService,
+    public readonly kioskGesture: KioskGestureService,
   ) {
     const kiosk = this.tokenService.getKioskSession();
     const company = this.tokenService.getSelectCompany();
@@ -1094,6 +1102,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       cancelAnimationFrame(this.renderRafId);
       this.renderRafId = null;
     }
+    if (this.gestureControlEnabled) {
+      this.kioskGesture.dispose();
+    }
     if (this.toastTimer) {
       clearTimeout(this.toastTimer);
     }
@@ -1423,9 +1434,54 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
         ctx.clearRect(0, 0, displaySize.width, displaySize.height);
         this.canvasDirty = false;
       }
+      if (this.gestureControlEnabled && this.video?.nativeElement && !this.adminPreviewMode) {
+        const evt = this.kioskGesture.processFrame(this.video.nativeElement);
+        this.gestureStatusLabel = this.kioskGesture.activeGesture();
+        if (evt) {
+          this.handleKioskGesture(evt.action, evt.label);
+        }
+      }
       this.renderRafId = requestAnimationFrame(step);
     };
     this.renderRafId = requestAnimationFrame(step);
+  }
+
+  async toggleGestureControl(): Promise<void> {
+    this.gestureControlEnabled = !this.gestureControlEnabled;
+    if (this.gestureControlEnabled) {
+      await this.kioskGesture.init();
+      this.audioSfx.playBeep();
+      this.notify('✋ เปิดโหมดสั่งการด้วยท่ามือไร้สัมผัส (👍 ยืนยัน / ✋ พัก / ✌️ ตัวอักษรใหญ่)', 'info');
+    } else {
+      this.kioskGesture.dispose();
+      this.gestureStatusLabel = null;
+      this.audioSfx.playTick();
+    }
+    this.cdr.markForCheck();
+  }
+
+  private handleKioskGesture(action: string, label: string): void {
+    if (action === 'confirm') {
+      this.audioSfx.playChime();
+      this.notify(`${label} — ยืนยันคำสั่ง`, 'success');
+    } else if (action === 'toggle_scan') {
+      this.scanPaused = !this.scanPaused;
+      this.audioSfx.playBeep();
+      this.notify(
+        this.scanPaused ? '✋ หยุดรับเฟรมชั่วคราว' : '✋ กลับมาสแกนต่อแล้ว',
+        'info',
+      );
+    } else if (action === 'toggle_large_text') {
+      this.toggleLargeText();
+      this.audioSfx.playTick();
+    } else if (action === 'mute_audio') {
+      this.audioSfx.toggle();
+      this.notify(
+        this.audioSfx.enabled() ? '✊ เปิดเสียง UI แล้ว' : '✊ ปิดเสียง UI แล้ว',
+        'info',
+      );
+    }
+    this.cdr.markForCheck();
   }
 
   private buildStatusMessage(): string {

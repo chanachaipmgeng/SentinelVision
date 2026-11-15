@@ -139,6 +139,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
       }
     };
     this.menuResizeFn();
+    if (window.innerWidth < 992) {
+      const html = document.documentElement;
+      if (html && html.getAttribute('data-toggled') !== 'open') {
+        html.setAttribute('data-toggled', 'close');
+      }
+    }
     this.currentUrl = this.router.url
     this.isCommonRoute = this.currentUrl.includes('/admin');
     this.isInstallerRoute = this.currentUrl.includes('/company');
@@ -252,9 +258,13 @@ export class SidebarComponent implements OnInit, OnDestroy {
 
   selectModule(group: SidebarModuleGroup): void {
     this.selectedModuleId = group.id;
-    // Expand sidebar if it was collapsed in icon-only mode so Column 2 is visible
+    // Expand sidebar if it was collapsed in icon-only mode on desktop so Column 2 is visible
     const html = document.documentElement;
-    if (html.getAttribute('data-toggled')) {
+    const toggled = html.getAttribute('data-toggled') || '';
+    if (
+      window.innerWidth >= 992 &&
+      ['icon-overlay-close', 'icon-click-closed', 'icon-hover-closed'].includes(toggled)
+    ) {
       html.removeAttribute('data-toggled');
     }
     const cleanUrl = (this.currentUrl || '').split('?')[0];
@@ -538,6 +548,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
   @HostListener('window:resize', ['$event'])
   onResize(_event: UIEvent): void {
     this.menuResizeFn();
+    if (window.innerWidth < 992) {
+      const html = document.documentElement;
+      if (html && html.getAttribute('data-toggled') !== 'open') {
+        html.setAttribute('data-toggled', 'close');
+      }
+    }
 
     this.screenWidth = window.innerWidth;
 

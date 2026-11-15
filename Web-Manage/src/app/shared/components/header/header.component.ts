@@ -91,7 +91,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
     if (!html) return;
 
     // Mobile: slide-in drawer
-    if (window.innerWidth <= 992) {
+    if (window.innerWidth < 992) {
       const next = html.getAttribute('data-toggled') === 'open' ? 'close' : 'open';
       html.setAttribute('data-toggled', next);
       const overlay = document.querySelector('#responsive-overlay');

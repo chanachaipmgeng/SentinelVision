@@ -58,6 +58,11 @@
             "assets": [
               {
                 "glob": "**/*",
+                "input": "public",
+                "output": "/"
+              },
+              {
+                "glob": "**/*",
                 "input": "src/assets",
                 "ignore": [
                   "**/models/**"

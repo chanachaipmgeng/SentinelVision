@@ -11,6 +11,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
@@ -52,6 +53,8 @@ from ..services.sentinel_incident_service import (
     serialize_incident as _serialize_incident,
 )
 from ..services.sentinel_muster_service import build_muster_roll
+from ..services.sentinel_graph_service import build_sentinel_investigation_graph
+from ..services.sentinel_assistant_service import stream_assistant_chat
 from ..services.siem_export_service import (
     enqueue_siem_test,
     get_siem_settings,
@@ -117,6 +120,47 @@ async def get_sentinel_overview(
 ):
     await assert_request_company_access(request, db, companyId)
     return await ctrl.get_overview(db, companyId)
+
+
+@router.get("/company/{companyId}/graph")
+async def get_sentinel_investigation_graph(
+    companyId: UUID,
+    request: Request,
+    days: int = Query(7, ge=1, le=90),
+    limit_incidents: int = Query(40, ge=5, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    """Company-scoped ECharts 2D relationship graph (Zone ↔ Camera ↔ Identity ↔ Incident)."""
+    await assert_request_company_access(request, db, companyId)
+    return await build_sentinel_investigation_graph(
+        db,
+        companyId,
+        days=days,
+        limit_incidents=limit_incidents,
+    )
+
+
+@router.post("/company/{companyId}/assistant/chat")
+async def post_sentinel_assistant_chat(
+    companyId: UUID,
+    body: dict,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Company-scoped Security & HR AI Copilot (SSE stream)."""
+    await assert_request_company_access(request, db, companyId)
+    question = str((body or {}).get("question") or "").strip()
+    history = (body or {}).get("history")
+    if not isinstance(history, list):
+        history = []
+    return StreamingResponse(
+        stream_assistant_chat(db, companyId, question, history),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/company/{companyId}/muster")

@@ -286,6 +286,10 @@ class Settings(BaseSettings):
     # Internal HLS base for ffmpeg clip cut (docker network, not browser path).
     MEDIAMTX_HLS_INTERNAL_URL: str = "http://mediamtx:8888"
 
+    # AI Copilot (Ask Dock) — optional Gemini Flash API; falls back to live DB summary if unset.
+    GOOGLE_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 

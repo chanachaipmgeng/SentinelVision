@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img" aria-labelledby="title desc">
+  <title id="title">SentinelVision architecture</title>
+  <desc id="desc">Nginx fronts an Angular kiosk console and FastAPI. InsightFace runs on a two-GPU host. PostgreSQL stores two pgvector HNSW indexes for employees and sentinel identities.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e7f4f2"/>
+      <stop offset="100%" stop-color="#e4eef5"/>
+    </linearGradient>
+    <filter id="soft" x="-2%" y="-2%" width="104%" height="104%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#15202b" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="960" height="640" fill="url(#bg)"/>
+  <g filter="url(#soft)">
+    <rect x="280" y="36" width="400" height="88" rx="6" fill="#f7faf8" stroke="#15202b" stroke-width="2.5"/>
+    <rect x="60" y="180" width="400" height="120" rx="6" fill="#f7faf8" stroke="#0f766e" stroke-width="2.5"/>
+    <rect x="500" y="180" width="400" height="120" rx="6" fill="#f7faf8" stroke="#0f766e" stroke-width="2.5"/>
+    <rect x="140" y="360" width="680" height="88" rx="6" fill="#f7faf8" stroke="#b35c2a" stroke-width="2.5"/>
+    <rect x="60" y="510" width="400" height="96" rx="6" fill="#f7faf8" stroke="#3a6ea5" stroke-width="2.5"/>
+    <rect x="500" y="510" width="400" height="96" rx="6" fill="#f7faf8" stroke="#15202b" stroke-width="2.5"/>
+  </g>
+  <g fill="none" stroke="#15202b" stroke-width="2.5" stroke-linecap="round">
+    <path d="M480 124v56"/>
+    <path d="M260 240h240"/>
+    <path d="M480 300v60"/>
+    <path d="M260 448v62"/>
+    <path d="M700 448v62"/>
+  </g>
+  <g font-family="Sora, system-ui, sans-serif" fill="#15202b">
+    <text x="480" y="72" font-size="22" font-weight="700" text-anchor="middle">nginx</text>
+    <text x="480" y="100" font-size="14" fill="#243447" text-anchor="middle">kiosk WebSocket / admin console / API</text>
+    <text x="84" y="220" font-size="22" font-weight="700">Angular 20</text>
+    <text x="84" y="250" font-size="14" fill="#243447">walk-up kiosk / HR and PDPA</text>
+    <text x="84" y="274" font-size="14" fill="#243447">watchlist / doors / events</text>
+    <text x="524" y="220" font-size="22" font-weight="700">FastAPI</text>
+    <text x="524" y="250" font-size="14" fill="#243447">JWT / shifts / late and overtime</text>
+    <text x="524" y="274" font-size="14" fill="#243447">signed webhook outbox</text>
+    <text x="164" y="398" font-size="20" font-weight="700">Match priority</text>
+    <text x="164" y="426" font-size="14" fill="#243447">watchlist alarm, then door zone, then visitor, event, or attendance</text>
+    <text x="84" y="550" font-size="18" font-weight="700">PostgreSQL + pgvector</text>
+    <text x="84" y="576" font-size="13" fill="#243447">512-d HNSW / employees + identities</text>
+    <text x="524" y="550" font-size="18" font-weight="700">InsightFace on GPU</text>
+    <text x="524" y="576" font-size="13" fill="#243447">quad API / 3 workers per process</text>
+  </g>
+</svg>

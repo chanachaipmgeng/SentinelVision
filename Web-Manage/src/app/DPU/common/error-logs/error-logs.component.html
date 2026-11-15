@@ -103,7 +103,15 @@
             {{ row.resolvedAt ? 'แก้แล้ว' : 'เปิดอยู่' }}
           </span>
         } @else {
-          <span class="cursor-pointer" (click)="onCellClick(row, column)">
+          <span
+            class="cursor-pointer"
+            role="button"
+            tabindex="0"
+            (click)="onCellClick(row, column)"
+            (keydown.enter)="onCellClick(row, column)"
+            (keydown.space)="$event.preventDefault()"
+            (keyup.space)="onCellClick(row, column)"
+          >
             {{ column.value ? column.value(row) : $any(row)[column.key] }}
           </span>
         }

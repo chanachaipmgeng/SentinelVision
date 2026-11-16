@@ -180,7 +180,7 @@ jobs:
             fi
             if [ "$i" -eq 60 ]; then
               docker compose -f docker-compose.yml -f docker-compose.cpu.yml ps
-              docker compose -f docker-compose.yml -f docker-compose.cpu.yml logs --tail=80 api
+              docker compose -f docker-compose.yml -f docker-compose.cpu.yml logs --tail=80 api-gpu
               exit 1
             fi
             sleep 10
@@ -189,7 +189,7 @@ jobs:
       - name: Seed demo users
         run: |
           docker compose -f docker-compose.yml -f docker-compose.cpu.yml \
-            run --rm --entrypoint python api scripts/seed_demo_data.py --reset
+            run --rm --entrypoint python api-gpu scripts/seed_demo_data.py --reset
 
       - name: Playwright browsers
         working-directory: Web-Manage

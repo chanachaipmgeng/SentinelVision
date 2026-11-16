@@ -11,7 +11,7 @@ services:
   db:
     profiles: ["builtin-db"]
 
-  api:
+  api-gpu:
     environment:
       DATABASE_URL: postgresql+asyncpg://${SHARED_PG_USER:-localdev}:${SHARED_PG_PASSWORD:-localdev_secret}@dev-postgres:5432/${SHARED_PG_DB:-localdev}
       DB_SCHEMA: ${DB_SCHEMA:-dpu}
@@ -25,7 +25,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${SHARED_PG_USER:-localdev}:${SHARED_PG_PASSWORD:-localdev_secret}@dev-postgres:5432/${SHARED_PG_DB:-localdev}
       DB_SCHEMA: ${DB_SCHEMA:-dpu}
     depends_on: !reset
-      api:
+      api-gpu:
         condition: service_healthy
     networks:
       - default

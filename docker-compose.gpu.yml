@@ -3,7 +3,7 @@
 # Each process sees a single device as cuda:0 (via CUDA_VISIBLE_DEVICES).
 #   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
 services:
-  api:
+  api-gpu:
     environment:
       FACE_DEVICE: "cuda:0"
       FACE_DEVICES: "cuda:0"
@@ -12,7 +12,6 @@ services:
       CUDA_VISIBLE_DEVICES: "0"
       NVIDIA_VISIBLE_DEVICES: "0"
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
-    gpus: all
     deploy:
       resources:
         reservations:
@@ -89,7 +88,6 @@ services:
         condition: service_healthy
       mediamtx:
         condition: service_started
-    gpus: all
     deploy:
       resources:
         # Same caps as `api` in docker-compose.prod.yml (prod overlay cannot target this
@@ -127,7 +125,7 @@ services:
     volumes:
       - ./docker/nginx/default.dual-gpu.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      api:
+      api-gpu:
         condition: service_healthy
       api-gpu1:
         condition: service_healthy

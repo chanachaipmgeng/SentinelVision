@@ -47,7 +47,7 @@ services:
         max-size: "5m"
         max-file: "2"
 
-  api:
+  api-gpu:
     environment:
       OPENCV_FFMPEG_CAPTURE_OPTIONS: ${OPENCV_FFMPEG_CAPTURE_OPTIONS:-rtsp_transport;tcp}
       MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION: ${MEDIAMTX_EVENT_RECORD_SEGMENT_DURATION:-5m}

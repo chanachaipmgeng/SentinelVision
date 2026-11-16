@@ -5,7 +5,7 @@
 #
 # Default URL points at 10.50.0.117:8081 — override with FACE_CORE_URL in .env.
 services:
-  api:
+  api-gpu:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile.bff

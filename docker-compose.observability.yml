@@ -12,7 +12,7 @@
 # Replace docker/observability/otel-collector.yml exporters with your Tempo / Jaeger / vendor
 # endpoint, or set OTEL_EXPORTER_OTLP_ENDPOINT to an external collector and drop the service.
 services:
-  api:
+  api-gpu:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4318}
       OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}

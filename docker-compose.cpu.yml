@@ -1,14 +1,31 @@
-# CPU-only override (no NVIDIA base image). Example:
-#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build api worker
+# CPU-only override (no NVIDIA base image / no GPU device reservation). Example:
+#   docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d --build api-gpu worker
 services:
-  api:
+  api-gpu:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile.cpu
+    container_name: sentinel-api-cpu
+    deploy:
+      resources:
+        reservations:
+          devices: !reset []
     environment:
       FACE_DEVICE: cpu
+      FACE_DEVICES: cpu
+      CUDA_VISIBLE_DEVICES: ""
       NVIDIA_VISIBLE_DEVICES: ""
   worker:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile.cpu
+    deploy:
+      resources:
+        reservations:
+          devices: !reset []
+    environment:
+      FACE_DEVICE: cpu
+      FACE_DEVICES: cpu
+      PEOPLE_YOLO_PROVIDERS: CPUExecutionProvider
+      CUDA_VISIBLE_DEVICES: ""
+      NVIDIA_VISIBLE_DEVICES: ""

@@ -4,7 +4,7 @@
 # Sibling checkout must exist at ../face-core (or /opt/face-core next to this repo).
 # FACE_CORE_API_KEY must be set in .env — there is no placeholder default.
 services:
-  api:
+  api-gpu:
     build:
       context: ./API-Fast
       dockerfile: Dockerfile.bff

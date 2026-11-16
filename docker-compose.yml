@@ -143,7 +143,6 @@ services:
       mediamtx:
         condition: service_started
     restart: unless-stopped
-    gpus: all
     deploy:
       resources:
         reservations:
@@ -253,7 +252,6 @@ services:
         condition: service_started
       mediamtx:
         condition: service_started
-    gpus: all
     deploy:
       resources:
         reservations:

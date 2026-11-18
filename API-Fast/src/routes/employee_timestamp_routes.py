@@ -283,6 +283,7 @@ async def delete_timestamp_route(
 # When paged=1 returns {items,total,limit,offset}; otherwise a bare list (legacy callers).
 @router.get("/search/company/{companyId}")
 async def search_timestamps_route(
+    request: Request,
     companyId: str,
     company_employeeId: Optional[str] = Query(None),
     startDate: Optional[str] = Query(None),
@@ -296,9 +297,29 @@ async def search_timestamps_route(
     sort_dir: str = Query("desc"),
     paged: bool = Query(False),
     db: AsyncSession = Depends(get_db),
-    _: Member = Depends(require_permission("attendance.read")),
 ):
     """Empty query strings (from Angular) are treated as omitted filters."""
+    from sqlalchemy import select
+    from ..models.company_employee import CompanyEmployee
+    from ..security.deps import assert_request_company_membership, assert_request_permission
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    emp_filter = _blank(company_employeeId)
+    is_self_query = False
+    if emp_filter and caller is not None:
+        own_emp = (
+            await db.execute(
+                select(CompanyEmployee).where(
+                    CompanyEmployee.company_employeeId == emp_filter,
+                    CompanyEmployee.companyId == companyId,
+                    CompanyEmployee.memberId == caller.memberId,
+                    CompanyEmployee.deletedAt.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        is_self_query = own_emp is not None
+    if not is_self_query:
+        await assert_request_permission(request, db, "attendance.read", companyId)
     return await search_timestamps(
         companyId,
         _blank(company_employeeId),

@@ -23,7 +23,7 @@
   <!-- Two-Column Dual-Rail Body -->
   <div class="sv-dual-body">
     <!-- Column 1: Primary Modules Rail -->
-    <nav class="sv-rail" aria-label="โมดูลหลัก">
+    <nav class="sv-rail" [attr.aria-label]="'sidebar.rail.aria' | translate">
       <button
         *ngFor="let grp of moduleGroups"
         type="button"
@@ -31,13 +31,13 @@
         [class.is-active]="grp.id === activeModuleGroup?.id"
         [style.--mod-rgb]="grp.accentRgb"
         [title]="grp.title | translate"
-        [attr.aria-label]="grp.shortLabel"
+        [attr.aria-label]="grp.shortLabel | translate"
         [attr.aria-current]="grp.id === activeModuleGroup?.id ? 'true' : null"
         (click)="selectModule(grp)">
         <span class="sv-rail__icon">
           <i [class]="grp.icon" aria-hidden="true"></i>
         </span>
-        <span class="sv-rail__label">{{ grp.shortLabel }}</span>
+        <span class="sv-rail__label">{{ grp.shortLabel | translate }}</span>
       </button>
     </nav>
 
@@ -68,7 +68,7 @@
         <div class="sv-subpanel__head">
           <span class="sv-subpanel__badge">
             <i [class]="mod.icon" aria-hidden="true"></i>
-            {{ mod.shortLabel }}
+            {{ mod.shortLabel | translate }}
           </span>
           <p class="sv-subpanel__title">{{ mod.title | translate }}</p>
         </div>

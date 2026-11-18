@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import {
   SentinelEdgeManifest,
   SentinelMusterPage,
@@ -86,6 +87,17 @@ export class SentinelApiService {
     return this.http.post<SentinelIdentity>(`${this.base(companyId)}/identities`, body);
   }
 
+  updateIdentity(
+    companyId: string,
+    identityId: string,
+    body: Record<string, unknown>,
+  ): Observable<SentinelIdentity> {
+    return this.http.put<SentinelIdentity>(
+      `${this.base(companyId)}/identities/${identityId}`,
+      body,
+    );
+  }
+
   enrollIdentityFace(companyId: string, identityId: string, file: File): Observable<Record<string, unknown>> {
     const fd = new FormData();
     fd.append('file', file);
@@ -102,6 +114,14 @@ export class SentinelApiService {
 
   createZone(companyId: string, body: Record<string, unknown>): Observable<SentinelZone> {
     return this.http.post<SentinelZone>(`${this.base(companyId)}/zones`, body);
+  }
+
+  updateZone(
+    companyId: string,
+    zoneId: string,
+    body: Record<string, unknown>,
+  ): Observable<SentinelZone> {
+    return this.http.put<SentinelZone>(`${this.base(companyId)}/zones/${zoneId}`, body);
   }
 
   triggerZone(companyId: string, zoneId: string, reason: string): Observable<Record<string, unknown>> {
@@ -262,5 +282,39 @@ export class SentinelApiService {
       `${this.base(companyId)}/events/${eventId}/sessions/check-in`,
       body,
     );
+  }
+
+  askAssistant(
+    companyId: string,
+    message: string,
+  ): Observable<{ reply: string; provider: string }> {
+    return this.http
+      .post(`${this.base(companyId)}/assistant/chat`, { question: message, message }, { responseType: 'text' })
+      .pipe(
+        map((raw) => {
+          const chunks: string[] = [];
+          let provider = 'sentinel-copilot';
+          let currentEvent = '';
+          for (const line of String(raw || '').split('\n')) {
+            if (line.startsWith('event:')) {
+              currentEvent = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              try {
+                const payload = JSON.parse(line.slice(5).trim());
+                if (currentEvent === 'token' && typeof payload?.text === 'string') {
+                  chunks.push(payload.text);
+                } else if (currentEvent === 'done' && typeof payload?.provider === 'string') {
+                  provider = payload.provider;
+                } else if (typeof payload?.reply === 'string') {
+                  chunks.push(payload.reply);
+                }
+              } catch {
+                // ignore malformed SSE line
+              }
+            }
+          }
+          return { reply: chunks.join('').trim() || String(raw || '').trim(), provider };
+        }),
+      );
   }
 }

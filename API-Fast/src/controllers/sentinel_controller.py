@@ -1033,7 +1033,10 @@ async def run_company_health_check(db: AsyncSession, company_id: UUID) -> dict:
 
     cameras = (
         await db.execute(
-            select(Camera).where(Camera.companyId == company_id)
+            select(Camera).where(
+                Camera.companyId == company_id,
+                Camera.deletedAt.is_(None),
+            )
         )
     ).scalars().all()
 

@@ -178,6 +178,13 @@ export class EmployeeService {
     return this.http.delete<ResponseModel>(this.apiBaseUrl + "/" + companyId + "/" + body.company_employeeId, options);
   }
 
+  offboard(companyId: string, companyEmployeeId: string, status: 'RESIGNED' | 'TERMINATED' = 'RESIGNED') {
+    return this.http.post<{ status: string; company_employeeId: string; biometricsPurged: boolean; facesDeleted: number }>(
+      `${this.apiBaseUrl}/${companyId}/${companyEmployeeId}/offboard`,
+      { status }
+    );
+  }
+
   getCompanyAdmin(memberId: string) {
     return this.http
       .get<CompanyModel[]>("/employees/member/" + memberId + "/companies-admin")

@@ -148,6 +148,13 @@
   background: #e2e8f0;
 }
 
+html[data-theme="dark"] .emap-canvas,
+html.dark .emap-canvas,
+.dark .emap-canvas,
+html[data-theme-mode="dark"] .emap-canvas {
+  background: #0b1320;
+}
+
 .emap-pin {
   background: transparent;
   border: 0;

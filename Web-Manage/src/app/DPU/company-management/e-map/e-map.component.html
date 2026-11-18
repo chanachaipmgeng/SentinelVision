@@ -71,12 +71,20 @@
           </select>
         </label>
 
-        <div class="emap-upload">
+        <div class="emap-upload flex flex-wrap gap-2 items-center">
           <label class="ti-btn ti-btn-light modern-btn emap-upload__btn">
             {{ 'emap.uploadPlan' | translate }}
             <input type="file" accept="image/png,image/jpeg" hidden (change)="onPlanSelected($event)" />
           </label>
-          <p class="emap-hint" *ngIf="needsPlan">{{ 'emap.needPlan' | translate }}</p>
+          <button
+            *ngIf="selectedFloorId"
+            type="button"
+            class="ti-btn ti-btn-danger modern-btn text-xs"
+            [disabled]="saving"
+            (click)="deleteSelectedFloor()">
+            <i class="ri-delete-bin-line"></i> {{ 'Delete' | translate }}
+          </button>
+          <p class="emap-hint w-full" *ngIf="needsPlan">{{ 'emap.needPlan' | translate }}</p>
         </div>
 
         <section class="emap-section">
@@ -90,13 +98,19 @@
                 class="ti-btn ti-btn-sm ti-btn-primary-full modern-btn"
                 [routerLink]="['/company/live-wall']"
                 [queryParams]="{ cameraId: pin.id }">
-                Live
+                {{ 'cctv.cameras.live' | translate }}
               </a>
               <a
-                *ngIf="pin.kind !== 'camera'"
+                *ngIf="pin.kind === 'zone'"
                 class="ti-btn ti-btn-sm ti-btn-light modern-btn"
                 routerLink="/company/access-control/zones">
-                Door
+                {{ 'emap.kind.zone' | translate }}
+              </a>
+              <a
+                *ngIf="pin.kind === 'kiosk'"
+                class="ti-btn ti-btn-sm ti-btn-light modern-btn"
+                routerLink="/company/devices">
+                {{ 'emap.kind.kiosk' | translate }}
               </a>
               <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="clearPin(pin)">
                 {{ 'emap.removePin' | translate }}

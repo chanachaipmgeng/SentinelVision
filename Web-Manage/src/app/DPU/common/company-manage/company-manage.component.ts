@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FileItem, FileUploader, FileUploadModule } from 'ng2-file-upload';
@@ -87,9 +87,15 @@ export class CompanyManageComponent implements OnInit {
   constructor(
     private comService: CompanyService,
     public translate: TranslateService,
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private router: Router,
   ) {
     this.uploadConfig();
+  }
+
+  openCompanyConsole(item: CompanyModel): void {
+    this.tokenService.saveSelectCompany(item);
+    void this.router.navigate(['/company/dashboard']);
   }
 
   ngOnInit(): void {

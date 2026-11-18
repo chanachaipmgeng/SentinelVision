@@ -20,7 +20,6 @@ import {
   PageEnvelope,
   toDataTableParams,
 } from '../../../shared/utils/data-table-query';
-import { NotificationSettingsPanelComponent } from '../settings/panels/notification-settings-panel/notification-settings-panel.component';
 
 interface AuditRow {
   id: string;
@@ -45,7 +44,6 @@ interface AuditRow {
         PageToolbarComponent,
         PillSearchComponent,
         DataTableComponent,
-        NotificationSettingsPanelComponent,
     ],
     templateUrl: './audit-log.component.html',
     styleUrls: ['../../../shared/styles/dpu-list-page.css'],
@@ -158,29 +156,44 @@ export class AuditLogComponent implements OnInit, OnDestroy {
   }
 
   exportCsv(): void {
-    const header = 'occurredAt,actor,action,resource,path,statusCode,ip';
-    const body = this.rows
-      .map((r) =>
-        [
-          r.occurredAt,
-          r.actorMemberId || r.actorRole,
-          r.action,
-          [r.entityType, r.entityId].filter(Boolean).join(':'),
-          r.path,
-          r.statusCode,
-          r.ip,
-        ]
-          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
-          .join(',')
-      )
-      .join('\n');
-    const blob = new Blob([header + '\n' + body], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'audit-log.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!this.companyId) return;
+    this.http
+      .get(`/companys/${this.companyId}/audit-logs/export`, { responseType: 'blob' })
+      .subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `audit-log-${this.companyId}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        error: () => {
+          const header = 'occurredAt,actor,action,resource,path,statusCode,ip';
+          const body = this.rows
+            .map((r) =>
+              [
+                r.occurredAt,
+                r.actorMemberId || r.actorRole,
+                r.action,
+                [r.entityType, r.entityId].filter(Boolean).join(':'),
+                r.path,
+                r.statusCode,
+                r.ip,
+              ]
+                .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+                .join(',')
+            )
+            .join('\n');
+          const blob = new Blob([header + '\n' + body], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'audit-log.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+      });
   }
 
   verifyIntegrity(): void {

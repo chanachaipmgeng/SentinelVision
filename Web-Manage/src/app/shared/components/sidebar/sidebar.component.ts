@@ -30,16 +30,16 @@ export interface SidebarModuleGroup {
 }
 
 const MODULE_META: Record<string, { shortLabel: string; title: string; icon: string; accentRgb: string }> = {
-  COMMAND: { shortLabel: 'ภาพรวม', title: 'SENTINELVISION COMMAND', icon: 'ri-radar-line', accentRgb: '45, 212, 191' },
-  CORE: { shortLabel: 'องค์กร', title: 'CORE — Organization', icon: 'ri-building-4-line', accentRgb: '56, 189, 248' },
-  ATTENDANCE: { shortLabel: 'ลงเวลา', title: 'ATTENDANCE — Time clock', icon: 'ri-time-line', accentRgb: '34, 211, 238' },
-  ACCESS_CONTROL: { shortLabel: 'ประตู', title: 'ACCESS_CONTROL — Doors', icon: 'ri-door-lock-line', accentRgb: '96, 165, 250' },
-  WATCHLIST: { shortLabel: 'เฝ้าระวัง', title: 'WATCHLIST — Watch & VIP', icon: 'ri-shield-star-line', accentRgb: '251, 113, 133' },
-  VISITOR: { shortLabel: 'ผู้ติดต่อ', title: 'VISITOR — Visitors & building', icon: 'ri-user-shared-line', accentRgb: '167, 139, 250' },
-  EVENTS: { shortLabel: 'อีเวนต์', title: 'EVENTS — Events & seminars', icon: 'ri-calendar-event-line', accentRgb: '251, 191, 36' },
-  CCTV: { shortLabel: 'กล้อง AI', title: 'CCTV — Cameras', icon: 'ri-video-on-line', accentRgb: '52, 211, 153' },
-  GOVERNANCE: { shortLabel: 'ระบบ', title: 'GOVERNANCE — Governance', icon: 'ri-settings-4-line', accentRgb: '148, 163, 184' },
-  ADMIN: { shortLabel: 'แอดมิน', title: 'System admin', icon: 'ri-admin-line', accentRgb: '45, 212, 191' },
+  COMMAND: { shortLabel: 'sidebar.rail.command', title: 'SENTINELVISION COMMAND', icon: 'ri-radar-line', accentRgb: '45, 212, 191' },
+  CORE: { shortLabel: 'sidebar.rail.core', title: 'CORE — Organization', icon: 'ri-building-4-line', accentRgb: '56, 189, 248' },
+  ATTENDANCE: { shortLabel: 'sidebar.rail.attendance', title: 'ATTENDANCE — Time clock', icon: 'ri-time-line', accentRgb: '34, 211, 238' },
+  ACCESS_CONTROL: { shortLabel: 'sidebar.rail.access', title: 'ACCESS_CONTROL — Doors', icon: 'ri-door-lock-line', accentRgb: '96, 165, 250' },
+  WATCHLIST: { shortLabel: 'sidebar.rail.watchlist', title: 'WATCHLIST — Watch & VIP', icon: 'ri-shield-star-line', accentRgb: '251, 113, 133' },
+  VISITOR: { shortLabel: 'sidebar.rail.visitor', title: 'VISITOR — Visitors & building', icon: 'ri-user-shared-line', accentRgb: '167, 139, 250' },
+  EVENTS: { shortLabel: 'sidebar.rail.events', title: 'EVENTS — Events & seminars', icon: 'ri-calendar-event-line', accentRgb: '251, 191, 36' },
+  CCTV: { shortLabel: 'sidebar.rail.cctv', title: 'CCTV — Cameras', icon: 'ri-video-on-line', accentRgb: '52, 211, 153' },
+  GOVERNANCE: { shortLabel: 'sidebar.rail.governance', title: 'GOVERNANCE — Governance', icon: 'ri-settings-4-line', accentRgb: '148, 163, 184' },
+  ADMIN: { shortLabel: 'sidebar.rail.admin', title: 'System admin', icon: 'ri-admin-line', accentRgb: '45, 212, 191' },
 };
 
 @Component({
@@ -101,6 +101,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   public moduleGroups: SidebarModuleGroup[] = [];
   public selectedModuleId: string = 'COMMAND';
   public menuitemsSubscribe$!: Subscription;
+  public moduleConfigSub?: Subscription;
   companyModel: CompanyModel = new CompanyModel()
   isCommonRoute: boolean = false;
   isInstallerRoute: boolean = false;
@@ -150,6 +151,9 @@ export class SidebarComponent implements OnInit, OnDestroy {
     this.isInstallerRoute = this.currentUrl.includes('/company');
     this.menuitemsSubscribe$ = this.navServices.items.subscribe((_items) => {
       this.changeMenu()
+    });
+    this.moduleConfigSub = this.moduleConfigService.configUpdated$.subscribe(() => {
+      this.changeMenu();
     });
     this.ParentActive();
     this.checkUrlChanges();
@@ -499,6 +503,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy() {
     this.menuitemsSubscribe$.unsubscribe();
+    this.moduleConfigSub?.unsubscribe();
     this.windowSubscribe$.unsubscribe();
     this.elementRef.nativeElement.ownerDocument.documentElement.setAttribute(
       'data-nav-layout',

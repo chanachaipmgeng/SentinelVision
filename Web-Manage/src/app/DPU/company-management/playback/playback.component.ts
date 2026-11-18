@@ -217,6 +217,22 @@ export class PlaybackComponent implements OnInit, OnDestroy {
     });
   }
 
+  deleteSelected(): void {
+    if (!this.selected || !this.companyId) return;
+    const targetId = this.selected.clipId;
+    this.http
+      .delete(`/cameras/company/${this.companyId}/clips/${targetId}`)
+      .subscribe({
+        next: () => {
+          this.clearPlayer();
+          this.loadClips();
+        },
+        error: (err) => {
+          this.error = err?.error?.detail || 'Delete failed';
+        },
+      });
+  }
+
   selectClip(clip: VideoClipRow): void {
     this.selected = clip;
     this.revokeObjectUrl();

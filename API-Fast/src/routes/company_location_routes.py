@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
@@ -11,31 +11,37 @@ from ..controllers.company_location_controller import (
     delete_location
 )
 from ..schemas.company_location_schema import CompanyLocationCreate, CompanyLocationUpdate, CompanyLocationResponse
+from ..security.deps import assert_request_company_access
 
 router = APIRouter()
 
 # ดึงข้อมูลสถานที่ทั้งหมดของบริษัท
 @router.get("/company/{companyId}", response_model=List[CompanyLocationResponse])
-async def get_all_locations_route(companyId: UUID, db: AsyncSession = Depends(get_db)):
+async def get_all_locations_route(companyId: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, companyId)
     return await get_all_locations(companyId, db)
 
 # ดึงข้อมูลสถานที่ตาม locationId
 @router.get("/company/{companyId}/{locationId}", response_model=CompanyLocationResponse)
-async def get_location_by_id_route(companyId: UUID, locationId: UUID, db: AsyncSession = Depends(get_db)):
+async def get_location_by_id_route(companyId: UUID, locationId: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, companyId)
     return await get_location_by_id(locationId, companyId, db)
 
 # สร้างสถานที่ใหม่
 @router.post("/company/{companyId}", response_model=CompanyLocationResponse)
-async def create_location_route(companyId: UUID, location: CompanyLocationCreate, db: AsyncSession = Depends(get_db)):
+async def create_location_route(companyId: UUID, location: CompanyLocationCreate, request: Request, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, companyId)
     return await create_location(location.dict(), companyId, db)
 
 # อัปเดตข้อมูลสถานที่
 @router.put("/company/{companyId}/{locationId}", response_model=CompanyLocationResponse)
-async def update_location_route(companyId: UUID, locationId: UUID, location: CompanyLocationUpdate, db: AsyncSession = Depends(get_db)):
+async def update_location_route(companyId: UUID, locationId: UUID, location: CompanyLocationUpdate, request: Request, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, companyId)
     return await update_location(locationId, companyId, location.dict(exclude_unset=True), db)
 
 # ลบสถานที่
 @router.delete("/company/{companyId}/{locationId}")
-async def delete_location_route(companyId: UUID, locationId: UUID, db: AsyncSession = Depends(get_db)):
+async def delete_location_route(companyId: UUID, locationId: UUID, request: Request, db: AsyncSession = Depends(get_db)):
+    await assert_request_company_access(request, db, companyId)
     await delete_location(locationId, companyId, db)
     return {"detail": "Location deleted successfully"}

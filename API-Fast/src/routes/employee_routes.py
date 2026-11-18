@@ -109,11 +109,16 @@ async def get_company_employee_by_id_route(
 # ดึงข้อมูลพนักงานในบริษัทตาม memberId และ companyId
 @router.get("/company/{companyId}/member/{memberId}", response_model=CompanyEmployeeResponse)
 async def get_company_member_by_id_route(
+    request: Request,
     companyId: str,
     memberId: str,
     db: AsyncSession = Depends(get_db),
-    _: Member = Depends(require_permission("employees.read")),
 ):
+    from ..security.deps import assert_request_company_membership, assert_request_permission
+
+    caller = await assert_request_company_membership(request, db, companyId)
+    if caller is None or str(getattr(caller, "memberId", "")) != str(memberId):
+        await assert_request_permission(request, db, "employees.read", companyId)
     return await get_company_member_by_id(memberId, companyId, db)
 
 # ดึงลูกน้อง company_employeeId และ companyId
@@ -218,11 +223,19 @@ async def start_import_job(
 
 
 @router.get("/company/{companyId}/import-jobs/{jobId}")
-async def get_import_job_route(companyId: str, jobId: str, db: AsyncSession = Depends(get_db)):
+async def get_import_job_route(
+    request: Request,
+    companyId: str,
+    jobId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.read")),
+):
     from fastapi import HTTPException
 
+    from ..security.deps import assert_request_company_access
     from ..services.import_job_service import get_import_job
 
+    await assert_request_company_access(request, db, companyId)
     job = await get_import_job(db, jobId)
     if not job or str(job.companyId) != companyId:
         raise HTTPException(status_code=404, detail="Import job not found")
@@ -235,11 +248,12 @@ async def offboard_employee_route(
     company_employeeId: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_permission("employees.write")),
 ):
     from ..controllers.company_employee_controller import offboard_company_employee
-    from ..security.deps import assert_request_company_membership
+    from ..security.deps import assert_request_company_access
 
-    await assert_request_company_membership(request, db, companyId)
+    await assert_request_company_access(request, db, companyId)
     try:
         body = await request.json()
     except Exception:

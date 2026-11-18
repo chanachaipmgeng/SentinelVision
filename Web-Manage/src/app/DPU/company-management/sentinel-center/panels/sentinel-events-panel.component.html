@@ -392,7 +392,18 @@
               </td>
               <td class="p-3">
                 <span *ngIf="att.hasFaceEnrolled" class="text-emerald-400 font-semibold">พร้อมสแกนเข้างาน</span>
-                <span *ngIf="!att.hasFaceEnrolled" class="text-amber-400">รออัปโหลดรูปหน้า</span>
+                <label
+                  *ngIf="!att.hasFaceEnrolled"
+                  class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded cursor-pointer"
+                >
+                  + อัปโหลดใบหน้า
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    (change)="enrollExistingAttendeeFace(att.identityId, $event)"
+                  />
+                </label>
               </td>
               <td class="p-3 text-end">
                 <button
@@ -416,7 +427,7 @@
   </div>
 
   <!-- Multi-Session Breakout Room Capacity Check-in -->
-  <div class="box modern-card glass card-surface mt-4 p-4">
+  <div class="col-span-12 box modern-card glass card-surface mt-4 p-4">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <div>
         <h4 class="text-sm font-bold text-slate-100 mb-0.5">Breakout Room Capacity Check-in</h4>

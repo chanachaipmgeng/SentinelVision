@@ -242,7 +242,7 @@
           <option *ngFor="let z of zones" [value]="z.zoneId">{{ z.name || z.zoneId }}</option>
         </select>
       </label>
-      <a routerLink="/company/sentinel-center" class="dpu-kiosk__chip" title="ออกบัตร Visitor">
+      <a routerLink="/company/visitors/passes" class="dpu-kiosk__chip" title="ออกบัตร Visitor">
         <i class="ri-id-card-line"></i>
         ออกบัตรใหม่
       </a>
@@ -505,7 +505,7 @@
             <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">โซนประตู &amp; Access Control</h2>
             <p class="dpu-kiosk__subtitle">{{ selectedZone?.name || 'เลือกโซนเพื่อตรวจสิทธิ์และสั่งเปิดประตู' }}</p>
           </div>
-          <a routerLink="/company/sentinel-center/access/zones" class="dpu-kiosk__icon-btn" title="ตั้งค่าโซนประตู">
+          <a routerLink="/company/access-control/zones" class="dpu-kiosk__icon-btn" title="ตั้งค่าโซนประตู">
             <i class="ri-door-lock-line"></i>
           </a>
         </header>
@@ -538,7 +538,7 @@
             <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">คัดกรองเฝ้าระวัง &amp; VIP</h2>
             <p class="dpu-kiosk__subtitle">Walk-by Screening • Blacklist / VIP Recognition</p>
           </div>
-          <a routerLink="/company/sentinel-center/watchlist/identities" class="dpu-kiosk__icon-btn" title="จัดการบัญชีเฝ้าระวัง">
+          <a routerLink="/company/watchlist/identities" class="dpu-kiosk__icon-btn" title="จัดการบัญชีเฝ้าระวัง">
             <i class="ri-spy-line"></i>
           </a>
         </header>
@@ -571,7 +571,7 @@
             <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">จุดรับรองผู้มาติดต่อ</h2>
             <p class="dpu-kiosk__subtitle">{{ selectedZone?.name || 'ยืนยันบัตร Visitor และแจ้งเตือน Host' }}</p>
           </div>
-          <a routerLink="/company/sentinel-center/visitor/passes" class="dpu-kiosk__icon-btn" title="ออกบัตร Visitor">
+          <a routerLink="/company/visitors/passes" class="dpu-kiosk__icon-btn" title="ออกบัตร Visitor">
             <i class="ri-id-card-line"></i>
           </a>
         </header>
@@ -604,7 +604,7 @@
             <h2 class="dpu-kiosk__title dpu-kiosk__title--sm">เช็คอินงานอีเวนต์ &amp; สัมมนา</h2>
             <p class="dpu-kiosk__subtitle">{{ selectedEvent?.name || 'เลือกแคมเปญอีเวนต์ด้านบนเพื่อเริ่มเช็คอิน' }}</p>
           </div>
-          <a routerLink="/company/sentinel-center/events/campaigns" class="dpu-kiosk__icon-btn" title="จัดการงานอีเวนต์">
+          <a routerLink="/company/events/campaigns" class="dpu-kiosk__icon-btn" title="จัดการงานอีเวนต์">
             <i class="ri-calendar-event-line"></i>
           </a>
         </header>

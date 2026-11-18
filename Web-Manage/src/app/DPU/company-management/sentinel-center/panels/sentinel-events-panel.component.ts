@@ -129,6 +129,12 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
     this.selectedIdentityPhoto = firstFileFromInput(event);
   }
 
+  enrollExistingAttendeeFace(identityId: string, event: Event): void {
+    const file = firstFileFromInput(event);
+    if (!file) return;
+    this.uploadIdentityFace(identityId, file);
+  }
+
   createEventCampaign(): void {
     if (!this.eventForm.name.trim()) {
       this.toast.emit('กรุณาระบุชื่องานอีเวนต์');

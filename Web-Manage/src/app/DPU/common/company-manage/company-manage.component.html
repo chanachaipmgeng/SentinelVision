@@ -70,7 +70,7 @@
                     <div class="flex items-center gap-2">
                       <span class="avatar avatar-sm avatar-rounded"><img [src]="item.getPicture()" alt=""></span>
                       <div>
-                        <a class="font-semibold text-primary" [routerLink]="'/company/home/' + item.companyId">
+                        <a class="font-semibold text-primary cursor-pointer hover:underline" (click)="openCompanyConsole(item)">
                           {{ item.companyName }}
                         </a>
                         <div class="text-[0.75rem] text-dpu-muted max-w-[220px] truncate">{{ item.companyInfo || '—' }}</div>

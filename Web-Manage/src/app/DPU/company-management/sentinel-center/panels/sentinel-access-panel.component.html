@@ -120,14 +120,6 @@
                     placeholder="https://iot-gateway.local/api/doors/gate-01/unlock"
                   />
                 </div>
-                <div class="col-span-6">
-                  <label class="form-label text-xs font-semibold">เวลาเปิดประตูอัตโนมัติ (Schedule)</label>
-                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleStart" />
-                </div>
-                <div class="col-span-6">
-                  <label class="form-label text-xs font-semibold">เวลาล็อกประตูอัตโนมัติ</label>
-                  <input type="time" class="form-control" [(ngModel)]="zoneForm.scheduleEnd" />
-                </div>
                 <div class="col-span-12">
                   <label class="flex items-center gap-2 text-xs cursor-pointer">
                     <input type="checkbox" [(ngModel)]="zoneForm.require2FA" />
@@ -164,13 +156,21 @@
                     placeholder="http://edge-bridge.local:8090/unlock"
                   />
                 </div>
-                <div class="col-span-12">
+                <div class="col-span-12 flex gap-2">
                   <button
                     type="button"
-                    class="btn-vault w-full py-2.5 font-semibold text-sm"
+                    class="btn-vault flex-1 py-2.5 font-semibold text-sm"
                     (click)="createAccessZone()"
                   >
-                    + บันทึกโซนควบคุมการเข้า-ออก
+                    {{ editingZoneId ? 'บันทึกการแก้ไขโซนประตู' : '+ บันทึกโซนควบคุมการเข้า-ออก' }}
+                  </button>
+                  <button
+                    *ngIf="editingZoneId"
+                    type="button"
+                    class="ti-btn ti-btn-light py-2.5 px-4 text-xs font-semibold"
+                    (click)="cancelEditZone()"
+                  >
+                    ยกเลิก
                   </button>
                 </div>
                 <div
@@ -297,6 +297,13 @@
                         </button>
                         <button
                           type="button"
+                          class="ti-btn ti-btn-sm ti-btn-light"
+                          (click)="startEditZone(z)"
+                        >
+                          <i class="ri-edit-line"></i> แก้ไข
+                        </button>
+                        <button
+                          type="button"
                           class="ti-btn ti-btn-sm ti-btn-danger"
                           (click)="deleteZone(z.zoneId)"
                         >
@@ -310,7 +317,7 @@
                           <span>ยังไม่มีโซนควบคุมประตู (สร้างโซนด้านซ้ายเพื่อเริ่มใช้งาน Access Control)</span>
                           <a
                             routerLink="/company/scan/access-control"
-                            class="text-teal-800 font-semibold text-xs hover:underline"
+                            class="text-cyan-400 font-semibold text-xs hover:underline"
                           >
                             หรือเปิดสแกนโดยไม่ระบุโซนก่อน
                           </a>

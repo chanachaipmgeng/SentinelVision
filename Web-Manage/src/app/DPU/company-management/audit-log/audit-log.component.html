@@ -104,12 +104,11 @@
   </div>
 
   <div class="col-span-12">
-    <p class="text-sm text-dpu-muted mb-2">
+    <p class="text-sm text-dpu-muted mb-0">
       {{ 'settingsHub.notify.movedHint' | translate }}
       <a routerLink="/company/settings/notifications" class="text-primary font-semibold">
         {{ 'settingsHub.notify.openInSettings' | translate }} <i class="ri-arrow-right-line"></i>
       </a>
     </p>
-    <app-notification-settings-panel [companyId]="companyId"></app-notification-settings-panel>
   </div>
 </div>

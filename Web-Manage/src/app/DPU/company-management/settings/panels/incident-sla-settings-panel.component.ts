@@ -22,7 +22,7 @@ type SlaStatus = 'idle' | 'saved' | 'error';
         <div *ngIf="loading" class="text-xs text-dpu-muted">{{ 'settingsHub.loading' | translate }}</div>
 
         <label class="block" *ngIf="!loading">
-          <span class="text-xs font-semibold text-slate-700">
+          <span class="text-xs font-semibold text-slate-200">
             {{ 'settingsHub.incidentSla.minutesHigh' | translate }}
           </span>
           <input
@@ -55,10 +55,10 @@ type SlaStatus = 'idle' | 'saved' | 'error';
           >
             รีเซ็ตค่าเริ่มต้น
           </button>
-          <span class="text-xs font-semibold text-emerald-700" *ngIf="status === 'saved'">
+          <span class="text-xs font-semibold text-emerald-400" *ngIf="status === 'saved'">
             {{ 'settingsHub.incidentSla.saved' | translate }}
           </span>
-          <span class="text-xs font-semibold text-rose-700" *ngIf="status === 'error'">
+          <span class="text-xs font-semibold text-rose-400" *ngIf="status === 'error'">
             {{ 'settingsHub.incidentSla.error' | translate }}
           </span>
         </div>

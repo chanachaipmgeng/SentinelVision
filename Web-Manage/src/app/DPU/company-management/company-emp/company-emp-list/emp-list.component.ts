@@ -30,6 +30,7 @@ export class EmpListComponent {
 
   @Output() viewItem = new EventEmitter<EmployeeModel>();
   @Output() deleteItem = new EventEmitter<EmployeeModel>();
+  @Output() offboardItem = new EventEmitter<EmployeeModel>();
   @Output() enrollFace = new EventEmitter<EmployeeModel>();
   @Output() manageFace = new EventEmitter<EmployeeModel>();
   @Output() goToPage = new EventEmitter<number>();

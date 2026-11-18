@@ -86,13 +86,30 @@
               <div><label class="form-label">เริ่ม</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.startDate" /></div>
               <div><label class="form-label">สิ้นสุด</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.endDate" /></div>
             </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="form-label">ประเภท</label>
+                <select class="form-control" [(ngModel)]="leaveDraft.leaveType">
+                  <option value="ANNUAL">ลาพักร้อน</option>
+                  <option value="SICK">ลาป่วย</option>
+                  <option value="PERSONAL">ลากิจ</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">รูปแบบการลา</label>
+                <select class="form-control" [(ngModel)]="leaveDraft.leaveUnit">
+                  <option value="DAY">เต็มวัน (Day)</option>
+                  <option value="HOUR">รายชั่วโมง (Hourly)</option>
+                </select>
+              </div>
+            </div>
+            <div *ngIf="leaveDraft.leaveUnit === 'HOUR'">
+              <label class="form-label">จำนวนชั่วโมงลา</label>
+              <input type="number" min="0.5" max="8" step="0.5" class="form-control" [(ngModel)]="leaveDraft.leaveHours" />
+            </div>
             <div>
-              <label class="form-label">ประเภท</label>
-              <select class="form-control" [(ngModel)]="leaveDraft.leaveType">
-                <option value="ANNUAL">ลาพักร้อน</option>
-                <option value="SICK">ลาป่วย</option>
-                <option value="PERSONAL">ลากิจ</option>
-              </select>
+              <label class="form-label">ลิงก์เอกสารแนบ / ใบรับรองแพทย์ (ถ้ามี)</label>
+              <input type="url" class="form-control" [(ngModel)]="leaveDraft.attachmentUrl" placeholder="https://..." />
             </div>
             <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="leaveDraft.reason"></textarea></div>
             <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitLeave()">ส่งคำขอ</button>

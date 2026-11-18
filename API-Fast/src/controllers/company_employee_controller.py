@@ -37,6 +37,8 @@ def _member_dict(member: Member) -> dict:
         "emergencyContactName": member.emergencyContactName,
         "emergencyContactPhone": member.emergencyContactPhone,
         "attachmentUrls": member.attachmentUrls,
+        "biometricConsentAt": getattr(member, "biometricConsentAt", None),
+        "biometricConsentVersion": getattr(member, "biometricConsentVersion", None),
     }
 
 def _employee_payload(employee: CompanyEmployee) -> dict:
@@ -145,9 +147,12 @@ async def get_all_companyEmployees(
 async def get_company_member_by_id(memberId: str, companyId: str, db: AsyncSession):
     result = await db.execute(
         select(CompanyEmployee)
+        .join(Member, CompanyEmployee.memberId == Member.memberId)
         .where(
             CompanyEmployee.memberId == memberId,
-            CompanyEmployee.companyId == companyId
+            CompanyEmployee.companyId == companyId,
+            CompanyEmployee.deletedAt.is_(None),
+            Member.deletedAt.is_(None),
         )
         .options(
             selectinload(CompanyEmployee.member),
@@ -168,7 +173,8 @@ async def get_company_employee_by_id(company_employeeId: str, companyId: str, db
         select(CompanyEmployee)
         .where(
             CompanyEmployee.company_employeeId == company_employeeId,
-            CompanyEmployee.companyId == companyId
+            CompanyEmployee.companyId == companyId,
+            CompanyEmployee.deletedAt.is_(None),
         )
         .options(
             selectinload(CompanyEmployee.member),
@@ -186,7 +192,11 @@ async def get_company_employee_by_id(company_employeeId: str, companyId: str, db
 async def get_company_sub_employee_by_id(company_employeeId: str, companyId: str, db: AsyncSession):
     result = await db.execute(
         select(CompanyEmployee)
-        .where(CompanyEmployee.companyId == companyId , CompanyEmployee.bossId == company_employeeId)
+        .where(
+            CompanyEmployee.companyId == companyId,
+            CompanyEmployee.bossId == company_employeeId,
+            CompanyEmployee.deletedAt.is_(None),
+        )
         .options(
             selectinload(CompanyEmployee.member),
             selectinload(CompanyEmployee.position),
@@ -278,7 +288,8 @@ async def register_member(
     result = await db.execute(
         select(CompanyEmployee).where(
             CompanyEmployee.memberId == member.memberId,
-            CompanyEmployee.companyId == company.companyId
+            CompanyEmployee.companyId == company.companyId,
+            CompanyEmployee.deletedAt.is_(None),
         )
     )
     existing_employee = result.scalar_one_or_none()
@@ -547,7 +558,11 @@ async def get_companies_by_member(memberId: str, db: AsyncSession):
     result = await db.execute(
         select(Company)
         .join(CompanyEmployee, Company.companyId == CompanyEmployee.companyId)
-        .where(CompanyEmployee.memberId == memberId),
+        .where(
+            CompanyEmployee.memberId == memberId,
+            Company.deletedAt.is_(None),
+            CompanyEmployee.deletedAt.is_(None),
+        ),
     )
     companies = result.scalars().all()
 
@@ -564,8 +579,11 @@ async def get_companies_admin(memberId: str, db: AsyncSession):
     result = await db.execute(
         select(Company)
         .join(CompanyEmployee, Company.companyId == CompanyEmployee.companyId)
-        .where(CompanyEmployee.memberId == memberId,
-               CompanyEmployee.companyRoleType == 'ADMIN_COMPANY'
+        .where(
+            CompanyEmployee.memberId == memberId,
+            CompanyEmployee.companyRoleType == 'ADMIN_COMPANY',
+            Company.deletedAt.is_(None),
+            CompanyEmployee.deletedAt.is_(None),
         ),
     )
     companies = result.scalars().all()

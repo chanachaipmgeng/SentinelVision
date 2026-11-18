@@ -173,6 +173,14 @@ export class NavService implements OnDestroy {
         badgeText: 'primary',
         permission: 'company.read',
       },
+      {
+        icon: 'shield-quarter',
+        path: '/company/sentinel-center',
+        title: 'SentinelVision Command & Graph',
+        type: 'link',
+        moduleId: 'COMMAND',
+        permission: 'sentinel.manage',
+      },
 
       { headTitle: 'CORE — Organization', moduleId: 'CORE' },
       {
@@ -231,6 +239,12 @@ export class NavService implements OnDestroy {
             permission: 'attendance.read',
             // Employee portal — soft-hide for company/HR admins (route still open).
             hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY'],
+          },
+          {
+            path: '/company/mobile-checkin',
+            title: 'Mobile field check-in',
+            type: 'link',
+            permission: 'attendance.read',
           },
           {
             path: '/company/company-location',

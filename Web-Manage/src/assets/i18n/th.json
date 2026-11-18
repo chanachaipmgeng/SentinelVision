@@ -919,5 +919,22 @@
   "presence.ot.status.punch_without_camera": "มีลงเวลา ไม่เห็นในกล้อง",
   "presence.ot.status.camera_without_punch": "เห็นในกล้อง ไม่มี OT จากลงเวลา",
   "CCTV — Cameras": "CCTV — กล้องวงจรปิด AI",
-  "Error logs": "บันทึกข้อผิดพลาดระบบ"
+  "Error logs": "บันทึกข้อผิดพลาดระบบ",
+  "SentinelVision Command & Graph": "ศูนย์ควบคุม 1:N & กราฟสืบสวน",
+  "Mobile field check-in": "ลงเวลานอกสถานที่ (มือถือ)",
+  "sidebar.rail.aria": "โมดูลหลัก",
+  "sidebar.rail.command": "ภาพรวม",
+  "sidebar.rail.core": "องค์กร",
+  "sidebar.rail.attendance": "ลงเวลา",
+  "sidebar.rail.access": "ประตู",
+  "sidebar.rail.watchlist": "เฝ้าระวัง",
+  "sidebar.rail.visitor": "ผู้ติดต่อ",
+  "sidebar.rail.events": "อีเวนต์",
+  "sidebar.rail.cctv": "กล้อง AI",
+  "sidebar.rail.governance": "ระบบ",
+  "sidebar.rail.admin": "แอดมิน",
+  "Add": "เพิ่ม",
+  "Select": "เลือก",
+  "PERMANENT": "ถาวร",
+  "TEMPORARY": "ชั่วคราว"
 }

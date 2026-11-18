@@ -35,7 +35,10 @@ def _clean_location_data(data: dict) -> dict:
 # ดึงข้อมูลสถานที่ทั้งหมดของบริษัทตาม companyId
 async def get_all_locations(companyId: UUID, db: AsyncSession):
     result = await db.execute(
-        select(CompanyLocation).where(CompanyLocation.companyId == companyId)
+        select(CompanyLocation).where(
+            CompanyLocation.companyId == companyId,
+            CompanyLocation.deletedAt.is_(None),
+        )
     )
     return result.scalars().all()
 
@@ -44,7 +47,8 @@ async def get_location_by_id(locationId: UUID, companyId: UUID, db: AsyncSession
     result = await db.execute(
         select(CompanyLocation).where(
             CompanyLocation.locationId == locationId,
-            CompanyLocation.companyId == companyId
+            CompanyLocation.companyId == companyId,
+            CompanyLocation.deletedAt.is_(None),
         )
     )
     location = result.scalar_one_or_none()

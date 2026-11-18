@@ -98,15 +98,33 @@ export class SentinelVisitorsPanelComponent implements OnInit {
   }
 
   copyPreRegLink(): void {
-    const url = `${window.location.origin}/#/company/scan/visitor-checkin?preReg=1`;
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(url).then(
-        () => this.toast.emit('คัดลอกลิงก์ลงทะเบียนผู้มาติดต่อล่วงหน้าแล้ว'),
+    if (this.inviteResult?.inviteToken) {
+      const url = `${window.location.origin}/#/visitor-invite/${this.inviteResult.inviteToken}`;
+      navigator.clipboard?.writeText(url).then(
+        () => this.toast.emit('คัดลอกลิงก์เชิญลงทะเบียนล่วงหน้าแล้ว'),
         () => this.toast.emit(url),
       );
       return;
     }
-    this.toast.emit(url);
+    this.api
+      .createVisitorInvite(this.companyId, {
+        visitorName: this.visitorForm.fullName.trim() || 'Guest Visitor',
+        purpose: this.visitorForm.visitPurpose?.trim() || undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          this.inviteResult = res;
+          const url = `${window.location.origin}/#/visitor-invite/${res.inviteToken}`;
+          navigator.clipboard?.writeText(url).then(
+            () => this.toast.emit('สร้างและคัดลอกลิงก์เชิญลงทะเบียนผู้มาติดต่อแล้ว'),
+            () => this.toast.emit(url),
+          );
+        },
+        error: () => {
+          const fallback = `${window.location.origin}/#/company/scan/visitor`;
+          this.toast.emit(fallback);
+        },
+      });
   }
 
   printVisitorBadge(v: SentinelIdentity): void {
@@ -117,7 +135,7 @@ export class SentinelVisitorsPanelComponent implements OnInit {
     }
     const name = escapeHtml(v.fullName);
     const org = escapeHtml(v.organization || '-');
-    const purpose = escapeHtml(v.alertNote || '-');
+    const purpose = escapeHtml((v as unknown as { visitPurpose?: string }).visitPurpose || v.alertNote || '-');
     const expiry = escapeHtml(v.expiresAt ? new Date(v.expiresAt).toLocaleString() : 'ไม่ระบุ');
     const code = escapeHtml(`SV-VISITOR:${v.identityId}`);
     popup.document.write(`<!doctype html>

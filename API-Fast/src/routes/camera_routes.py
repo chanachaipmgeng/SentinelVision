@@ -119,13 +119,41 @@ async def control_camera_ptz(
     await assert_request_permission(request, db, "cameras.manage", companyId)
     cam = await camera_service.get_company_camera(db, companyId, cameraId)
     payload = body or {}
+    raw_action = str(payload.get("action") or "move").strip()
+    upper_action = raw_action.upper()
+    speed_raw = payload.get("speed")
+    speed = float(speed_raw) if isinstance(speed_raw, (int, float, str)) and str(speed_raw).strip() else 0.5
+    pan = float(payload.get("pan") or 0.0)
+    tilt = float(payload.get("tilt") or 0.0)
+    zoom = float(payload.get("zoom") or 0.0)
+    norm_action = raw_action.lower()
+    if upper_action == "STOP":
+        norm_action = "stop"
+    elif upper_action == "UP" and tilt == 0.0:
+        norm_action = "move"
+        tilt = speed
+    elif upper_action == "DOWN" and tilt == 0.0:
+        norm_action = "move"
+        tilt = -speed
+    elif upper_action == "LEFT" and pan == 0.0:
+        norm_action = "move"
+        pan = -speed
+    elif upper_action == "RIGHT" and pan == 0.0:
+        norm_action = "move"
+        pan = speed
+    elif upper_action == "ZOOM_IN" and zoom == 0.0:
+        norm_action = "move"
+        zoom = speed
+    elif upper_action == "ZOOM_OUT" and zoom == 0.0:
+        norm_action = "move"
+        zoom = -speed
     return await send_ptz_command(
         cam,
-        action=str(payload.get("action") or "move"),
+        action=norm_action,
         profile_token=str(payload.get("profileToken") or "Profile_1"),
-        pan=float(payload.get("pan") or 0.0),
-        tilt=float(payload.get("tilt") or 0.0),
-        zoom=float(payload.get("zoom") or 0.0),
+        pan=pan,
+        tilt=tilt,
+        zoom=zoom,
         onvif_url=payload.get("onvifUrl"),
     )
 

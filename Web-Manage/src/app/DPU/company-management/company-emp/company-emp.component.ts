@@ -312,6 +312,61 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
     });
   }
 
+  offboard(item: EmployeeModel): void {
+    const fullName = `${item.member?.firstName || ''} ${item.member?.lastName || ''}`.trim() || item.employeeId || 'พนักงาน';
+    swal({
+      title: `แจ้งพ้นสภาพพนักงาน (${fullName})?`,
+      text: 'ระบบจะยกเลิกสิทธิ์เข้าใช้งานและลบข้อมูลใบหน้าชีวมิติตามนโยบาย PDPA ทันที',
+      icon: 'warning',
+      dangerMode: true,
+      buttons: ['ยกเลิก', 'ยืนยันพ้นสภาพ (Offboard)'],
+    }).then((confirmed: unknown) => {
+      if (!confirmed) return;
+      this.employeeService.offboard(this.companyId, item.company_employeeId).subscribe({
+        next: (res) => {
+          swal(
+            'ดำเนินการสำเร็จ',
+            `ปรับสถานะเป็น ${res.status} และลบข้อมูลใบหน้าแล้ว (${res.facesDeleted} รายการ)`,
+            'success'
+          );
+          this.reloadEmployees();
+        },
+        error: (err) => this.showSaveError(err),
+      });
+    });
+  }
+
+  exportEmployeesCsv(): void {
+    const rows = this.filterList.length ? this.filterList : this.itemsList;
+    if (!rows.length) {
+      swal('ไม่มีข้อมูล', 'ไม่มีรายชื่อพนักงานสำหรับส่งออก', 'info');
+      return;
+    }
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['employeeId', 'firstName', 'lastName', 'email', 'phoneNumber', 'department', 'position'];
+    const lines = [
+      header.join(','),
+      ...rows.map((r) =>
+        [
+          esc(r.employeeId),
+          esc(r.member?.firstName),
+          esc(r.member?.lastName),
+          esc(r.member?.email),
+          esc(r.member?.phoneNumber),
+          esc(r.department?.thName || r.department?.engName),
+          esc(r.position?.thName || r.position?.engName),
+        ].join(',')
+      ),
+    ];
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `employees-${this.companyId}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   new(): void {
     this.isEdit = false;
     this.selectModel = new EmployeeModel();

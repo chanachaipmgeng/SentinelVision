@@ -184,19 +184,37 @@
   color: var(--dpu-muted, #64748b);
 }
 
+html[data-theme="dark"] .dpu-settings-list__row,
 html.dark .dpu-settings-list__row,
-html.dark .dpu-settings-card {
+.dark .dpu-settings-list__row,
+html[data-theme-mode="dark"] .dpu-settings-list__row,
+html[data-theme="dark"] .dpu-settings-card,
+html.dark .dpu-settings-card,
+.dark .dpu-settings-card,
+html[data-theme-mode="dark"] .dpu-settings-card {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
+html[data-theme="dark"] .dpu-settings-rail__title,
 html.dark .dpu-settings-rail__title,
+.dark .dpu-settings-rail__title,
+html[data-theme-mode="dark"] .dpu-settings-rail__title,
+html[data-theme="dark"] .dpu-settings-rail__link,
 html.dark .dpu-settings-rail__link,
-html.dark .dpu-settings-card {
+.dark .dpu-settings-rail__link,
+html[data-theme-mode="dark"] .dpu-settings-rail__link,
+html[data-theme="dark"] .dpu-settings-card,
+html.dark .dpu-settings-card,
+.dark .dpu-settings-card,
+html[data-theme-mode="dark"] .dpu-settings-card {
   color: rgba(255, 255, 255, 0.88);
 }
 
-html.dark .dpu-settings-rail__link.is-active {
+html[data-theme="dark"] .dpu-settings-rail__link.is-active,
+html.dark .dpu-settings-rail__link.is-active,
+.dark .dpu-settings-rail__link.is-active,
+html[data-theme-mode="dark"] .dpu-settings-rail__link.is-active {
   color: #fff;
 }
 

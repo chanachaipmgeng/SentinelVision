@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import { catchError, map, shareReplay, tap } from 'rxjs/operators';
 
 /** Always-on platform modules (never toggled off). */
@@ -123,6 +123,8 @@ function normalizeConfig(raw: Partial<CompanyModuleConfig> | null | undefined): 
 export class CompanyModuleConfigService {
   private readonly cache = new Map<string, CompanyModuleConfig>();
   private readonly inflight = new Map<string, Observable<CompanyModuleConfig>>();
+  private readonly updatedSubject = new Subject<string>();
+  public readonly configUpdated$ = this.updatedSubject.asObservable();
 
   constructor(private http: HttpClient) {}
 
@@ -168,7 +170,10 @@ export class CompanyModuleConfigService {
       .put<Partial<CompanyModuleConfig>>(`/sentinel/company/${companyId}/module-config`, body)
       .pipe(
         map((raw) => normalizeConfig(raw)),
-        tap((cfg) => this.cache.set(companyId, cfg))
+        tap((cfg) => {
+          this.cache.set(companyId, cfg);
+          this.updatedSubject.next(companyId);
+        })
       );
   }
 

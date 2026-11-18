@@ -51,6 +51,14 @@ export class NotificationCenterComponent implements OnInit {
   };
   templates: NotificationTemplatesView = { builtins: [], custom: [], i18nKeys: {} };
   mutedRaw = '';
+  prefsSavedMsg = '';
+  customDraft = {
+    eventKey: 'attendance.checked_in',
+    locale: 'th',
+    channel: 'IN_APP',
+    subject: '',
+    bodyTemplate: '',
+  };
 
   constructor(private http: HttpClient, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -166,10 +174,39 @@ export class NotificationCenterComponent implements OnInit {
       .map((s) => s.trim())
       .filter(Boolean);
     this.prefs.mutedEvents = muted;
+    this.prefsSavedMsg = '';
     this.http
       .put(`/notifications/company/${this.companyId}/preferences/me`, this.prefs)
       .subscribe({
-        next: () => this.reload(),
+        next: () => {
+          this.prefsSavedMsg = 'บันทึกค่ากำหนดการแจ้งเตือนแล้ว';
+          this.reload();
+        },
+      });
+  }
+
+  saveCustomTemplate(): void {
+    if (!this.companyId || !this.customDraft.eventKey.trim() || !this.customDraft.bodyTemplate.trim()) {
+      return;
+    }
+    this.http
+      .put(`/notifications/company/${this.companyId}/templates`, {
+        templates: [
+          {
+            eventKey: this.customDraft.eventKey.trim(),
+            locale: this.customDraft.locale,
+            channel: this.customDraft.channel,
+            subject: this.customDraft.subject.trim(),
+            bodyTemplate: this.customDraft.bodyTemplate.trim(),
+          },
+        ],
+      })
+      .subscribe({
+        next: () => {
+          this.customDraft.subject = '';
+          this.customDraft.bodyTemplate = '';
+          this.reload();
+        },
       });
   }
 }

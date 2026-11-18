@@ -28,7 +28,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           <label class="flex items-start gap-2">
             <input type="checkbox" class="mt-1" [(ngModel)]="faceOverride" [disabled]="busy" />
             <span>
-              <span class="block text-xs font-semibold text-slate-700">
+              <span class="block text-xs font-semibold text-slate-200">
                 {{ 'settingsHub.ai.faceOverride' | translate }}
               </span>
               <span class="block text-[0.7rem] text-dpu-muted">
@@ -38,7 +38,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           </label>
 
           <label class="block" *ngIf="faceOverride">
-            <span class="text-xs font-semibold text-slate-700">
+            <span class="text-xs font-semibold text-slate-200">
               {{ 'settingsHub.ai.faceThreshold' | translate }}
             </span>
             <input
@@ -58,7 +58,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           <label class="flex items-start gap-2">
             <input type="checkbox" class="mt-1" [(ngModel)]="cctvOverride" [disabled]="busy" />
             <span>
-              <span class="block text-xs font-semibold text-slate-700">
+              <span class="block text-xs font-semibold text-slate-200">
                 {{ 'settingsHub.ai.cctvOverride' | translate }}
               </span>
               <span class="block text-[0.7rem] text-dpu-muted">
@@ -68,7 +68,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           </label>
 
           <label class="block" *ngIf="cctvOverride">
-            <span class="text-xs font-semibold text-slate-700">
+            <span class="text-xs font-semibold text-slate-200">
               {{ 'settingsHub.ai.cctvInterval' | translate }}
             </span>
             <input
@@ -102,10 +102,10 @@ type PanelStatus = 'idle' | 'saved' | 'error';
             >
               รีเซ็ตค่าเริ่มต้น
             </button>
-            <span class="text-xs font-semibold text-emerald-700" *ngIf="status === 'saved'">
+            <span class="text-xs font-semibold text-emerald-400" *ngIf="status === 'saved'">
               {{ 'settingsHub.ai.saved' | translate }}
             </span>
-            <span class="text-xs font-semibold text-rose-700" *ngIf="status === 'error'">
+            <span class="text-xs font-semibold text-rose-400" *ngIf="status === 'error'">
               {{ 'settingsHub.ai.error' | translate }}
             </span>
           </div>

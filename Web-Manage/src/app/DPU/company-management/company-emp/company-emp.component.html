@@ -37,6 +37,11 @@
                 <i class="ri-file-excel-2-line"></i>
                 <span class="emp-tool-label">{{ 'Template' | translate }}</span>
               </button>
+              <button type="button" class="ti-btn ti-btn-light modern-btn emp-tool-btn"
+                (click)="exportEmployeesCsv()">
+                <i class="ri-download-2-line"></i>
+                <span class="emp-tool-label">Export CSV</span>
+              </button>
               <button type="button" class="ti-btn ti-btn-info-full modern-btn emp-tool-btn"
                 [disabled]="isImporting" (click)="triggerImportFile()">
                 <i *ngIf="!isImporting" class="ri-upload-2-line"></i>
@@ -89,6 +94,7 @@
       [pageEnd]="pageEnd"
       (viewItem)="view($event)"
       (deleteItem)="delete($event)"
+      (offboardItem)="offboard($event)"
       (enrollFace)="openFaceEnroll($event)"
       (manageFace)="openFaceManagementModal($event)"
       (goToPage)="goToPage($event)"

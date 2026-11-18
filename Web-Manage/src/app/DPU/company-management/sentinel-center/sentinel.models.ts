@@ -13,6 +13,7 @@ export interface SentinelZone {
   doorHeldMaxSeconds?: number;
   edgeProtocol?: 'WEBHOOK' | 'WIEGAND' | 'OSDP' | string;
   edgeBridgeUrl?: string | null;
+  relayWebhookUrl?: string | null;
   osdpAddress?: number;
   allowedIdentityTypes?: string[];
 }

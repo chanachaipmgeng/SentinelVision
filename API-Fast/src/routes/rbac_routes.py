@@ -90,7 +90,12 @@ async def list_company_role_assignments(
         {
             m.memberId: m
             for m in (
-                await db.execute(select(Member).where(Member.memberId.in_(member_ids)))
+                await db.execute(
+                    select(Member).where(
+                        Member.memberId.in_(member_ids),
+                        Member.deletedAt.is_(None),
+                    )
+                )
             ).scalars().all()
         }
         if member_ids
@@ -100,7 +105,12 @@ async def list_company_role_assignments(
         {
             d.departmentId: (d.thName or d.engName or "")
             for d in (
-                await db.execute(select(Department).where(Department.departmentId.in_(dept_ids)))
+                await db.execute(
+                    select(Department).where(
+                        Department.departmentId.in_(dept_ids),
+                        Department.deletedAt.is_(None),
+                    )
+                )
             ).scalars().all()
         }
         if dept_ids
@@ -110,7 +120,12 @@ async def list_company_role_assignments(
         {
             loc.locationId: loc.locationName
             for loc in (
-                await db.execute(select(CompanyLocation).where(CompanyLocation.locationId.in_(loc_ids)))
+                await db.execute(
+                    select(CompanyLocation).where(
+                        CompanyLocation.locationId.in_(loc_ids),
+                        CompanyLocation.deletedAt.is_(None),
+                    )
+                )
             ).scalars().all()
         }
         if loc_ids

@@ -43,6 +43,7 @@ export class HrShiftsTabComponent implements OnInit {
   departments: HrDepartmentShiftRow[] = [];
   employees: HrEmployeeShiftRow[] = [];
   newShift = defaultNewShift();
+  editingShiftId: string | null = null;
 
   // BL-10: Roster Calendar & Shift Swap
   rosterMonth = new Date().toISOString().slice(0, 7);
@@ -91,11 +92,41 @@ export class HrShiftsTabComponent implements OnInit {
 
   createShift(): void {
     if (!this.newShift.name.trim()) return;
+    if (this.editingShiftId) {
+      this.api.updateShift(this.companyId, this.editingShiftId, this.newShift).subscribe(() => {
+        this.editingShiftId = null;
+        this.newShift = defaultNewShift();
+        this.loadShifts();
+        this.flash('อัปเดตกะเวลาทำงานเรียบร้อย');
+      });
+      return;
+    }
     this.api.createShift(this.companyId, this.newShift).subscribe(() => {
       this.newShift = defaultNewShift();
       this.loadShifts();
       this.flash('บันทึกกะเวลาทำงานเรียบร้อย');
     });
+  }
+
+  startEditShift(s: HrShift): void {
+    this.editingShiftId = s.shiftId;
+    this.newShift = {
+      name: s.name || '',
+      startTime: s.startTime || '09:00',
+      endTime: s.endTime || '18:00',
+      graceMinutes: Number(s.graceMinutes ?? 15),
+      roundingMinutes: Number(s.roundingMinutes ?? 0),
+      breakMinutes: Number(s.breakMinutes ?? 0),
+      otThresholdMinutes: Number(s.otThresholdMinutes ?? 0),
+      breakWindows: [],
+      isCrossMidnight: Boolean(s.isCrossMidnight),
+      isDefault: Boolean(s.isDefault),
+    };
+  }
+
+  cancelEditShift(): void {
+    this.editingShiftId = null;
+    this.newShift = defaultNewShift();
   }
 
   deleteShift(shiftId: string): void {

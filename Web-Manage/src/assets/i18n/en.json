@@ -919,5 +919,22 @@
   "presence.ot.status.punch_without_camera": "Punch, no camera",
   "presence.ot.status.camera_without_punch": "Camera, no punch",
   "CCTV — Cameras": "CCTV — Cameras",
-  "Error logs": "Error logs"
+  "Error logs": "Error logs",
+  "SentinelVision Command & Graph": "SentinelVision Command & Graph",
+  "Mobile field check-in": "Mobile field check-in",
+  "sidebar.rail.aria": "Primary modules",
+  "sidebar.rail.command": "Command",
+  "sidebar.rail.core": "Org",
+  "sidebar.rail.attendance": "Clock",
+  "sidebar.rail.access": "Access",
+  "sidebar.rail.watchlist": "Watch",
+  "sidebar.rail.visitor": "Visitors",
+  "sidebar.rail.events": "Events",
+  "sidebar.rail.cctv": "CCTV",
+  "sidebar.rail.governance": "System",
+  "sidebar.rail.admin": "Admin",
+  "Add": "Add",
+  "Select": "Select",
+  "PERMANENT": "Permanent",
+  "TEMPORARY": "Temporary"
 }

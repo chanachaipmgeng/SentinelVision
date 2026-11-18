@@ -210,14 +210,14 @@ export class FaceMonitorComponent implements OnInit {
       xAxis: {
         type: 'category',
         data: Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')),
-        splitArea: { show: true },
-        axisLabel: { color: '#64748b' },
+        splitArea: { show: false },
+        axisLabel: { color: '#94a3b8' },
       },
       yAxis: {
         type: 'category',
         data: this.weekdayLabels,
-        splitArea: { show: true },
-        axisLabel: { color: '#64748b' },
+        splitArea: { show: false },
+        axisLabel: { color: '#94a3b8' },
       },
       visualMap: {
         min: 0,
@@ -226,7 +226,8 @@ export class FaceMonitorComponent implements OnInit {
         orient: 'horizontal',
         left: 'center',
         bottom: 0,
-        inRange: { color: ['#ecfdf5', brand, '#134e4a'] },
+        textStyle: { color: '#94a3b8' },
+        inRange: { color: ['rgba(15, 23, 42, 0.55)', brand, '#2dd4bf'] },
       },
       series: [
         {

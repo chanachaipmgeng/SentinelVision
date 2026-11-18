@@ -63,6 +63,8 @@ _COMPANY_RES = [
     re.compile(rf"/analytics/company/({_UUID})"),
     re.compile(rf"/people/company/({_UUID})"),
     re.compile(rf"/presence/company/({_UUID})"),
+    re.compile(rf"/rbac/company/({_UUID})"),
+    re.compile(rf"/scim/v2/company/({_UUID})"),
 ]
 # Tenant API keys (Bearer sv_…) — read-only scopes → path allow-lists.
 _API_KEY_SCOPE_RES = (
@@ -114,6 +116,16 @@ _APPROVAL_MEMBERSHIP_RES = [
     re.compile(rf"/hr/company/({_UUID})/regularizations(?:/|$)"),
     re.compile(rf"/hr/company/({_UUID})/ot-approvals(?:/|$)"),
     re.compile(rf"/hr/company/({_UUID})/leave-balances(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/leaves(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/shift-swaps(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/pdpa/consent-policy(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/approval-policy(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/approval-delegations(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/leave-policies(?:/|$)"),
+    re.compile(rf"/hr/company/({_UUID})/ot-policy(?:/|$)"),
+    re.compile(rf"/employees/company/({_UUID})/member/"),
+    re.compile(rf"/timestamp/search/company/({_UUID})(?:/|$)"),
+    re.compile(rf"/timestamp/company/({_UUID})/(?:mobile-checkin|pin-checkin|offline-sync)"),
 ]
 _OPEN_PREFIXES = (
     "/auth/login",

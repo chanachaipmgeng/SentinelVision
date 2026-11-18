@@ -151,6 +151,9 @@
             <button type="button" class="ti-btn ti-btn-light modern-btn ms-2" (click)="downloadSelected()">
               {{ 'cctv.playback.download' | translate }}
             </button>
+            <button type="button" class="ti-btn ti-btn-danger modern-btn ms-1.5" (click)="deleteSelected()">
+              <i class="ri-delete-bin-line"></i> {{ 'Delete' | translate }}
+            </button>
           </div>
         </div>
         <video

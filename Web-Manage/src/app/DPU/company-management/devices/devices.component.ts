@@ -65,6 +65,7 @@ export class DevicesComponent implements OnInit {
   companyId = '';
   loading = false;
   items: KioskDeviceRow[] = [];
+  zones: Array<{ zoneId: string; name: string }> = [];
   filtered: KioskDeviceRow[] = [];
   pageItems: KioskDeviceRow[] = [];
   pageIndex = 0;
@@ -104,6 +105,22 @@ export class DevicesComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.loadZones();
+  }
+
+  loadZones(): void {
+    if (!this.companyId) return;
+    this.http
+      .get<Array<{ zoneId: string; name?: string }>>(`/sentinel/company/${this.companyId}/zones`)
+      .subscribe({
+        next: (rows) => {
+          this.zones = (rows || []).map((z) => ({
+            zoneId: z.zoneId,
+            name: String(z.name || z.zoneId),
+          }));
+        },
+        error: () => (this.zones = []),
+      });
   }
 
   private api(path = ''): string {

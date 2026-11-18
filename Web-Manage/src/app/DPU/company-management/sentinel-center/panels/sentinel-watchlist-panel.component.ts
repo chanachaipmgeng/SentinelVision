@@ -27,6 +27,7 @@ export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {
   identities: SentinelIdentity[] = [];
   selectedIdentityPhoto: File | null = null;
   watchlistForm = defaultWatchlistForm();
+  editingIdentityId: string | null = null;
 
   siemForm = {
     siemWebhookUrl: '',
@@ -145,6 +146,25 @@ export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {
       this.toast.emit('กรุณาระบุชื่อ-นามสกุล');
       return;
     }
+    if (this.editingIdentityId) {
+      const targetId = this.editingIdentityId;
+      this.api.updateIdentity(this.companyId, targetId, formObj).subscribe({
+        next: () => {
+          const photo = this.selectedIdentityPhoto;
+          this.selectedIdentityPhoto = null;
+          this.editingIdentityId = null;
+          this.watchlistForm = defaultWatchlistForm();
+          if (photo) {
+            this.uploadIdentityFace(targetId, photo);
+          } else {
+            this.toast.emit('อัปเดตรายชื่อเรียบร้อยแล้ว');
+            this.loadIdentities();
+            this.overviewChanged.emit();
+          }
+        },
+      });
+      return;
+    }
     this.api.createIdentity(this.companyId, formObj).subscribe({
       next: (created) => {
         const photo = this.selectedIdentityPhoto;
@@ -165,6 +185,25 @@ export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {
     const file = firstFileFromInput(event);
     if (!file) return;
     this.uploadIdentityFace(identityId, file);
+  }
+
+  startEditIdentity(item: SentinelIdentity): void {
+    this.editingIdentityId = item.identityId;
+    this.watchlistForm = {
+      ...defaultWatchlistForm(),
+      identityType: (item.identityType as 'BLACKLIST' | 'POI' | 'VIP') || 'BLACKLIST',
+      severity: (item.severity as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW') || 'HIGH',
+      fullName: item.fullName || '',
+      documentRef: item.documentRef || '',
+      organization: item.organization || '',
+      expiresAt: item.expiresAt ? String(item.expiresAt).slice(0, 16) : '',
+      alertNote: item.alertNote || '',
+    };
+  }
+
+  cancelEditIdentity(): void {
+    this.editingIdentityId = null;
+    this.watchlistForm = defaultWatchlistForm();
   }
 
   private uploadIdentityFace(identityId: string, file: File): void {

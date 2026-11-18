@@ -408,7 +408,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     this.companyId = kiosk?.companyId || company.companyId;
     this.companyName = company.companyName || kiosk?.deviceName || 'บริษัท';
     this.isKioskDevice = !!kiosk;
-    this.homeLink = kiosk ? '/company/timestamp-face' : `/company/home/${this.companyId}`;
+    this.homeLink = kiosk ? '/company/timestamp-face' : '/company/dashboard';
     // Initial paint before paramMap subscription; live updates go through onStationRouteParams.
     this.applyResolvedStationContext(
       resolveStationRouteContext(

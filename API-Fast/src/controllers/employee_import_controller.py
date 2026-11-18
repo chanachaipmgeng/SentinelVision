@@ -158,8 +158,18 @@ def _lookup_by_name(items: List[Any], name: str) -> Optional[Any]:
 
 
 async def _load_org_lookups(companyId: str, db: AsyncSession) -> Tuple[List[Department], List[Position]]:
-    dept_result = await db.execute(select(Department).where(Department.companyId == companyId))
-    pos_result = await db.execute(select(Position).where(Position.companyId == companyId))
+    dept_result = await db.execute(
+        select(Department).where(
+            Department.companyId == companyId,
+            Department.deletedAt.is_(None),
+        )
+    )
+    pos_result = await db.execute(
+        select(Position).where(
+            Position.companyId == companyId,
+            Position.deletedAt.is_(None),
+        )
+    )
     return list(dept_result.scalars().all()), list(pos_result.scalars().all())
 
 

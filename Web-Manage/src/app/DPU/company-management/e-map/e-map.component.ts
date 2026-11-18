@@ -238,6 +238,22 @@ export class EMapComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  async deleteSelectedFloor(): Promise<void> {
+    if (!this.companyId || !this.selectedFloorId) return;
+    this.saving = true;
+    try {
+      await firstValueFrom(
+        this.http.delete(`/site-floors/company/${this.companyId}/floors/${this.selectedFloorId}`)
+      );
+      this.selectedFloorId = '';
+      await this.reloadFloors();
+    } catch {
+      this.errorMessage = 'emap.saveError';
+    } finally {
+      this.saving = false;
+    }
+  }
+
   async onPlanSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];

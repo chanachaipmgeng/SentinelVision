@@ -32,6 +32,7 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     if (!this.companyId) return;
+    this.loadSafeKeys();
     this.loadEdgeManifest();
     this.applyOverviewMuster(this.overview);
     this.refreshMuster();
@@ -140,6 +141,34 @@ export class SentinelMusterPanelComponent implements OnInit, OnChanges {
       this.safeKeys.delete(key);
     } else {
       this.safeKeys.add(key);
+    }
+    this.saveSafeKeys();
+  }
+
+  private safeStorageKey(): string {
+    const day = this.musterWorkDate || new Date().toISOString().slice(0, 10);
+    return `sv_muster_safe_${this.companyId}_${day}`;
+  }
+
+  private loadSafeKeys(): void {
+    try {
+      const raw = localStorage.getItem(this.safeStorageKey());
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          this.safeKeys = new Set(arr.map(String));
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private saveSafeKeys(): void {
+    try {
+      localStorage.setItem(this.safeStorageKey(), JSON.stringify(Array.from(this.safeKeys)));
+    } catch {
+      // ignore storage errors
     }
   }
 

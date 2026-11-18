@@ -209,4 +209,16 @@ export class PresenceComponent implements OnInit {
     }
     return 'warn';
   }
+
+  async closeStaleSessions(): Promise<void> {
+    if (!this.companyId) return;
+    try {
+      await firstValueFrom(
+        this.http.post(`/presence/company/${this.companyId}/close-stale`, {})
+      );
+      await this.runSearch();
+    } catch {
+      this.error = 'presence.error';
+    }
+  }
 }

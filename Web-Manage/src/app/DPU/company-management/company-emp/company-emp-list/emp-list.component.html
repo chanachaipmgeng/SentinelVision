@@ -44,6 +44,9 @@
                         <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
                           (click)="manageFace.emit(item)"
                           class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                        <button type="button" title="แจ้งพ้นสภาพ / ล้างข้อมูลชีวมิติ (Offboard)"
+                          (click)="offboardItem.emit(item)"
+                          class="ti-btn ti-btn-sm bg-amber-500/20 text-amber-300 border border-amber-500/30 modern-btn"><i class="ri-user-unfollow-line"></i></button>
                         <button type="button" title="ลบ" (click)="deleteItem.emit(item)"
                           class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
                       </div>
@@ -97,6 +100,9 @@
                 <button type="button" title="จัดการใบหน้า" data-hs-overlay="#modal-face-management"
                   (click)="manageFace.emit(item)"
                   class="ti-btn ti-btn-sm ti-btn-info modern-btn"><i class="ri-gallery-line"></i></button>
+                <button type="button" title="แจ้งพ้นสภาพ / ล้างข้อมูลชีวมิติ (Offboard)"
+                  (click)="offboardItem.emit(item)"
+                  class="ti-btn ti-btn-sm bg-amber-500/20 text-amber-300 border border-amber-500/30 modern-btn"><i class="ri-user-unfollow-line"></i></button>
                 <button type="button" title="ลบ" (click)="deleteItem.emit(item)"
                   class="ti-btn ti-btn-sm ti-btn-danger modern-btn"><i class="ri-delete-bin-line"></i></button>
               </div>
@@ -105,7 +111,7 @@
         </div>
       }
 
-      @if (totalFiltered === 0) {
+      @if (safeFilterList.length === 0) {
         <div class="emp-empty">
           <i class="ri-user-search-line"></i>
           <p class="mb-1 font-semibold">{{ searchTerm ? 'ไม่พบพนักงานที่ค้นหา' : 'ยังไม่มีพนักงาน' }}</p>

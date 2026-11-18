@@ -12,6 +12,7 @@ from ..controllers.company_controller import (
     get_company_by_id,
     create_company,
     update_company,
+    delete_company,
 )
 from ..models.member import Member
 from ..schemas.company_schema import CompanyUpdate, CompanyResponse, CompanyBase
@@ -100,10 +101,21 @@ async def create_company_route(
 async def update_company_route(
     companyId: str,
     company_update: CompanyUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     _: Member = Depends(require_permission("company.settings")),
 ):
+    await assert_request_company_access(request, db, companyId)
     return await update_company(companyId, company_update.dict(exclude_unset=True), db)
+
+
+@router.delete("/{companyId}")
+async def delete_company_route(
+    companyId: str,
+    db: AsyncSession = Depends(get_db),
+    _: Member = Depends(require_system_admin),
+):
+    return await delete_company(companyId, db)
 
 
 @router.get("/{companyId}/audit-logs")

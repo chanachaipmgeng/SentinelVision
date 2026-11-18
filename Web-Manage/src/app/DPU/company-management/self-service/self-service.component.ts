@@ -84,7 +84,15 @@ export class SelfServiceComponent implements OnInit {
   leaveBalances: SelfLeaveBalanceRow[] = [];
   regularizations: SelfRegularizationRow[] = [];
   otRequests: SelfOtRow[] = [];
-  leaveDraft = { startDate: '', endDate: '', leaveType: 'ANNUAL', reason: '' };
+  leaveDraft = {
+    startDate: '',
+    endDate: '',
+    leaveType: 'ANNUAL',
+    leaveUnit: 'DAY' as 'DAY' | 'HOUR',
+    leaveHours: 4,
+    attachmentUrl: '',
+    reason: '',
+  };
   regenDraft = {
     workDate: '',
     requestedTimestamp: '',
@@ -252,7 +260,7 @@ export class SelfServiceComponent implements OnInit {
         });
       if (!this.colleagues.length) {
         this.http
-          .get<typeof this.colleagues>(`/hr/company/${this.companyId}/employees`)
+          .get<typeof this.colleagues>(`/employees/company/${this.companyId}`)
           .subscribe({
             next: (rows) =>
               (this.colleagues = (rows || []).filter(
@@ -272,8 +280,11 @@ export class SelfServiceComponent implements OnInit {
       .post(`/hr/company/${this.companyId}/leaves`, {
         company_employeeId: this.companyEmployeeId,
         startDate: this.leaveDraft.startDate,
-        endDate: this.leaveDraft.endDate,
+        endDate: this.leaveDraft.endDate || this.leaveDraft.startDate,
         leaveType: this.leaveDraft.leaveType,
+        leaveUnit: this.leaveDraft.leaveUnit,
+        leaveHours: this.leaveDraft.leaveUnit === 'HOUR' ? Number(this.leaveDraft.leaveHours) || 1 : null,
+        attachmentUrl: this.leaveDraft.attachmentUrl?.trim() || null,
         reason: this.leaveDraft.reason,
       })
       .subscribe({

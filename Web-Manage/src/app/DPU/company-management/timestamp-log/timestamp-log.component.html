@@ -214,7 +214,7 @@
   size="lg"
   [title]="'Attendance details'"
   [subtitle]="selectModel ? (selectModel.timestamp | date: 'EEEE, dd MMMM yyyy HH:mm') || '' : ''"
-  [showFooter]="selectModel?.timestampType === 0">
+  [showFooter]="!!selectModel">
   <span drawerHeaderActions *ngIf="selectModel as item" class="ts-status-pill" [attr.data-tone]="statusTone(item)">
     <i class="ri-checkbox-circle-line" *ngIf="statusTone(item) === 'success'"></i>
     <i class="ri-error-warning-line" *ngIf="statusTone(item) === 'warning'"></i>

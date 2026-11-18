@@ -8,6 +8,7 @@ import {
   HrLeave,
   HrObservabilitySummary,
   HrPdpaSummary,
+  HrShift,
   HrShiftsResponse,
   HrDepartmentShiftRow,
   NotifyOutboxRow,
@@ -30,6 +31,10 @@ export class HrScheduleApiService {
 
   createShift(companyId: string, body: Record<string, unknown>): Observable<HrShiftsResponse> {
     return this.http.post<HrShiftsResponse>(`/hr/company/${companyId}/shifts`, body);
+  }
+
+  updateShift(companyId: string, shiftId: string, body: Record<string, unknown>): Observable<HrShift> {
+    return this.http.put<HrShift>(`/hr/company/${companyId}/shifts/${shiftId}`, body);
   }
 
   deleteShift(companyId: string, shiftId: string): Observable<Record<string, unknown>> {

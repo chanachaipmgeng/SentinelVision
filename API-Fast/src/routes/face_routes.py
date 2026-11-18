@@ -52,15 +52,26 @@ async def enrolled_image_proxy_route(
 
 
 @router.get("/queue-stats")
-async def face_queue_stats(companyId: Optional[UUID] = None, _auth=_face_auth):
+async def face_queue_stats(
+    request: Request,
+    companyId: Optional[UUID] = None,
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
+):
+    if companyId is not None:
+        await assert_request_company_access(request, db, companyId)
     return await face_core_queue_stats_route(companyId)
 
 
 @router.get("/kiosk-attendance/{companyId}")
 async def kiosk_attendance_route(
-    companyId: UUID, db: AsyncSession = Depends(get_db), _auth=_face_auth
+    request: Request,
+    companyId: UUID,
+    db: AsyncSession = Depends(get_db),
+    _auth=_face_auth,
 ):
     """Today's checked-in roster for the face kiosk panel."""
+    await assert_request_company_access(request, db, companyId)
     return await get_kiosk_attendance(companyId, db)
 
 
@@ -245,15 +256,20 @@ async def check_face_quality_route(
     _auth=_face_auth,
 ):
     """BL-09: Pre-check brightness, sharpness, face ratio, and 5-angle pose (yaw/pitch/roll)."""
+    import asyncio
     import cv2
     import numpy as np
 
     from ..utils.enrollment_quality import check_enrollment_quality_bgr
+    from ..utils.face_engine import get_decode_executor
     from ..utils.face_gpu_queue import run_on_face_gpu
 
     raw = await file.read()
     arr = np.frombuffer(raw, dtype=np.uint8)
-    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    loop = asyncio.get_running_loop()
+    img = await loop.run_in_executor(
+        get_decode_executor(), lambda: cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    )
     if img is None:
         return {"ok": False, "reason": "Invalid image file", "scores": {}}
 

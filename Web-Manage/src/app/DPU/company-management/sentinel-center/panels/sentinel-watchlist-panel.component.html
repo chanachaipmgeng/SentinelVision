@@ -184,13 +184,21 @@
           (change)="onIdentityPhotoSelected($event)"
         />
       </div>
-      <div class="col-span-12">
+      <div class="col-span-12 flex gap-2">
         <button
           type="button"
-          class="btn-vault w-full py-2.5 font-semibold text-sm"
+          class="btn-vault flex-1 py-2.5 font-semibold text-sm"
           (click)="createIdentityRecord(watchlistForm)"
         >
-          + บันทึกรายชื่อเข้าสู่ระบบเฝ้าระวัง
+          {{ editingIdentityId ? 'บันทึกการแก้ไขรายชื่อ' : '+ บันทึกรายชื่อเข้าสู่ระบบเฝ้าระวัง' }}
+        </button>
+        <button
+          *ngIf="editingIdentityId"
+          type="button"
+          class="ti-btn ti-btn-light py-2.5 px-4 text-xs font-semibold"
+          (click)="cancelEditIdentity()"
+        >
+          ยกเลิก
         </button>
       </div>
     </div>
@@ -260,7 +268,14 @@
                 />
               </label>
             </td>
-            <td class="p-3 text-end">
+            <td class="p-3 text-end space-x-1">
+              <button
+                type="button"
+                class="ti-btn ti-btn-sm ti-btn-light"
+                (click)="startEditIdentity(item)"
+              >
+                <i class="ri-edit-line"></i> แก้ไข
+              </button>
               <button
                 type="button"
                 class="ti-btn ti-btn-sm ti-btn-danger"

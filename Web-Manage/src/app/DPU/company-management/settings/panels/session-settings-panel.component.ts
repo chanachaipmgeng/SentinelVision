@@ -26,7 +26,7 @@ type PanelStatus = 'idle' | 'saved' | 'error';
         <div *ngIf="loading" class="text-xs text-dpu-muted">{{ 'settingsHub.loading' | translate }}</div>
 
         <label class="block" *ngIf="!loading">
-          <span class="text-xs font-semibold text-slate-700">
+          <span class="text-xs font-semibold text-slate-200">
             {{ 'settingsHub.session.idleMinutes' | translate }}
           </span>
           <input
@@ -59,10 +59,10 @@ type PanelStatus = 'idle' | 'saved' | 'error';
           >
             รีเซ็ตค่าเริ่มต้น
           </button>
-          <span class="text-xs font-semibold text-emerald-700" *ngIf="status === 'saved'">
+          <span class="text-xs font-semibold text-emerald-400" *ngIf="status === 'saved'">
             {{ 'settingsHub.session.saved' | translate }}
           </span>
-          <span class="text-xs font-semibold text-rose-700" *ngIf="status === 'error'">
+          <span class="text-xs font-semibold text-rose-400" *ngIf="status === 'error'">
             {{ 'settingsHub.session.error' | translate }}
           </span>
         </div>

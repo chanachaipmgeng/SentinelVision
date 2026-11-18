@@ -22,6 +22,7 @@ export class SentinelAccessPanelComponent implements OnInit {
   companyId = '';
   zones: SentinelZone[] = [];
   zoneForm = defaultZoneForm();
+  editingZoneId: string | null = null;
   lastCreatedZoneId: string | null = null;
 
   constructor(
@@ -50,6 +51,20 @@ export class SentinelAccessPanelComponent implements OnInit {
       return;
     }
     const allowedIdentityTypes = buildZoneAllowedIdentityTypes(this.zoneForm);
+    if (this.editingZoneId) {
+      this.api
+        .updateZone(this.companyId, this.editingZoneId, { ...this.zoneForm, allowedIdentityTypes })
+        .subscribe({
+          next: () => {
+            this.editingZoneId = null;
+            this.zoneForm = defaultZoneForm();
+            this.toast.emit('อัปเดตโซนประตู Access Control สำเร็จ');
+            this.loadZones();
+            this.overviewChanged.emit();
+          },
+        });
+      return;
+    }
     this.api
       .createZone(this.companyId, { ...this.zoneForm, allowedIdentityTypes })
       .subscribe({
@@ -61,6 +76,34 @@ export class SentinelAccessPanelComponent implements OnInit {
           this.overviewChanged.emit();
         },
       });
+  }
+
+  startEditZone(z: SentinelZone): void {
+    this.editingZoneId = z.zoneId;
+    const allowed = Array.isArray(z.allowedIdentityTypes) ? z.allowedIdentityTypes : [];
+    this.zoneForm = {
+      ...defaultZoneForm(),
+      name: z.name || '',
+      code: z.code || '',
+      stationMode: z.stationMode || 'ACCESS_CONTROL',
+      direction: z.direction || 'BIDIRECTIONAL',
+      scheduleStart: z.scheduleStart || '00:00',
+      scheduleEnd: z.scheduleEnd || '23:59',
+      allowEmployee: allowed.includes('EMPLOYEE'),
+      allowVip: allowed.includes('VIP'),
+      allowVisitor: allowed.includes('VISITOR'),
+      relayWebhookUrl: z.relayWebhookUrl || '',
+      require2FA: Boolean(z.require2FA),
+      antiPassbackEnabled: Boolean(z.antiPassbackEnabled),
+      edgeProtocol: z.edgeProtocol || 'WEBHOOK',
+      osdpAddress: Number(z.osdpAddress ?? 0),
+      edgeBridgeUrl: z.edgeBridgeUrl || '',
+    };
+  }
+
+  cancelEditZone(): void {
+    this.editingZoneId = null;
+    this.zoneForm = defaultZoneForm();
   }
 
   remoteUnlockZone(zoneId: string): void {

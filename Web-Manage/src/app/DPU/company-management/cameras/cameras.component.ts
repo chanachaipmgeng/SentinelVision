@@ -591,8 +591,18 @@ export class CamerasComponent implements OnInit {
 
   sendPtz(cam: CameraRow, action: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT' | 'ZOOM_IN' | 'ZOOM_OUT' | 'STOP'): void {
     if (!this.companyId) return;
+    const speed = 0.5;
+    const pan = action === 'LEFT' ? -speed : action === 'RIGHT' ? speed : 0;
+    const tilt = action === 'UP' ? speed : action === 'DOWN' ? -speed : 0;
+    const zoom = action === 'ZOOM_IN' ? speed : action === 'ZOOM_OUT' ? -speed : 0;
     this.http
-      .post(`/cameras/company/${this.companyId}/cameras/${cam.cameraId}/ptz`, { action, speed: 0.5 })
+      .post(`/cameras/company/${this.companyId}/cameras/${cam.cameraId}/ptz`, {
+        action: action === 'STOP' ? 'stop' : 'move',
+        pan,
+        tilt,
+        zoom,
+        speed,
+      })
       .subscribe({
         next: () => undefined,
         error: (err) => {

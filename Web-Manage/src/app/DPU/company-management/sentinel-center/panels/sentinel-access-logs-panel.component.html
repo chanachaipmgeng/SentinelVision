@@ -2,7 +2,7 @@
   <div class="flex flex-wrap items-start justify-between gap-3">
     <div>
       <h6 class="font-bold text-base mb-0">
-        <i class="ri-file-list-3-line text-teal-700 me-1"></i>
+        <i class="ri-file-list-3-line text-cyan-400 me-1"></i>
         ประวัติการผ่านประตู / Access Control Logs
       </h6>
       <p class="text-xs text-dpu-muted mb-0">
@@ -213,12 +213,12 @@
                 class="text-[0.65rem] font-semibold uppercase tracking-wide"
                 [ngClass]="
                   inc.status === 'CLOSED'
-                    ? 'text-slate-500'
+                    ? 'text-slate-400'
                     : inc.status === 'ASSIGNED'
-                    ? 'text-sky-700'
+                    ? 'text-sky-300'
                     : inc.status === 'ACKNOWLEDGED'
-                    ? 'text-emerald-700'
-                    : 'text-amber-700'
+                    ? 'text-emerald-300'
+                    : 'text-amber-300'
                 "
               >
                 {{ inc.status || 'OPEN' }}
@@ -261,9 +261,9 @@
         <tr *ngIf="!loading && incidents.length === 0">
           <td colspan="7" class="py-8">
             <div class="flex flex-col items-center justify-center gap-3 text-center px-4">
-              <i class="ri-door-open-line text-3xl text-teal-700/70" aria-hidden="true"></i>
+              <i class="ri-door-open-line text-3xl text-cyan-400/70" aria-hidden="true"></i>
               <div>
-                <p class="font-semibold text-slate-800 mb-1">ยังไม่มีเหตุการณ์ผ่านประตู</p>
+                <p class="font-semibold text-slate-200 mb-1">ยังไม่มีเหตุการณ์ผ่านประตู</p>
                 <p class="text-xs text-dpu-muted mb-0 max-w-md">
                   สร้างโซนประตู แล้วเปิดสแกน Access Control (กล้องสดหรืออัปโหลดทดสอบบนศูนย์เฝ้าระวัง)
                   เพื่อให้เหตุการณ์ปรากฏที่นี่

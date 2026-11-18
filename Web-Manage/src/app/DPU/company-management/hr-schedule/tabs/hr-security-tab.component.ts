@@ -28,7 +28,7 @@ export class HrSecurityTabComponent implements OnInit {
   kioskDevices: HrKioskDevice[] = [];
   newKioskName = '';
   issuedKiosk: HrKioskDevice | null = null;
-  readonly pairPageUrl = `${window.location.origin}/kiosk/pair`;
+  readonly pairPageUrl = `${window.location.origin}/#/kiosk/pair`;
   mfaStatus: MfaStatusView | null = null;
   mfaSetupData: MfaSetupDataView | null = null;
   mfaVerifyCode = '';

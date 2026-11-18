@@ -218,10 +218,11 @@
         <label class="form-label">{{ 'Muted events' | translate }} (comma-separated)</label>
         <input class="form-control" [(ngModel)]="mutedRaw" placeholder="attendance.missing, import.finished" />
       </div>
-      <div class="col-span-12">
+      <div class="col-span-12 flex items-center gap-3">
         <button type="button" class="ti-btn ti-btn-primary-full" (click)="savePrefs()">
           {{ 'Save' | translate }}
         </button>
+        <span *ngIf="prefsSavedMsg" class="text-xs font-semibold text-emerald-400">{{ prefsSavedMsg }}</span>
       </div>
     </div>
   </div>
@@ -230,7 +231,68 @@
     <div class="box-header">
       <h6 class="font-semibold m-0">{{ 'Templates' | translate }} &amp; i18n keys</h6>
     </div>
-    <div class="box-body space-y-4">
+    <div class="box-body space-y-5">
+      <div class="p-4 rounded-xl border border-white/10 bg-slate-900/50 space-y-3">
+        <h6 class="font-semibold text-sm mb-0">สร้าง / แก้ไขเทมเพลตแจ้งเตือนขององค์กร (Custom Template)</h6>
+        <div class="grid grid-cols-12 gap-3 text-xs">
+          <div class="col-span-12 sm:col-span-4">
+            <label class="form-label">Event Key</label>
+            <input class="form-control" [(ngModel)]="customDraft.eventKey" placeholder="attendance.checked_in" />
+          </div>
+          <div class="col-span-6 sm:col-span-2">
+            <label class="form-label">Locale</label>
+            <select class="form-control" [(ngModel)]="customDraft.locale">
+              <option value="th">th</option>
+              <option value="en">en</option>
+            </select>
+          </div>
+          <div class="col-span-6 sm:col-span-3">
+            <label class="form-label">Channel</label>
+            <select class="form-control" [(ngModel)]="customDraft.channel">
+              <option value="IN_APP">IN_APP</option>
+              <option value="EMAIL">EMAIL</option>
+              <option value="LINE">LINE</option>
+            </select>
+          </div>
+          <div class="col-span-12 sm:col-span-3">
+            <label class="form-label">Subject</label>
+            <input class="form-control" [(ngModel)]="customDraft.subject" placeholder="หัวข้อแจ้งเตือน" />
+          </div>
+          <div class="col-span-12">
+            <label class="form-label">Body Template</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="customDraft.bodyTemplate" placeholder="ข้อความแจ้งเตือน..."></textarea>
+          </div>
+          <div class="col-span-12">
+            <button type="button" class="ti-btn ti-btn-primary-full text-xs" (click)="saveCustomTemplate()">
+              <i class="ri-save-line me-1"></i> บันทึกเทมเพลตองค์กร
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="templates.custom?.length">
+        <h6 class="font-semibold">เทมเพลตเฉพาะขององค์กร (Custom Templates)</h6>
+        <table class="table table-bordered w-full text-sm">
+          <thead>
+            <tr>
+              <th>event</th>
+              <th>locale</th>
+              <th>channel</th>
+              <th>subject</th>
+              <th>body</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of templates.custom">
+              <td><code>{{ t.eventKey }}</code></td>
+              <td>{{ t.locale }}</td>
+              <td>{{ t.channel }}</td>
+              <td>{{ t.subject }}</td>
+              <td>{{ t.bodyTemplate }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <div>
         <h6 class="font-semibold">i18n</h6>
         <ul class="text-sm">

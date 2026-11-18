@@ -121,6 +121,35 @@ import { SentinelApiService, SentinelInvestigationGraph, SentinelGraphNode } fro
               คลิกที่ Node ในกราฟเพื่อดูรายละเอียด Zone, กล้อง, บุคคลเฝ้าระวัง หรือ Incident พร้อมเปิดดูภาพหลักฐาน
             </p>
           }
+
+          <div class="pt-3 mt-3 border-t border-white/10 space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-teal-300 flex items-center gap-1.5">
+              <i class="ri-sparkling-2-line"></i>
+              <span>Sentinel AI Copilot</span>
+            </div>
+            <div class="flex gap-1.5">
+              <input
+                type="text"
+                class="form-control !py-1.5 !px-2.5 text-xs flex-1"
+                [(ngModel)]="copilotPrompt"
+                (keyup.enter)="askCopilot()"
+                placeholder="ถามสรุปเหตุการณ์วันนี้..."
+              />
+              <button
+                type="button"
+                class="ti-btn !px-3 !py-1.5 text-xs bg-teal-500/20 text-teal-200 border border-teal-500/30 rounded-lg"
+                [disabled]="copilotLoading() || !copilotPrompt.trim()"
+                (click)="askCopilot()"
+              >
+                <i class="ri-send-plane-2-line" [class.animate-pulse]="copilotLoading()"></i>
+              </button>
+            </div>
+            @if (copilotReply()) {
+              <div class="p-2.5 rounded-xl bg-slate-900/80 border border-teal-500/20 text-xs text-slate-200 whitespace-pre-line leading-relaxed max-h-48 overflow-y-auto">
+                {{ copilotReply() }}
+              </div>
+            }
+          </div>
         </div>
       </div>
     </div>
@@ -145,6 +174,9 @@ export class SentinelGraphPanelComponent implements OnInit {
   readonly stats = signal<SentinelInvestigationGraph['stats'] | null>(null);
   readonly selectedNode = signal<SentinelGraphNode | null>(null);
   readonly lightboxUrl = signal<string | null>(null);
+  copilotPrompt = '';
+  readonly copilotLoading = signal(false);
+  readonly copilotReply = signal<string | null>(null);
   protected readonly String = String;
 
   ngOnInit(): void {
@@ -212,5 +244,22 @@ export class SentinelGraphPanelComponent implements OnInit {
     if (ev?.dataType === 'node' && ev.data) {
       this.selectedNode.set(ev.data);
     }
+  }
+
+  askCopilot(): void {
+    const companyId = this.tokenService.getSelectCompany()?.companyId;
+    const msg = this.copilotPrompt.trim();
+    if (!companyId || !msg || this.copilotLoading()) return;
+    this.copilotLoading.set(true);
+    this.api.askAssistant(companyId, msg).subscribe({
+      next: (res) => {
+        this.copilotReply.set(res.reply || '');
+        this.copilotLoading.set(false);
+      },
+      error: () => {
+        this.copilotReply.set('ไม่สามารถเชื่อมต่อ AI Copilot ได้ในขณะนี้');
+        this.copilotLoading.set(false);
+      },
+    });
   }
 }

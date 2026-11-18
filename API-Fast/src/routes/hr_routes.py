@@ -462,7 +462,22 @@ async def list_leave_requests(
     company_employeeId: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    caller = await assert_request_company_membership(request, db, companyId)
+    is_self_query = False
+    if company_employeeId is not None and caller is not None:
+        own_emp = (
+            await db.execute(
+                select(CompanyEmployee).where(
+                    CompanyEmployee.company_employeeId == company_employeeId,
+                    CompanyEmployee.companyId == companyId,
+                    CompanyEmployee.memberId == caller.memberId,
+                    CompanyEmployee.deletedAt.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        is_self_query = own_emp is not None
+    if not is_self_query:
+        await assert_request_company_access(request, db, companyId)
     stmt = select(LeaveRequest).where(LeaveRequest.companyId == companyId)
     if status_filter:
         stmt = stmt.where(LeaveRequest.status == status_filter.upper())
@@ -497,7 +512,7 @@ async def create_leave_request(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    caller = await assert_request_company_membership(request, db, companyId)
     emp_id = body.company_employeeId
     emp = (
         await db.execute(
@@ -515,6 +530,8 @@ async def create_leave_request(
     ).scalar_one_or_none()
     if not emp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found in company")
+    if caller is None or emp.memberId != caller.memberId:
+        await assert_request_company_access(request, db, companyId)
 
     try:
         start_d = date.fromisoformat(str(body.startDate or "")[:10])
@@ -2132,7 +2149,7 @@ async def list_shift_swaps(
     swapStatus: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_company_membership(request, db, companyId)
     stmt = (
         select(ShiftSwapRequest)
         .where(ShiftSwapRequest.companyId == companyId)
@@ -2246,7 +2263,7 @@ async def decide_shift_swap(
     if decision not in {ApprovalRequestStatus.APPROVED.value, ApprovalRequestStatus.REJECTED.value}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="status must be APPROVED or REJECTED")
 
-    actor = getattr(request.state, "user", None)
+    actor = getattr(request.state, "member", None) or getattr(request.state, "user", None)
     actor_id = getattr(actor, "memberId", None)
     swap.status = decision
     swap.approvedBy = actor_id

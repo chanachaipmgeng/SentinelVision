@@ -34,11 +34,16 @@
             <input type="text" class="form-control" id="deal-lead-score" placeholder="นามสกุล"
               [(ngModel)]="selectModel.member!.lastName">
           </div>
-          <div class="xl:col-span-12 col-span-12">
+          <div class="xl:col-span-6 col-span-12">
             <label for="company-name" class="form-label">{{ 'Email' | translate }} <span class="text-danger">*</span></label>
             <input type="email" class="form-control" id="company-name" placeholder="เช่น name@company.com"
               [(ngModel)]="selectModel.member!.email">
-            <p class="text-xs text-textmuted mt-1 mb-0">ต้องเป็นรูปแบบอีเมลจริง เช่น name&#64;company.com (ต้องมี &#64; และจุดในโดเมน)</p>
+            <p class="text-xs text-textmuted mt-1 mb-0">ต้องเป็นรูปแบบอีเมลจริง เช่น name&#64;company.com</p>
+          </div>
+          <div class="xl:col-span-6 col-span-12">
+            <label for="emp-phone" class="form-label">เบอร์โทรศัพท์</label>
+            <input type="tel" class="form-control" id="emp-phone" placeholder="เช่น 081-234-5678"
+              [(ngModel)]="selectModel.member!.phoneNumber">
           </div>
           <div class="xl:col-span-12 col-span-12">
             <label class="form-label">วันเริ่มงาน</label>

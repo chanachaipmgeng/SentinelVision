@@ -191,22 +191,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.trendChart = {
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(255,255,255,0.96)',
-        borderColor: 'rgba(15,118,110,0.2)',
+        backgroundColor: 'rgba(15, 23, 42, 0.94)',
+        borderColor: 'rgba(45, 212, 191, 0.35)',
+        textStyle: { color: '#f1f5f9' },
       },
       grid: { left: 36, right: 16, top: 28, bottom: 28 },
       xAxis: {
         type: 'category',
         data: chartData.map((d) => d.date),
         boundaryGap: false,
-        axisLine: { lineStyle: { color: '#cbd5e1' } },
-        axisLabel: { color: '#64748b' },
+        axisLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.35)' } },
+        axisLabel: { color: '#94a3b8' },
       },
       yAxis: {
         type: 'value',
         minInterval: 1,
-        splitLine: { lineStyle: { color: '#e2e8f0', type: 'dashed' } },
-        axisLabel: { color: '#64748b' },
+        splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.18)', type: 'dashed' } },
+        axisLabel: { color: '#94a3b8' },
       },
       series: [
         {
@@ -238,8 +239,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const inArea = this.inAreaToday;
     const outside = this.outsideToday;
     this.mixChart = {
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 0, textStyle: { color: '#64748b' } },
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: 'rgba(15, 23, 42, 0.94)',
+        borderColor: 'rgba(45, 212, 191, 0.35)',
+        textStyle: { color: '#f1f5f9' },
+      },
+      legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
       series: [
         {
           name: 'วันนี้',
@@ -247,8 +253,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           radius: ['42%', '68%'],
           center: ['50%', '46%'],
           avoidLabelOverlap: true,
-          itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
-          label: { color: '#0f172a' },
+          itemStyle: { borderRadius: 6, borderColor: 'rgba(15, 23, 42, 0.6)', borderWidth: 2 },
+          label: { color: '#cbd5e1', fontWeight: 600 },
           data: [
             { value: inArea, name: 'ในพื้นที่', itemStyle: { color: brand } },
             { value: outside, name: 'นอกพื้นที่', itemStyle: { color: warn } },

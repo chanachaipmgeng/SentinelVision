@@ -83,7 +83,7 @@
                     <span *ngIf="item.hasBiometricConsent()" class="badge bg-success/10 text-success" [title]="item.biometricConsentAt || ''">
                       {{ item.biometricConsentAt | date: 'dd/MM/yyyy HH:mm' }}
                     </span>
-                    <span *ngIf="!item.hasBiometricConsent()" class="badge bg-gray-100 text-gray-600">
+                    <span *ngIf="!item.hasBiometricConsent()" class="badge bg-slate-700/40 text-slate-300 border border-white/10">
                       ยังไม่ยินยอม
                     </span>
                   </td>
@@ -91,7 +91,7 @@
                     <span *ngIf="item.hasFaceEnrolled()" class="badge bg-primary/10 text-primary">
                       {{ item.faceEncodingCount }} ใบหน้า
                     </span>
-                    <span *ngIf="!item.hasFaceEnrolled()" class="badge bg-gray-100 text-gray-600">
+                    <span *ngIf="!item.hasFaceEnrolled()" class="badge bg-slate-700/40 text-slate-300 border border-white/10">
                       ยังไม่มี
                     </span>
                   </td>
@@ -230,7 +230,7 @@
         <app-empty-state *ngIf="consentLoading" [loading]="true" message="กำลังโหลดนโยบาย..."></app-empty-state>
         <div
           *ngIf="!consentLoading"
-          class="admin-consent-text rounded-md border border-defaultborder bg-white/60 p-3 max-h-[50vh] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">
+          class="admin-consent-text rounded-md border border-defaultborder bg-slate-900/60 text-slate-200 p-3 max-h-[50vh] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap">
           {{ consentText() }}
         </div>
         <p class="text-[0.75rem] text-dpu-muted mt-3 mb-0">

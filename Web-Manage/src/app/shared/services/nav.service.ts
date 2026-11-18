@@ -173,14 +173,6 @@ export class NavService implements OnDestroy {
         badgeText: 'primary',
         permission: 'company.read',
       },
-      {
-        icon: 'shield-quarter',
-        path: '/company/sentinel-center',
-        title: 'SentinelVision Command & Graph',
-        type: 'link',
-        moduleId: 'COMMAND',
-        permission: 'sentinel.manage',
-      },
 
       { headTitle: 'CORE — Organization', moduleId: 'CORE' },
       {

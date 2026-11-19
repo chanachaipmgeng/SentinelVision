@@ -78,6 +78,7 @@
   - On Windows environments, normalize CRLF to LF in targeted files prior to calling `edit_file` to ensure exact character-sequence matching.
   - Never write `open(p, 'wb').write(open(p, 'rb').read()...)` on the same path (opening `'wb'` truncates the file before `'rb'` reads it); always read into a variable first, then write.
   - In Windows PowerShell 5.1, chain dependent commands with `; if ($?) { ... }` instead of `&&`.
+  - In Windows PowerShell 5.1 environments, `curl` is aliased to `Invoke-WebRequest`; CLI commands verifying HTTP endpoints MUST execute `curl.exe` rather than bare `curl` to avoid argument parsing errors.
 - **Browser Edge AI & WASM Asset Serving (`Web-Manage/public/`)**:
   - `Web-Manage/angular.json` ignores `**/models/**` under `src/assets`. Same-origin browser AI assets (`/mediapipe/*`, `/ort/*`, `/models/*`) MUST be served from `Web-Manage/public/` (mapped to `/`) and populated via `npm run sync-mediapipe`, `npm run sync-ort`, `npm run fetch-hand-model`, and `npm run fetch-silero-vad`.
   - Keep browser-side MediaPipe Gesture (`KioskGestureService`) opt-in and throttled (~4 Hz) so it never competes with InsightFace WebSocket frames on low-power Kiosk hardware.
@@ -90,3 +91,8 @@
   - Accent tones are strictly constrained to 7 semantic tokens: `cyan` (Attendance/Core), `sky` (Access Control), `rose` (Watchlist/Threats), `amber` (Visitor/Events), `violet` (CCTV/MediaMTX), `emerald` (Active/Healthy), and `slate` (Neutral/Inactive).
   - In component `@Input()` definitions, avoid `Record<string, any>` (which fails strict ESLint `@typescript-eslint/no-explicit-any`); use `Params` from `@angular/router` or `Record<string, unknown>`.
   - In Karma unit tests for standalone components or test hosts consuming `@ngx-translate/core` pipes (`| translate`), always provide `TranslateModule.forRoot()` in `TestBed.configureTestingModule({ imports: [TranslateModule.forRoot(), ...] })` to prevent `NG0201: No provider found for TranslateStore`.
+- **Page Header & Vertical Spacing Invariants**:
+  - Every management screen under `Web-Manage/src/app/DPU/company-management/` MUST include `<app-page-header [title]="..." [activeTitle]="..." [title1]="...">` at the top for layout parity and navigation breadcrumbs; never omit the page header or allow chips/toolbars to attach directly to the top viewport edge.
+  - Maintain a minimum vertical breathing room below `<app-page-header>` of `margin-top: 0.875rem` / `1rem` across all dashboard, listing, and KPI pages (`.dpu-list-page`, `.dpu-dashboard`, `.dpu-scan-hub`, `.inbox-page`), avoiding legacy `margin-top: 0.25rem` (4px).
+- **KPI Metric Rows & Bento Stat Wrapper Adoption**:
+  - Never handcraft bespoke HTML/CSS cards (e.g. `.sv-kpi-card`) for KPI metric rows. Wrap metric rows in `<app-bento-grid gap="gap-3.5">` using child `<app-bento-stat>` components with responsive spans (`colSpan="col-span-6 md:col-span-4 xl:col-span-2"` for 6-item rows) and semantic accent tones (`cyan`, `sky`, `rose`, `amber`, `violet`, `emerald`, `slate`), ensuring automatic VaultX Obsidian Glass styling and dark/light mode parity.

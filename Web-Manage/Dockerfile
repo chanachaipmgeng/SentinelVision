@@ -24,11 +24,11 @@ FROM nginxinc/nginx-unprivileged:1.30.6-alpine@sha256:f5116ed4606f3eb015dd4a8e28
 COPY docker/nginx-spa.conf /etc/nginx/conf.d/default.conf
 COPY docker/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 USER root
-# Pull Alpine security fixes published after the pinned base digest was built (CI trivy gate
-# fails on fixable HIGH/CRITICAL OS CVEs). Explicit libxslt bump busts BuildKit cache that
-# otherwise reuses a pre-advisory `apk upgrade` layer (CVE-2026-125350 / 87636 / 9947).
-RUN apk upgrade --no-cache \
-    && apk add --no-cache --upgrade 'libxslt>=1.1.43-r4' \
+# Purge unused modules that hold back nginx updates, pull Alpine security fixes,
+# and upgrade nginx to >= 1.30.7-r0 to resolve upstream CVEs.
+RUN apk del nginx-module-geoip nginx-module-image-filter nginx-module-njs nginx-module-xslt \
+    && apk upgrade --no-cache \
+    && apk add --no-cache --upgrade 'nginx>=1.30.7-r0' \
     && sed -i 's/\r$//' /docker-entrypoint.d/40-runtime-config.sh \
     && chmod 0755 /docker-entrypoint.d/40-runtime-config.sh \
     && rm -rf /usr/share/nginx/html/*

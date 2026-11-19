@@ -15,11 +15,11 @@ COPY snippets/ /etc/nginx/snippets/
 COPY entrypoint/30-dpu-runtime.sh /docker-entrypoint.d/30-dpu-runtime.sh
 
 USER root
-# Pull Alpine security fixes published after the pinned base digest was built (CI trivy gate
-# fails on fixable HIGH/CRITICAL OS CVEs). Explicit libxslt bump keeps BuildKit from reusing a
-# stale upgrade layer when Alpine publishes a fix mid-cache lifetime.
-RUN apk upgrade --no-cache \
-    && apk add --no-cache --upgrade 'libxslt>=1.1.43-r4' \
+# Purge unused modules that hold back nginx updates, pull Alpine security fixes,
+# and upgrade nginx to >= 1.30.7-r0 to resolve upstream CVEs.
+RUN apk del nginx-module-geoip nginx-module-image-filter nginx-module-njs nginx-module-xslt \
+    && apk upgrade --no-cache \
+    && apk add --no-cache --upgrade 'nginx>=1.30.7-r0' \
     && sed -i 's/\r$//' /docker-entrypoint.d/30-dpu-runtime.sh /etc/nginx/conf.d/*.conf /etc/nginx/snippets/*.conf \
     && chmod 0755 /docker-entrypoint.d/30-dpu-runtime.sh \
     && /docker-entrypoint.d/30-dpu-runtime.sh \

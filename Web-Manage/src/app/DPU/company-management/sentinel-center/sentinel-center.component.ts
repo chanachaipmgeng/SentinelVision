@@ -62,7 +62,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
       [title1]="'Security, Access, Watchlist & Events'"
     ></app-page-header>
 
-    <div class="space-y-6">
+    <div class="space-y-6 mt-4">
       <div class="sv-command-banner flex flex-wrap items-center justify-between gap-4">
         <div>
           <div class="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80 mb-1">

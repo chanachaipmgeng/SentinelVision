@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { EChartsOption } from 'echarts';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { TokenService } from '../../../shared/services/token.service';
@@ -76,6 +77,7 @@ export interface AnalyticsSummary {
         FormsModule,
         TranslateModule,
         NgxEchartsModule,
+        PageHeaderComponent,
         PageToolbarComponent,
         StatChipComponent,
         EmptyStateComponent,

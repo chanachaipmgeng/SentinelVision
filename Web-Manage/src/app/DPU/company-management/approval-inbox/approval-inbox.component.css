@@ -1,5 +1,6 @@
 .inbox-page {
   --inbox-gap: 1rem;
+  margin-top: 1rem;
   padding: 0 0 2rem;
   display: flex;
   flex-direction: column;

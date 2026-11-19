@@ -3289,3 +3289,9 @@ html[data-theme="light"]:not(.dpu-kiosk-mode) .emp-id-badge {
 .back-to-top {
   bottom: 5.5rem !important;
 }
+
+/* 9. Global Page Header & List Page Clearance Invariants */
+.dpu-list-page {
+  margin-top: 0.875rem !important;
+}
+

@@ -75,7 +75,7 @@ export interface KpiItem {
       }
       .dpu-kpi {
         list-style: none;
-        margin: 0;
+        margin: 0.5rem 0;
         padding: 0;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(var(--dpu-kpi-min, 10.5rem), 1fr));

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
+import { PageHeaderComponent } from '../../../shared/components/page-header/page-header.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
 import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
@@ -51,6 +52,7 @@ export interface OtEvidenceItem {
     CommonModule,
     FormsModule,
     TranslateModule,
+    PageHeaderComponent,
     PageToolbarComponent,
     PillSearchComponent,
     StatChipComponent,

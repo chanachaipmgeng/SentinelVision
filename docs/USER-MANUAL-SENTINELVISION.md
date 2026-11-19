@@ -61,10 +61,17 @@
 
 ![แดชบอร์ดภาพรวมองค์กร](./screenshots/02-dashboard.png)
 
-### ฟีเจอร์หลักบนหน้าแดชบอร์ด (`/company/dashboard`)
-- **แบนเนอร์ทางลัด SentinelVision Center:** เข้าถึงศูนย์ควบคุมความปลอดภัย Watchlist, Access Control, Visitor Pass และ Smart Events ได้ในคลิกเดียว
-- **ตัวชี้วัดสำคัญรายวัน (Daily KPIs):** จำนวนพนักงานทั้งหมด, สถิติเข้างานวันนี้ (ตรงเวลา, มาสาย, ขาดงาน, ลางาน), รายการรออนุมัติ (Pending Approvals) และสถานะความพร้อมของระบบ
-- **กราฟแนวโน้มการเข้างาน 7 วันย้อนหลัง:** แสดงสัดส่วนการเข้างานตรงเวลาและมาสายรายวันแบบโต้ตอบได้
+### สถาปัตยกรรม Bento Grid และฟีเจอร์หลักบนหน้าแดชบอร์ด (`/company/dashboard`)
+หน้าแดชบอร์ดได้รับการออกแบบใหม่ด้วย **Bento Grid Architecture** บนมาตรฐาน VaultX Obsidian Glass ที่จัดสรรพื้นที่แสดงผลอย่างสมดุลแบบ 12 คอลัมน์:
+- **แถบ 4 Bento KPI Metric Tiles ด้านบน:**
+  - *ลงเวลาวันนี้ (Punches today)* [โทนสี Cyan]: จำนวนบันทึกการลงเวลาเข้า-ออกงานทั้งหมดในรอบวัน พร้อมลิงก์ไปยังหน้า Timestamp Log
+  - *ในพื้นที่วันนี้ (In area today)* [โทนสี Emerald]: จำนวนการลงเวลาที่อยู่ในกรอบรัศมีพิกัด GPS/Geofence ขององค์กร
+  - *นอกพื้นที่วันนี้ (Out of area today)* [โทนสี Rose]: จำนวนการลงเวลาที่อยู่นอกพื้นที่พิกัดอนุญาต พร้อมตัวบ่งชี้สถานะแจ้งเตือน
+  - *รอการอนุมัติ (Pending approval)* [โทนสี Amber]: จำนวนคำขอลา OT หรือขอแก้ไขเวลาที่ค้างอยู่ในคิวอนุมัติ
+- **Bento Card การวิเคราะห์แนวโน้ม 7 วันย้อนหลัง (7-day Velocity Trend - Span 8, `cyan`):** แสดงกราฟแท่งเปรียบเทียบปริมาณและสัดส่วนการลงเวลาตรงเวลาและมาสายในรอบสัปดาห์ พร้อมยอดรวม Week Total
+- **Bento Card สัดส่วนการลงเวลาวันนี้ (Today Mix Ratio - Span 4, `sky`):** กราฟโดนัทจำแนกสถานะการลงเวลาในพื้นที่เทียบกับนอกพื้นที่
+- **Bento Card แผนที่พิกัดจุดลงเวลา (Today Punch Map - Span 7, `emerald`):** แผนที่ดาวเทียมแสดงพิกัด GPS ตำแหน่งที่พนักงานสแกนลงเวลาจริงเทียบกับพื้นที่สำนักงาน
+- **Bento Card สตรีมตรวจจับใบหน้าสด (Live Biometric Sightings Feed - Span 5, `rose`):** แสดงภาพถ่ายใบหน้า เวลา ชื่อพนักงาน ตำแหน่ง และแท็กสถานะแบบ Real-time พร้อมจุดกระพริบ Pulse แสดงสถานะ Streaming สด
 
 ---
 
@@ -239,7 +246,15 @@
 
 ## 14. การลงเวลา การอนุมัติ รายงาน และ Employee Self-Service (ESS)
 
-- **ศูนย์รวมจุดสแกน (`/company/scan-hub`)**: รวมลิงก์เปิด Kiosk ทุกโหมด (`ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`) พร้อมปุ่มคัดลอก Direct URL สำหรับติดตั้งบนเครื่อง Kiosk แยกจุด
+- **ศูนย์รวมจุดสแกนและสถานีปฏิบัติการ Bento Grid (`/company/scan-hub`)**:
+  - **Biometric Face Scan Terminal (Hero Bento Card - Span 8, `cyan`)**: ศูนย์สั่งการเทอร์มินัลตรวจจับใบหน้าหลายคนพร้อมกันความเร็วสูง แสดงสถานะความพร้อม (`PRIMARY TERMINAL` / `READY`), โหมดเริ่มต้น, ปุ่มเปิดเทอร์มินัลสด (`Open Terminal`), ปุ่มคัดลอกลิงก์ตรง (`Copy URL`), แถบสลับโหมดด่วน 6 โหมด (`ATTENDANCE`, `ACCESS_CONTROL`, `WATCHLIST_MONITOR`, `VISITOR_CHECKIN`, `EVENT_CHECKIN`, `UNIFIED_HYBRID`), และรายการ Active Terminal Endpoints แยกจุด
+  - **Hardware & Automation Rules (Bento Card - Span 4, `sky`)**: กำหนดค่าประตูเริ่มต้น, กิจกรรมเริ่มต้น, การตอบสนอง Unknown Face และสวิตช์กฎอัตโนมัติ (แจ้งเตือนเงียบ Blacklist, ข้อความต้อนรับ VIP, เสียงพูดสังเคราะห์ TTS, ปลดล็อกประตูรีเลย์เมื่อลงเวลาสำเร็จ)
+  - **5 Operational Domains Bento Cards (โครงสร้าง 5 มิติการทำงาน)**:
+    - *Security & Watchlist (`rose`)*: เฝ้าระวังบัญชีดำและบุคคลน่าสงสัย ลิงก์ตรงเข้า Sentinel Center และเปิด Watchlist Scanner
+    - *Smart Access Control (`sky`)*: ควบคุมประตูทางเข้า-ออก ไม้กั้น พร้อมลิงก์ไปยัง Zone Management และ Access Gate Scanner
+    - *Attendance & Workforce (`cyan`)*: การลงเวลาพนักงาน กะทำงาน และตารางเวลา พร้อมลิงก์ไปยัง Timestamp Log
+    - *Visitor & Event Check-In (`amber`)*: รองรับทั้งบัตรผู้มาติดต่อ (Visitor Pass) และงานอีเวนต์ (Event Check-In) ในการ์ดเดียว
+    - *CCTV & Perimeter Surveillance (`violet`)*: สตรีมมิ่งกล้องวงจรปิดผ่าน MediaMTX WebRTC เชื่อมต่อไปยัง CCTV Wall
 - **ประวัติการลงเวลา (`/company/timestamp-log`) & รายการแจ้งเตือน/ผิดปกติ (`/company/warning-timestamp-log`)**: ตรวจสอบบันทึกเวลาเข้า-ออกงาน ภาพถ่ายขณะสแกน คะแนนความมั่นใจ (Confidence) รายการมาสาย/ออกก่อน/นอกพื้นที่ และส่งออก CSV/Excel
 - **กล่องอนุมัติ (`/company/approval-inbox`)**: อนุมัติหรือปฏิเสธคำขอลา, คำขอ OT, การสลับกะ (Roster Swap) และการแก้ไขเวลาทำงานแบบ Multi-level Approval Chain พร้อมตัวกรองตามสถานที่ตั้ง
 - **รายงาน (`/company/reports`)**: สรุปรายงานเวลาทำงานรายวัน/รายเดือน ชั่วโมง OT และสถิติการเข้างาน
@@ -247,7 +262,9 @@
 
 ---
 
-![ศูนย์รวมจุดสแกน (Scan Hub)](images/manual/11-scan-hub.png)
+![ศูนย์รวมจุดสแกน - เทอร์มินัลและกฎอัตโนมัติ (Scan Hub Hero)](images/manual/11-scan-hub.png)
+
+![ศูนย์รวมจุดสแกน - โครงสร้าง 5 มิติปฏิบัติการ (Scan Hub 5 Domains)](images/manual/11-scan-hub-domains.png)
 
 ![ประวัติการลงเวลา](images/manual/12a-timestamp-log.png)
 

@@ -35,34 +35,50 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   menuOpen = false;
 
   readonly values = [
-    { icon: 'ri-user-smile-line', titleKey: 'landing.value.face.title', bodyKey: 'landing.value.face.body' },
+    { icon: 'ri-scan-2-line', titleKey: 'landing.value.face.title', bodyKey: 'landing.value.face.body' },
+    { icon: 'ri-door-lock-box-line', titleKey: 'landing.value.access.title', bodyKey: 'landing.value.access.body' },
+    { icon: 'ri-alarm-warning-line', titleKey: 'landing.value.watchlist.title', bodyKey: 'landing.value.watchlist.body' },
+    { icon: 'ri-shield-check-line', titleKey: 'landing.value.visitor.title', bodyKey: 'landing.value.visitor.body' },
     { icon: 'ri-vidicon-line', titleKey: 'landing.value.cctv.title', bodyKey: 'landing.value.cctv.body' },
-    { icon: 'ri-shield-keyhole-line', titleKey: 'landing.value.access.title', bodyKey: 'landing.value.access.body' },
-    { icon: 'ri-calendar-check-line', titleKey: 'landing.value.attendance.title', bodyKey: 'landing.value.attendance.body' },
+    { icon: 'ri-broadcast-line', titleKey: 'landing.value.attendance.title', bodyKey: 'landing.value.attendance.body' },
   ];
 
   readonly features = [
-    { titleKey: 'landing.feature.kiosk.title', bodyKey: 'landing.feature.kiosk.body' },
-    { titleKey: 'landing.feature.hybrid.title', bodyKey: 'landing.feature.hybrid.body' },
-    { titleKey: 'landing.feature.shift.title', bodyKey: 'landing.feature.shift.body' },
-    { titleKey: 'landing.feature.export.title', bodyKey: 'landing.feature.export.body' },
+    { titleKey: 'landing.feature.command.title', bodyKey: 'landing.feature.command.body', icon: 'ri-dashboard-3-line', tag: 'Realtime Command' },
+    { titleKey: 'landing.feature.kiosk.title', bodyKey: 'landing.feature.kiosk.body', icon: 'ri-camera-lens-line', tag: '6 Station Modes' },
+    { titleKey: 'landing.feature.walkby.title', bodyKey: 'landing.feature.walkby.body', icon: 'ri-group-line', tag: 'Zero Latency' },
+    { titleKey: 'landing.feature.pdpa.title', bodyKey: 'landing.feature.pdpa.body', icon: 'ri-shield-user-line', tag: 'PDPA Compliant' },
+    { titleKey: 'landing.feature.presence.title', bodyKey: 'landing.feature.presence.body', icon: 'ri-radar-line', tag: 'OT Evidence' },
+    { titleKey: 'landing.feature.muster.title', bodyKey: 'landing.feature.muster.body', icon: 'ri-building-line', tag: 'Emergency Headcount' },
+  ];
+
+  readonly kioskModes = [
+    { code: 'ATTENDANCE', icon: 'ri-calendar-check-line', tone: 'cyan', titleKey: 'landing.kiosk.mode.attendance.title', descKey: 'landing.kiosk.mode.attendance.desc' },
+    { code: 'ACCESS_CONTROL', icon: 'ri-door-lock-line', tone: 'sky', titleKey: 'landing.kiosk.mode.access.title', descKey: 'landing.kiosk.mode.access.desc' },
+    { code: 'WATCHLIST_MONITOR', icon: 'ri-alarm-warning-line', tone: 'rose', titleKey: 'landing.kiosk.mode.watchlist.title', descKey: 'landing.kiosk.mode.watchlist.desc' },
+    { code: 'VISITOR_CHECKIN', icon: 'ri-user-shared-line', tone: 'violet', titleKey: 'landing.kiosk.mode.visitor.title', descKey: 'landing.kiosk.mode.visitor.desc' },
+    { code: 'EVENT_CHECKIN', icon: 'ri-ticket-2-line', tone: 'amber', titleKey: 'landing.kiosk.mode.event.title', descKey: 'landing.kiosk.mode.event.desc' },
+    { code: 'UNIFIED_HYBRID', icon: 'ri-apps-2-line', tone: 'teal', titleKey: 'landing.kiosk.mode.unified.title', descKey: 'landing.kiosk.mode.unified.desc' },
   ];
 
   readonly metrics = [
-    { value: 512, suffix: '-d', labelKey: 'landing.metric.embedding' },
-    { value: 1, suffix: ':N', labelKey: 'landing.metric.match' },
-    { value: 24, suffix: '/7', labelKey: 'landing.metric.uptime' },
+    { value: 512, decimals: 0, suffix: '-d', labelKey: 'landing.metric.embedding' },
+    { value: 99.8, decimals: 1, suffix: '%', labelKey: 'landing.metric.accuracy' },
+    { value: 6, decimals: 0, suffix: ' Modes', labelKey: 'landing.metric.modes' },
+    { value: 100, decimals: 0, suffix: '%', labelKey: 'landing.metric.pdpa' },
   ];
 
   readonly marqueeChips = [
     'landing.marquee.face',
-    'landing.marquee.cctv',
     'landing.marquee.access',
+    'landing.marquee.watchlist',
+    'landing.marquee.visitor',
+    'landing.marquee.events',
+    'landing.marquee.cctv',
     'landing.marquee.attendance',
-    'landing.marquee.hybrid',
-    'landing.marquee.shift',
+    'landing.marquee.presence',
+    'landing.marquee.muster',
     'landing.marquee.export',
-    'landing.marquee.kiosk',
   ];
 
   constructor(

@@ -691,7 +691,7 @@
 
 @media (min-width: 1024px) {
   .dpu-landing__values {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -751,6 +751,12 @@
   .dpu-landing__bento-item:nth-child(4) {
     grid-column: span 7;
   }
+  .dpu-landing__bento-item:nth-child(5) {
+    grid-column: span 6;
+  }
+  .dpu-landing__bento-item:nth-child(6) {
+    grid-column: span 6;
+  }
 }
 
 .dpu-landing__bento-item {
@@ -781,7 +787,13 @@
 
 @media (min-width: 640px) {
   .dpu-landing__metrics {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .dpu-landing__metrics {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -1432,3 +1444,170 @@ app-dpu-cursor-dot {
     transform: translateY(1rem);
   }
 }
+
+/* ---- Station Modes Showcase ---- */
+.dpu-landing__modes-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .dpu-landing__modes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .dpu-landing__modes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.dpu-landing__mode-card {
+  padding: 1.35rem 1.25rem;
+  border-radius: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 11rem;
+}
+
+.dpu-landing__mode-card:hover {
+  transform: translateY(-3px);
+}
+
+.dpu-landing__mode-card[data-tone="cyan"]:hover {
+  border-color: rgba(6, 182, 212, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(6, 182, 212, 0.25);
+}
+.dpu-landing__mode-card[data-tone="sky"]:hover {
+  border-color: rgba(2, 132, 199, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(2, 132, 199, 0.25);
+}
+.dpu-landing__mode-card[data-tone="rose"]:hover {
+  border-color: rgba(244, 63, 94, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(244, 63, 94, 0.25);
+}
+.dpu-landing__mode-card[data-tone="violet"]:hover {
+  border-color: rgba(139, 92, 246, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(139, 92, 246, 0.25);
+}
+.dpu-landing__mode-card[data-tone="amber"]:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(245, 158, 11, 0.25);
+}
+.dpu-landing__mode-card[data-tone="teal"]:hover {
+  border-color: rgba(20, 184, 166, 0.45);
+  box-shadow: 0 10px 28px -4px rgba(20, 184, 166, 0.25);
+}
+
+.dpu-landing__mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  margin-bottom: 0.85rem;
+  width: fit-content;
+}
+.dpu-landing__mode-card[data-tone="cyan"] .dpu-landing__mode-badge {
+  background: rgba(6, 182, 212, 0.12);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+.dpu-landing__mode-card[data-tone="sky"] .dpu-landing__mode-badge {
+  background: rgba(2, 132, 199, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(2, 132, 199, 0.25);
+}
+.dpu-landing__mode-card[data-tone="rose"] .dpu-landing__mode-badge {
+  background: rgba(244, 63, 94, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+.dpu-landing__mode-card[data-tone="violet"] .dpu-landing__mode-badge {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+.dpu-landing__mode-card[data-tone="amber"] .dpu-landing__mode-badge {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.dpu-landing__mode-card[data-tone="teal"] .dpu-landing__mode-badge {
+  background: rgba(20, 184, 166, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(20, 184, 166, 0.25);
+}
+
+.dpu-landing__mode-card h3 {
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+}
+
+.dpu-landing__mode-card p {
+  margin: 0;
+  color: var(--dpu-land-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ---- Hero Simulated Live Console UI ---- */
+.dpu-landing__hero-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  inset: 0;
+}
+.dpu-landing__console-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: rgba(2, 8, 8, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  color: #94a3b8;
+  z-index: 10;
+}
+.dpu-landing__console-dots {
+  display: flex;
+  gap: 0.35rem;
+}
+.dpu-landing__console-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.dpu-landing__console-dot--red { background: #ef4444; }
+.dpu-landing__console-dot--yellow { background: #eab308; }
+.dpu-landing__console-dot--green { background: #22c55e; }
+
+.dpu-landing__console-body {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+@media (max-width: 767.98px) {
+  .dpu-landing__console-body {
+    grid-template-columns: 1fr;
+  }
+  .dpu-landing__console-panel--events {
+    display: none !important;
+  }
+}
+

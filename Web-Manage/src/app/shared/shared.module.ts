@@ -21,6 +21,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { CommandPaletteComponent } from './components/command-palette/command-palette.component';
 import { NotificationDrawerComponent } from './components/notification-drawer/notification-drawer.component';
 import { OfflineBannerComponent } from './components/offline-banner/offline-banner.component';
+import { BentoGridComponent, BentoCardComponent, BentoStatComponent } from './components/bento';
 
 @NgModule({
   imports: [
@@ -34,6 +35,9 @@ import { OfflineBannerComponent } from './components/offline-banner/offline-bann
     CommandPaletteComponent,
     NotificationDrawerComponent,
     OfflineBannerComponent,
+    BentoGridComponent,
+    BentoCardComponent,
+    BentoStatComponent,
     HeaderComponent,
     SidebarComponent,
     ContentLayoutComponent,
@@ -60,6 +64,9 @@ import { OfflineBannerComponent } from './components/offline-banner/offline-bann
     AuthenticationLayoutComponent,
     LandingSwitcherComponent,
     LandingLayoutComponent,
+    BentoGridComponent,
+    BentoCardComponent,
+    BentoStatComponent,
     TranslateModule,
   ],
   providers: [ColorPickerService, AuthService, TranslateModule],

@@ -1,6 +1,6 @@
 <app-page-header [title]="'Scan & Action Hub'" [activeTitle]="'Scan center'" [title1]="'Scan Hub'"></app-page-header>
 
-<div class="dpu-scan-hub grid grid-cols-12 gap-x-6 gap-y-4">
+<div class="dpu-scan-hub space-y-5">
   <div class="col-span-12">
     <app-page-toolbar title="Scan mode & module settings">
       <ng-container chips>
@@ -27,7 +27,7 @@
     </app-page-toolbar>
   </div>
 
-  <div class="col-span-12" *ngIf="loading">
+  <div *ngIf="loading">
     <div class="box modern-card glass">
       <div class="box-body">
         <app-empty-state [loading]="true" message="Loading module config..."></app-empty-state>
@@ -36,7 +36,7 @@
   </div>
 
   <ng-container *ngIf="!loading">
-    <div class="col-span-12" *ngIf="error">
+    <div *ngIf="error">
       <div class="box modern-card glass">
         <div class="box-body flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -48,68 +48,153 @@
       </div>
     </div>
 
-    <div class="col-span-12" *ngIf="saveMessage">
+    <div *ngIf="saveMessage">
       <div class="box modern-card glass">
         <div class="box-body text-sm text-dpu-brand">{{ saveMessage }}</div>
       </div>
     </div>
 
-    <!-- Module toggles -->
-    <div class="col-span-12 xl:col-span-7">
-      <div class="box modern-card glass">
-        <div class="box-header">
-          <h5 class="box-title !mb-0">{{ 'Active modules' | translate }}</h5>
+    <!-- MAIN BENTO GRID -->
+    <app-bento-grid gap="gap-5">
+
+      <!-- HERO BENTO CARD: Biometric Scan Terminal (Multi-Person Face Kiosk) -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-8"
+        accentTone="cyan"
+        headerIcon="ri-scan-2-line"
+        title="Biometric Face Scan Terminal"
+        subtitle="Real-time multi-person verification & kiosk automation engine"
+        badge="PRIMARY TERMINAL"
+        badgeTone="cyan"
+      >
+        <div headerExtra class="flex items-center gap-2">
+          <span class="sv-bento-chip-active">
+            <span class="sv-pulse-dot"></span>
+            <span>READY</span>
+          </span>
         </div>
-        <div class="box-body">
-          <p class="dpu-scan-hub__lead">
-            {{ 'scanHub.modulesLead' | translate }}
-          </p>
-          <div class="dpu-scan-hub__modules">
-            @for (card of moduleCards; track trackModule($index, card)) {
-              <label class="dpu-scan-hub__module" [class.is-on]="card.enabled">
-                <span class="dpu-scan-hub__module-icon"><i [ngClass]="card.icon"></i></span>
-                <span class="dpu-scan-hub__module-text">
-                  <strong>{{ card.label | translate }}</strong>
-                  <em>{{ card.hint | translate }}</em>
-                </span>
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  [checked]="card.enabled"
-                  (change)="setModuleEnabled(card.module, $any($event.target).checked)" />
-              </label>
+
+        <div class="sv-terminal-hero p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6 mb-5">
+          <div class="space-y-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs uppercase font-mono tracking-wider text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+                Mode: {{ config.defaultStationMode }}
+              </span>
+              <span class="text-xs text-slate-400" *ngIf="config.defaultZoneId">
+                <i class="ri-map-pin-line me-1 text-sky-400"></i>Zone ID: {{ config.defaultZoneId }}
+              </span>
+              <span class="text-xs text-slate-400" *ngIf="config.defaultEventId">
+                <i class="ri-calendar-line me-1 text-amber-400"></i>Event ID: {{ config.defaultEventId }}
+              </span>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-1">
+              {{ 'Launch Live Biometric Scanner' | translate }}
+            </h3>
+            <p class="text-sm text-slate-400 max-w-xl">
+              {{ 'Deploy high-throughput multi-face recognition station for employee punch, access gate verification, and watchlist surveillance.' | translate }}
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-shrink-0">
+            <button
+              *ngIf="primaryLaunchLink"
+              type="button"
+              class="ti-btn ti-btn-primary-full modern-btn !py-2.5 !px-5 shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2"
+              (click)="launch(primaryLaunchLink)"
+            >
+              <i class="ri-play-circle-line text-lg"></i>
+              <span>{{ 'Open Terminal' | translate }}</span>
+            </button>
+            <button
+              *ngIf="primaryLaunchLink"
+              type="button"
+              class="ti-btn ti-btn-outline-light modern-btn !py-2.5 !px-3"
+              (click)="copyDirectUrl(primaryLaunchLink, $event)"
+              title="Copy Direct URL"
+            >
+              <i class="ri-file-copy-line"></i>
+              <span class="hidden sm:inline ms-1">{{ 'Copy URL' | translate }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Station Mode Switcher Pills -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+              {{ 'Quick Switch Terminal Mode' | translate }}
+            </span>
+            <span class="text-xs text-slate-500">
+              {{ 'Click to set default station mode' | translate }}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            @for (mode of stationModes; track mode) {
+              <button
+                type="button"
+                class="sv-mode-pill"
+                [class.is-active]="config.defaultStationMode === mode"
+                (click)="onDefaultStationModeChange(mode)"
+              >
+                <span class="sv-mode-pill__dot"></span>
+                <span class="sv-mode-pill__label">{{ mode }}</span>
+              </button>
             }
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Default station + zone/event -->
-    <div class="col-span-12 xl:col-span-5">
-      <div class="box modern-card glass">
-        <div class="box-header">
-          <h5 class="box-title !mb-0">{{ 'On face match actions' | translate }}</h5>
-        </div>
-        <div class="box-body space-y-4">
-          <div>
-            <label class="form-label">{{ 'Default station mode' | translate }}</label>
-            <select
-              class="form-control"
-              [ngModel]="config.defaultStationMode"
-              (ngModelChange)="onDefaultStationModeChange($event)">
-              @for (mode of stationModes; track mode) {
-                <option [ngValue]="mode">{{ mode }}</option>
-              }
-            </select>
+        <!-- Available Scan Launch Links -->
+        <div class="mt-5 pt-4 border-t border-slate-800/80">
+          <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            {{ 'Active Terminal Endpoints' | translate }} ({{ launchLinks.length }})
           </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" *ngIf="launchLinks.length; else noLaunch">
+            @for (link of launchLinks; track trackLaunch($index, link)) {
+              <div class="sv-launch-card group" (click)="launch(link)">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="font-semibold text-slate-200 group-hover:text-cyan-400 transition-colors">
+                    {{ link.label | translate }}
+                  </span>
+                  <i class="ri-arrow-right-up-line text-slate-500 group-hover:text-cyan-400 transition-colors"></i>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                  <span class="font-mono text-[11px] text-cyan-400/80">{{ link.stationMode }}</span>
+                  <button
+                    type="button"
+                    class="sv-copy-btn"
+                    (click)="copyDirectUrl(link, $event)"
+                    title="Copy URL"
+                  >
+                    <i class="ri-links-line"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+          <ng-template #noLaunch>
+            <app-empty-state message="No scanner modes active — enable modules below"></app-empty-state>
+          </ng-template>
+        </div>
+      </app-bento-card>
 
+      <!-- HARDWARE & ON-MATCH RULES BENTO CARD -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-4"
+        accentTone="sky"
+        headerIcon="ri-settings-4-line"
+        title="Hardware & Rules"
+        subtitle="Access relays, silent alerts & audio triggers"
+        badge="AUTOMATION"
+        badgeTone="sky"
+      >
+        <div class="space-y-4">
           <div>
-            <label class="form-label">{{ 'Default door zone' | translate }}</label>
+            <label class="form-label text-xs uppercase tracking-wider text-slate-400">{{ 'Default Door Zone' | translate }}</label>
             <select
               class="form-control"
               [ngModel]="config.defaultZoneId || ''"
               (ngModelChange)="onDefaultZoneChange($event)">
-              <option value="">— {{ 'Unspecified' | translate }} —</option>
+              <option value="">— {{ 'Unspecified (All Zones)' | translate }} —</option>
               @for (z of zones; track z.zoneId) {
                 <option [value]="z.zoneId">{{ z.name || z.zoneId }}</option>
               }
@@ -117,7 +202,7 @@
           </div>
 
           <div>
-            <label class="form-label">{{ 'Default event' | translate }}</label>
+            <label class="form-label text-xs uppercase tracking-wider text-slate-400">{{ 'Default Event' | translate }}</label>
             <select
               class="form-control"
               [ngModel]="config.defaultEventId || ''"
@@ -129,93 +214,328 @@
             </select>
           </div>
 
-          <div class="dpu-scan-hub__rules">
-            <label class="dpu-scan-hub__rule">
+          <div>
+            <label class="form-label text-xs uppercase tracking-wider text-slate-400">{{ 'Unknown Face Action' | translate }}</label>
+            <select
+              class="form-control"
+              [ngModel]="config.scanActionRules.unknownFaceAction"
+              (ngModelChange)="setRule('unknownFaceAction', $event)">
+              @for (a of unknownFaceActions; track a) {
+                <option [ngValue]="a">{{ a }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80 space-y-2.5">
+            <label class="sv-rule-switch">
               <input
                 type="checkbox"
                 class="form-check-input"
                 [checked]="config.scanActionRules.enableBlacklistSilentAlarm"
                 (change)="setRule('enableBlacklistSilentAlarm', $any($event.target).checked)" />
-              <span>{{ 'Silent alert on Blacklist / POI' | translate }}</span>
+              <div class="flex-1">
+                <span class="block text-sm font-medium text-slate-200">{{ 'Silent alert on Blacklist / POI' | translate }}</span>
+                <span class="block text-xs text-slate-500">Trigger silent incident push to Sentinel Command Center</span>
+              </div>
             </label>
-            <label class="dpu-scan-hub__rule">
+
+            <label class="sv-rule-switch">
               <input
                 type="checkbox"
                 class="form-check-input"
                 [checked]="config.scanActionRules.enableVipGreeting"
                 (change)="setRule('enableVipGreeting', $any($event.target).checked)" />
-              <span>{{ 'VIP greeting' | translate }}</span>
+              <div class="flex-1">
+                <span class="block text-sm font-medium text-slate-200">{{ 'VIP Greeting' | translate }}</span>
+                <span class="block text-xs text-slate-500">Show welcome animation & chime on VIP match</span>
+              </div>
             </label>
-            <label class="dpu-scan-hub__rule">
+
+            <label class="sv-rule-switch">
               <input
                 type="checkbox"
                 class="form-check-input"
                 [checked]="config.scanActionRules.enableTtsVoice"
                 (change)="setRule('enableTtsVoice', $any($event.target).checked)" />
-              <span>{{ 'TTS voice' | translate }}</span>
+              <div class="flex-1">
+                <span class="block text-sm font-medium text-slate-200">{{ 'TTS Voice Prompt' | translate }}</span>
+                <span class="block text-xs text-slate-500">Vocal feedback on check-in success/failure</span>
+              </div>
             </label>
-            <label class="dpu-scan-hub__rule">
+
+            <label class="sv-rule-switch">
               <input
                 type="checkbox"
                 class="form-check-input"
                 [checked]="config.scanActionRules.enableDoorRelayOnAttendance"
                 (change)="setRule('enableDoorRelayOnAttendance', $any($event.target).checked)" />
-              <span>{{ 'Unlock door on successful punch' | translate }}</span>
-            </label>
-            <div>
-              <label class="form-label">{{ 'Unknown face action' | translate }}</label>
-              <select
-                class="form-control"
-                [ngModel]="config.scanActionRules.unknownFaceAction"
-                (ngModelChange)="setRule('unknownFaceAction', $event)">
-                @for (a of unknownFaceActions; track a) {
-                  <option [ngValue]="a">{{ a }}</option>
-                }
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Launch scanners -->
-    <div class="col-span-12">
-      <div class="box modern-card glass">
-        <div class="box-header">
-          <h5 class="box-title !mb-0">{{ 'Open live scanners' | translate }}</h5>
-        </div>
-        <div class="box-body">
-          <p class="dpu-scan-hub__lead">
-            {{ 'scanHub.launchLead' | translate }}
-          </p>
-          <div class="dpu-scan-hub__launches" *ngIf="launchLinks.length; else noLaunch">
-            @for (link of launchLinks; track trackLaunch($index, link)) {
-              <div class="dpu-scan-hub__launch-wrap flex flex-col gap-1.5">
-                <button type="button" class="dpu-scan-hub__launch w-full" (click)="launch(link)">
-                  <strong>{{ link.label | translate }}</strong>
-                  <em>{{ link.stationMode }}</em>
-                  <span class="dpu-scan-hub__launch-meta">
-                    <span *ngIf="link.needsZone">zone</span>
-                    <span *ngIf="link.needsEvent">event</span>
-                  </span>
-                  <i class="ri-arrow-right-s-line"></i>
-                </button>
-                <button
-                  type="button"
-                  class="ti-btn ti-btn-sm ti-btn-light w-full text-xs"
-                  (click)="copyDirectUrl(link, $event)"
-                >
-                  <i class="ri-links-line me-1"></i>
-                  Copy Direct URL
-                </button>
+              <div class="flex-1">
+                <span class="block text-sm font-medium text-slate-200">{{ 'Unlock door on successful punch' | translate }}</span>
+                <span class="block text-xs text-slate-500">Fire GPIO/relay to open physical turnstile</span>
               </div>
-            }
+            </label>
           </div>
-          <ng-template #noLaunch>
-            <app-empty-state message="No modules enabled — enable at least one first"></app-empty-state>
-          </ng-template>
         </div>
-      </div>
-    </div>
+      </app-bento-card>
+
+      <!-- 5 OPERATIONAL DOMAINS -->
+
+      <!-- DOMAIN 1: Security & Threat Intelligence -->
+      <app-bento-card
+        colSpan="col-span-12 md:col-span-6 xl:col-span-4"
+        accentTone="rose"
+        headerIcon="ri-shield-keyhole-line"
+        title="Security & Watchlist"
+        subtitle="POI, Blacklist & threat detection"
+        [badge]="isModuleEnabled('WATCHLIST') ? 'ACTIVE' : 'DISABLED'"
+        [badgeTone]="isModuleEnabled('WATCHLIST') ? 'rose' : 'slate'"
+      >
+        <div class="space-y-4">
+          <div class="sv-domain-toggle p-3.5 rounded-xl flex items-center justify-between" [class.is-active]="isModuleEnabled('WATCHLIST')">
+            <div class="flex items-center gap-3">
+              <div class="sv-domain-icon bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                <i class="ri-alarm-warning-line text-lg"></i>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-slate-200">Watchlist Monitor</div>
+                <div class="text-xs text-slate-400">Silent alarm & incident dispatch</div>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [checked]="isModuleEnabled('WATCHLIST')"
+              (change)="setModuleEnabled('WATCHLIST', $any($event.target).checked)" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <a
+              routerLink="/company/sentinel-center"
+              class="sv-domain-action-btn border border-rose-500/30 text-rose-300 hover:bg-rose-500/10"
+            >
+              <i class="ri-shield-flash-line"></i>
+              <span>Sentinel Command Center</span>
+              <i class="ri-arrow-right-line ms-auto"></i>
+            </a>
+            <button
+              *ngIf="getLaunchLink('WATCHLIST_MONITOR') as wlLink"
+              type="button"
+              class="sv-domain-action-btn bg-slate-800/80 text-slate-200 hover:text-rose-400 hover:border-rose-500/40"
+              (click)="launch(wlLink)"
+            >
+              <i class="ri-scan-line"></i>
+              <span>Open Watchlist Scanner</span>
+              <i class="ri-arrow-right-s-line ms-auto"></i>
+            </button>
+          </div>
+        </div>
+      </app-bento-card>
+
+      <!-- DOMAIN 2: Smart Access Control -->
+      <app-bento-card
+        colSpan="col-span-12 md:col-span-6 xl:col-span-4"
+        accentTone="sky"
+        headerIcon="ri-door-lock-line"
+        title="Smart Access Control"
+        subtitle="Doors, gates, turnstiles & zones"
+        [badge]="isModuleEnabled('ACCESS_CONTROL') ? 'ACTIVE' : 'DISABLED'"
+        [badgeTone]="isModuleEnabled('ACCESS_CONTROL') ? 'sky' : 'slate'"
+      >
+        <div class="space-y-4">
+          <div class="sv-domain-toggle p-3.5 rounded-xl flex items-center justify-between" [class.is-active]="isModuleEnabled('ACCESS_CONTROL')">
+            <div class="flex items-center gap-3">
+              <div class="sv-domain-icon bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <i class="ri-door-lock-line text-lg"></i>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-slate-200">Access Control Module</div>
+                <div class="text-xs text-slate-400">Anti-passback & zone validation</div>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [checked]="isModuleEnabled('ACCESS_CONTROL')"
+              (change)="setModuleEnabled('ACCESS_CONTROL', $any($event.target).checked)" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <a
+              routerLink="/company/zones"
+              class="sv-domain-action-btn border border-sky-500/30 text-sky-300 hover:bg-sky-500/10"
+            >
+              <i class="ri-map-pin-range-line"></i>
+              <span>Zone & Gate Management</span>
+              <i class="ri-arrow-right-line ms-auto"></i>
+            </a>
+            <button
+              *ngIf="getLaunchLink('ACCESS_CONTROL') as acLink"
+              type="button"
+              class="sv-domain-action-btn bg-slate-800/80 text-slate-200 hover:text-sky-400 hover:border-sky-500/40"
+              (click)="launch(acLink)"
+            >
+              <i class="ri-scan-line"></i>
+              <span>Open Access Gate Scanner</span>
+              <i class="ri-arrow-right-s-line ms-auto"></i>
+            </button>
+          </div>
+        </div>
+      </app-bento-card>
+
+      <!-- DOMAIN 3: Attendance & Workforce -->
+      <app-bento-card
+        colSpan="col-span-12 md:col-span-6 xl:col-span-4"
+        accentTone="cyan"
+        headerIcon="ri-time-line"
+        title="Attendance & Workforce"
+        subtitle="Work shifts, clock-in & overtime"
+        [badge]="isModuleEnabled('ATTENDANCE') ? 'ACTIVE' : 'DISABLED'"
+        [badgeTone]="isModuleEnabled('ATTENDANCE') ? 'cyan' : 'slate'"
+      >
+        <div class="space-y-4">
+          <div class="sv-domain-toggle p-3.5 rounded-xl flex items-center justify-between" [class.is-active]="isModuleEnabled('ATTENDANCE')">
+            <div class="flex items-center gap-3">
+              <div class="sv-domain-icon bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <i class="ri-fingerprint-line text-lg"></i>
+              </div>
+              <div>
+                <div class="text-sm font-bold text-slate-200">Attendance Module</div>
+                <div class="text-xs text-slate-400">High-speed face punch & GPS bounds</div>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [checked]="isModuleEnabled('ATTENDANCE')"
+              (change)="setModuleEnabled('ATTENDANCE', $any($event.target).checked)" />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <a
+              routerLink="/company/timestamp-log"
+              class="sv-domain-action-btn border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+            >
+              <i class="ri-file-list-3-line"></i>
+              <span>Attendance Punch Logs</span>
+              <i class="ri-arrow-right-line ms-auto"></i>
+            </a>
+            <button
+              *ngIf="getLaunchLink('ATTENDANCE') as attLink"
+              type="button"
+              class="sv-domain-action-btn bg-slate-800/80 text-slate-200 hover:text-cyan-400 hover:border-cyan-500/40"
+              (click)="launch(attLink)"
+            >
+              <i class="ri-scan-line"></i>
+              <span>Open Attendance Scanner</span>
+              <i class="ri-arrow-right-s-line ms-auto"></i>
+            </button>
+          </div>
+        </div>
+      </app-bento-card>
+
+      <!-- DOMAIN 4: Visitor & Event Check-In -->
+      <app-bento-card
+        colSpan="col-span-12 md:col-span-6 xl:col-span-6"
+        accentTone="amber"
+        headerIcon="ri-calendar-event-line"
+        title="Visitor & Event Check-In"
+        subtitle="Pre-registered guests, visitor badges & event kiosks"
+        badge="GUEST FLOW"
+        badgeTone="amber"
+      >
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Visitor sub-block -->
+          <div class="p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="ri-user-shared-line text-amber-400 text-lg"></i>
+                <span class="text-sm font-bold text-slate-200">Visitor Pass</span>
+              </div>
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="isModuleEnabled('VISITOR')"
+                (change)="setModuleEnabled('VISITOR', $any($event.target).checked)" />
+            </div>
+            <p class="text-xs text-slate-400">Pre-registration, NDA signing & visitor badge issuance.</p>
+            <button
+              *ngIf="getLaunchLink('VISITOR_CHECKIN') as visLink"
+              type="button"
+              class="sv-domain-action-btn text-xs !py-1.5 bg-slate-800/80 text-slate-200 hover:text-amber-400 w-full"
+              (click)="launch(visLink)"
+            >
+              <i class="ri-scan-line"></i>
+              <span>Visitor Scanner</span>
+            </button>
+          </div>
+
+          <!-- Event sub-block -->
+          <div class="p-3.5 rounded-xl border border-slate-800/80 bg-slate-900/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i class="ri-calendar-check-line text-amber-400 text-lg"></i>
+                <span class="text-sm font-bold text-slate-200">Event Check-In</span>
+              </div>
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="isModuleEnabled('EVENTS')"
+                (change)="setModuleEnabled('EVENTS', $any($event.target).checked)" />
+            </div>
+            <p class="text-xs text-slate-400">Event roster verification, VIP seat routing & badge scan.</p>
+            <button
+              *ngIf="getLaunchLink('EVENT_CHECKIN') as evLink"
+              type="button"
+              class="sv-domain-action-btn text-xs !py-1.5 bg-slate-800/80 text-slate-200 hover:text-amber-400 w-full"
+              (click)="launch(evLink)"
+            >
+              <i class="ri-scan-line"></i>
+              <span>Event Scanner</span>
+            </button>
+          </div>
+        </div>
+      </app-bento-card>
+
+      <!-- DOMAIN 5: CCTV & Perimeter Surveillance -->
+      <app-bento-card
+        colSpan="col-span-12 md:col-span-12 xl:col-span-6"
+        accentTone="violet"
+        headerIcon="ri-vidicon-line"
+        title="CCTV & Perimeter Surveillance"
+        subtitle="MediaMTX WebRTC streaming & AI multi-camera matrix"
+        [badge]="isModuleEnabled('CCTV') ? 'ACTIVE' : 'STANDBY'"
+        [badgeTone]="isModuleEnabled('CCTV') ? 'violet' : 'slate'"
+      >
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-slate-800/80 bg-slate-900/40">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="sv-pulse-dot" [class.bg-purple-400]="isModuleEnabled('CCTV')"></span>
+              <span class="text-sm font-bold text-slate-200">MediaMTX High-Res Video Mesh</span>
+            </div>
+            <p class="text-xs text-slate-400 max-w-md">
+              RTSP/WebRTC low-latency streaming matrix with real-time face detection bounding boxes & camera health telemetry.
+            </p>
+          </div>
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+              <span>Enable CCTV</span>
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="isModuleEnabled('CCTV')"
+                (change)="setModuleEnabled('CCTV', $any($event.target).checked)" />
+            </label>
+            <a
+              routerLink="/company/sentinel-center"
+              class="ti-btn ti-btn-sm ti-btn-outline-light text-xs py-1.5 px-3 flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <i class="ri-layout-grid-line text-purple-400"></i>
+              <span>CCTV Matrix</span>
+            </a>
+          </div>
+        </div>
+      </app-bento-card>
+
+    </app-bento-grid>
   </ng-container>
 </div>

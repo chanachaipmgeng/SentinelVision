@@ -18,6 +18,11 @@ import { CheckinMapComponent } from '../../../shared/components/checkin-map/chec
 import { SetupChecklistComponent } from '../../../shared/components/setup-checklist/setup-checklist.component';
 import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizard/welcome-wizard.component';
 import { environment } from '../../../../environments/environment';
+import {
+  BentoGridComponent,
+  BentoCardComponent,
+  BentoStatComponent,
+} from '../../../shared/components/bento';
 
 @Component({
     selector: 'app-dashboard',
@@ -32,6 +37,9 @@ import { environment } from '../../../../environments/environment';
         CheckinMapComponent,
         SetupChecklistComponent,
         WelcomeWizardComponent,
+        BentoGridComponent,
+        BentoCardComponent,
+        BentoStatComponent,
     ],
     templateUrl: './dashboard.component.html',
     styleUrls: [

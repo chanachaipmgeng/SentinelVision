@@ -37,6 +37,11 @@ const STATION_MODES: StationMode[] = [
   'UNIFIED_HYBRID',
 ];
 
+import {
+  BentoGridComponent,
+  BentoCardComponent,
+} from '../../../shared/components/bento';
+
 /**
  * Full Scan & Action Hub — replaces the Phase 2 placeholder at `/company/scan-hub`.
  * Uses Phase 2 `CompanyModuleConfigService` (GET/PUT module-config).
@@ -51,6 +56,8 @@ const STATION_MODES: StationMode[] = [
         PageToolbarComponent,
         StatChipComponent,
         EmptyStateComponent,
+        BentoGridComponent,
+        BentoCardComponent,
     ],
     templateUrl: './scan-hub.component.html',
     styleUrls: ['./scan-hub.component.scss']
@@ -289,6 +296,26 @@ export class ScanHubComponent implements OnInit {
 
   get toggleableCount(): number {
     return TOGGLEABLE_COMPANY_MODULES.length;
+  }
+
+  getModuleCard(module: ToggleableCompanyModule): HubModuleCard | undefined {
+    return this.moduleCards.find((c) => c.module === module);
+  }
+
+  getLaunchLink(mode: StationMode): HubLaunchLink | undefined {
+    return this.launchLinks.find((l) => l.stationMode === mode);
+  }
+
+  isModuleEnabled(module: ToggleableCompanyModule): boolean {
+    return this.config.enabledModules.includes(module);
+  }
+
+  get primaryLaunchLink(): HubLaunchLink | undefined {
+    return (
+      this.getLaunchLink(this.config.defaultStationMode) ||
+      this.launchLinks[0] ||
+      undefined
+    );
   }
 }
 

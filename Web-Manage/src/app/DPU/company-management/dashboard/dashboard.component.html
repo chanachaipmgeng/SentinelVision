@@ -7,7 +7,7 @@
 <app-setup-checklist #setupChecklist></app-setup-checklist>
 <app-welcome-wizard (openChecklist)="setupChecklist.reveal()"></app-welcome-wizard>
 
-<div class="dpu-dashboard grid grid-cols-12 gap-x-6 gap-y-4">
+<div class="dpu-dashboard space-y-5">
   <div class="col-span-12">
     <app-page-toolbar title="dashboard.toolbarTitle">
       <ng-container chips>
@@ -66,125 +66,137 @@
   </div>
 
   <ng-container *ngIf="stats && !isLoading">
-    <!-- KPI row -->
-    <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <a routerLink="/company/timestamp-log" class="block box dpu-stat-card modern-card glass card-surface-cyan hover:border-cyan-400/50 transition-colors">
-        <div class="box-body">
-          <div class="dpu-stat-head">
-            <span class="dpu-stat-label">{{ 'Punches today' | translate }}</span>
-            <div class="dpu-stat-icon is-cyan">
-              <i class="ri-fingerprint-line"></i>
-            </div>
-          </div>
-          <div class="dpu-stat-value text-cyan-400">{{ stats.summary.checkInsToday }}</div>
-          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
-        </div>
-      </a>
-    </div>
-    <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <a routerLink="/company/timestamp-log" class="block box dpu-stat-card modern-card glass card-surface hover:border-emerald-400/50 transition-colors">
-        <div class="box-body">
-          <div class="dpu-stat-head">
-            <span class="dpu-stat-label">{{ 'In area today' | translate }}</span>
-            <div class="dpu-stat-icon is-emerald">
-              <i class="ri-map-pin-user-line"></i>
-            </div>
-          </div>
-          <div class="dpu-stat-value text-emerald-400">{{ inAreaToday }}</div>
-          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
-        </div>
-      </a>
-    </div>
-    <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <a routerLink="/company/warning-timestamp-log" class="block box dpu-stat-card modern-card glass card-surface hover:border-rose-400/50 transition-colors">
-        <div class="box-body">
-          <div class="dpu-stat-head">
-            <span class="dpu-stat-label">{{ 'Out of area today' | translate }}</span>
-            <div class="dpu-stat-icon is-rose">
-              <i class="ri-error-warning-line"></i>
-            </div>
-          </div>
-          <div class="dpu-stat-value" [ngClass]="outsideToday > 0 ? 'text-rose-400' : 'text-slate-200'">{{ outsideToday }}</div>
-          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
-        </div>
-      </a>
-    </div>
-    <div class="xl:col-span-3 md:col-span-6 col-span-12">
-      <div class="box dpu-stat-card modern-card glass card-surface">
-        <div class="box-body">
-          <div class="dpu-stat-head">
-            <span class="dpu-stat-label">{{ 'Pending approval' | translate }}</span>
-            <div class="dpu-stat-icon is-amber">
-              <i class="ri-time-line"></i>
-            </div>
-          </div>
-          <div class="dpu-stat-value" [ngClass]="pendingApproval > 0 ? 'text-amber-400' : 'text-slate-200'">{{ pendingApproval }}</div>
-          <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link block mt-1">{{ 'Go to approval queue' | translate }}</a>
-          <span *ngIf="!pendingApproval" class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
-        </div>
-      </div>
-    </div>
+    <!-- Bento KPI Stats Row -->
+    <app-bento-grid gap="gap-4">
+      <app-bento-stat
+        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
+        label="Punches today"
+        [value]="stats.summary.checkInsToday"
+        unit="records"
+        accentTone="cyan"
+        icon="ri-fingerprint-line"
+        [trendPositive]="true"
+        [trendLabel]="'Today summary' | translate"
+        routerLink="/company/timestamp-log"
+      ></app-bento-stat>
 
-    <!-- Charts -->
-    <div class="xl:col-span-8 col-span-12 sv-contain-region">
-      <div class="box modern-card glass h-full">
-        <div class="box-header flex items-center justify-between">
-          <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ '7-day trend' | translate }}</h5>
-        </div>
-        <div class="box-body">
-          <div echarts [options]="trendChart" class="h-72"></div>
-        </div>
-      </div>
-    </div>
-    <div class="xl:col-span-4 col-span-12 sv-contain-region">
-      <div class="box modern-card glass h-full">
-        <div class="box-header flex items-center justify-between">
-          <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Today mix' | translate }}</h5>
-        </div>
-        <div class="box-body">
-          <div echarts [options]="mixChart" class="h-72"></div>
-        </div>
-      </div>
-    </div>
+      <app-bento-stat
+        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
+        label="In area today"
+        [value]="inAreaToday"
+        unit="punches"
+        accentTone="emerald"
+        icon="ri-map-pin-user-line"
+        [trendPositive]="true"
+        [trendLabel]="'Normal punch' | translate"
+        routerLink="/company/timestamp-log"
+      ></app-bento-stat>
 
-    <!-- Map + realtime feed -->
-    <div class="xl:col-span-7 col-span-12 sv-contain-region">
-      <div class="box modern-card glass">
-        <div class="box-header flex items-center justify-between gap-2">
-          <div>
-            <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Today punch map' | translate }}</h5>
-            <p class="mb-0 text-xs text-dpu-muted">
-              {{ 'dashboard.mapHint' | translate }}
-            </p>
-          </div>
-          <span class="dpu-muted-count">{{ mapPoints.length }} {{ 'punch points' | translate }}</span>
-        </div>
-        <div class="box-body">
-          <app-checkin-map
-            [points]="mapPoints"
-            [companyLocations]="companyLocations"
-            height="420px">
-          </app-checkin-map>
-        </div>
-      </div>
-    </div>
+      <app-bento-stat
+        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
+        label="Out of area today"
+        [value]="outsideToday"
+        unit="alerts"
+        accentTone="rose"
+        icon="ri-error-warning-line"
+        [trendPositive]="outsideToday === 0"
+        [trend]="outsideToday > 0 ? 'down' : 'up'"
+        [trendLabel]="(outsideToday > 0 ? 'Requires check' : 'All clear') | translate"
+        routerLink="/company/warning-timestamp-log"
+      ></app-bento-stat>
 
-    <div class="xl:col-span-5 col-span-12 sv-contain-region">
-      <div class="box modern-card glass dpu-live-panel">
-        <div class="box-header flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <span class="dpu-live-dot" [class.is-on]="liveOn"></span>
-            <h5 class="box-title !mb-0 text-display-gradient font-bold">{{ 'Latest punches (Realtime)' | translate }}</h5>
-          </div>
-          <a routerLink="/company/timestamp-log" class="dpu-dash-link">{{ 'View all' | translate }}</a>
+      <app-bento-stat
+        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
+        label="Pending approval"
+        [value]="pendingApproval"
+        unit="items"
+        accentTone="amber"
+        icon="ri-time-line"
+        [trendPositive]="pendingApproval === 0"
+        [trend]="pendingApproval > 0 ? 'down' : 'up'"
+        [trendLabel]="(pendingApproval > 0 ? 'Queue active' : 'Clean') | translate"
+        routerLink="/company/warning-timestamp-log"
+      ></app-bento-stat>
+    </app-bento-grid>
+
+    <!-- Main Bento Grid -->
+    <app-bento-grid gap="gap-5">
+      <!-- 7-day Trend Analysis Bento Card -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-8"
+        accentTone="cyan"
+        headerIcon="ri-line-chart-line"
+        title="7-day trend"
+        subtitle="Attendance velocity & check-in patterns"
+        badge="VELOCITY"
+        badgeTone="cyan"
+      >
+        <div headerExtra class="text-xs text-slate-400 font-mono">
+          {{ 'Week Total' | translate }}: <strong class="text-cyan-400 font-bold">{{ weekTotal }}</strong>
         </div>
-        <div class="box-body !p-0">
+        <div echarts [options]="trendChart" class="h-72"></div>
+      </app-bento-card>
+
+      <!-- Today Mix & Punctuality Bento Card -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-4"
+        accentTone="sky"
+        headerIcon="ri-pie-chart-2-line"
+        title="Today mix"
+        subtitle="On-time vs geofence breakdown"
+        badge="RATIO"
+        badgeTone="sky"
+      >
+        <div echarts [options]="mixChart" class="h-72"></div>
+      </app-bento-card>
+
+      <!-- Geo-Spatial Punch Locations Map Bento Card -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-7"
+        accentTone="emerald"
+        headerIcon="ri-map-pin-range-line"
+        title="Today punch map"
+        subtitle="Geofenced location telemetry & GPS radius"
+        badge="MAP TELEMETRY"
+        badgeTone="emerald"
+      >
+        <div headerExtra class="text-xs text-emerald-400 font-mono">
+          {{ mapPoints.length }} {{ 'punch points' | translate }}
+        </div>
+        <app-checkin-map
+          [points]="mapPoints"
+          [companyLocations]="companyLocations"
+          height="420px">
+        </app-checkin-map>
+      </app-bento-card>
+
+      <!-- Realtime Punch Feed Bento Card -->
+      <app-bento-card
+        colSpan="col-span-12 xl:col-span-5"
+        accentTone="rose"
+        headerIcon="ri-radar-line"
+        title="Latest punches (Realtime)"
+        subtitle="Live biometric stream & facial match sightings"
+        [badge]="liveOn ? 'LIVE RADAR' : 'PAUSED'"
+        [badgeTone]="liveOn ? 'rose' : 'slate'"
+      >
+        <div headerExtra class="flex items-center gap-2">
+          <span class="sv-bento-chip-active" *ngIf="liveOn">
+            <span class="sv-pulse-dot"></span>
+            <span>STREAMING</span>
+          </span>
+          <a routerLink="/company/timestamp-log" class="text-xs text-cyan-400 hover:underline">
+            {{ 'View all' | translate }}
+          </a>
+        </div>
+
+        <div class="dpu-live-panel -mx-3 -mb-3">
           <app-empty-state
             *ngIf="!stats.recentActivity?.length"
             icon="ri-time-line"
             message="No recent activity">
           </app-empty-state>
-          <ul class="dpu-live-feed" *ngIf="stats.recentActivity?.length">
+          <ul class="dpu-live-feed max-h-[420px] overflow-y-auto" *ngIf="stats.recentActivity?.length">
             @for (activity of stats.recentActivity; track activity.timestampId || $index) {
               <li class="dpu-live-item" [class.is-new]="isNew(activity)" [class.is-warn]="!isInArea(activity)">
                 <img class="dpu-live-avatar" [src]="photoUrl(activity)" alt="">
@@ -208,7 +220,7 @@
             }
           </ul>
         </div>
-      </div>
-    </div>
+      </app-bento-card>
+    </app-bento-grid>
   </ng-container>
 </div>

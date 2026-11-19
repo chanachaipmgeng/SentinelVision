@@ -155,7 +155,7 @@ All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company author
 | GET/POST | `/sentinel/company/{companyId}/events` | JWT | List or create Smart Event / Seminar campaigns (`name`, `locationName`, `startAt`, `endAt`, `welcomeMessage`, `capacity`, `autoExpireDays`). |
 | DELETE | `/sentinel/company/{companyId}/events/{eventId}` | JWT | Close and soft-delete an event campaign. |
 | POST | `/sentinel/company/{companyId}/scan` | JWT / Kiosk | Unified 1:N Biometric Scan (`file`, optional `zoneId`, `eventId`, `stationMode`, `totpOrPin`): evaluates `BLACKLIST`/`POI` silent alarms, Access Control rules, IoT door relay, Event seat lookup, and Employee verification. |
-| GET | `/sentinel/company/{companyId}/incidents` | JWT | Paginated security & access incident log (`eventType`, `severity`, `limit`, `offset`). |
+| GET | `/sentinel/company/{companyId}/incidents` | JWT | Paginated security & access incident log (`eventType`, `severity`, `limit`, `offset`); includes enriched camera & location metadata (`cameraName`, `building`, `floorLevel`, `floorName`, `mapPosX`, `mapPosY`, `siteFloorId`, `locationName`, `latitude`, `longitude`). |
 | POST | `/sentinel/company/{companyId}/incidents/{incidentId}/acknowledge` | JWT | Acknowledge a `WARNING` or `CRITICAL` security incident. |
 | GET | `/sentinel/company/{companyId}/edge-sync` | JWT / Kiosk | Offline-First Edge Kiosk embedding manifest (`manifestVersion`, `employeeVectorsCount`, `sentinelVectorsCount`, `totalActiveVectors`, `activeZones`). |
 | GET/PUT | `/sentinel/company/{companyId}/module-config` | JWT | Get or update enabled SentinelVision modules for the company (`moduleGroups` / dual-rail sidebar visibility). |

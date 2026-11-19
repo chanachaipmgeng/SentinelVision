@@ -45,6 +45,7 @@ from ..services.sentinel_incident_service import (
     close_incident,
     close_incidents_bulk,
     dispatch_relay_webhook_async as _dispatch_relay_webhook_async,
+    enrich_incidents_location_metadata,
     evaluate_kiosk_sentinel_match,
     evaluate_unified_scan_decision,
     list_incidents,
@@ -573,7 +574,9 @@ async def acknowledge_sentinel_incident(
     inc = await acknowledge_incident(
         db, companyId, incidentId, actor.memberId if actor else None
     )
-    return _serialize_incident(inc)
+    s = _serialize_incident(inc)
+    enriched = await enrich_incidents_location_metadata(db, companyId, [s])
+    return enriched[0] if enriched else s
 
 
 @router.post("/company/{companyId}/incidents/{incidentId}/assign")
@@ -595,7 +598,9 @@ async def assign_sentinel_incident(
         actor_id=actor.memberId if actor else None,
         assignee_id=assignee_id,
     )
-    return _serialize_incident(inc)
+    s = _serialize_incident(inc)
+    enriched = await enrich_incidents_location_metadata(db, companyId, [s])
+    return enriched[0] if enriched else s
 
 
 @router.post("/company/{companyId}/incidents/{incidentId}/close")
@@ -610,7 +615,9 @@ async def close_sentinel_incident(
     inc = await close_incident(
         db, companyId, incidentId, actor.memberId if actor else None
     )
-    return _serialize_incident(inc)
+    s = _serialize_incident(inc)
+    enriched = await enrich_incidents_location_metadata(db, companyId, [s])
+    return enriched[0] if enriched else s
 
 
 @router.get("/company/{companyId}/edge-sync")

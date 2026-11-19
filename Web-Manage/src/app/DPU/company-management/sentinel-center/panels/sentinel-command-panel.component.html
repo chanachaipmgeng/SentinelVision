@@ -265,7 +265,27 @@
                         </span>
                         <div class="text-[0.7rem] text-slate-400 mt-0.5">{{ inc.actionTaken }}</div>
                       </td>
-                      <td class="p-3 text-slate-200">{{ inc.zoneName || '-' }}</td>
+                      <td class="p-3 text-slate-200">
+                        <div class="font-medium text-slate-200">{{ inc.zoneName || '-' }}</div>
+                        <div *ngIf="inc.cameraName" class="text-[0.7rem] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <i class="ri-camera-lens-line text-cyan-400"></i>
+                          <span>{{ inc.cameraName }}</span>
+                          <span *ngIf="inc.building || inc.floorLevel" class="text-slate-500">
+                            ({{ inc.building ? inc.building + ' ' : '' }}{{ inc.floorLevel }})
+                          </span>
+                        </div>
+                        <div *ngIf="inc.latitude && inc.longitude" class="text-[0.68rem] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <i class="ri-map-pin-2-line text-emerald-400"></i>
+                          <a
+                            class="hover:underline text-emerald-400/90"
+                            [href]="'https://www.google.com/maps?q=' + inc.latitude + ',' + inc.longitude"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {{ inc.latitude | number:'1.4-4' }}, {{ inc.longitude | number:'1.4-4' }}
+                          </a>
+                        </div>
+                      </td>
                       <td class="p-3 text-slate-200">
                         <span *ngIf="inc.confidencePercent !== null && inc.confidencePercent !== undefined">{{ inc.confidencePercent }}%</span>
                         <span *ngIf="inc.confidencePercent === null || inc.confidencePercent === undefined" class="text-slate-400">-</span>

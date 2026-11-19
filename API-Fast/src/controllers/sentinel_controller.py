@@ -41,6 +41,7 @@ from ..services.sentinel_identity_service import (
 )
 from ..services.sentinel_incident_service import (
     dispatch_relay_webhook_async,
+    enrich_incidents_location_metadata,
     evaluate_unified_scan_decision,
     record_incident,
     serialize_incident,
@@ -135,7 +136,9 @@ async def get_overview(db: AsyncSession, company_id: UUID) -> dict:
             "offset": muster.get("offset"),
             "workDate": muster.get("workDate"),
         },
-        "recentIncidents": [serialize_incident(inc) for inc in recent_incidents],
+        "recentIncidents": await enrich_incidents_location_metadata(
+            db, company_id, [serialize_incident(inc) for inc in recent_incidents]
+        ),
     }
 
 

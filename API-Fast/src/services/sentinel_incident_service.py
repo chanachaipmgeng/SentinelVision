@@ -11,8 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.settings import settings
+from ..models.camera import Camera
+from ..models.company_location import CompanyLocation
 from ..models.member import Member
 from ..models.sentinel import SentinelAccessZone, SentinelEvent, SentinelIdentity, SentinelIncidentLog
+from ..models.site_floor import SiteFloor
 from ..services.face_match_service import (
     search_face_pgvector,
     search_sentinel_identity_pgvector,
@@ -81,6 +84,16 @@ def serialize_incident(inc: SentinelIncidentLog) -> dict:
         "zoneName": inc.zoneName,
         "direction": getattr(inc, "direction", None),
         "cameraId": str(getattr(inc, "cameraId", None)) if getattr(inc, "cameraId", None) else None,
+        "cameraName": getattr(inc, "cameraName", None),
+        "building": getattr(inc, "building", None),
+        "floorLevel": getattr(inc, "floorLevel", None),
+        "floorName": getattr(inc, "floorName", None),
+        "mapPosX": getattr(inc, "mapPosX", None),
+        "mapPosY": getattr(inc, "mapPosY", None),
+        "siteFloorId": str(getattr(inc, "siteFloorId", None)) if getattr(inc, "siteFloorId", None) else None,
+        "locationName": getattr(inc, "locationName", None),
+        "latitude": getattr(inc, "latitude", None),
+        "longitude": getattr(inc, "longitude", None),
         "eventId": str(inc.eventId) if inc.eventId else None,
         "confidencePercent": inc.confidencePercent,
         "distance": inc.distance,
@@ -96,6 +109,152 @@ def serialize_incident(inc: SentinelIncidentLog) -> dict:
         "slaDueAt": getattr(inc, "slaDueAt", None),
         "occurredAt": inc.occurredAt,
     }
+
+
+async def enrich_incidents_location_metadata(
+    db: AsyncSession,
+    company_id: UUID,
+    incidents: list[dict],
+) -> list[dict]:
+    """Batch-enrich serialized incidents with Camera, Floor Plan, and GPS Location details."""
+    if not incidents:
+        return incidents
+
+    cam_ids: set[UUID] = set()
+    zone_ids: set[UUID] = set()
+
+    for item in incidents:
+        raw_cam = item.get("cameraId")
+        if raw_cam:
+            try:
+                cam_ids.add(UUID(str(raw_cam)))
+            except (ValueError, TypeError):
+                pass
+        raw_zone = item.get("zoneId")
+        if raw_zone:
+            try:
+                zone_ids.add(UUID(str(raw_zone)))
+            except (ValueError, TypeError):
+                pass
+
+    cam_map: dict[UUID, Camera] = {}
+    if cam_ids:
+        cam_stmt = select(Camera).where(
+            Camera.companyId == company_id,
+            Camera.cameraId.in_(cam_ids),
+            Camera.deletedAt.is_(None),
+        )
+        cam_rows = (await db.execute(cam_stmt)).scalars().all()
+        for c in cam_rows:
+            cam_map[c.cameraId] = c
+            if c.zoneId:
+                zone_ids.add(c.zoneId)
+
+    zone_map: dict[UUID, SentinelAccessZone] = {}
+    if zone_ids:
+        zone_stmt = select(SentinelAccessZone).where(
+            SentinelAccessZone.companyId == company_id,
+            SentinelAccessZone.zoneId.in_(zone_ids),
+            SentinelAccessZone.deletedAt.is_(None),
+        )
+        zone_rows = (await db.execute(zone_stmt)).scalars().all()
+        for z in zone_rows:
+            zone_map[z.zoneId] = z
+
+    floor_ids: set[UUID] = set()
+    loc_ids: set[UUID] = set()
+
+    for c in cam_map.values():
+        if c.siteFloorId:
+            floor_ids.add(c.siteFloorId)
+    for z in zone_map.values():
+        if z.siteFloorId:
+            floor_ids.add(z.siteFloorId)
+        if z.locationId:
+            loc_ids.add(z.locationId)
+
+    floor_map: dict[UUID, SiteFloor] = {}
+    if floor_ids:
+        floor_stmt = select(SiteFloor).where(
+            SiteFloor.companyId == company_id,
+            SiteFloor.siteFloorId.in_(floor_ids),
+            SiteFloor.deletedAt.is_(None),
+        )
+        floor_rows = (await db.execute(floor_stmt)).scalars().all()
+        floor_map = {f.siteFloorId: f for f in floor_rows}
+
+    loc_map: dict[UUID, CompanyLocation] = {}
+    if loc_ids:
+        loc_stmt = select(CompanyLocation).where(
+            CompanyLocation.companyId == company_id,
+            CompanyLocation.locationId.in_(loc_ids),
+            CompanyLocation.deletedAt.is_(None),
+        )
+        loc_rows = (await db.execute(loc_stmt)).scalars().all()
+        loc_map = {loc_obj.locationId: loc_obj for loc_obj in loc_rows}
+
+    default_loc: Optional[CompanyLocation] = None
+    if not loc_map:
+        fallback_stmt = (
+            select(CompanyLocation)
+            .where(
+                CompanyLocation.companyId == company_id,
+                CompanyLocation.deletedAt.is_(None),
+            )
+            .order_by(CompanyLocation.createdAt.asc())
+            .limit(1)
+        )
+        default_loc = (await db.execute(fallback_stmt)).scalar_one_or_none()
+
+    for item in incidents:
+        item.setdefault("cameraName", None)
+        item.setdefault("building", None)
+        item.setdefault("floorLevel", None)
+        item.setdefault("floorName", None)
+        item.setdefault("mapPosX", None)
+        item.setdefault("mapPosY", None)
+        item.setdefault("siteFloorId", None)
+        item.setdefault("locationName", None)
+        item.setdefault("latitude", None)
+        item.setdefault("longitude", None)
+
+        raw_cam = item.get("cameraId")
+        c_uuid = UUID(str(raw_cam)) if raw_cam else None
+        cam = cam_map.get(c_uuid) if c_uuid else None
+
+        raw_zone = item.get("zoneId")
+        z_uuid = UUID(str(raw_zone)) if raw_zone else (cam.zoneId if cam else None)
+        zone = zone_map.get(z_uuid) if z_uuid else None
+
+        if cam is not None:
+            item["cameraName"] = cam.name
+            if cam.mapPosX is not None:
+                item["mapPosX"] = cam.mapPosX
+            if cam.mapPosY is not None:
+                item["mapPosY"] = cam.mapPosY
+
+        if zone is not None:
+            if item.get("mapPosX") is None and zone.mapPosX is not None:
+                item["mapPosX"] = zone.mapPosX
+            if item.get("mapPosY") is None and zone.mapPosY is not None:
+                item["mapPosY"] = zone.mapPosY
+
+        target_floor_id = (cam.siteFloorId if cam else None) or (zone.siteFloorId if zone else None)
+        if target_floor_id and target_floor_id in floor_map:
+            fl = floor_map[target_floor_id]
+            item["siteFloorId"] = str(fl.siteFloorId)
+            item["building"] = fl.buildingLabel
+            item["floorLevel"] = fl.floorLabel
+            item["floorName"] = fl.name
+
+        target_loc_id = zone.locationId if zone else None
+        loc = loc_map.get(target_loc_id) if target_loc_id else default_loc
+        if loc is not None:
+            item["locationName"] = loc.locationName
+            item["latitude"] = loc.latitude
+            item["longitude"] = loc.longitude
+
+    return incidents
 
 
 async def compute_sla_due_at(
@@ -266,7 +425,9 @@ async def record_incident(
     try:
         from .incident_ws_hub import publish_incident_event
 
-        await publish_incident_event(company_id, serialize_incident(inc))
+        payload = serialize_incident(inc)
+        enriched_list = await enrich_incidents_location_metadata(db, company_id, [payload])
+        await publish_incident_event(company_id, enriched_list[0] if enriched_list else payload)
     except Exception as exc:
         logger.debug("WebSocket incident broadcast skipped: %s", exc)
 
@@ -461,7 +622,8 @@ async def list_incidents(
             return []
     stmt = stmt.order_by(SentinelIncidentLog.occurredAt.desc()).limit(limit).offset(offset)
     rows = (await db.execute(stmt)).scalars().all()
-    return [serialize_incident(r) for r in rows]
+    incidents = [serialize_incident(r) for r in rows]
+    return await enrich_incidents_location_metadata(db, company_id, incidents)
 
 
 async def dispatch_relay_webhook_async(
@@ -953,6 +1115,7 @@ __all__ = [
     "close_incidents_bulk",
     "compute_sla_due_at",
     "dispatch_relay_webhook_async",
+    "enrich_incidents_location_metadata",
     "evaluate_kiosk_sentinel_match",
     "evaluate_unified_scan_decision",
     "list_incidents",

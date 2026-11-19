@@ -343,3 +343,77 @@ async def test_evaluate_kiosk_uses_dedupe_on_repeat_hit():
     # Dedupe path: no new NotificationOutbox / incident insert.
     assert db.add.call_count == 0
     assert existing.confidencePercent == round(max(0.0, min(1.0, 1.0 - 0.12)) * 100.0, 2)
+
+
+@pytest.mark.asyncio
+async def test_enrich_incidents_location_metadata():
+    cam_id = uuid4()
+    floor_id = uuid4()
+    zone_id = uuid4()
+    loc_id = uuid4()
+
+    mock_cam = MagicMock()
+    mock_cam.cameraId = cam_id
+    mock_cam.name = "CAM-01 Main Gate"
+    mock_cam.zoneId = zone_id
+    mock_cam.siteFloorId = floor_id
+    mock_cam.mapPosX = 42.5
+    mock_cam.mapPosY = 78.1
+
+    mock_zone = MagicMock()
+    mock_zone.zoneId = zone_id
+    mock_zone.name = "Main Gate Zone"
+    mock_zone.siteFloorId = floor_id
+    mock_zone.locationId = loc_id
+    mock_zone.mapPosX = 40.0
+    mock_zone.mapPosY = 75.0
+
+    mock_floor = MagicMock()
+    mock_floor.siteFloorId = floor_id
+    mock_floor.buildingLabel = "Tower A"
+    mock_floor.floorLabel = "Floor 2"
+    mock_floor.name = "Tower A Floor 2"
+
+    mock_loc = MagicMock()
+    mock_loc.locationId = loc_id
+    mock_loc.locationName = "Bangkok HQ"
+    mock_loc.latitude = 13.7563
+    mock_loc.longitude = 100.5018
+
+    db = AsyncMock()
+
+    async def _mock_execute(stmt):
+        query_str = str(stmt)
+        if "FROM camera" in query_str:
+            return MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_cam]))))
+        elif "FROM sentinel_access_zone" in query_str:
+            return MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_zone]))))
+        elif "FROM site_floor" in query_str:
+            return MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_floor]))))
+        elif "FROM company_location" in query_str:
+            return MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[mock_loc]))))
+        return MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+
+    db.execute = AsyncMock(side_effect=_mock_execute)
+
+    inc_dict = {
+        "incidentId": str(uuid4()),
+        "companyId": str(COMPANY_ID),
+        "cameraId": str(cam_id),
+        "zoneId": str(zone_id),
+        "subjectName": "Target X",
+    }
+
+    result = await svc.enrich_incidents_location_metadata(db, COMPANY_ID, [inc_dict])
+    assert len(result) == 1
+    item = result[0]
+    assert item["cameraName"] == "CAM-01 Main Gate"
+    assert item["mapPosX"] == 42.5
+    assert item["mapPosY"] == 78.1
+    assert item["building"] == "Tower A"
+    assert item["floorLevel"] == "Floor 2"
+    assert item["floorName"] == "Tower A Floor 2"
+    assert item["siteFloorId"] == str(floor_id)
+    assert item["locationName"] == "Bangkok HQ"
+    assert item["latitude"] == 13.7563
+    assert item["longitude"] == 100.5018

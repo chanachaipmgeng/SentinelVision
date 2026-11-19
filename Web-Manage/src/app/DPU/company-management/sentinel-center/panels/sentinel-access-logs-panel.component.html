@@ -191,10 +191,29 @@
             <div class="text-[0.7rem] text-slate-400 mt-0.5">{{ inc.actionTaken }}</div>
           </td>
           <td class="p-3">
-            <div class="text-slate-200">{{ inc.zoneName || '-' }}</div>
+            <div class="text-slate-200 font-medium">{{ inc.zoneName || '-' }}</div>
+            <div *ngIf="inc.cameraName" class="text-[0.7rem] text-slate-400 flex items-center gap-1 mt-0.5">
+              <i class="ri-camera-lens-line text-cyan-400"></i>
+              <span>{{ inc.cameraName }}</span>
+              <span *ngIf="inc.building || inc.floorLevel" class="text-slate-500">
+                ({{ inc.building ? inc.building + ' ' : '' }}{{ inc.floorLevel }})
+              </span>
+            </div>
+            <div *ngIf="inc.latitude && inc.longitude" class="text-[0.68rem] text-slate-400 flex items-center gap-1 mt-0.5">
+              <i class="ri-map-pin-2-line text-emerald-400"></i>
+              <a
+                class="hover:underline text-emerald-400/90"
+                [href]="'https://www.google.com/maps?q=' + inc.latitude + ',' + inc.longitude"
+                target="_blank"
+                rel="noopener noreferrer"
+                (click)="$event.stopPropagation()"
+              >
+                {{ inc.latitude | number:'1.4-4' }}, {{ inc.longitude | number:'1.4-4' }}
+              </a>
+            </div>
             <a
               *ngIf="inc.zoneId"
-              class="text-[0.7rem] text-cyan-400 hover:underline"
+              class="text-[0.7rem] text-cyan-400 hover:underline block mt-0.5"
               [routerLink]="['/company/scan/access-control']"
               [queryParams]="{ zoneId: inc.zoneId }"
               (click)="$event.stopPropagation()"
@@ -362,6 +381,74 @@
             [queryParams]="{ zoneId: inc.zoneId }">
             {{ 'listKit.accessLogs.openZoneScan' | translate }}
           </a>
+        </dd>
+      </div>
+
+      <!-- Detection Camera & Hardware -->
+      <div>
+        <dt>{{ 'listKit.accessLogs.detectedCamera' | translate }}</dt>
+        <dd>
+          <div *ngIf="inc.cameraName || inc.cameraId; else noCameraTpl" class="flex flex-col gap-0.5">
+            <span class="font-semibold text-slate-100 flex items-center gap-1">
+              <i class="ri-camera-lens-line text-cyan-400"></i>
+              {{ inc.cameraName || 'กล้องไม่ทราบชื่อ' }}
+            </span>
+            <span *ngIf="inc.cameraId" class="text-[0.7rem] text-slate-400 font-mono">
+              ID: {{ inc.cameraId }}
+            </span>
+          </div>
+          <ng-template #noCameraTpl>
+            <span class="text-slate-400">{{ 'listKit.accessLogs.noCameraLinked' | translate }}</span>
+          </ng-template>
+        </dd>
+      </div>
+
+      <!-- Floorplan & Coordinates -->
+      <div *ngIf="inc.building || inc.floorLevel || (inc.mapPosX !== null && inc.mapPosX !== undefined)">
+        <dt>{{ 'listKit.accessLogs.floorplanLocation' | translate }}</dt>
+        <dd>
+          <div class="flex flex-col gap-0.5">
+            <span *ngIf="inc.building || inc.floorLevel" class="text-slate-100 font-medium flex items-center gap-1">
+              <i class="ri-building-line text-sky-400"></i>
+              {{ inc.building || '' }} {{ inc.floorLevel ? '(' + inc.floorLevel + ')' : '' }} {{ inc.floorName ? '• ' + inc.floorName : '' }}
+            </span>
+            <span *ngIf="inc.mapPosX !== null && inc.mapPosX !== undefined" class="text-[0.72rem] text-slate-400 flex items-center gap-1">
+              <i class="ri-crosshair-2-line text-amber-400"></i>
+              {{ 'listKit.accessLogs.mapCoordinates' | translate }}: X {{ inc.mapPosX | number:'1.1-1' }}%, Y {{ inc.mapPosY | number:'1.1-1' }}%
+            </span>
+            <a
+              *ngIf="inc.siteFloorId"
+              class="sv-incident__link text-[0.72rem] mt-0.5 inline-flex items-center gap-1"
+              [routerLink]="['/company/cameras']"
+              [queryParams]="{ floorId: inc.siteFloorId, cameraId: inc.cameraId }"
+            >
+              <i class="ri-map-2-line"></i> {{ 'listKit.accessLogs.viewOnEmap' | translate }}
+            </a>
+          </div>
+        </dd>
+      </div>
+
+      <!-- Geographic GPS Coordinates -->
+      <div *ngIf="inc.latitude && inc.longitude">
+        <dt>{{ 'listKit.accessLogs.gpsCoordinates' | translate }}</dt>
+        <dd>
+          <div class="flex flex-col gap-0.5">
+            <span *ngIf="inc.locationName" class="text-slate-100 font-medium">
+              {{ inc.locationName }}
+            </span>
+            <span class="text-[0.72rem] text-slate-300 font-mono flex items-center gap-1">
+              <i class="ri-map-pin-2-line text-emerald-400"></i>
+              {{ inc.latitude | number:'1.6-6' }}, {{ inc.longitude | number:'1.6-6' }}
+            </span>
+            <a
+              class="sv-incident__link text-[0.72rem] mt-0.5 inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300"
+              [href]="'https://www.google.com/maps?q=' + inc.latitude + ',' + inc.longitude"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <i class="ri-external-link-line"></i> {{ 'listKit.accessLogs.openGoogleMaps' | translate }}
+            </a>
+          </div>
         </dd>
       </div>
       <div>

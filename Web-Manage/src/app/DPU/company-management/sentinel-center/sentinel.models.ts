@@ -45,6 +45,18 @@ export interface SentinelIncident {
   actionTaken?: string | null;
   zoneId?: string | null;
   zoneName?: string | null;
+  direction?: string | null;
+  cameraId?: string | null;
+  cameraName?: string | null;
+  building?: string | null;
+  floorLevel?: string | null;
+  floorName?: string | null;
+  mapPosX?: number | null;
+  mapPosY?: number | null;
+  siteFloorId?: string | null;
+  locationName?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   confidencePercent?: number | null;
   occurredAt?: string | Date | null;
   status?: string | null;

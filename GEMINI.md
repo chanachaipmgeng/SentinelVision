@@ -84,3 +84,9 @@
   - Keep ambient canvas effects (`ConstellationComponent`, `HorizonGlowComponent`) scoped to Login / Landing / Kiosk idle — never mount them behind dense admin data tables.
 - **Copilot & Investigation Graph Tenancy**:
   - `/sentinel/company/{companyId}/graph` and `/sentinel/company/{companyId}/assistant/chat` MUST enforce `assert_request_company_access` and fall back gracefully to live PostgreSQL company summaries when `GOOGLE_API_KEY` is unset.
+- **Bento Grid Architecture & Shared Component Invariants**:
+  - Grid wrapper `<app-bento-grid>` enforces responsive 12-column CSS Grid (`grid-template-columns: repeat(12, minmax(0, 1fr))`) collapsing to 1 column on `< 768px`. It MUST dynamically support both Tailwind gap classes (`gap="gap-5"`) and raw CSS lengths (`gap="1.25rem"`).
+  - Child cards `<app-bento-card>` MUST use `:host { display: contents; }` so child `.sv-bento-card` participates directly in the parent grid's 12-column layout via responsive span classes (`col-span-12 xl:col-span-8`, etc.) with VaultX Obsidian Glass dark surfaces (`#070d14` base + rim highlight) and light-theme overrides.
+  - Accent tones are strictly constrained to 7 semantic tokens: `cyan` (Attendance/Core), `sky` (Access Control), `rose` (Watchlist/Threats), `amber` (Visitor/Events), `violet` (CCTV/MediaMTX), `emerald` (Active/Healthy), and `slate` (Neutral/Inactive).
+  - In component `@Input()` definitions, avoid `Record<string, any>` (which fails strict ESLint `@typescript-eslint/no-explicit-any`); use `Params` from `@angular/router` or `Record<string, unknown>`.
+  - In Karma unit tests for standalone components or test hosts consuming `@ngx-translate/core` pipes (`| translate`), always provide `TranslateModule.forRoot()` in `TestBed.configureTestingModule({ imports: [TranslateModule.forRoot(), ...] })` to prevent `NG0201: No provider found for TranslateStore`.

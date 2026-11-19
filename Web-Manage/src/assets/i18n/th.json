@@ -301,6 +301,8 @@
   "landing.kiosk.mode.event.desc": "เช็กชื่อผู้เข้าร่วมงานสัมมนา แสดงเลขที่นั่ง และขึ้นข้อความต้อนรับบนจอ",
   "landing.kiosk.mode.unified.title": "โหมดรวมอัจฉริยะ (Unified Hybrid)",
   "landing.kiosk.mode.unified.desc": "รวมทุกภารกิจในจุดเดียว สแกนครั้งเดียวทำงานทั้งลงเวลาและปลดล็อกประตู",
+  "landing.metrics.tag": "สถิติและประสิทธิภาพ",
+  "landing.metrics.title": "ตัวเลขที่พิสูจน์ความเสถียรระดับองค์กร",
   "landing.metric.embedding": "ความละเอียดเวกเตอร์ชีวมิติ",
   "landing.metric.accuracy": "ความแม่นยำในการตรวจจับ & Liveness",
   "landing.metric.modes": "โหมดตู้สแกนอัจฉริยะ",

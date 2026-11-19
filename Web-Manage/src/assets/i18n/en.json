@@ -301,6 +301,8 @@
   "landing.kiosk.mode.event.desc": "Attendee registry verification, seat assignment display, and welcome message.",
   "landing.kiosk.mode.unified.title": "Unified Hybrid Station",
   "landing.kiosk.mode.unified.desc": "Single-scan multi-mission: records employee attendance while unlocking access doors.",
+  "landing.metrics.tag": "Metrics & Performance",
+  "landing.metrics.title": "Proven Numbers for Enterprise Reliability",
   "landing.metric.embedding": "Biometric Vector Precision",
   "landing.metric.accuracy": "Liveness & Recognition Accuracy",
   "landing.metric.modes": "Smart Station Profiles",

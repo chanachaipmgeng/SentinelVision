@@ -94,7 +94,7 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
     id: 'ai',
     labelKey: 'settingsHub.section.ai',
     hintKey: 'settingsHub.section.ai.hint',
-    icon: 'ri-brain-line',
+    icon: 'ri-cpu-line',
     permission: 'company.settings',
   },
   {

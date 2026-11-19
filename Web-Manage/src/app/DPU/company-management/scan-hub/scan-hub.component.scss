@@ -5,7 +5,7 @@
 .dpu-scan-hub__lead {
   margin: 0 0 1rem;
   font-size: 0.9rem;
-  color: #94a3b8;
+  color: var(--dpu-muted, #64748b);
 }
 
 .dpu-scan-hub__modules {
@@ -19,17 +19,17 @@
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f1f5f9;
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: var(--dpu-card-bg, #ffffff);
+  color: var(--dpu-ink, #0f172a);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dpu-scan-hub__module.is-on {
-  border-color: rgba(6, 182, 212, 0.45);
+  border-color: rgba(6, 182, 212, 0.6);
   background: rgba(6, 182, 212, 0.08);
-  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.15);
+  box-shadow: 0 4px 16px -2px rgba(6, 182, 212, 0.18);
 }
 
 .dpu-scan-hub__module-icon {
@@ -40,7 +40,7 @@
   align-items: center;
   justify-content: center;
   background: rgba(6, 182, 212, 0.12);
-  color: #22d3ee;
+  color: #0891b2;
   font-size: 1.2rem;
   flex-shrink: 0;
 }
@@ -54,13 +54,13 @@
 }
 
 .dpu-scan-hub__module-text strong {
-  color: #f1f5f9;
+  color: var(--dpu-ink, #0f172a);
 }
 
 .dpu-scan-hub__module-text em {
   font-style: normal;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--dpu-muted, #64748b);
 }
 
 .dpu-scan-hub__rules {
@@ -74,13 +74,13 @@
   align-items: flex-start;
   gap: 0.6rem;
   font-size: 0.9rem;
-  color: #cbd5e1 !important;
+  color: var(--dpu-ink, #1e293b) !important;
   font-weight: 500;
   cursor: pointer;
   transition: color 0.15s ease;
 
   &:hover {
-    color: #22d3ee !important;
+    color: #0891b2 !important;
   }
 
   span {
@@ -114,23 +114,23 @@
   position: relative;
   padding: 1rem 2.25rem 1rem 1rem;
   border-radius: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--dpu-border, #e2e8f0);
+  background: var(--dpu-card-bg, #ffffff);
   text-align: left;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dpu-scan-hub__launch:hover {
-  border-color: rgba(6, 182, 212, 0.45);
+  border-color: rgba(6, 182, 212, 0.6);
   background: rgba(6, 182, 212, 0.08);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
 .dpu-scan-hub__launch strong {
   font-size: 0.95rem;
-  color: #ffffff;
+  color: var(--dpu-ink, #0f172a);
 }
 
 .dpu-scan-hub__launch em {
@@ -138,7 +138,7 @@
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #22d3ee;
+  color: #0891b2;
 }
 
 .dpu-scan-hub__launch-meta {
@@ -146,7 +146,7 @@
   gap: 0.35rem;
   margin-top: 0.35rem;
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--dpu-muted, #64748b);
 }
 
 .dpu-scan-hub__launch > i {
@@ -154,6 +154,81 @@
   right: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #22d3ee;
+  color: #0891b2;
   font-size: 1.25rem;
+}
+
+/* ==========================================================================
+   VaultX Obsidian Dark Theme Overrides
+   ========================================================================== */
+:host-context(html[data-theme='dark']),
+:host-context(html.dark),
+:host-context(.dark) {
+  .dpu-scan-hub__lead {
+    color: #94a3b8;
+  }
+
+  .dpu-scan-hub__module {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #f1f5f9;
+  }
+
+  .dpu-scan-hub__module.is-on {
+    border-color: rgba(6, 182, 212, 0.45);
+    background: rgba(6, 182, 212, 0.08);
+    box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.15);
+  }
+
+  .dpu-scan-hub__module-icon {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+  }
+
+  .dpu-scan-hub__module-text strong {
+    color: #f1f5f9;
+  }
+
+  .dpu-scan-hub__module-text em {
+    color: #94a3b8;
+  }
+
+  .dpu-scan-hub__rule {
+    color: #cbd5e1 !important;
+
+    &:hover {
+      color: #22d3ee !important;
+    }
+
+    span {
+      color: inherit;
+    }
+  }
+
+  .dpu-scan-hub__launch {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .dpu-scan-hub__launch:hover {
+    border-color: rgba(6, 182, 212, 0.45);
+    background: rgba(6, 182, 212, 0.08);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+  }
+
+  .dpu-scan-hub__launch strong {
+    color: #ffffff;
+  }
+
+  .dpu-scan-hub__launch em {
+    color: #22d3ee;
+  }
+
+  .dpu-scan-hub__launch-meta {
+    color: #94a3b8;
+  }
+
+  .dpu-scan-hub__launch > i {
+    color: #22d3ee;
+  }
 }

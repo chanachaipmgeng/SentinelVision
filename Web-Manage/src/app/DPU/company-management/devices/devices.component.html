@@ -11,7 +11,7 @@
       <app-pill-search
         [(value)]="searchTerm"
         placeholder="{{ 'Search devices' | translate }}"
-        ariaLabel="a11y.search"
+        [ariaLabel]="'a11y.search' | translate"
       ></app-pill-search>
       <a routerLink="/company/settings/devices" class="ti-btn ti-btn-light modern-btn">
         <i class="ri-settings-3-line" aria-hidden="true"></i>

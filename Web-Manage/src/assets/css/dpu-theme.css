@@ -1650,6 +1650,7 @@ html.dpu-kiosk-mode .main-content > * {
 
 .sv-table-wrapper table {
   width: 100%;
+  min-width: 52rem;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -3141,4 +3142,150 @@ html.dpu-kiosk-mode .footer {
 :where(a:any-link, button, summary, [role="button"], input, select, textarea):focus-visible {
   outline: 2px solid #06b6d4;
   outline-offset: 2px;
+}
+
+/* ==========================================================================
+   UX/UI Visual Polish: Light/Dark Theme, Spacing, Caret & Contrast Tokens
+   ========================================================================== */
+
+/* 1. Scan Hub Module Cards & Checkbox Contrast in Light Mode */
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card h4,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card h5,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .box-title,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card label,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .text-white,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .text-slate-100,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .text-slate-200 {
+  color: #0f172a !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card p,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .text-slate-300,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .sv-module-card .text-slate-400 {
+  color: #475569 !important;
+}
+
+/* 2. Secondary & Ghost Button Light Mode Outlines */
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-light,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-light,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-ghost,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-ghost,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .modern-btn.ti-btn-light,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .modern-btn.ti-btn-light {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-light:hover,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .ti-btn-ghost:hover,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .modern-btn.ti-btn-light:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* 3. Header Icon Contrast in Dark Mode */
+html[data-theme="dark"] .app-header .header-link-icon,
+html.dark .app-header .header-link-icon,
+html[data-theme-mode="dark"] .app-header .header-link-icon {
+  color: #cbd5e1 !important;
+}
+html[data-theme="dark"] .app-header .header-link-icon:hover,
+html.dark .app-header .header-link-icon:hover,
+html[data-theme-mode="dark"] .app-header .header-link-icon:hover {
+  color: #38bdf8 !important;
+}
+html[data-theme="dark"] .footer img,
+html.dark .footer img,
+html[data-theme-mode="dark"] .footer img {
+  filter: brightness(1.6) contrast(1.1);
+}
+
+/* 4. Native Select Dropdown Caret Normalization - Single Clean Chevron */
+select.form-control,
+select.form-select,
+select.ti-form-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 1rem !important;
+  padding-right: 2.25rem !important;
+}
+
+/* 5. Fire Alarm & Destructive Buttons Text Contrast */
+.btn-fire-alarm,
+button.btn-fire-alarm,
+.ti-btn-danger,
+button.ti-btn-danger {
+  color: #ffffff !important;
+  background-color: #dc2626 !important;
+  border-color: #b91c1c !important;
+}
+.btn-fire-alarm:hover,
+button.btn-fire-alarm:hover,
+.ti-btn-danger:hover,
+button.ti-btn-danger:hover {
+  background-color: #b91c1c !important;
+  color: #ffffff !important;
+}
+
+/* 6. Sentinel Center Sub-Tabs in Light Mode */
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill--active,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill--active {
+  background: #0f766e !important;
+  color: #ffffff !important;
+  border-color: #0d9488 !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill {
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill:hover,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-sub-nav-pill:hover {
+  color: #0f172a !important;
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+/* 7. Unpaired / Expired Kiosk Badge & Employee ID Pill Contrast */
+.sv-badge--unpaired {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(148, 163, 184, 0.3) !important;
+}
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-badge--unpaired,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-badge--unpaired {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #cbd5e1 !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .emp-id-badge,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .emp-id-badge {
+  background: rgba(15, 118, 110, 0.1) !important;
+  color: #0f766e !important;
+  border: 1px solid rgba(15, 118, 110, 0.25) !important;
+}
+
+/* 8. Offset Floating Back-to-Top Button Above Ask AI FAB */
+#back-to-top,
+.back-to-top {
+  bottom: 5.5rem !important;
 }

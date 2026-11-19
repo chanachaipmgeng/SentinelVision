@@ -57,7 +57,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
     ],
     template: `
     <app-page-header
-      [title]="'SentinelVision — ศูนย์ควบคุมอัตลักษณ์ ความปลอดภัย Access Control & Smart Events'"
+      [title]="'sentinel.command.title'"
       [activeTitle]="'SentinelVision Command'"
       [title1]="'Security, Access, Watchlist & Events'"
     ></app-page-header>
@@ -70,10 +70,10 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
             <span>SentinelVision Unified Biometric Platform • InsightFace 512-d HNSW</span>
           </div>
           <h4 class="text-xl font-bold text-white mb-1">
-            ศูนย์ปฏิบัติการยืนยันตัวตน เฝ้าระวังความปลอดภัย และควบคุมการเข้า-ออกอัจฉริยะ
+            {{ 'sentinel.command.hero' | translate }}
           </h4>
           <p class="text-xs text-white/80 mb-0">
-            เชื่อมโยงระบบลงเวลาพนักงาน, บัญชีเฝ้าระวัง (Blacklist/VIP), ประตู Access Control, ผู้มาติดต่อ (Visitor Pass), และงานอีเวนต์ในสมองกลเดียว
+            {{ 'sentinel.command.subtitle' | translate }}
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -81,14 +81,14 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
             routerLink="/company/timestamp-face"
             class="btn-vault text-xs px-4 py-2 inline-flex items-center gap-1.5"
           >
-            <i class="ri-camera-lens-line"></i> เปิดหน้าจอ Kiosk สด
+            <i class="ri-camera-lens-line"></i> {{ 'sentinel.command.openKiosk' | translate }}
           </a>
           <button
             type="button"
             class="ti-btn bg-slate-800/80 border border-white/10 text-slate-200 hover:text-white hover:border-cyan-500/40 text-xs px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 transition-all"
             (click)="reloadOverview()"
           >
-            <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i> รีเฟรชข้อมูล
+            <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i> {{ 'sentinel.command.refresh' | translate }}
           </button>
         </div>
       </div>
@@ -183,7 +183,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
                 "
               >
                 <i [class]="item.icon"></i>
-                <span>{{ item.label }}</span>
+                <span>{{ item.label | translate }}</span>
               </a>
             </div>
           </div>

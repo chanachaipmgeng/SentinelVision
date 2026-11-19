@@ -1,6 +1,8 @@
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import {
@@ -81,15 +83,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.stats?.companyLocations || [];
   }
 
-  constructor(private dashboardService: DashboardService) {}
+  private langSub?: Subscription;
+
+  constructor(
+    private dashboardService: DashboardService,
+    private translate: TranslateService,
+  ) {}
 
   ngOnInit(): void {
     this.loadStats(true);
     this.startPolling();
+    this.langSub = this.translate.onLangChange.subscribe(() => {
+      this.setupCharts();
+    });
   }
 
   ngOnDestroy(): void {
     this.stopPolling();
+    this.langSub?.unsubscribe();
   }
 
   toggleLive(): void {
@@ -187,6 +198,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const brand = '#0f766e';
     const warn = '#c2410c';
     const chartData = this.stats.chartData.checkInsLast7Days || [];
+    const punchLabel = this.translate.instant('dashboard.chart.punches') || 'ลงเวลา';
+    const todayLabel = this.translate.instant('dashboard.chart.today') || 'วันนี้';
+    const inAreaLabel = this.translate.instant('dashboard.chart.inArea') || 'ในพื้นที่';
+    const outAreaLabel = this.translate.instant('dashboard.chart.outArea') || 'นอกพื้นที่';
 
     this.trendChart = {
       tooltip: {
@@ -195,7 +210,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         borderColor: 'rgba(45, 212, 191, 0.35)',
         textStyle: { color: '#f1f5f9' },
       },
-      grid: { left: 36, right: 16, top: 28, bottom: 28 },
+      grid: { left: 40, right: 28, top: 28, bottom: 32, containLabel: true },
       xAxis: {
         type: 'category',
         data: chartData.map((d) => d.date),
@@ -211,7 +226,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       series: [
         {
-          name: 'ลงเวลา',
+          name: punchLabel,
           type: 'line',
           data: chartData.map((d) => d.count),
           smooth: true,
@@ -248,7 +263,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       legend: { bottom: 0, textStyle: { color: '#94a3b8' } },
       series: [
         {
-          name: 'วันนี้',
+          name: todayLabel,
           type: 'pie',
           radius: ['42%', '68%'],
           center: ['50%', '46%'],
@@ -256,8 +271,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           itemStyle: { borderRadius: 6, borderColor: 'rgba(15, 23, 42, 0.6)', borderWidth: 2 },
           label: { color: '#cbd5e1', fontWeight: 600 },
           data: [
-            { value: inArea, name: 'ในพื้นที่', itemStyle: { color: brand } },
-            { value: outside, name: 'นอกพื้นที่', itemStyle: { color: warn } },
+            { value: inArea, name: inAreaLabel, itemStyle: { color: brand } },
+            { value: outside, name: outAreaLabel, itemStyle: { color: warn } },
           ],
         },
       ],

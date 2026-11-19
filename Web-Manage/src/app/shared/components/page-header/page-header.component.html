@@ -1,15 +1,15 @@
 <div class="block justify-between page-header md:flex">
     <div>
-        <h3 class="!text-primary dark:!text-primary/70 dark:text-white dark:hover:text-white !text-[1.125rem] font-semibold">{{title | translate}} </h3>
+        <h3 class="text-slate-800 dark:text-white text-[1.125rem] font-semibold tracking-tight">{{resolvedTitle | translate}}</h3>
     </div>
     <ol class="flex items-center whitespace-nowrap min-w-0">
         <li class="text-[0.813rem] ps-[0.5rem]">
-          <a class="flex items-center text-primary hover:text-primary dark:text-primary truncate" href="javascript:void(0);">
+          <a class="flex items-center text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 truncate font-medium" href="javascript:void(0);">
             {{activeTitle | translate}}
-            <i class="ti ti-chevrons-right flex-shrink-0 text-[#8c9097] dark:text-white/50 px-[0.5rem] overflow-visible rtl:rotate-180"></i>
+            <i class="ti ti-chevrons-right flex-shrink-0 text-slate-400 dark:text-slate-500 px-[0.5rem] overflow-visible rtl:rotate-180"></i>
           </a>
         </li>
-        <li class="text-[0.813rem] text-primary font-semibold hover:text-primary dark:text-[#8c9097] dark:text-white/50 " aria-current="page">
+        <li class="text-[0.813rem] text-slate-800 font-semibold dark:text-slate-200" aria-current="page">
             {{title1 | translate}}
         </li>
     </ol>

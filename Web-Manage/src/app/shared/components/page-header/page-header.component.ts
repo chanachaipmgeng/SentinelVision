@@ -9,6 +9,11 @@ import { TranslateModule } from '@ngx-translate/core';
 })
 export class PageHeaderComponent {
   @Input() title!: string;
-  @Input() title1!:string;
-  @Input() activeTitle!:string;
+  @Input() heading?: string;
+  @Input() title1!: string;
+  @Input() activeTitle!: string;
+
+  get resolvedTitle(): string {
+    return this.heading || this.title || this.title1 || '';
+  }
 }

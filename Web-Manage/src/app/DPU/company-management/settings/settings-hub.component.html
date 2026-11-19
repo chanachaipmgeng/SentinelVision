@@ -49,7 +49,7 @@
       </div>
     </nav>
 
-    <main class="dpu-settings-body" *ngIf="active" (input)="markDirty()" (change)="markDirty()">
+    <section class="dpu-settings-body" *ngIf="active" (input)="markDirty()" (change)="markDirty()">
       <app-page-toolbar [title]="active.labelKey">
         <ng-container chips>
           <app-stat-chip tone="ok" *ngIf="statusMsg">{{ statusMsg }}</app-stat-chip>
@@ -64,7 +64,7 @@
           </a>
         </ng-container>
       </app-page-toolbar>
-      <p class="dpu-settings-body__hint">{{ active.hintKey | translate }}</p>
+      <p class="dpu-settings-body__hint text-xs text-dpu-muted mt-1 mb-3 px-1">{{ active.hintKey | translate }}</p>
 
       @switch (active.id) {
         @case ('notifications') {
@@ -126,6 +126,6 @@
           <app-rbac-management-panel (statusFlash)="flash($event)"></app-rbac-management-panel>
         }
       }
-    </main>
+    </section>
   </div>
 </div>

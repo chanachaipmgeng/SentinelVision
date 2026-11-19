@@ -59,6 +59,12 @@
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
+@media (min-width: 1280px) {
+  .sv-setup__list {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
 .sv-setup__step {
   display: flex;
   align-items: center;
@@ -101,6 +107,8 @@
   font-size: 0.86rem;
   font-weight: 600;
   color: var(--dpu-ink);
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .sv-setup__step.is-done .sv-setup__step-title {

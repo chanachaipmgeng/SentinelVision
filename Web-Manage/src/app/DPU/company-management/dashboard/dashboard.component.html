@@ -77,6 +77,7 @@
             </div>
           </div>
           <div class="dpu-stat-value text-cyan-400">{{ stats.summary.checkInsToday }}</div>
+          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
         </div>
       </a>
     </div>
@@ -90,6 +91,7 @@
             </div>
           </div>
           <div class="dpu-stat-value text-emerald-400">{{ inAreaToday }}</div>
+          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
         </div>
       </a>
     </div>
@@ -103,6 +105,7 @@
             </div>
           </div>
           <div class="dpu-stat-value" [ngClass]="outsideToday > 0 ? 'text-rose-400' : 'text-slate-200'">{{ outsideToday }}</div>
+          <span class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
         </div>
       </a>
     </div>
@@ -117,6 +120,7 @@
           </div>
           <div class="dpu-stat-value" [ngClass]="pendingApproval > 0 ? 'text-amber-400' : 'text-slate-200'">{{ pendingApproval }}</div>
           <a *ngIf="pendingApproval" routerLink="/company/warning-timestamp-log" class="dpu-dash-link block mt-1">{{ 'Go to approval queue' | translate }}</a>
+          <span *ngIf="!pendingApproval" class="dpu-stat-spacer block mt-1 text-xs invisible select-none" aria-hidden="true">&nbsp;</span>
         </div>
       </div>
     </div>

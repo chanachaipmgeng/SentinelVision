@@ -73,27 +73,27 @@ export function workspaceSubNav(
   switch (workspace) {
     case 'ACCESS_CONTROL':
       return [
-        { section: 'zones', label: 'โซนประตู & ปลดล็อก', icon: 'ri-door-lock-line', route: '/company/access-control/zones' },
-        { section: 'logs', label: 'ประวัติการผ่านประตู', icon: 'ri-file-list-3-line', route: '/company/access-control/logs' },
-        { section: 'settings', label: 'ตั้งค่า Access & IoT Relay', icon: 'ri-settings-3-line', route: '/company/access-control/settings' },
+        { section: 'zones', label: 'sentinel.subnav.zones', icon: 'ri-door-lock-line', route: '/company/access-control/zones' },
+        { section: 'logs', label: 'sentinel.subnav.accessLogs', icon: 'ri-file-list-3-line', route: '/company/access-control/logs' },
+        { section: 'settings', label: 'sentinel.subnav.accessSettings', icon: 'ri-settings-3-line', route: '/company/access-control/settings' },
       ];
     case 'WATCHLIST':
       return [
-        { section: 'identities', label: 'บัญชี Blacklist / POI / VIP', icon: 'ri-shield-user-line', route: '/company/watchlist/identities' },
-        { section: 'incidents', label: 'แจ้งเตือนเหตุการณ์ (Incident Alerts)', icon: 'ri-alarm-warning-line', route: '/company/watchlist/incidents' },
-        { section: 'settings', label: 'ตั้งค่าแจ้งเตือน & SIEM', icon: 'ri-settings-4-line', route: '/company/watchlist/settings' },
+        { section: 'identities', label: 'sentinel.subnav.watchlist', icon: 'ri-shield-user-line', route: '/company/watchlist/identities' },
+        { section: 'incidents', label: 'sentinel.subnav.incidents', icon: 'ri-alarm-warning-line', route: '/company/watchlist/incidents' },
+        { section: 'settings', label: 'sentinel.subnav.watchlistSettings', icon: 'ri-settings-4-line', route: '/company/watchlist/settings' },
       ];
     case 'VISITOR':
       return [
-        { section: 'passes', label: 'บัตรผู้มาติดต่อ (Visitor Pass)', icon: 'ri-user-shared-line', route: '/company/visitors/passes' },
-        { section: 'muster-roll', label: 'เช็คยอดคนในอาคาร (Muster Roll)', icon: 'ri-broadcast-line', route: '/company/visitors/muster-roll' },
-        { section: 'settings', label: 'ตั้งค่าผู้มาติดต่อ & PDPA', icon: 'ri-shield-check-line', route: '/company/visitors/settings' },
+        { section: 'passes', label: 'sentinel.subnav.visitors', icon: 'ri-user-shared-line', route: '/company/visitors/passes' },
+        { section: 'muster-roll', label: 'sentinel.subnav.musterRoll', icon: 'ri-broadcast-line', route: '/company/visitors/muster-roll' },
+        { section: 'settings', label: 'sentinel.subnav.visitorSettings', icon: 'ri-shield-check-line', route: '/company/visitors/settings' },
       ];
     case 'EVENTS':
       return [
-        { section: 'campaigns', label: 'แคมเปญ & ผู้ร่วมงาน', icon: 'ri-ticket-2-line', route: '/company/events/campaigns' },
-        { section: 'checkins', label: 'สถิติเช็คอินสด & Booth Dwell', icon: 'ri-bar-chart-grouped-line', route: '/company/events/checkins' },
-        { section: 'settings', label: 'ตั้งค่างานอีเวนต์', icon: 'ri-settings-3-line', route: '/company/events/settings' },
+        { section: 'campaigns', label: 'sentinel.subnav.events', icon: 'ri-ticket-2-line', route: '/company/events/campaigns' },
+        { section: 'checkins', label: 'sentinel.subnav.eventCheckins', icon: 'ri-bar-chart-grouped-line', route: '/company/events/checkins' },
+        { section: 'settings', label: 'sentinel.subnav.eventSettings', icon: 'ri-settings-3-line', route: '/company/events/settings' },
       ];
     default:
       return [];
@@ -127,27 +127,27 @@ export function tabFromModuleSection(
 export function labelForWorkspace(workspace: string, section: string | null): string {
   if (workspace === 'ACCESS_CONTROL') {
     const accessSection = normalizeAccessSection(section);
-    if (accessSection === 'logs') return 'Access Control / ประวัติการผ่านประตู';
-    if (accessSection === 'settings') return 'Access Control / ตั้งค่า';
-    return 'Access Control / โซนประตู';
+    if (accessSection === 'logs') return 'Access Control • Logs';
+    if (accessSection === 'settings') return 'Access Control • Settings';
+    return 'Access Control • Zones';
   }
   if (workspace === 'WATCHLIST') {
     const ws = normalizeWatchlistSection(section);
-    if (ws === 'incidents') return 'Watchlist & VIP / แจ้งเตือนเหตุการณ์ (Incident Alerts)';
-    if (ws === 'settings') return 'Watchlist & VIP / ตั้งค่าแจ้งเตือนความปลอดภัย & SIEM';
-    return 'Watchlist & VIP / บัญชีเฝ้าระวัง Blacklist · POI · VIP';
+    if (ws === 'incidents') return 'Watchlist & VIP • Incidents';
+    if (ws === 'settings') return 'Watchlist & VIP • Settings';
+    return 'Watchlist & VIP • Identities';
   }
   if (workspace === 'VISITOR') {
     const vs = normalizeVisitorSection(section);
-    if (vs === 'muster-roll') return 'Visitor & อาคาร / เช็คยอดคนในอาคาร (Muster Roll)';
-    if (vs === 'settings') return 'Visitor & อาคาร / ตั้งค่าผู้มาติดต่อ & PDPA';
-    return 'Visitor & อาคาร / บัตรผ่านใบหน้าชั่วคราว (Visitor Pass)';
+    if (vs === 'muster-roll') return 'Visitor • Muster Roll';
+    if (vs === 'settings') return 'Visitor • Settings';
+    return 'Visitor • Passes';
   }
   if (workspace === 'EVENTS') {
     const es = normalizeEventsSection(section);
-    if (es === 'checkins') return 'Events & สัมมนา / สถิติเช็คอินสด & เวลาแวะบูธ (Booth Dwell)';
-    if (es === 'settings') return 'Events & สัมมนา / ตั้งค่างานอีเวนต์';
-    return 'Events & สัมมนา / แคมเปญ & ลงทะเบียนผู้ร่วมงาน';
+    if (es === 'checkins') return 'Events • Live Check-ins';
+    if (es === 'settings') return 'Events • Settings';
+    return 'Events • Campaigns';
   }
   return workspace;
 }

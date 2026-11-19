@@ -2,7 +2,7 @@
       @if (listViewMode === 'table' && totalFiltered > 0) {
         <div class="box-body !p-0">
           <div class="table-responsive">
-            <table class="table whitespace-nowrap emp-table mb-0">
+            <table class="table whitespace-nowrap emp-table w-full min-w-full mb-0">
               <thead>
                 <tr>
                   <th scope="col">{{ 'Employee' | translate }}</th>
@@ -14,7 +14,7 @@
               </thead>
               <tbody>
                 @for (item of safeFilterList; track trackEmp(item); let i = $index) {
-                  <tr class="emp-row" [style.animation-delay.ms]="i * 40">
+                  <tr class="emp-row">
                     <td>
                       <div class="emp-person">
                         <span class="avatar avatar-md avatar-rounded emp-avatar">

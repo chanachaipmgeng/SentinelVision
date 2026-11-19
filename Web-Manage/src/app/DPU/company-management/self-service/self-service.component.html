@@ -1,55 +1,74 @@
-<app-page-header [title]="'บริการตนเอง'" [activeTitle]="'พนักงาน'" [title1]="'Self-Service'"></app-page-header>
+<app-page-header
+  [title]="'ess.pageTitle'"
+  [activeTitle]="'ess.breadcrumb'"
+  [title1]="'ess.pageTitle'">
+</app-page-header>
 
-<div class="dpu-list-page ess-page">
-  <app-page-toolbar title="Employee Self-Service">
-    <a routerLink="/company/mobile-checkin" class="ti-btn ti-btn-primary text-xs me-2">
-      <i class="ri-map-pin-user-line me-1"></i> เช็กอินนอกสถานที่ (Mobile GPS)
-    </a>
-    <button
-      *ngIf="isCompanyAdminViewer && !missingEmployeeRecord"
-      type="button"
-      class="ti-btn ti-btn-light text-xs"
-      (click)="toggleAdminSelfServiceMode()"
-    >
-      <i class="ri-user-settings-line me-1"></i>
-      {{ adminSelfServiceMode ? 'สลับไปมุมมอง Admin Info' : 'ใช้งาน Self-Service ของฉัน' }}
-    </button>
-  </app-page-toolbar>
-  <p class="text-sm text-dpu-muted mb-3">ดูการลงเวลาของฉัน · ขอลา · ขอแก้เวลา</p>
+<div class="dpu-ess-page max-w-7xl mx-auto">
+  <div class="box modern-card glass card-surface p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2 mb-0.5">
+          <i class="ri-user-smile-line text-cyan-400"></i>
+          {{ 'ess.pageTitle' | translate }}
+        </h2>
+        <p class="text-xs text-dpu-muted mb-0">
+          {{ 'ess.subtitle' | translate }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a routerLink="/company/timestamp-mobile" class="ti-btn ti-btn-sm ti-btn-outline-light modern-btn">
+          <i class="ri-map-pin-line text-cyan-400"></i>
+          <span>{{ 'ess.mobileGpsCheckin' | translate }}</span>
+        </a>
+        <button
+          *ngIf="isCompanyAdminViewer"
+          type="button"
+          class="ti-btn ti-btn-sm ti-btn-light modern-btn"
+          (click)="toggleAdminSelfServiceMode()">
+          {{ (adminSelfServiceMode ? 'ess.toggleAdminView' : 'ess.toggleSelfService') | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <div *ngIf="loadError" class="ess-error-banner" role="alert">{{ loadError }}</div>
+  <div *ngIf="loading" class="box modern-card glass p-8 text-center text-dpu-muted">
+    <i class="ri-loader-4-line animate-spin text-2xl text-cyan-400 mb-2"></i>
+    <div>{{ 'Loading...' | translate }}</div>
+  </div>
 
-  <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
-
-  <!-- Role-aware empty: employee portal, not an admin ops surface -->
-  <div *ngIf="!loading && showEmployeeAudienceEmpty" class="ess-audience-empty modern-card glass">
-    <i class="ri-user-smile-line ess-audience-icon" aria-hidden="true"></i>
-    <h2 class="ess-audience-title">สำหรับพนักงาน</h2>
-    <p class="ess-audience-copy">
-      หน้านี้เป็นพอร์ทัลบริการตนเองของพนักงาน — ดูประวัติลงเวลา ขอลา และขอแก้เวลาของตัวเอง
-      <ng-container *ngIf="isCompanyAdminViewer">
-        บัญชีผู้ดูแลบริษัทไม่ใช่กลุ่มเป้าหมายหลัก จึงถูกซ่อนจากเมนูด้านข้าง
-      </ng-container>
+  <div *ngIf="!loading && showEmployeeAudienceEmpty" class="box modern-card glass card-surface p-6 text-center">
+    <div class="w-12 h-12 rounded-full bg-cyan-500/15 text-cyan-400 flex items-center justify-center mx-auto mb-3 text-2xl">
+      <i class="ri-shield-user-line"></i>
+    </div>
+    <h3 class="text-base font-semibold text-slate-100 mb-1">{{ 'ess.forEmployees' | translate }}</h3>
+    <p class="text-sm text-dpu-muted max-w-lg mx-auto mb-2">
+      {{ 'ess.forEmployeesBody' | translate }}
     </p>
     <p class="ess-audience-hint text-sm text-dpu-muted mb-0">
-      เข้าสู่ระบบด้วยบัญชีพนักงานเพื่อใช้งาน หรือใช้เมนูอนุมัติ / ประวัติการลงเวลาสำหรับการดูแลทีม
+      {{ 'ess.forEmployeesHint' | translate }}
     </p>
   </div>
 
   <ng-container *ngIf="!loading && !showEmployeeAudienceEmpty">
     <div class="flex flex-wrap gap-2 mb-4">
-      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'attendance' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('attendance')">การลงเวลา</button>
-      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'leave' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('leave')">วันลา</button>
-      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'regularization' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('regularization')">แก้เวลา</button>
-      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'ot' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('ot')">ขอทำ OT</button>
-      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'swap' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('swap')">สลับกะ</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'attendance' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('attendance')">{{ 'ess.tab.attendance' | translate }}</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'leave' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('leave')">{{ 'ess.tab.leave' | translate }}</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'regularization' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('regularization')">{{ 'ess.tab.regularization' | translate }}</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'ot' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('ot')">{{ 'ess.tab.ot' | translate }}</button>
+      <button type="button" class="rounded-full px-4 py-1.5 text-sm font-medium transition border" [ngClass]="activeTab === 'swap' ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400/50' : 'bg-white/5 text-slate-300 border-white/10 hover:bg-white/10'" (click)="setTab('swap')">{{ 'ess.tab.swap' | translate }}</button>
     </div>
 
     <div *ngIf="activeTab === 'attendance'" class="box modern-card glass card-surface">
       <div class="box-body p-0 overflow-x-auto">
         <table class="table dpu-list-table w-full">
           <thead>
-            <tr><th>เวลา</th><th>ประเภท</th><th>สถานะ</th><th>หมายเหตุ</th></tr>
+            <tr>
+              <th>{{ 'ess.col.time' | translate }}</th>
+              <th>{{ 'ess.col.type' | translate }}</th>
+              <th>{{ 'ess.col.status' | translate }}</th>
+              <th>{{ 'ess.col.note' | translate }}</th>
+            </tr>
           </thead>
           <tbody>
             <tr *ngFor="let row of attendance">
@@ -59,7 +78,7 @@
               <td>{{ row.note || '—' }}</td>
             </tr>
             <tr *ngIf="!attendance.length">
-              <td colspan="4" class="text-center text-muted py-6">ยังไม่มีรายการ — สำหรับพนักงาน</td>
+              <td colspan="4" class="text-center text-muted py-6">{{ 'ess.attendance.empty' | translate }}</td>
             </tr>
           </tbody>
         </table>
@@ -72,63 +91,63 @@
           <div *ngFor="let b of leaveBalances" class="box modern-card glass card-surface p-3 flex items-center justify-between">
             <div>
               <div class="text-xs text-dpu-muted uppercase tracking-wider">{{ b.leaveType }}</div>
-              <div class="text-lg font-bold text-cyan-300 mt-0.5">{{ b.remainingDays }} วัน</div>
+              <div class="text-lg font-bold text-cyan-300 mt-0.5">{{ b.remainingDays }} {{ 'ess.leave.days' | translate }}</div>
             </div>
-            <span class="badge bg-cyan-500/15 text-cyan-300 text-xs">ใช้ไป {{ b.used ?? 0 }}</span>
+            <span class="badge bg-cyan-500/15 text-cyan-300 text-xs">{{ 'ess.leave.used' | translate }} {{ b.used ?? 0 }}</span>
           </div>
         </div>
       </div>
       <div class="col-span-12 lg:col-span-5">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ขอลา</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.leave.title' | translate }}</div></div>
           <div class="box-body space-y-3">
             <div class="grid grid-cols-2 gap-2">
-              <div><label class="form-label">เริ่ม</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.startDate" /></div>
-              <div><label class="form-label">สิ้นสุด</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.endDate" /></div>
+              <div><label class="form-label">{{ 'ess.leave.startDate' | translate }}</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.startDate" /></div>
+              <div><label class="form-label">{{ 'ess.leave.endDate' | translate }}</label><input type="date" class="form-control" [(ngModel)]="leaveDraft.endDate" /></div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="form-label">ประเภท</label>
+                <label class="form-label">{{ 'ess.leave.type' | translate }}</label>
                 <select class="form-control" [(ngModel)]="leaveDraft.leaveType">
-                  <option value="ANNUAL">ลาพักร้อน</option>
-                  <option value="SICK">ลาป่วย</option>
-                  <option value="PERSONAL">ลากิจ</option>
+                  <option value="ANNUAL">{{ 'ess.leave.annual' | translate }}</option>
+                  <option value="SICK">{{ 'ess.leave.sick' | translate }}</option>
+                  <option value="PERSONAL">{{ 'ess.leave.personal' | translate }}</option>
                 </select>
               </div>
               <div>
-                <label class="form-label">รูปแบบการลา</label>
+                <label class="form-label">{{ 'ess.leave.unit' | translate }}</label>
                 <select class="form-control" [(ngModel)]="leaveDraft.leaveUnit">
-                  <option value="DAY">เต็มวัน (Day)</option>
-                  <option value="HOUR">รายชั่วโมง (Hourly)</option>
+                  <option value="DAY">{{ 'ess.leave.fullDay' | translate }}</option>
+                  <option value="HOUR">{{ 'ess.leave.hourly' | translate }}</option>
                 </select>
               </div>
             </div>
             <div *ngIf="leaveDraft.leaveUnit === 'HOUR'">
-              <label class="form-label">จำนวนชั่วโมงลา</label>
+              <label class="form-label">{{ 'ess.leave.hours' | translate }}</label>
               <input type="number" min="0.5" max="8" step="0.5" class="form-control" [(ngModel)]="leaveDraft.leaveHours" />
             </div>
             <div>
-              <label class="form-label">ลิงก์เอกสารแนบ / ใบรับรองแพทย์ (ถ้ามี)</label>
+              <label class="form-label">{{ 'ess.leave.attachment' | translate }}</label>
               <input type="url" class="form-control" [(ngModel)]="leaveDraft.attachmentUrl" placeholder="https://..." />
             </div>
-            <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="leaveDraft.reason"></textarea></div>
-            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitLeave()">ส่งคำขอ</button>
+            <div><label class="form-label">{{ 'ess.leave.reason' | translate }}</label><textarea class="form-control" rows="2" [(ngModel)]="leaveDraft.reason"></textarea></div>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitLeave()">{{ 'ess.leave.submit' | translate }}</button>
           </div>
         </div>
       </div>
       <div class="col-span-12 lg:col-span-7">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ประวัติคำขอลา</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.leave.history' | translate }}</div></div>
           <div class="box-body p-0 overflow-x-auto">
             <table class="table dpu-list-table w-full">
-              <thead><tr><th>ช่วง</th><th>ประเภท</th><th>สถานะ</th></tr></thead>
+              <thead><tr><th>{{ 'ess.col.period' | translate }}</th><th>{{ 'ess.col.type' | translate }}</th><th>{{ 'ess.col.status' | translate }}</th></tr></thead>
               <tbody>
                 <tr *ngFor="let lr of leaves">
                   <td>{{ lr.startDate }} → {{ lr.endDate }}</td>
                   <td>{{ lr.leaveType }}</td>
                   <td>{{ lr.status || lr.approvalStatus }}</td>
                 </tr>
-                <tr *ngIf="!leaves.length"><td colspan="3" class="text-center text-muted py-6">ยังไม่มีคำขอ</td></tr>
+                <tr *ngIf="!leaves.length"><td colspan="3" class="text-center text-muted py-6">{{ 'ess.leave.empty' | translate }}</td></tr>
               </tbody>
             </table>
           </div>
@@ -139,40 +158,46 @@
     <div *ngIf="activeTab === 'regularization'" class="grid grid-cols-12 gap-4">
       <div class="col-span-12 lg:col-span-5">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ขอแก้เวลา</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.regularization.title' | translate }}</div></div>
           <div class="box-body space-y-3">
-            <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="regenDraft.workDate" /></div>
-            <div><label class="form-label">เวลาที่ขอ</label><input type="datetime-local" class="form-control" [(ngModel)]="regenDraft.requestedTimestamp" /></div>
+            <div><label class="form-label">{{ 'ess.regularization.workDate' | translate }}</label><input type="date" class="form-control" [(ngModel)]="regenDraft.workDate" /></div>
+            <div><label class="form-label">{{ 'ess.regularization.requestedTime' | translate }}</label><input type="datetime-local" class="form-control" [(ngModel)]="regenDraft.requestedTimestamp" /></div>
             <div>
-              <label class="form-label">ประเภท</label>
+              <label class="form-label">{{ 'ess.col.type' | translate }}</label>
               <select class="form-control" [(ngModel)]="regenDraft.requestedType">
-                <option [ngValue]="1">เข้างาน</option>
-                <option [ngValue]="2">ออกงาน</option>
+                <option [ngValue]="1">{{ 'ess.regularization.checkIn' | translate }}</option>
+                <option [ngValue]="2">{{ 'ess.regularization.checkOut' | translate }}</option>
               </select>
             </div>
-            <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="regenDraft.reason"></textarea></div>
-            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitRegularization()">ส่งคำขอ</button>
+            <div><label class="form-label">{{ 'ess.regularization.reason' | translate }}</label><textarea class="form-control" rows="2" [(ngModel)]="regenDraft.reason"></textarea></div>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitRegularization()">{{ 'ess.regularization.submit' | translate }}</button>
           </div>
         </div>
       </div>
       <div class="col-span-12 lg:col-span-7">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ประวัติคำขอแก้เวลา</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.regularization.history' | translate }}</div></div>
           <div class="box-body p-0 overflow-x-auto">
             <table class="table dpu-list-table w-full">
               <thead>
-                <tr><th>วันทำงาน</th><th>เวลาที่ขอ</th><th>ประเภท</th><th>สถานะ</th><th>เหตุผล</th></tr>
+                <tr>
+                  <th>{{ 'ess.col.workDate' | translate }}</th>
+                  <th>{{ 'ess.col.requestedTime' | translate }}</th>
+                  <th>{{ 'ess.col.type' | translate }}</th>
+                  <th>{{ 'ess.col.status' | translate }}</th>
+                  <th>{{ 'ess.col.reason' | translate }}</th>
+                </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let r of regularizations">
                   <td>{{ r.workDate }}</td>
                   <td>{{ r.requestedTimestamp | date: 'short' }}</td>
-                  <td>{{ r.requestedType === 1 || r.requestedType === '1' ? 'เข้างาน' : 'ออกงาน' }}</td>
+                  <td>{{ (r.requestedType === 1 || r.requestedType === '1' ? 'ess.regularization.checkIn' : 'ess.regularization.checkOut') | translate }}</td>
                   <td>{{ r.status || 'PENDING' }}</td>
                   <td>{{ r.reason || '—' }}</td>
                 </tr>
                 <tr *ngIf="!regularizations.length">
-                  <td colspan="5" class="text-center text-muted py-6">ยังไม่มีคำขอแก้เวลา</td>
+                  <td colspan="5" class="text-center text-muted py-6">{{ 'ess.regularization.empty' | translate }}</td>
                 </tr>
               </tbody>
             </table>
@@ -184,22 +209,27 @@
     <div *ngIf="activeTab === 'ot'" class="grid grid-cols-12 gap-4">
       <div class="col-span-12 lg:col-span-5">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ขอทำ OT</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.ot.title' | translate }}</div></div>
           <div class="box-body space-y-3">
-            <div><label class="form-label">วันทำงาน</label><input type="date" class="form-control" [(ngModel)]="otDraft.workDate" /></div>
-            <div><label class="form-label">จำนวนนาที OT</label><input type="number" min="15" step="15" class="form-control" [(ngModel)]="otDraft.otMinutes" /></div>
-            <div><label class="form-label">เหตุผล</label><textarea class="form-control" rows="2" [(ngModel)]="otDraft.reason"></textarea></div>
-            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitOt()">ส่งคำขอ OT</button>
+            <div><label class="form-label">{{ 'ess.ot.workDate' | translate }}</label><input type="date" class="form-control" [(ngModel)]="otDraft.workDate" /></div>
+            <div><label class="form-label">{{ 'ess.ot.minutes' | translate }}</label><input type="number" min="15" step="15" class="form-control" [(ngModel)]="otDraft.otMinutes" /></div>
+            <div><label class="form-label">{{ 'ess.ot.reason' | translate }}</label><textarea class="form-control" rows="2" [(ngModel)]="otDraft.reason"></textarea></div>
+            <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitOt()">{{ 'ess.ot.submit' | translate }}</button>
           </div>
         </div>
       </div>
       <div class="col-span-12 lg:col-span-7">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ประวัติคำขอ OT</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.ot.history' | translate }}</div></div>
           <div class="box-body p-0 overflow-x-auto">
             <table class="table dpu-list-table w-full">
               <thead>
-                <tr><th>วันทำงาน</th><th>จำนวน (นาที)</th><th>สถานะ</th><th>เหตุผล</th></tr>
+                <tr>
+                  <th>{{ 'ess.col.workDate' | translate }}</th>
+                  <th>{{ 'ess.col.minutes' | translate }}</th>
+                  <th>{{ 'ess.col.status' | translate }}</th>
+                  <th>{{ 'ess.col.reason' | translate }}</th>
+                </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let o of otRequests">
@@ -209,7 +239,7 @@
                   <td>{{ o.reason || '—' }}</td>
                 </tr>
                 <tr *ngIf="!otRequests.length">
-                  <td colspan="4" class="text-center text-muted py-6">ยังไม่มีคำขอ OT</td>
+                  <td colspan="4" class="text-center text-muted py-6">{{ 'ess.ot.empty' | translate }}</td>
                 </tr>
               </tbody>
             </table>
@@ -221,38 +251,42 @@
     <div *ngIf="activeTab === 'swap'" class="grid grid-cols-12 gap-4">
       <div class="col-span-12 lg:col-span-5">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ขอสลับกะทำงาน</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.swap.title' | translate }}</div></div>
           <div class="box-body space-y-3">
             <div>
-              <label class="form-label">วันที่ต้องการสลับ</label>
+              <label class="form-label">{{ 'ess.swap.workDate' | translate }}</label>
               <input type="date" class="form-control" [(ngModel)]="swapDraft.workDate" />
             </div>
             <div>
-              <label class="form-label">สลับกะกับพนักงาน</label>
+              <label class="form-label">{{ 'ess.swap.targetEmployee' | translate }}</label>
               <select class="form-control" [(ngModel)]="swapDraft.targetEmployeeId">
-                <option value="">-- เลือกเพื่อนร่วมงาน --</option>
+                <option value="">-- {{ 'ess.swap.selectColleague' | translate }} --</option>
                 <option *ngFor="let c of colleagues" [value]="c.company_employeeId">
                   {{ c.member?.firstName }} {{ c.member?.lastName }} ({{ c.employeeId || '-' }})
                 </option>
               </select>
             </div>
             <div>
-              <label class="form-label">เหตุผล</label>
+              <label class="form-label">{{ 'ess.swap.reason' | translate }}</label>
               <textarea class="form-control" rows="2" [(ngModel)]="swapDraft.reason"></textarea>
             </div>
             <button type="button" class="ti-btn ti-btn-primary-full modern-btn w-full" (click)="submitShiftSwap()">
-              ส่งคำขอสลับกะ
+              {{ 'ess.swap.submit' | translate }}
             </button>
           </div>
         </div>
       </div>
       <div class="col-span-12 lg:col-span-7">
         <div class="box modern-card glass card-surface">
-          <div class="box-header"><div class="box-title">ประวัติคำขอสลับกะ</div></div>
+          <div class="box-header"><div class="box-title">{{ 'ess.swap.history' | translate }}</div></div>
           <div class="box-body p-0 overflow-x-auto">
             <table class="table dpu-list-table w-full">
               <thead>
-                <tr><th>วันที่</th><th>สถานะ</th><th>เหตุผล</th></tr>
+                <tr>
+                  <th>{{ 'ess.col.date' | translate }}</th>
+                  <th>{{ 'ess.col.status' | translate }}</th>
+                  <th>{{ 'ess.col.reason' | translate }}</th>
+                </tr>
               </thead>
               <tbody>
                 <tr *ngFor="let s of shiftSwaps">
@@ -261,7 +295,7 @@
                   <td>{{ s.reason || '—' }}</td>
                 </tr>
                 <tr *ngIf="!shiftSwaps.length">
-                  <td colspan="3" class="text-center text-muted py-6">ยังไม่มีคำขอสลับกะ</td>
+                  <td colspan="3" class="text-center text-muted py-6">{{ 'ess.swap.empty' | translate }}</td>
                 </tr>
               </tbody>
             </table>

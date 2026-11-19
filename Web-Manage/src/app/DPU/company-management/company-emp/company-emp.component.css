@@ -227,8 +227,7 @@
 }
 
 .emp-row {
-  animation: emp-row-in 0.4s var(--dpu-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
-  transition: background 0.2s ease, transform 0.2s var(--dpu-ease, ease);
+  transition: background 0.2s ease;
 }
 
 .emp-row:hover {

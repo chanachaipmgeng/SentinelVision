@@ -24,7 +24,8 @@ describe('NavService', () => {
       .flatMap((m) => [m.path, ...(m.children || []).map((c) => c.path)])
       .filter(Boolean) as string[];
 
-    expect(paths.filter((p) => p === '/company/sentinel-center').length).toBe(0);
+    expect(paths.filter((p) => p === '/company/sentinel-center').length).toBe(1);
+    expect(paths).toContain('/company/sentinel-center');
     expect(paths).toContain('/company/scan-hub');
     expect(paths).toContain('/company/scan/attendance');
     expect(paths).toContain('/company/access-control/zones');

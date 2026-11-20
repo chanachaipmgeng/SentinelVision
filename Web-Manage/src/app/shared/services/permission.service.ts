@@ -170,7 +170,7 @@ export class PermissionService {
     if (path.includes('hr-schedule')) {
       return 'hr.shifts';
     }
-    if (path.includes('company-location')) {
+    if (path.includes('company-location') || path.includes('settings')) {
       return 'company.settings';
     }
     if (path.includes('audit-log')) {
@@ -182,7 +182,7 @@ export class PermissionService {
     if (path.includes('access-control') || path.includes('watchlist') || path.includes('visitor') || path.includes('event')) {
       return 'sentinel.manage';
     }
-    if (path.includes('scan-hub') || path.includes('dashboard')) {
+    if (path.includes('scan-hub') || path.includes('dashboard') || path.includes('sentinel-center')) {
       return 'company.read';
     }
     return null;

@@ -110,6 +110,13 @@ export class NavService implements OnDestroy {
     return [
       { headTitle: 'System admin', permission: 'system.admin' },
       {
+        icon: 'home',
+        path: '/admin/home',
+        title: 'Admin Dashboard',
+        type: 'link',
+        permission: 'system.admin',
+      },
+      {
         icon: 'user',
         path: '/admin/member-manage',
         title: 'Manage members',
@@ -163,6 +170,17 @@ export class NavService implements OnDestroy {
         permission: 'company.read',
       },
       {
+        icon: 'shield-check',
+        path: '/company/sentinel-center',
+        title: 'Sentinel Command Center',
+        type: 'link',
+        moduleId: 'COMMAND',
+        badgeValue: 'LIVE',
+        badgeClass: 'danger',
+        badgeText: 'danger',
+        permission: 'company.read',
+      },
+      {
         icon: 'radar',
         path: '/company/scan-hub',
         title: 'Scan & Action Hub',
@@ -171,6 +189,17 @@ export class NavService implements OnDestroy {
         badgeValue: 'AI',
         badgeClass: 'primary',
         badgeText: 'primary',
+        permission: 'company.read',
+      },
+      {
+        icon: 'broadcast',
+        path: '/company/visitors/muster-roll',
+        title: 'Emergency Muster Roll',
+        type: 'link',
+        moduleId: 'COMMAND',
+        badgeValue: 'SOS',
+        badgeClass: 'danger',
+        badgeText: 'danger',
         permission: 'company.read',
       },
 
@@ -245,8 +274,20 @@ export class NavService implements OnDestroy {
             permission: 'company.settings',
           },
           {
-            path: '/company/hr-schedule',
-            title: 'Shifts / leave / kiosk devices',
+            path: '/company/hr-schedule/shifts',
+            title: 'Work shifts & policies',
+            type: 'link',
+            permission: 'hr.shifts',
+          },
+          {
+            path: '/company/hr-schedule/leaves',
+            title: 'Leave management',
+            type: 'link',
+            permission: 'hr.shifts',
+          },
+          {
+            path: '/company/hr-schedule/holidays',
+            title: 'Company holidays',
             type: 'link',
             permission: 'hr.shifts',
           },
@@ -444,6 +485,14 @@ export class NavService implements OnDestroy {
         title: 'Manage kiosk devices',
         type: 'link',
         moduleId: 'GOVERNANCE',
+      },
+      {
+        icon: 'user-check',
+        path: '/company/settings/rbac',
+        title: 'Roles & Permissions (RBAC)',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+        permission: 'company.settings',
       },
       {
         icon: 'notification',

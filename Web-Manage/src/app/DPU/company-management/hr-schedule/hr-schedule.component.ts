@@ -29,7 +29,8 @@ import { HR_SCHEDULE_TABS, HrScheduleTab } from './hr-schedule.helpers';
                 routerLinkActive="!bg-gradient-to-r !from-cyan-500 !to-teal-500 !text-white !border-transparent !shadow-md !shadow-cyan-500/25"
                 [routerLinkActiveOptions]="{ exact: true }"
                 #rla="routerLinkActive"
-                class="ti-btn !rounded-full !px-4 !py-2 !text-xs !font-semibold transition-all duration-200"
+                class="ti-btn sv-sub-nav-pill !rounded-full !px-4 !py-2 !text-xs !font-semibold transition-all duration-200"
+                [class.sv-sub-nav-pill--active]="rla.isActive"
                 [ngClass]="rla.isActive ? '' : '!bg-white/5 hover:!bg-white/10 !text-slate-300 !border !border-white/10'"
               >
                 <i [class]="tab.icon + ' me-1.5'"></i> {{ tab.label }}

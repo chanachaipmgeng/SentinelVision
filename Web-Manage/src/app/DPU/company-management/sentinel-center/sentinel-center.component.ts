@@ -175,7 +175,8 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               <a
                 *ngFor="let item of subNavItems"
                 [routerLink]="item.route"
-                class="ti-btn !rounded-full !px-3.5 !py-1.5 !text-xs !font-semibold transition-all duration-200 inline-flex items-center gap-1.5"
+                class="ti-btn sv-sub-nav-pill !rounded-full !px-3.5 !py-1.5 !text-xs !font-semibold transition-all duration-200 inline-flex items-center gap-1.5"
+                [class.sv-sub-nav-pill--active]="currentSection === item.section"
                 [ngClass]="
                   currentSection === item.section
                     ? '!bg-gradient-to-r !from-cyan-500 !to-teal-500 !text-white !border-transparent !shadow-md !shadow-cyan-500/25'

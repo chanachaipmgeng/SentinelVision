@@ -34,10 +34,18 @@ export interface DashboardStats {
     inAreaToday?: number;
     outsideToday?: number;
     pendingApproval?: number;
+    checkOutsToday?: number;
+    lateToday?: number;
+    totalEmployees?: number;
   };
   chartData: {
     checkInsLast7Days: { date: string; count: number }[];
-    todayBreakdown?: { inArea: number; outside: number };
+    todayBreakdown?: {
+      inArea: number;
+      outside: number;
+      checkOuts?: number;
+      late?: number;
+    };
   };
   mapPoints?: DashboardActivity[];
   companyLocations?: DashboardCompanyLocation[];

@@ -8,41 +8,48 @@
 <app-welcome-wizard (openChecklist)="setupChecklist.reveal()"></app-welcome-wizard>
 
 <div class="dpu-dashboard space-y-5">
-  <div class="col-span-12">
-    <app-page-toolbar title="dashboard.toolbarTitle">
-      <ng-container chips>
-        <app-stat-chip tone="ok" *ngIf="stats">{{ 'Today' | translate }} {{ stats.summary.checkInsToday }}</app-stat-chip>
-        <app-stat-chip tone="soft" *ngIf="stats">{{ 'Last 7 days' | translate }} {{ weekTotal }}</app-stat-chip>
-        <app-stat-chip tone="warn" *ngIf="stats">{{ 'Out of area' | translate }} {{ outsideToday }}</app-stat-chip>
-        <app-stat-chip tone="danger" *ngIf="stats && pendingApproval">{{ 'Pending approval' | translate }} {{ pendingApproval }}</app-stat-chip>
-        <app-stat-chip [tone]="liveOn ? 'ok' : 'soft'">
-          {{ (liveOn ? 'Realtime on' : 'Realtime off') | translate }}
-        </app-stat-chip>
-      </ng-container>
-      <ng-container controls>
-        <span class="dpu-dash-updated" *ngIf="lastUpdated">
-          {{ 'Updated' | translate }} {{ lastUpdated | date:'HH:mm:ss' }}
+  <!-- Tasklyn-style Top Action & Header Bar -->
+  <div class="sv-dash-header-bar flex flex-wrap items-center justify-between gap-4 py-1">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2.5">
+        <span>Analytics</span>
+        <span class="sv-dash-live-badge" *ngIf="liveOn">
+          <span class="sv-pulse-dot"></span>
+          <span>LIVE</span>
         </span>
-        <button type="button" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh" (click)="toggleLive()">
-          <i [ngClass]="liveOn ? 'ri-broadcast-line text-emerald-400' : 'ri-pause-circle-line text-slate-400'"></i>
-          <span>{{ (liveOn ? 'Stop live' : 'Go live') | translate }}</span>
-        </button>
-        <a routerLink="/company/sentinel-center" class="btn-vault dpu-dash-refresh">
-          <i class="ri-shield-flash-line"></i><span>Sentinel Center</span>
-        </a>
-        <a routerLink="/company/warning-timestamp-log" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-checkbox-circle-line text-amber-400"></i><span>{{ 'Approve' | translate }}</span>
-        </a>
-        <a routerLink="/company/timestamp-face" class="ti-btn ti-btn-light modern-btn dpu-dash-refresh">
-          <i class="ri-camera-lens-line text-cyan-400"></i><span>Kiosk</span>
-        </a>
-        <button type="button" class="ti-btn ti-btn-secondary-full modern-btn dpu-dash-refresh"
-          (click)="loadStats(false)" [disabled]="isLoading || isRefreshing">
-          <i class="ri-refresh-line" [class.animate-spin]="isRefreshing"></i>
-          <span>{{ 'Refresh' | translate }}</span>
-        </button>
-      </ng-container>
-    </app-page-toolbar>
+      </h1>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        {{ 'Analyze and manage your workforce attendance, biometric security and operations' | translate }}
+      </p>
+    </div>
+
+    <div class="flex items-center flex-wrap gap-2.5">
+      <!-- Search pill with ⌘ F / Ctrl K shortcut badge -->
+      <button type="button" class="sv-search-pill" (click)="openSearch()">
+        <i class="ri-search-line sv-search-pill-icon"></i>
+        <span class="sv-search-pill-text">{{ 'Search anything' | translate }}</span>
+        <span class="sv-kbd-badge">⌘ F</span>
+      </button>
+
+      <!-- Action buttons -->
+      <button type="button" class="sv-card-btn" (click)="toggleLive()" [title]="liveOn ? 'Pause Live' : 'Resume Live'">
+        <i [ngClass]="liveOn ? 'ri-broadcast-line text-emerald-500' : 'ri-pause-circle-line text-slate-400'"></i>
+      </button>
+
+      <button type="button" class="sv-card-btn" (click)="loadStats(false)" [disabled]="isLoading || isRefreshing" title="Refresh">
+        <i class="ri-refresh-line" [class.animate-spin]="isRefreshing"></i>
+      </button>
+
+      <a routerLink="/company/sentinel-center" class="sv-btn-action" title="Sentinel Command Center">
+        <i class="ri-shield-flash-line"></i>
+        <span>Command Center</span>
+      </a>
+
+      <a routerLink="/company/timestamp-face" class="sv-btn-action-ghost" title="Face Kiosk Station">
+        <i class="ri-camera-lens-line text-cyan-500"></i>
+        <span>Kiosk</span>
+      </a>
+    </div>
   </div>
 
   <div class="col-span-12" *ngIf="isLoading">
@@ -66,161 +73,181 @@
   </div>
 
   <ng-container *ngIf="stats && !isLoading">
-    <!-- Bento KPI Stats Row -->
-    <app-bento-grid gap="gap-4">
-      <app-bento-stat
-        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
-        label="Punches today"
-        [value]="stats.summary.checkInsToday"
-        unit="records"
-        accentTone="cyan"
-        icon="ri-fingerprint-line"
-        [trendPositive]="true"
-        [trendLabel]="'Today summary' | translate"
-        routerLink="/company/timestamp-log"
-      ></app-bento-stat>
-
-      <app-bento-stat
-        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
-        label="In area today"
-        [value]="inAreaToday"
-        unit="punches"
-        accentTone="emerald"
-        icon="ri-map-pin-user-line"
-        [trendPositive]="true"
-        [trendLabel]="'Normal punch' | translate"
-        routerLink="/company/timestamp-log"
-      ></app-bento-stat>
-
-      <app-bento-stat
-        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
-        label="Out of area today"
-        [value]="outsideToday"
-        unit="alerts"
-        accentTone="rose"
-        icon="ri-error-warning-line"
-        [trendPositive]="outsideToday === 0"
-        [trend]="outsideToday > 0 ? 'down' : 'up'"
-        [trendLabel]="(outsideToday > 0 ? 'Requires check' : 'All clear') | translate"
-        routerLink="/company/warning-timestamp-log"
-      ></app-bento-stat>
-
-      <app-bento-stat
-        colSpan="col-span-12 sm:col-span-6 xl:col-span-3"
-        label="Pending approval"
-        [value]="pendingApproval"
-        unit="items"
-        accentTone="amber"
-        icon="ri-time-line"
-        [trendPositive]="pendingApproval === 0"
-        [trend]="pendingApproval > 0 ? 'down' : 'up'"
-        [trendLabel]="(pendingApproval > 0 ? 'Queue active' : 'Clean') | translate"
-        routerLink="/company/warning-timestamp-log"
-      ></app-bento-stat>
-    </app-bento-grid>
-
-    <!-- Main Bento Grid -->
-    <app-bento-grid gap="gap-5">
-      <!-- 7-day Trend Analysis Bento Card -->
-      <app-bento-card
-        colSpan="col-span-12 xl:col-span-8"
-        accentTone="cyan"
-        headerIcon="ri-line-chart-line"
-        title="7-day trend"
-        subtitle="Attendance velocity & check-in patterns"
-        badge="VELOCITY"
-        badgeTone="cyan"
-      >
-        <div headerExtra class="text-xs text-slate-400 font-mono">
-          {{ 'Week Total' | translate }}: <strong class="text-cyan-400 font-bold">{{ weekTotal }}</strong>
+    <!-- Tasklyn-style 5-Segment Unified Metric Ribbon Card -->
+    <div class="sv-metric-ribbon">
+      <!-- Col 1: Total Staff -->
+      <div class="sv-metric-col" routerLink="/company/member">
+        <div class="sv-metric-head">
+          <span class="sv-metric-label">{{ 'Total Staff' | translate }}</span>
+          <span class="sv-metric-trend sv-trend-up">▲ 2</span>
         </div>
-        <div echarts [options]="trendChart" class="h-72"></div>
-      </app-bento-card>
+        <div class="sv-metric-val">{{ totalStaff }}</div>
+      </div>
 
-      <!-- Today Mix & Punctuality Bento Card -->
-      <app-bento-card
-        colSpan="col-span-12 xl:col-span-4"
-        accentTone="sky"
-        headerIcon="ri-pie-chart-2-line"
-        title="Today mix"
-        subtitle="On-time vs geofence breakdown"
-        badge="RATIO"
-        badgeTone="sky"
-      >
-        <div echarts [options]="mixChart" class="h-72"></div>
-      </app-bento-card>
-
-      <!-- Geo-Spatial Punch Locations Map Bento Card -->
-      <app-bento-card
-        colSpan="col-span-12 xl:col-span-7"
-        accentTone="emerald"
-        headerIcon="ri-map-pin-range-line"
-        title="Today punch map"
-        subtitle="Geofenced location telemetry & GPS radius"
-        badge="MAP TELEMETRY"
-        badgeTone="emerald"
-      >
-        <div headerExtra class="text-xs text-emerald-400 font-mono">
-          {{ mapPoints.length }} {{ 'punch points' | translate }}
+      <!-- Col 2: Total Punches Today -->
+      <div class="sv-metric-col" routerLink="/company/timestamp-log">
+        <div class="sv-metric-head">
+          <span class="sv-metric-label">{{ 'Total Punches' | translate }}</span>
+          <span class="sv-metric-trend sv-trend-up">▲ 4</span>
         </div>
-        <app-checkin-map
-          [points]="mapPoints"
-          [companyLocations]="companyLocations"
-          height="420px">
-        </app-checkin-map>
-      </app-bento-card>
+        <div class="sv-metric-val">{{ checkInsToday }}</div>
+      </div>
 
-      <!-- Realtime Punch Feed Bento Card -->
-      <app-bento-card
-        colSpan="col-span-12 xl:col-span-5"
-        accentTone="rose"
-        headerIcon="ri-radar-line"
-        title="Latest punches (Realtime)"
-        subtitle="Live biometric stream & facial match sightings"
-        [badge]="liveOn ? 'LIVE RADAR' : 'PAUSED'"
-        [badgeTone]="liveOn ? 'rose' : 'slate'"
-      >
-        <div headerExtra class="flex items-center gap-2">
-          <span class="sv-bento-chip-active" *ngIf="liveOn">
-            <span class="sv-pulse-dot"></span>
-            <span>STREAMING</span>
+      <!-- Col 3: On-time In Area -->
+      <div class="sv-metric-col" routerLink="/company/timestamp-log">
+        <div class="sv-metric-head">
+          <span class="sv-metric-label">{{ 'In-Area Normal' | translate }}</span>
+          <span class="sv-metric-trend sv-trend-up">▲ 3</span>
+        </div>
+        <div class="sv-metric-val">{{ inAreaToday }}</div>
+      </div>
+
+      <!-- Col 4: Out of Area / Alerts -->
+      <div class="sv-metric-col" routerLink="/company/warning-timestamp-log">
+        <div class="sv-metric-head">
+          <span class="sv-metric-label">{{ 'Out-of-Area' | translate }}</span>
+          <span class="sv-metric-trend" [ngClass]="outsideToday > 0 ? 'sv-trend-warn' : 'sv-trend-up'">
+            {{ outsideToday > 0 ? '▼ ' + outsideToday : '▲ 0' }}
           </span>
-          <a routerLink="/company/timestamp-log" class="text-xs text-cyan-400 hover:underline">
-            {{ 'View all' | translate }}
-          </a>
         </div>
+        <div class="sv-metric-val" [class.text-rose-500]="outsideToday > 0">
+          {{ outsideToday }}
+        </div>
+      </div>
 
-        <div class="dpu-live-panel -mx-3 -mb-3">
-          <app-empty-state
-            *ngIf="!stats.recentActivity?.length"
-            icon="ri-time-line"
-            message="No recent activity">
-          </app-empty-state>
-          <ul class="dpu-live-feed max-h-[420px] overflow-y-auto" *ngIf="stats.recentActivity?.length">
-            @for (activity of stats.recentActivity; track activity.timestampId || $index) {
-              <li class="dpu-live-item" [class.is-new]="isNew(activity)" [class.is-warn]="!isInArea(activity)">
-                <img class="dpu-live-avatar" [src]="photoUrl(activity)" alt="">
-                <div class="dpu-live-body">
-                  <div class="dpu-live-row">
-                    <strong>{{ activity.employeeName }}</strong>
-                    <time>{{ activity.timestamp | date:'HH:mm:ss' }}</time>
-                  </div>
-                  <div class="dpu-live-meta">
-                    <span *ngIf="activity.employeeId">{{ 'ID' | translate }} {{ activity.employeeId }} · </span>
-                    {{ activity.locationName || ((isInArea(activity) ? 'In area' : 'Out of area') | translate) }}
-                  </div>
-                  <div class="dpu-live-tags">
-                    <span class="badge" [ngClass]="isInArea(activity) ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
-                      {{ (isInArea(activity) ? 'In area' : 'Out of area') | translate }}
-                    </span>
-                    <span class="badge bg-warning/10 text-warning" *ngIf="activity.approvalStatus === 'PENDING'">PENDING</span>
-                  </div>
-                </div>
-              </li>
-            }
-          </ul>
+      <!-- Col 5: Pending Approval Queue -->
+      <div class="sv-metric-col" routerLink="/company/warning-timestamp-log">
+        <div class="sv-metric-head">
+          <span class="sv-metric-label">{{ 'Pending Approval' | translate }}</span>
+          <span class="sv-metric-trend sv-trend-amber">⏳ {{ pendingApproval }}</span>
         </div>
-      </app-bento-card>
-    </app-bento-grid>
+        <div class="sv-metric-val" [class.text-amber-500]="pendingApproval > 0">
+          {{ pendingApproval }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasklyn-style 2x2 Analytical Bento Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <!-- Card 1: Check-in Status by Category (Tasklyn "Upcoming Tasks by Status" Capsule Bar Chart) -->
+      <div class="sv-dash-card">
+        <div class="sv-dash-card-header">
+          <div class="flex items-center gap-2">
+            <h2 class="sv-dash-card-title">{{ 'Check-in Status Breakdown' | translate }}</h2>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" class="sv-card-btn" title="Filter"><i class="ri-filter-3-line"></i></button>
+            <button type="button" class="sv-card-btn" title="More options"><i class="ri-more-2-fill"></i></button>
+          </div>
+        </div>
+        <div class="sv-dash-card-body">
+          <div echarts [options]="statusChart" class="h-64 sm:h-72"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Punches by Day & Area (Tasklyn "Tasks by Project" Two-tone Stacked Capsule Bar Chart) -->
+      <div class="sv-dash-card">
+        <div class="sv-dash-card-header">
+          <div class="flex items-center gap-3">
+            <h2 class="sv-dash-card-title">{{ 'Punches by Day & Area' | translate }}</h2>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button type="button" class="sv-card-btn" title="Filter"><i class="ri-filter-3-line"></i></button>
+            <button type="button" class="sv-card-btn" title="More options"><i class="ri-more-2-fill"></i></button>
+          </div>
+        </div>
+        <!-- Tasklyn-style Legend Pills -->
+        <div class="flex items-center gap-4 px-5 pt-3 text-xs font-medium">
+          <span class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <span class="sv-legend-swatch sv-swatch-blue"></span>
+            <span>{{ 'In Area' | translate }}</span>
+          </span>
+          <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <span class="sv-legend-swatch sv-swatch-blue-soft"></span>
+            <span>{{ 'Out of Area' | translate }}</span>
+          </span>
+        </div>
+        <div class="sv-dash-card-body">
+          <div echarts [options]="trendChart" class="h-64 sm:h-72"></div>
+        </div>
+      </div>
+
+      <!-- Card 3: Today Punch Map & Telemetry (Tasklyn "Task by Assignee" Dropdown Header Layout) -->
+      <div class="sv-dash-card">
+        <div class="sv-dash-card-header">
+          <div class="flex items-center gap-2">
+            <h2 class="sv-dash-card-title">{{ 'Today Punch Map & Telemetry' | translate }}</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="sv-filter-pill">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+              <span>📍 {{ mapPoints.length }} {{ 'punch points' | translate }}</span>
+              <i class="ri-arrow-down-s-line text-xs"></i>
+            </div>
+            <button type="button" class="sv-card-btn" title="Filter"><i class="ri-filter-3-line"></i></button>
+            <button type="button" class="sv-card-btn" title="More options"><i class="ri-more-2-fill"></i></button>
+          </div>
+        </div>
+        <div class="sv-dash-card-body p-0">
+          <app-checkin-map
+            [points]="mapPoints"
+            [companyLocations]="companyLocations"
+            height="380px">
+          </app-checkin-map>
+        </div>
+      </div>
+
+      <!-- Card 4: Live Biometric Stream & Sightings (Tasklyn Completion / Live Feed Layout) -->
+      <div class="sv-dash-card">
+        <div class="sv-dash-card-header">
+          <div class="flex items-center gap-2">
+            <h2 class="sv-dash-card-title">{{ 'Live Biometric Sightings' | translate }}</h2>
+            <span class="sv-bento-chip-active" *ngIf="liveOn">
+              <span class="sv-pulse-dot"></span>
+              <span>STREAMING</span>
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <a routerLink="/company/timestamp-log" class="text-xs text-blue-500 hover:underline mr-1 font-medium">
+              {{ 'View all' | translate }}
+            </a>
+            <button type="button" class="sv-card-btn" title="Filter"><i class="ri-filter-3-line"></i></button>
+            <button type="button" class="sv-card-btn" title="More options"><i class="ri-more-2-fill"></i></button>
+          </div>
+        </div>
+        <div class="sv-dash-card-body p-0">
+          <div class="dpu-live-panel">
+            <app-empty-state
+              *ngIf="!stats.recentActivity?.length"
+              icon="ri-time-line"
+              message="No recent activity">
+            </app-empty-state>
+            <ul class="dpu-live-feed max-h-[380px] overflow-y-auto" *ngIf="stats.recentActivity?.length">
+              @for (activity of stats.recentActivity; track activity.timestampId || $index) {
+                <li class="dpu-live-item" [class.is-new]="isNew(activity)" [class.is-warn]="!isInArea(activity)">
+                  <img class="dpu-live-avatar" [src]="photoUrl(activity)" alt="">
+                  <div class="dpu-live-body">
+                    <div class="dpu-live-row">
+                      <strong>{{ activity.employeeName }}</strong>
+                      <time>{{ activity.timestamp | date:'HH:mm:ss' }}</time>
+                    </div>
+                    <div class="dpu-live-meta">
+                      <span *ngIf="activity.employeeId">{{ 'ID' | translate }} {{ activity.employeeId }} · </span>
+                      {{ activity.locationName || ((isInArea(activity) ? 'In area' : 'Out of area') | translate) }}
+                    </div>
+                    <div class="dpu-live-tags">
+                      <span class="badge" [ngClass]="isInArea(activity) ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'">
+                        {{ (isInArea(activity) ? 'In area' : 'Out of area') | translate }}
+                      </span>
+                      <span class="badge bg-warning/10 text-warning" *ngIf="activity.approvalStatus === 'PENDING'">PENDING</span>
+                    </div>
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </ng-container>
 </div>

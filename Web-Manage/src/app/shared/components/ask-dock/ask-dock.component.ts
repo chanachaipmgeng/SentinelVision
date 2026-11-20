@@ -112,7 +112,7 @@ interface ChatTurn {
       .sv-ask-fab {
         position: fixed;
         right: 1.35rem;
-        bottom: 1.35rem;
+        bottom: 4.25rem;
         z-index: 1050;
         display: inline-flex;
         align-items: center;
@@ -135,7 +135,7 @@ interface ChatTurn {
       .sv-ask-dock {
         position: fixed;
         right: 1.25rem;
-        bottom: 4.75rem;
+        bottom: 7.75rem;
         z-index: 1060;
         width: min(25rem, calc(100vw - 2rem));
         height: min(34rem, calc(100vh - 6.5rem));

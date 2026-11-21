@@ -10,6 +10,7 @@ import { PageToolbarComponent } from '../../../shared/components/page-toolbar/pa
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
 import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
+import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { VALID_STATION_MODES } from '../../services/company-module-config.service';
 
@@ -74,6 +75,7 @@ type RoiMode = 'line' | 'zone' | 'loiter' | 'roi';
         FormsModule,
         RouterLink,
         TranslateModule,
+        SharedModule,
         PageToolbarComponent,
         PillSearchComponent,
         StatChipComponent,

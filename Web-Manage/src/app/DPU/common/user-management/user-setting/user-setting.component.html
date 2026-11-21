@@ -158,8 +158,8 @@
           <div class="col-span-12 md:col-span-6">
             <label class="form-label">{{ 'Status' | translate }}</label>
             <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
-              <ng-option [value]="0">Unactive</ng-option>
-              <ng-option [value]="1">Active</ng-option>
+              <ng-option [value]="0">{{ 'Unactive' | translate }}</ng-option>
+              <ng-option [value]="1">{{ 'Active' | translate }}</ng-option>
             </ng-select>
           </div>
         </div>

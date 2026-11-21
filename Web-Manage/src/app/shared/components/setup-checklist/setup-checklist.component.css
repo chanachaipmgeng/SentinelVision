@@ -113,7 +113,7 @@
 
 .sv-setup__step.is-done .sv-setup__step-title {
   color: var(--dpu-muted);
-  text-decoration: line-through;
+  opacity: 0.82;
 }
 
 .sv-setup__hint {

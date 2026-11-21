@@ -37,7 +37,7 @@
           role="listitem"
           class="dpu-settings-rail__link"
           [routerLink]="['/company/settings', s.id]"
-          routerLinkActive="is-active"
+          [class.is-active]="active?.id === s.id"
           [attr.aria-current]="active?.id === s.id ? 'page' : null"
         >
           <i class="dpu-settings-rail__icon" [ngClass]="s.icon" aria-hidden="true"></i>

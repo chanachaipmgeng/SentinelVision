@@ -227,6 +227,14 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
                 {"date": date_str, "count": chart_data_map.get(date_str, 0)}
             )
 
+        stmt_total_employees = select(func.count(CompanyEmployee.company_employeeId)).where(
+            and_(
+                CompanyEmployee.companyId == companyId,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+        )
+        total_employees = (await db.execute(stmt_total_employees)).scalar_one_or_none() or 0
+
         return {
             "summary": {
                 "checkInsToday": check_ins_today,
@@ -235,6 +243,7 @@ async def get_dashboard_stats(companyId: UUID, db: AsyncSession):
                 "checkOutsToday": check_outs_today,
                 "lateToday": late_today,
                 "pendingApproval": pending_approval,
+                "totalEmployees": total_employees,
             },
             "chartData": {
                 "checkInsLast7Days": check_ins_last_7_days,

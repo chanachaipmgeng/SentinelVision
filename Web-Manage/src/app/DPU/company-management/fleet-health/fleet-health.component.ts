@@ -113,8 +113,12 @@ interface FleetHealthResponse {
               {{ summary.healthScore }}%
             </span>
           </div>
-          <span class="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-            <i class="ri-shield-check-line"></i> เสถียรภาพสูง
+          <span
+            class="text-[11px] flex items-center gap-1 font-medium"
+            [ngClass]="summary.healthScore >= 90 ? 'text-emerald-400' : (summary.healthScore >= 70 ? 'text-amber-400' : 'text-rose-400')"
+          >
+            <i [class]="summary.healthScore >= 90 ? 'ri-shield-check-line' : (summary.healthScore >= 70 ? 'ri-error-warning-line' : 'ri-close-circle-line')"></i>
+            {{ summary.healthScore >= 90 ? 'เสถียรภาพสูง' : (summary.healthScore >= 70 ? 'เฝ้าระวัง' : 'วิกฤต / ออฟไลน์') }}
           </span>
         </div>
 
@@ -305,7 +309,12 @@ interface FleetHealthResponse {
                   </span>
                 </td>
                 <td class="py-3.5 px-4 font-mono text-slate-300">
-                  {{ c.latencyMs ? c.latencyMs + ' ms' : 'ปกติ' }}
+                  <ng-container *ngIf="c.isActive && (c.status === 'online' || c.status === 'active' || c.status === 'connected'); else offlineLatency">
+                    {{ c.latencyMs ? c.latencyMs + ' ms' : 'ปกติ' }}
+                  </ng-container>
+                  <ng-template #offlineLatency>
+                    <span class="text-slate-500">—</span>
+                  </ng-template>
                 </td>
                 <td class="py-3.5 px-4 text-right">
                   <a routerLink="/company/cameras" class="ti-btn ti-btn-light text-xs px-2.5 py-1 rounded-lg border border-white/10 hover:text-cyan-400">

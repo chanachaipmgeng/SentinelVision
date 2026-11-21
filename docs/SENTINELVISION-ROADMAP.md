@@ -1,8 +1,8 @@
 # SentinelVision — Unified Biometric Identity, Security & Vision Analytics Platform
 
 **Repository:** `https://github.com/chanachaipmgeng/SentinelVision.git`  
-**Release:** `v4.0.0` (Phase 1 – Phase 6 Implemented)  
-**Core Engine:** FastAPI (`API-Fast`) + InsightFace `buffalo_l` (512-d ArcFace) + PostgreSQL `pgvector` (Dual HNSW Indexes) + Angular 19 (`Web-Manage`)
+**Release:** `v6.3.0` (Phase 1 – Phase 8 + UX/UI Audit Remediation Implemented)  
+**Core Engine:** FastAPI (`API-Fast`) + InsightFace `buffalo_l` (512-d ArcFace) + PostgreSQL `pgvector` (Dual HNSW Indexes, Alembic `0001..0037`) + Angular 19 (`Web-Manage`)
 
 ---
 
@@ -62,3 +62,14 @@ flowchart LR
 | **Enterprise UI** | Console UI integration for Audit Hash-Chain Verify, HRIS Connectors (`SAP`/`Workday`/`PEAK`/`FlowAccount`), ONVIF Discovery & PTZ, Visitor Invite/OCR, and Multi-Region DR Topology | `Web-Manage/src/app/DPU/company-management/{audit-log,reports,cameras,sentinel-center}/` | ✅ Completed |
 | **Guest Portal & NVR Scrubber** | Public Guest Self-Service Pre-Registration Portal (`/#/visitor-invite/:token` with PDPA & OCR) + Unified NVR AI-Marker Timeline Scrubber | `Web-Manage/src/app/authentication/visitor-invite/`, `Web-Manage/src/app/DPU/company-management/playback/` | ✅ Completed |
 | **P2 Enterprise Polish** | TensorRT FP16 EP (`FACE_TENSORRT_ENABLED`), Event Breakout Room Capacity (`POST .../sessions/check-in`), Dynamic PDPA Privacy Masking (`PUT .../privacy-masks`), and `audit-verify` legacy-row compatibility | `API-Fast/src/utils/face_engine.py`, `event_session_service.py`, `privacy_mask_service.py`, `audit_service.py` | ✅ Completed |
+
+---
+
+## 4. Phase 8 (v6.3.0): IVAP v2.0 Benchmark Priorities 1–3 & Full-App UX/UI Hardening (Completed)
+
+| Track | Capability | Key Files | Status |
+| :--- | :--- | :--- | :--- |
+| **Priority 1: Edge Fleet Health & Telemetry** | Real-time Edge Kiosk & CCTV health telemetry (`GET /sentinel/company/{companyId}/fleet-health`), dynamic health score thresholds & `/company/fleet-health` console | `API-Fast/src/routes/sentinel_routes.py`, `Web-Manage/.../fleet-health/fleet-health.component.ts` | ✅ Completed |
+| **Priority 2: Visitor Self-Reg & Event QR** | Public Visitor Invitation flow, Event Public Registration Portal with lazy-loaded QR generation (`qrcode`), and Alembic `0036_event_public_registration` | `API-Fast/src/services/event_registration_service.py`, `API-Fast/alembic/versions/0036_event_public_registration.py` | ✅ Completed |
+| **Priority 3: Smart Parking LPR & RFID Cards** | `sentinel_vehicle`, `sentinel_parking_spot`, `sentinel_parking_transaction`, `sentinel_rfid_card` (Alembic `0037_vehicle_parking_rfid`), automated LPR barrier & dwell engine, RFID swipe verification, `/company/parking` & `/company/rfid-cards` | `API-Fast/src/services/{parking_service,rfid_service}.py`, `Web-Manage/.../{parking,rfid-cards}/` | ✅ Completed |
+| **48-Screen UX/UI & CI Hardening** | Landing Hero contrast/LCP fix, Dashboard `totalEmployees` reconciliation, Self-Service System-Admin 404 guard, Chrome 135+ `<select>::picker-icon` double-arrow fix, Cameras `<app-page-header>` & offline PTZ guard, RBAC 2x2 grid & active rail fix, Trivy `dpu/backup:ci` clean, scoped `Web-Manage/GEMINI.md` | `API-Fast/src/controllers/dashboard_controller.py`, `Web-Manage/src/assets/css/{dpu-theme,dpu-landing}.css`, `Web-Manage/GEMINI.md` | ✅ Completed |

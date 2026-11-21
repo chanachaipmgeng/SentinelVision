@@ -16,9 +16,11 @@
 - [FACE-CORE-IDENTIFY-CAPACITY](FACE-CORE-IDENTIFY-CAPACITY.md) — identify-only: baseline quad + **เพดานสุดท้ายหลังจูน (hexa w2: ×1 64/80 · ×3 48/64)** + HTTP ~20 conc / ~35 RPS · Face Core §6.6–§6.8 · [SATURATION §4g](KIOSK-LOADTEST-SATURATION.md)
 - [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology, Enterprise architecture & testing
 - [API](API.md) — DPU routes plus the Face Core calls the BFF makes
+- [API_CONTRACT](API_CONTRACT.md) — Enterprise API contract (envelopes, error taxonomy, pagination, kiosk isolation)
 
 Sibling vision hub: [`../face-core`](../face-core) — enable with `docker-compose.face-core.yml`.
 
 ## Agent Rules & Engineering Standards
 
-- **Project Rules**: [`../GEMINI.md`](../GEMINI.md) — กฎหลักสำหรับ AI Agent และวิศวกร (Multi-tenancy, Active Identity Filtering, Kiosk Token Isolation, PDPA PII Masking, Asyncio/GPU Non-blocking, Alembic, Nginx Gateway, VaultX Obsidian Glass UI, i18n Parity, และ Verification Commands)
+- **Project Rules (Root)**: [`../GEMINI.md`](../GEMINI.md) — กฎหลักสำหรับ AI Agent และวิศวกร (Multi-tenancy, Active Identity Filtering, Kiosk Token Isolation, PDPA PII Masking, Asyncio/GPU Non-blocking, Alembic, Nginx Gateway, และ Verification Commands)
+- **Frontend Scoped Rules**: [`../Web-Manage/GEMINI.md`](../Web-Manage/GEMINI.md) — กฎเฉพาะฝั่ง Angular/CSS (`::picker-icon`, Hero LCP Contrast, Telemetry Truthfulness, Thai Typography, Role-gated Self-Service, FAB Clearance)

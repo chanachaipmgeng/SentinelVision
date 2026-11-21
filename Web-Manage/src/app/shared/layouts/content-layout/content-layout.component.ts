@@ -43,6 +43,7 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 export class ContentLayoutComponent implements OnDestroy {
   public menuItems!: Menu[];
   private routerSub?: Subscription;
+  private cdTimer?: ReturnType<typeof setInterval>;
 
   constructor(
     public navServices: NavService,
@@ -59,7 +60,7 @@ export class ContentLayoutComponent implements OnDestroy {
     this.navServices.items.subscribe((menuItems: Menu[]) => {
       this.menuItems = menuItems;
     });
-    setInterval(() => {
+    this.cdTimer = setInterval(() => {
       // require view to be updated
       this.ref.markForCheck();
     }, 100);
@@ -77,6 +78,10 @@ export class ContentLayoutComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.cdTimer) {
+      clearInterval(this.cdTimer);
+      this.cdTimer = undefined;
+    }
     this.routerSub?.unsubscribe();
     this.idleTimeout.stop();
     this.setKioskMode(false);

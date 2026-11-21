@@ -22,7 +22,7 @@ import {
       <div class="sv-command-topbar flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-white/10 bg-[#070d14] shadow-xl">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
-            <i class="ri-rfid-line"></i>
+            <i class="ri-bank-card-2-line"></i>
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -135,7 +135,7 @@ import {
       </div>
 
       <!-- Search & Filters -->
-      <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border border-white/10 bg-[#070d14]">
+      <div class="flex flex-wrap items-center justify-between gap-3 p-3 lg:pr-28 rounded-xl border border-white/10 bg-[#070d14]">
         <div class="flex items-center gap-2 flex-1 max-w-md">
           <div class="relative w-full">
             <i class="ri-search-line absolute left-3 top-2.5 text-slate-500"></i>

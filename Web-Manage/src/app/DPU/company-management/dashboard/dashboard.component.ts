@@ -106,10 +106,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   get totalStaff(): number {
-    if (this.stats?.summary?.totalEmployees) {
-      return this.stats.summary.totalEmployees;
-    }
-    return Math.max(28, this.checkInsToday + 4);
+    return this.stats?.summary?.totalEmployees ?? 0;
   }
 
   get mapPoints() {

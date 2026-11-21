@@ -72,21 +72,21 @@
         <div class="dpu-landing__hero-grid" aria-hidden="true"></div>
 
         <div class="dpu-landing__hero-inner">
-          <div dpuReveal="up">
+          <div>
             <span class="dpu-landing__eyebrow">
               <span class="dpu-landing__eyebrow-dot" aria-hidden="true"></span>
               {{ 'landing.hero.badge' | translate }}
             </span>
           </div>
 
-          <h1 id="landing-hero-title" class="dpu-text-display-gradient" dpuReveal="up" dpuRevealDelay="0.1s">
+          <h1 id="landing-hero-title" class="dpu-text-display-gradient">
             Sentinel
           </h1>
-          <p class="dpu-landing__hero-by" dpuReveal="up" dpuRevealDelay="0.14s">by IVAP</p>
-          <p class="dpu-landing__hero-lead" dpuReveal="up" dpuRevealDelay="0.2s">
+          <p class="dpu-landing__hero-by">by IVAP</p>
+          <p class="dpu-landing__hero-lead">
             {{ 'landing.hero.lead' | translate }}
           </p>
-          <div class="dpu-landing__cta-row" dpuReveal="up" dpuRevealDelay="0.32s">
+          <div class="dpu-landing__cta-row">
             <a routerLink="/auth/login" class="dpu-btn-vault">{{ 'landing.cta.start' | translate }}</a>
             <a href="#features" (click)="scrollTo('features'); $event.preventDefault()" class="dpu-btn-ghost">
               {{ 'landing.cta.explore' | translate }}

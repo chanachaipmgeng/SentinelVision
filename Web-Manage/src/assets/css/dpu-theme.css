@@ -3210,7 +3210,8 @@ html[data-theme-mode="dark"] .footer img {
 /* 4. Native Select Dropdown Caret Normalization - Single Clean Chevron */
 select.form-control,
 select.form-select,
-select.ti-form-select {
+select.ti-form-select,
+.main-content select:not(.flatpickr-monthDropdown-months) {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
@@ -3219,6 +3220,26 @@ select.ti-form-select {
   background-position: right 0.75rem center !important;
   background-size: 1rem !important;
   padding-right: 2.25rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+select.form-control::picker-icon,
+select.form-select::picker-icon,
+select.ti-form-select::picker-icon,
+.main-content select::picker-icon {
+  display: none !important;
+}
+select.form-control::-ms-expand,
+select.form-select::-ms-expand,
+select.ti-form-select::-ms-expand,
+.main-content select::-ms-expand {
+  display: none !important;
+}
+
+/* 4b. Global FAB Non-Occlusion Bottom Clearance */
+.main-content {
+  padding-bottom: 5.5rem !important;
 }
 
 /* 5. Fire Alarm & Destructive Buttons Text Contrast */

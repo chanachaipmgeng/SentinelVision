@@ -29,7 +29,7 @@ interface SimpleOption {
           <h6 class="box-title mb-0">{{ 'rbacPanel.assignTitle' | translate }}</h6>
         </div>
         <div class="box-body">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="form-label text-xs">{{ 'rbacPanel.member' | translate }}</label>
               <select class="form-control" [(ngModel)]="form.memberId">
@@ -83,7 +83,7 @@ interface SimpleOption {
           <div *ngIf="!loading && !assignments.length" class="text-xs text-dpu-muted py-3">
             {{ 'No data' | translate }}
           </div>
-          <div *ngIf="!loading && assignments.length" class="table-responsive">
+          <div *ngIf="!loading && assignments.length" class="table-responsive overflow-x-auto max-w-full">
             <table class="table whitespace-nowrap min-w-full text-xs">
               <thead>
                 <tr>

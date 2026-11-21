@@ -45,7 +45,11 @@
 }
 
 .ess-audience-hint {
-  max-width: 26rem;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  text-wrap: balance;
 }
 
 @media (max-width: 640px) {

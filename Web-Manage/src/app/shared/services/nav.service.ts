@@ -170,7 +170,7 @@ export class NavService implements OnDestroy {
         permission: 'company.read',
       },
       {
-        icon: 'shield-check',
+        icon: 'check-shield',
         path: '/company/sentinel-center',
         title: 'Sentinel Command Center',
         type: 'link',

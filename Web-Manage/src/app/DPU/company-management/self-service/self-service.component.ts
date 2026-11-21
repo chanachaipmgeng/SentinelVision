@@ -74,7 +74,9 @@ export class SelfServiceComponent implements OnInit {
   /** True when signed-in identity is company/HR admin (employee portal audience). */
   isCompanyAdminViewer = false;
   /** Allows Admin/HR with a linked CompanyEmployee record to toggle into their own Self-Service view. */
-  adminSelfServiceMode = true;
+  adminSelfServiceMode = false;
+  /** Whether we have already attempted resolving the linked CompanyEmployee row. */
+  private employeeLookupAttempted = false;
   /** No CompanyEmployee row for this member in the selected company. */
   missingEmployeeRecord = false;
   loadError = '';
@@ -127,13 +129,17 @@ export class SelfServiceComponent implements OnInit {
 
   toggleAdminSelfServiceMode(): void {
     this.adminSelfServiceMode = !this.adminSelfServiceMode;
-    if (this.adminSelfServiceMode && this.companyEmployeeId && this.attendance.length === 0 && this.leaves.length === 0) {
-      this.reload();
+    if (this.adminSelfServiceMode) {
+      if (!this.companyEmployeeId && !this.employeeLookupAttempted) {
+        this.lookupEmployeeRecord();
+      } else if (this.companyEmployeeId && this.attendance.length === 0 && this.leaves.length === 0) {
+        this.reload();
+      }
     }
   }
 
   ngOnInit(): void {
-    this.isCompanyAdminViewer = this.permissions.isCompanyAdmin();
+    this.isCompanyAdminViewer = this.permissions.isCompanyAdmin() || this.permissions.isSystemAdmin();
     if (!this.companyId || !this.memberId) {
       this.missingEmployeeRecord = true;
       return;
@@ -142,41 +148,56 @@ export class SelfServiceComponent implements OnInit {
     this.loadError = '';
     this.permissions.load(this.companyId).subscribe({
       next: () => {
-        this.isCompanyAdminViewer = this.permissions.isCompanyAdmin();
-        // Company admin: stop after role check — page is employee-audience only.
+        this.isCompanyAdminViewer = this.permissions.isCompanyAdmin() || this.permissions.isSystemAdmin();
         if (this.isCompanyAdminViewer) {
+          // Company/System admin: skip employee lookup until they explicitly toggle self-service view.
+          this.adminSelfServiceMode = false;
           this.loading = false;
+          return;
         }
+        this.lookupEmployeeRecord();
       },
       error: () => {
         if (this.isCompanyAdminViewer) {
+          this.adminSelfServiceMode = false;
           this.loading = false;
+          return;
         }
+        this.lookupEmployeeRecord();
       },
     });
-    // Employees (and non-admin deep links) resolve their CompanyEmployee row.
+  }
+
+  private lookupEmployeeRecord(): void {
+    if (!this.companyId || !this.memberId) {
+      this.missingEmployeeRecord = true;
+      this.loading = false;
+      return;
+    }
+    this.employeeLookupAttempted = true;
+    this.loading = true;
     this.http
       .get<{ company_employeeId?: string; companyEmployeeId?: string }>(
         `/employees/company/${this.companyId}/member/${this.memberId}`,
       )
       .subscribe({
-      next: (emp) => {
-        this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
-        this.missingEmployeeRecord = !this.companyEmployeeId;
-        this.loading = false;
-        if (this.companyEmployeeId && (!this.isCompanyAdminViewer || this.adminSelfServiceMode)) {
-          this.reload();
-        }
-      },
-      error: () => {
-        this.missingEmployeeRecord = true;
-        this.companyEmployeeId = '';
-        this.loading = false;
-        if (!this.isCompanyAdminViewer) {
-          this.loadError = 'ไม่พบบัญชีพนักงานของคุณในบริษัทนี้';
-        }
-      },
-    });
+        next: (emp) => {
+          this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
+          this.missingEmployeeRecord = !this.companyEmployeeId;
+          this.loading = false;
+          if (this.companyEmployeeId && (!this.isCompanyAdminViewer || this.adminSelfServiceMode)) {
+            this.reload();
+          }
+        },
+        error: () => {
+          this.missingEmployeeRecord = true;
+          this.companyEmployeeId = '';
+          this.loading = false;
+          if (!this.isCompanyAdminViewer) {
+            this.loadError = 'ไม่พบบัญชีพนักงานของคุณในบริษัทนี้';
+          }
+        },
+      });
   }
 
   setTab(tab: Tab): void {

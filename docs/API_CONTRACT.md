@@ -142,36 +142,85 @@ Before biometric embedding extraction (InsightFace `buffalo_l` 512-d), images un
 
 ## 6. Realtime WebSocket Protocol (`/face/ws/kiosk`)
 
-The Kiosk WebSocket connection provides low-latency multi-person biometric detection and check-in streaming.
+The Kiosk WebSocket connection provides low-latency multi-person biometric detection, tracking, and check-in streaming with strictly enforced tenant limits and JWT lifecycle verification.
 
-### 6.1 Handshake & Authentication
+### 6.1 Handshake, Authentication & Guardrails
+Immediately upon WebSocket connection acceptance, the server issues a ready banner:
 ```json
-// Client -> Server (immediately upon WS connection)
+// Server -> Client
 {
-  "action": "auth",
-  "token": "<device_jwt_token>"
+  "type": "ready",
+  "message": "Send session then identify/checkin frames",
+  "faceCoreEnabled": false,
+  "authTimeoutSeconds": 10.0,
+  "queue": { "pending": 0, "active": 0 }
+}
+```
+
+The client **must** authenticate within `authTimeoutSeconds` (default 10s) by sending a `session` message:
+```json
+// Client -> Server
+{
+  "type": "session",
+  "companyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "token": "<kiosk_or_admin_jwt_token>",
+  "stationMode": "ATTENDANCE",
+  "zoneId": "zone-uuid-or-none",
+  "latitude": 13.7563,
+  "longitude": 100.5018
+}
+```
+
+Upon verification of JWT validity, tenant match, and concurrency slots (`WS_KIOSK_MAX_CONN_PER_IP = 16`, `WS_KIOSK_MAX_CONN_PER_COMPANY = 64`), the server confirms:
+```json
+// Server -> Client
+{
+  "type": "session_ok",
+  "companyId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "companyCode": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "deviceId": "uuid-device-id",
+  "stationMode": "ATTENDANCE",
+  "zoneId": "zone-uuid-or-none",
+  "queue": { "pending": 0, "active": 0 }
+}
+```
+
+If session authentication fails, times out, or violates concurrency limits, the server emits `{"type": "error", "code": "...", "detail": "..."}` and immediately closes the connection with code `1008 Policy Violation` (e.g. `unauthenticated`, `auth_timeout`, `invalid_session`, `too_many_connections`).
+
+### 6.2 Heartbeat, Keepalive & Token Expiration
+- **Ping / Pong:** Client sends `{"type": "ping"}`. Server replies `{"type": "pong", "queue": { ... }}`.
+- **Device Heartbeat:** Paired kiosks transmit telemetry:
+```json
+// Client -> Server
+{
+  "type": "heartbeat",
+  "fingerprint": "client-fp-hash",
+  "appVersion": "4.0.0",
+  "config": {}
 }
 
 // Server -> Client
 {
-  "event": "auth_ok",
-  "deviceId": "uuid-device",
-  "stationMode": "ATTENDANCE"
+  "type": "heartbeat_ok",
+  "deviceId": "uuid-device-id",
+  "heartbeatAt": "2026-11-21T12:00:00Z"
 }
 ```
+- **Token Expiry Notice:** When $< 300$ seconds remain before JWT expiration, the server automatically emits `{"type": "token_expiring"}` so the client can refresh tokens asynchronously before disconnect. When expired, subsequent frames yield `{"type": "error", "code": "token_expired"}`.
 
-### 6.2 Real-time Frame Evaluation
+### 6.3 Frame Evaluation & Match Dispatch
 ```json
 // Client -> Server: Binary JPEG frame or Base64 payload
 {
-  "action": "detect",
+  "type": "detect",
   "frame": "data:image/jpeg;base64,...",
-  "stationMode": "UNIFIED_HYBRID"
+  "requestId": "req-101"
 }
 
-// Server -> Client (Detection Event)
+// Server -> Client: Match / Tracking Result
 {
-  "event": "face_result",
+  "type": "detected",
+  "requestId": "req-101",
   "faces": [
     {
       "trackingId": 101,
@@ -185,11 +234,6 @@ The Kiosk WebSocket connection provides low-latency multi-person biometric detec
   ]
 }
 ```
-
-### 6.3 Heartbeat & Session Keepalive
-- The client sends `{ "action": "ping" }` every 15 seconds.
-- The server responds `{ "event": "pong", "serverTime": 1732168800 }`.
-- Idle connections without ping for $> 45$ seconds are closed with code `4408 Request Timeout`.
 
 ---
 

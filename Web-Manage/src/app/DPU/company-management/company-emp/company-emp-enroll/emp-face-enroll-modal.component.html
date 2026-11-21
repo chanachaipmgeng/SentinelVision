@@ -196,7 +196,7 @@
           ยกเลิก
         </button>
         <button type="button" class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="isUploadingFace || switchingCamera || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !((isFaceDetected && enrollReady) || qualityOverride)) : !uploadFaceItems.length)"
+          [disabled]="isUploadingFace || switchingCamera || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !((isFaceDetected && enrollReady) || qualityOverride)) : (!uploadFaceItems.length || isCheckingUploadQuality || (hasInvalidUploadPhotos && !qualityOverride)))"
           (click)="captureImage()">
           @if (isUploadingFace) {
             {{ uploadProgressLabel || 'กำลังบันทึก...' }}

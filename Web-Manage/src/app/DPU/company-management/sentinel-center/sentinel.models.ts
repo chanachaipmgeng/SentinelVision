@@ -121,6 +121,10 @@ export interface SentinelEventRule {
   attendeeCount?: number;
   capacity?: number;
   checkedInCount?: number;
+  publicSlug?: string | null;
+  registrationOpen?: boolean;
+  registrationDeadline?: string | null;
+  description?: string | null;
 }
 
 export interface SentinelOverviewSummary {

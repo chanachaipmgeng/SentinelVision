@@ -97,3 +97,95 @@ def verify_visitor_invite_token(token: str) -> dict[str, Any]:
         "validHours": int(payload.get("vh") or 12),
         "expiresAt": datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat(),
     }
+
+
+_PASS_PREFIX = "sv_pass_"
+
+
+def create_visitor_pass_token(
+    *,
+    company_id: UUID,
+    identity_id: UUID,
+    visitor_name: str,
+    valid_from: datetime,
+    expires_at: datetime,
+    zone_ids: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """Generate a tamper-proof signed Visitor Digital Pass token for QR / badge verification."""
+    payload = {
+        "typ": "visitor_pass",
+        "cid": str(company_id),
+        "iid": str(identity_id),
+        "name": visitor_name.strip()[:120],
+        "vf": int(valid_from.timestamp()),
+        "exp": int(expires_at.timestamp()),
+        "zones": zone_ids or [],
+    }
+    encoded = _b64url_encode(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+    sig = _sign(encoded)
+    pass_code = f"{_PASS_PREFIX}{encoded}.{sig}"
+
+    qr_data_url: Optional[str] = None
+    try:
+        import io
+        import qrcode
+
+        qr = qrcode.QRCode(box_size=6, border=2)
+        qr.add_data(pass_code)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_data_url = f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode('ascii')}"
+    except Exception:
+        pass
+
+    return {
+        "passCode": pass_code,
+        "qrData": pass_code,
+        "qrDataUrl": qr_data_url,
+        "validFrom": valid_from.isoformat(),
+        "expiresAt": expires_at.isoformat(),
+        "visitorName": visitor_name,
+        "zones": zone_ids or [],
+    }
+
+
+def verify_visitor_pass_token(pass_code: str) -> dict[str, Any]:
+    """Verify digital visitor pass signature and active validity window."""
+    raw = (pass_code or "").strip()
+    if not raw.startswith(_PASS_PREFIX) or "." not in raw:
+        raise HTTPException(status_code=400, detail="Invalid visitor pass format")
+    body = raw[len(_PASS_PREFIX) :]
+    payload_b64, sig = body.split(".", 1)
+    expected_sig = _sign(payload_b64)
+    if not hmac.compare_digest(sig, expected_sig):
+        raise HTTPException(status_code=401, detail="Invalid or tampered visitor pass signature")
+    try:
+        payload = json.loads(_b64url_decode(payload_b64).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Malformed visitor pass payload") from None
+
+    if payload.get("typ") != "visitor_pass":
+        raise HTTPException(status_code=400, detail="Invalid token type, expected visitor_pass")
+
+    now_ts = datetime.now(timezone.utc).timestamp()
+    vf_ts = int(payload.get("vf") or 0)
+    exp_ts = int(payload.get("exp") or 0)
+
+    if now_ts < vf_ts:
+        raise HTTPException(status_code=403, detail="Visitor pass is not yet active")
+    if now_ts > exp_ts:
+        raise HTTPException(status_code=410, detail="Visitor pass has expired")
+
+    return {
+        "companyId": UUID(str(payload["cid"])),
+        "identityId": UUID(str(payload["iid"])),
+        "visitorName": str(payload.get("name") or ""),
+        "validFrom": datetime.fromtimestamp(vf_ts, tz=timezone.utc).isoformat(),
+        "expiresAt": datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat(),
+        "zones": payload.get("zones") or [],
+    }
+

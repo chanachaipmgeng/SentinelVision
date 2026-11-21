@@ -7,10 +7,21 @@ and serializer / schedule helpers.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -459,6 +470,105 @@ async def checkin_event_breakout_session(
     )
 
 
+@router.patch("/company/{companyId}/events/{eventId}/registration")
+async def update_event_reg_settings(
+    companyId: UUID,
+    eventId: UUID,
+    body: Dict[str, Any],
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_registration_service import update_event_registration_settings
+
+    await assert_request_company_access(request, db, companyId)
+    return await update_event_registration_settings(db, companyId, eventId, body)
+
+
+@router.get("/company/{companyId}/events/{eventId}/registrations")
+async def list_event_regs(
+    companyId: UUID,
+    eventId: UUID,
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_registration_service import list_event_registrations
+
+    await assert_request_company_access(request, db, companyId)
+    return await list_event_registrations(
+        db, companyId, eventId, limit=limit, offset=offset, search=search, status_filter=status
+    )
+
+
+@router.get("/company/{companyId}/events/{eventId}/registrations/export")
+async def export_event_regs_csv(
+    companyId: UUID,
+    eventId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from fastapi.responses import PlainTextResponse
+    from ..services.event_registration_service import export_event_registrations_csv
+
+    await assert_request_company_access(request, db, companyId)
+    csv_content = await export_event_registrations_csv(db, companyId, eventId)
+    return PlainTextResponse(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="event_{eventId}_registrations.csv"'},
+    )
+
+
+@router.post("/company/{companyId}/events/{eventId}/registrations/{registrationId}/cancel")
+async def cancel_event_reg(
+    companyId: UUID,
+    eventId: UUID,
+    registrationId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_registration_service import cancel_event_registration
+
+    await assert_request_company_access(request, db, companyId)
+    return await cancel_event_registration(db, companyId, eventId, registrationId)
+
+
+@router.get("/company/{companyId}/fleet-health")
+async def get_fleet_health(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.fleet_health_service import get_fleet_health_overview
+
+    await assert_request_company_access(request, db, companyId)
+    return await get_fleet_health_overview(db, companyId)
+
+
+@router.get("/public/events/{slug}")
+async def get_public_event(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_registration_service import get_public_event_by_slug
+
+    return await get_public_event_by_slug(db, slug)
+
+
+@router.post("/public/events/{slug}/register")
+async def register_event_publicly(
+    slug: str,
+    body: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.event_registration_service import register_public_event
+
+    return await register_public_event(db, slug, body)
+
+
 @router.post("/company/{companyId}/scan")
 async def unified_sentinel_scan(
     companyId: UUID,
@@ -706,7 +816,10 @@ async def complete_public_visitor_invite(
 ):
     from datetime import datetime, timedelta, timezone
     from fastapi import HTTPException
-    from ..services.visitor_invite_service import verify_visitor_invite_token
+    from ..services.visitor_invite_service import (
+        create_visitor_pass_token,
+        verify_visitor_invite_token,
+    )
 
     if not consentAccepted:
         raise HTTPException(status_code=400, detail="PDPA biometric consent is required")
@@ -731,7 +844,64 @@ async def complete_public_visitor_invite(
         created = await ctrl.enroll_identity_face(
             db, invite["companyId"], UUID(created["identityId"]), photo
         )
-    return {"registered": True, "identity": created}
+    pass_info = create_visitor_pass_token(
+        company_id=invite["companyId"],
+        identity_id=UUID(created["identityId"]),
+        visitor_name=invite["visitorName"],
+        valid_from=now,
+        expires_at=expires_at,
+        zone_ids=created.get("allowedZoneIds") or [],
+    )
+    return {"registered": True, "identity": created, "pass": pass_info}
+
+
+@router.post("/company/{companyId}/visitors/verify-pass")
+async def verify_visitor_digital_pass(
+    companyId: UUID,
+    request: Request,
+    body: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import datetime, timezone
+    from sqlalchemy import select
+    from ..models.sentinel import SentinelIdentity
+    from ..services.visitor_invite_service import verify_visitor_pass_token
+
+    await assert_request_company_access(request, db, companyId)
+    pass_code = str((body or {}).get("passCode") or "").strip()
+    if not pass_code:
+        raise HTTPException(status_code=400, detail="passCode is required")
+
+    pass_payload = verify_visitor_pass_token(pass_code)
+    if pass_payload["companyId"] != companyId:
+        raise HTTPException(status_code=403, detail="Pass belongs to another organization")
+
+    stmt = select(SentinelIdentity).where(
+        SentinelIdentity.identityId == pass_payload["identityId"],
+        SentinelIdentity.companyId == companyId,
+        SentinelIdentity.deletedAt.is_(None),
+    )
+    res = await db.execute(stmt)
+    identity = res.scalar_one_or_none()
+    if not identity:
+        raise HTTPException(status_code=404, detail="Visitor identity not found or revoked")
+    if identity.status != "ACTIVE":
+        raise HTTPException(status_code=403, detail=f"Visitor status is {identity.status}")
+
+    return {
+        "valid": True,
+        "passCode": pass_code,
+        "identityId": str(identity.identityId),
+        "fullName": identity.fullName,
+        "identityType": identity.identityType,
+        "status": identity.status,
+        "validFrom": pass_payload["validFrom"],
+        "expiresAt": pass_payload["expiresAt"],
+        "visitPurpose": identity.visitPurpose,
+        "hostMemberId": str(identity.hostMemberId) if identity.hostMemberId else None,
+        "allowedZoneIds": identity.allowedZoneIds or [],
+        "verifiedAt": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.post("/public/visitor-invite/{token}/ocr-document")

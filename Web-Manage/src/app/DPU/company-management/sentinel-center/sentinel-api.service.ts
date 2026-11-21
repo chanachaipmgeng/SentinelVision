@@ -164,6 +164,44 @@ export class SentinelApiService {
     return this.http.delete<Record<string, unknown>>(`${this.base(companyId)}/events/${eventId}`);
   }
 
+  updateEventRegistration(
+    companyId: string,
+    eventId: string,
+    body: Record<string, unknown>,
+  ): Observable<Record<string, unknown>> {
+    return this.http.patch<Record<string, unknown>>(
+      `${this.base(companyId)}/events/${eventId}/registration`,
+      body,
+    );
+  }
+
+  getEventRegistrations(
+    companyId: string,
+    eventId: string,
+    limit = 50,
+    offset = 0,
+    search?: string,
+  ): Observable<Record<string, unknown>> {
+    let url = `${this.base(companyId)}/events/${eventId}/registrations?limit=${limit}&offset=${offset}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    return this.http.get<Record<string, unknown>>(url);
+  }
+
+  exportEventRegistrationsUrl(companyId: string, eventId: string): string {
+    return `${this.base(companyId)}/events/${eventId}/registrations/export`;
+  }
+
+  cancelEventRegistration(
+    companyId: string,
+    eventId: string,
+    registrationId: string,
+  ): Observable<Record<string, unknown>> {
+    return this.http.post<Record<string, unknown>>(
+      `${this.base(companyId)}/events/${eventId}/registrations/${registrationId}/cancel`,
+      {},
+    );
+  }
+
   getIncidents(
     companyId: string,
     severity?: string,

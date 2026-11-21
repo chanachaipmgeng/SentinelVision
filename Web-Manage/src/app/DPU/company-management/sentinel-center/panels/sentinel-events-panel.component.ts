@@ -122,6 +122,49 @@ export class SentinelEventsPanelComponent implements OnInit, OnChanges {
     );
   }
 
+  toggleRegistration(ev: SentinelEventRule): void {
+    if (!this.companyId || !ev.eventId) return;
+    const targetState = !ev.registrationOpen;
+    this.api
+      .updateEventRegistration(this.companyId, ev.eventId, {
+        registrationOpen: targetState,
+      })
+      .subscribe({
+        next: (res) => {
+          ev.registrationOpen = targetState;
+          if (res['publicSlug']) {
+            ev.publicSlug = String(res['publicSlug']);
+          }
+          const msg = targetState
+            ? `เปิดรับสมัคร Public สำหรับ "${ev.name}" แล้ว`
+            : `ปิดรับสมัคร Public แล้ว`;
+          this.toast.emit(msg);
+        },
+        error: (err) => {
+          this.toast.emit(err?.error?.detail || 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะการลงทะเบียน');
+        },
+      });
+  }
+
+  copyPublicUrl(ev: SentinelEventRule): void {
+    const slug = ev.publicSlug || ev.eventId;
+    const url = `${window.location.origin}/events/register/${encodeURIComponent(slug)}`;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => this.toast.emit(`คัดลอกลิงก์ลงทะเบียนเรียบร้อยแล้ว: ${url}`),
+        () => this.toast.emit(`ลิงก์ลงทะเบียน: ${url}`),
+      );
+    } else {
+      this.toast.emit(`ลิงก์ลงทะเบียน: ${url}`);
+    }
+  }
+
+  exportRegistrations(ev: SentinelEventRule): void {
+    if (!this.companyId || !ev.eventId) return;
+    const url = this.api.exportEventRegistrationsUrl(this.companyId, ev.eventId);
+    window.open(url, '_blank');
+  }
+
   loadIdentities(): void {
     this.api.getIdentities(this.companyId).subscribe((rows) => (this.identities = rows || []));
   }

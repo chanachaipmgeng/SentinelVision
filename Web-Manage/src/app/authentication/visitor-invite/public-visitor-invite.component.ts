@@ -13,6 +13,16 @@ interface InviteMetadata {
   consentPolicy?: { title?: string; summary?: string; version?: string } | null;
 }
 
+interface VisitorPass {
+  passCode: string;
+  qrData: string;
+  qrDataUrl?: string;
+  validFrom: string;
+  expiresAt: string;
+  visitorName: string;
+  zones?: string[];
+}
+
 @Component({
   selector: 'app-public-visitor-invite',
   standalone: true,
@@ -39,11 +49,59 @@ interface InviteMetadata {
           {{ errorMsg }}
         </div>
 
-        <div *ngIf="!loading && completed" class="p-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
-          <div class="text-emerald-300 font-bold text-base">ลงทะเบียนล่วงหน้าสำเร็จ</div>
-          <p class="text-xs text-slate-300 mb-0">
-            ระบบบันทึกข้อมูลใบหน้าและบัตรผู้มาติดต่อของ <strong>{{ invite?.visitorName }}</strong> เรียบร้อยแล้ว สามารถเดินผ่านจุดคัดกรอง Kiosk ได้ทันทีเมื่อเดินทางมาถึง
-          </p>
+        <div *ngIf="!loading && completed" class="space-y-4">
+          <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center">
+            <div class="text-emerald-300 font-bold text-lg flex items-center justify-center gap-2">
+              <i class="ri-checkbox-circle-fill text-xl"></i>
+              ลงทะเบียนผู้มาติดต่อสำเร็จ
+            </div>
+            <p class="text-xs text-slate-300 mt-1 mb-0">
+              ระบบบันทึกข้อมูลและออกบัตรดิจิทัลเรียบร้อยแล้ว ท่านสามารถสแกนใบหน้าหรือแสดง QR Pass นี้ต่อเจ้าหน้าที่รักษาความปลอดภัย
+            </p>
+          </div>
+
+          <!-- Digital Visitor Pass Card -->
+          <div *ngIf="pass" class="rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-[#0a1525] to-[#04080f] p-5 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <span class="text-[10px] font-mono tracking-widest text-cyan-400 uppercase">SentinelVision Access Pass</span>
+                <div class="text-lg font-bold text-slate-100">{{ pass.visitorName }}</div>
+              </div>
+              <span class="px-2.5 py-1 text-xs rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> ACTIVE PASS
+              </span>
+            </div>
+
+            <div *ngIf="pass.qrDataUrl" class="my-4 flex flex-col items-center">
+              <div class="p-3 bg-white rounded-2xl shadow-lg border border-slate-200 inline-block">
+                <img [src]="pass.qrDataUrl" alt="Visitor Pass QR" class="w-44 h-44 object-contain" />
+              </div>
+              <span class="text-[11px] text-slate-400 mt-2 font-mono tracking-wider">
+                PASS CODE: {{ pass.passCode.slice(0, 24) }}...
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs bg-slate-900/60 p-3 rounded-xl border border-white/5">
+              <div>
+                <span class="text-slate-400 text-[10px] block">เริ่มใช้งาน (Valid From)</span>
+                <span class="font-medium text-slate-200">{{ pass.validFrom | date: 'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div>
+                <span class="text-slate-400 text-[10px] block">หมดอายุ (Expires At)</span>
+                <span class="font-medium text-rose-300">{{ pass.expiresAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div *ngIf="invite?.hostName" class="col-span-2 pt-1 border-t border-white/5">
+                <span class="text-slate-400 text-[10px] block">ผู้รับรอง (Host)</span>
+                <span class="text-slate-200">{{ invite?.hostName }} ({{ invite?.purpose || 'ทั่วไป' }})</span>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-white/10 text-center text-xs text-cyan-300/80">
+              💡 กรุณาบันทึกภาพหน้าจอนี้ไว้ เพื่อใช้สแกนผ่าน Kiosk หรือจุดตรวจความปลอดภัย
+            </div>
+          </div>
         </div>
 
         <ng-container *ngIf="!loading && invite && !completed">
@@ -117,6 +175,7 @@ export class PublicVisitorInviteComponent implements OnInit {
   completed = false;
   errorMsg = '';
   invite: InviteMetadata | null = null;
+  pass: VisitorPass | null = null;
   ocrDoc: Record<string, unknown> | null = null;
   phoneNumber = '';
   consentAccepted = false;
@@ -196,10 +255,14 @@ export class PublicVisitorInviteComponent implements OnInit {
       fd.append('photo', this.selfieFile);
     }
     this.http
-      .post(`/sentinel/public/visitor-invite/${encodeURIComponent(this.token)}/complete`, fd)
+      .post<{ registered: boolean; identity: any; pass: VisitorPass }>(
+        `/sentinel/public/visitor-invite/${encodeURIComponent(this.token)}/complete`,
+        fd,
+      )
       .subscribe({
-        next: () => {
+        next: (res) => {
           this.completed = true;
+          this.pass = res.pass || null;
           this.submitting = false;
           this.cdr.markForCheck();
         },

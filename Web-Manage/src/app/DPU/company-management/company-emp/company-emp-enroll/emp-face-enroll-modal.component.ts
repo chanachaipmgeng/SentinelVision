@@ -644,6 +644,14 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     this.cdr.detectChanges();
   }
 
+  get hasInvalidUploadPhotos(): boolean {
+    return this.uploadFaceItems.some((i) => i.qualityReport && !i.qualityReport.ok);
+  }
+
+  get isCheckingUploadQuality(): boolean {
+    return this.uploadFaceItems.some((i) => !!i.qualityChecking);
+  }
+
   async uploadFacePhotos(): Promise<void> {
     if (!this.selectModel?.member?.memberId) {
       swal('Error', 'ไม่พบข้อมูลพนักงาน', 'error');
@@ -651,6 +659,18 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     }
     if (!this.uploadFaceItems.length) {
       swal('ยังไม่มีรูป', 'กรุณาเลือกรูปใบหน้าอย่างน้อย 1 รูป', 'info');
+      return;
+    }
+    if (this.isCheckingUploadQuality) {
+      swal('กำลังตรวจสอบคุณภาพ', 'ระบบกำลังตรวจวัดคุณภาพรูปภาพ กรุณารอสักครู่', 'info');
+      return;
+    }
+    if (this.hasInvalidUploadPhotos && !this.qualityOverride) {
+      swal(
+        'รูปภาพไม่ผ่านเกณฑ์คุณภาพ',
+        'มีรูปภาพที่ไม่ผ่านเกณฑ์คุณภาพ กรุณาลบรูปที่ผิดเกณฑ์แล้วถ่ายใหม่ หรือเลือก "อนุญาตให้อัปโหลดแม้คุณภาพต่ำ (Force Upload)" หากจำเป็น',
+        'warning',
+      );
       return;
     }
     this.isUploadingFace = true;

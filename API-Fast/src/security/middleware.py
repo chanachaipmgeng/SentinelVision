@@ -139,6 +139,7 @@ _OPEN_PREFIXES = (
     "/auth/send-reset-password",
     "/auth/reset-password",
     "/sentinel/public/visitor-invite",
+    "/sentinel/public/events",
     "/sentinel/dr/replicate",
     "/health",
     "/ready",

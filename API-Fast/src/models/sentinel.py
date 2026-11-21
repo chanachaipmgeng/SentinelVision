@@ -152,6 +152,10 @@ class SentinelEvent(Base):
     welcomeMessage: Mapped[str | None] = mapped_column("welcome_message", String(255), nullable=True)
     capacity: Mapped[int] = mapped_column("capacity", Integer, nullable=False, default=200)
     autoExpireDays: Mapped[int] = mapped_column("auto_expire_days", Integer, nullable=False, default=7)
+    publicSlug: Mapped[str | None] = mapped_column("public_slug", String(100), nullable=True, unique=True, index=True)
+    registrationOpen: Mapped[bool] = mapped_column("registration_open", Boolean, nullable=False, default=False, server_default="false")
+    registrationDeadline: Mapped[datetime | None] = mapped_column("registration_deadline", DateTime(timezone=True), nullable=True)
+    description: Mapped[str | None] = mapped_column("description", Text, nullable=True)
     status: Mapped[str] = mapped_column("status", String(20), nullable=False, default="LIVE")
     createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
     updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now())
@@ -220,3 +224,49 @@ class SentinelIncidentLog(Base):
             postgresql_where=text("sla_due_at IS NOT NULL"),
         ),
     )
+
+
+class SentinelEventRegistration(Base):
+    """Public or Self-Service Registration for Sentinel Events."""
+
+    __tablename__ = "sentinel_event_registration"
+
+    registrationId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    eventId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_event.eventId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    identityId: Mapped[uuid.UUID | None] = mapped_column(
+        "identity_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_identity.identityId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    fullName: Mapped[str] = mapped_column("full_name", String(160), nullable=False)
+    email: Mapped[str] = mapped_column("email", String(160), nullable=False)
+    phoneNumber: Mapped[str | None] = mapped_column("phone_number", String(50), nullable=True)
+    organization: Mapped[str | None] = mapped_column("organization", String(160), nullable=True)
+    status: Mapped[str] = mapped_column(
+        "status", String(30), nullable=False, default="REGISTERED", server_default="REGISTERED"
+    )
+    consentAt: Mapped[datetime] = mapped_column("consent_at", DateTime(timezone=True), nullable=False)
+    checkInAt: Mapped[datetime | None] = mapped_column("check_in_at", DateTime(timezone=True), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        "updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("sentinel_event_reg_event_idx", "eventId", "status"),
+        Index("sentinel_event_reg_company_idx", "companyId", "email"),
+    )
+

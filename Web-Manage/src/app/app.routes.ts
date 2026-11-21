@@ -43,6 +43,13 @@ export const App_Route: Route[] = [
       ),
   },
   {
+    path: 'events/register/:slug',
+    loadComponent: () =>
+      import('./public/event-registration/public-event-registration.component').then(
+        (m) => m.PublicEventRegistrationComponent,
+      ),
+  },
+  {
     path: 'auth/change-password',
     canActivate: [AuthGuard],
     loadComponent: () =>

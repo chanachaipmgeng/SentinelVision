@@ -385,6 +385,7 @@
   "GOVERNANCE — Governance": "GOVERNANCE — ธรรมาภิบาล",
   "Audit log": "ประวัติการใช้งาน (Audit Log)",
   "Manage kiosk devices": "จัดการอุปกรณ์ Kiosk",
+  "Fleet & Edge Health": "ตรวจสุขภาพอุปกรณ์ Edge",
   "Roles & Permissions (RBAC)": "จัดการบทบาทและสิทธิ์ (RBAC)",
   "dashboard.pageTitle": "Sentinel by IVAP — แดชบอร์ดภาพรวมอัตลักษณ์และการลงเวลา",
   "SentinelVision Command": "Sentinel Command",

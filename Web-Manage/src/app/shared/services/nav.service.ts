@@ -487,6 +487,13 @@ export class NavService implements OnDestroy {
         moduleId: 'GOVERNANCE',
       },
       {
+        icon: 'heart-rate',
+        path: '/company/fleet-health',
+        title: 'Fleet & Edge Health',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+      },
+      {
         icon: 'user-check',
         path: '/company/settings/rbac',
         title: 'Roles & Permissions (RBAC)',

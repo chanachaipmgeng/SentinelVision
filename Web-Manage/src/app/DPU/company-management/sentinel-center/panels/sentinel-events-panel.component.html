@@ -330,12 +330,46 @@
               </th>
               <td class="p-3 text-slate-200">{{ ev.locationName || '-' }}</td>
               <td class="p-3">
-                <span class="badge sv-pill-event px-2 py-0.5 rounded">
-                  {{ ev.attendeeCount }} / {{ ev.capacity }} คน
-                </span>
+                <div class="flex flex-col gap-1">
+                  <span class="badge sv-pill-event px-2 py-0.5 rounded w-fit">
+                    {{ ev.attendeeCount }} / {{ ev.capacity }} คน
+                  </span>
+                  <div *ngIf="ev.registrationOpen" class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      class="text-[10px] text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded hover:bg-cyan-500/20 transition flex items-center gap-1"
+                      (click)="copyPublicUrl(ev)"
+                      title="คลิกเพื่อคัดลอกลิงก์ลงทะเบียน Public Portal"
+                    >
+                      <i class="ri-file-copy-line"></i>
+                      <span>/events/register/{{ ev.publicSlug || ev.eventId.slice(0, 8) }}</span>
+                    </button>
+                  </div>
+                  <span *ngIf="!ev.registrationOpen" class="text-[10px] text-slate-500">
+                    Public Portal ปิดอยู่
+                  </span>
+                </div>
               </td>
               <td class="p-3 font-bold text-emerald-400">{{ ev.checkedInCount }} คน</td>
               <td class="p-3 text-end space-x-1">
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm"
+                  [ngClass]="ev.registrationOpen ? 'ti-btn-light' : 'ti-btn-info-full'"
+                  (click)="toggleRegistration(ev)"
+                  [title]="ev.registrationOpen ? 'ปิดรับสมัคร Public' : 'เปิดรับสมัคร Public Portal'"
+                >
+                  <i [class]="ev.registrationOpen ? 'ri-lock-line me-1' : 'ri-user-add-line me-1'"></i>
+                  {{ ev.registrationOpen ? 'ปิดรับ Public' : 'เปิดรับ Public' }}
+                </button>
+                <button
+                  type="button"
+                  class="ti-btn ti-btn-sm ti-btn-light"
+                  (click)="exportRegistrations(ev)"
+                  title="Export ผู้ลงทะเบียนเป็น CSV"
+                >
+                  <i class="ri-download-2-line"></i>
+                </button>
                 <a
                   [routerLink]="['/company/scan/event']"
                   [queryParams]="{ eventId: ev.eventId }"

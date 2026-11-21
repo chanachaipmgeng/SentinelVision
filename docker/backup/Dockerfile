@@ -6,11 +6,11 @@ FROM postgres:16.15-alpine@sha256:aa6cb33cf4c19c765cefcf48d96176258800870a9a1e93
 
 # rclone comes from the official image (current Go toolchain) rather than the Alpine package
 COPY --from=rclone /usr/local/bin/rclone /usr/local/bin/rclone
-# apk upgrade + explicit bumps: postgres:alpine ships krb5/libxslt that Trivy flags HIGH
-# once Alpine publishes fixes (CVE-2026-107364 family, CVE-2026-125350 / 87636 / 9947).
+# apk upgrade + explicit bumps: postgres:alpine ships krb5/libxslt/libxml2 that Trivy flags HIGH
+# once Alpine publishes fixes (CVE-2026-107364 family, CVE-2026-125350 / 87636 / 9947, CVE-2026-86144).
 RUN apk upgrade --no-cache \
     && apk add --no-cache curl tar coreutils findutils \
-    && apk add --no-cache --upgrade 'krb5-libs>=1.22.3-r0' 'libxslt>=1.1.43-r4' \
+    && apk add --no-cache --upgrade 'krb5-libs>=1.22.3-r0' 'libxslt>=1.1.43-r4' 'libxml2>=2.13.9-r3' \
     # the sidecar runs as a fixed non-root user; the server-only entrypoint helpers are not needed
     && rm -f /usr/local/bin/gosu /usr/local/bin/docker-entrypoint.sh /usr/local/bin/docker-ensure-initdb.sh /usr/local/bin/docker-enforce-initdb.sh \
     && mkdir -p /opt/dpu/scripts/lib /data /backups \

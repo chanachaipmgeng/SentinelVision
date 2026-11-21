@@ -18,3 +18,10 @@ vulnerabilities:
     purls: ["pkg:pypi/setuptools@70.3.0"]
     statement: "pip's vendored pkg_resources SBOM entry; the vulnerable PackageIndex module is not shipped."
     expired_at: 2027-03-31
+  # Backup image (trivy image, target "usr/local/bin/rclone"): rclone v1.76.0 compiled with Go 1.27.3.
+  # CVE-2026-97054 affects Go HTTP/1 servers using MaxBytesReader. The backup sidecar runs rclone
+  # solely as a CLI batch client (rclone copy) and does not expose an HTTP/1 server.
+  - id: CVE-2026-97054
+    purls: ["pkg:golang/stdlib@v1.27.3"]
+    statement: "rclone is executed only as a batch CLI tool for backup copies; it does not run an HTTP/1 server."
+    expired_at: 2027-03-31

@@ -38,6 +38,12 @@
 - **CI Strict `mypy` & `cv2` Mock-Safe Testing:**
   - Explicitly annotate local SQLAlchemy `select(...)` variables (e.g. `prev_q: Any = (...)`) when `.where(...)` uses inline conditional expressions so strict CI `mypy` (`[var-annotated]`) passes cleanly.
   - Because some unit tests (`test_kiosk_blacklist_exposure.py`, `test_sentinel_search_gate.py`) assign `sys.modules["cv2"] = MagicMock()`, any service lazy-importing `cv2` (`privacy_mask_service.py`) MUST validate `isinstance(result, np.ndarray) and result.shape == expected_shape` and provide a pure-NumPy fallback.
+- **SQLAlchemy Async Result Rowcount Guard (`getattr(res, "rowcount", 0)`):**
+  In SQLAlchemy 2.0 async sessions, executing `delete(...)` or `update(...)` returns a `Result` whose `.rowcount` attribute is not declared on generic `Result[*tuple[Any, ...]]` under strict `mypy`. Never access `res.rowcount` directly; always extract safely via `int(getattr(res, "rowcount", 0) or 0)` to maintain clean `mypy` type check parity.
+- **Auxiliary Library Lazy-Import & CI Test Collection Guard:**
+  Optional or secondary utility packages not guaranteed in minimal CI runners (e.g., `qrcode`, `reportlab`, `matplotlib`) MUST NOT be imported at module top level in service or controller files. Always lazy-import them inside the calling function with a `try ... except ImportError` fallback so `pytest` test collection never crashes when packages are stripped in lightweight test runners.
+- **Worker Queue Priority & Monotonic Timer Test Invariant:**
+  When testing priority queue execution order across asynchronous tasks or thread pools, do not rely solely on `time.monotonic()` comparisons (which has ~15.6 ms resolution on Windows). Track discrete execution sequences in an append-only list (`order.append(task_name)`) and assert `order == ["high_prio", "low_prio"]` alongside `time.perf_counter()`.
 
 ## 4. Schema, Gateway & Deployment Workflow
 - **Database Migrations:** Alembic (`API-Fast/alembic/`) is the only thing that changes the schema; the API runs no DDL at startup. Change the model, then `alembic revision --autogenerate` + `alembic upgrade head`; `alembic check` must stay clean.
@@ -123,3 +129,6 @@
 - **Page Header & Title Ergonomics**:
   - Keep page header titles concise (avoid multi-clause run-on sentences that cause orphan word wraps like "Events" on a second line).
   - Standardize breadcrumbs and module titles across all enterprise management pages.
+- **Strict TypeScript & Angular Lifecycle Lint Invariants**:
+  - In component classes, service signatures, and state models, never declare variables or callbacks with `any` (`@typescript-eslint/no-explicit-any`). Define explicit domain interfaces (`*.models.ts` or `sentinel-api.service.ts`), type interval timers as `ReturnType<typeof setInterval> | null`, and use `Record<string, unknown>` for dynamic JSON payloads.
+  - Never generate or retain empty Angular lifecycle methods (e.g., empty `ngOnDestroy() {}` violating `@angular-eslint/no-empty-lifecycle-method`). If a lifecycle interface is implemented, it must contain functional logic; otherwise, remove the method and the `implements On...` declaration.

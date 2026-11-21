@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
+import { PermissionService } from '../../../shared/services/permission.service';
 
 interface FleetSummary {
   healthScore: number;
@@ -151,16 +152,23 @@ interface FleetHealthResponse {
           </span>
         </div>
 
-        <!-- Metric 5: AI Engine Queue -->
+        <!-- Metric 5: AI Engine Status (Cluster Queue for System Admin; Ready status for Company Admin) -->
         <div class="p-4 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">AI GPU Queue</span>
+          <span class="text-xs text-slate-400">{{ isSystemAdmin ? 'AI GPU Queue' : 'สถานะระบบ AI' }}</span>
           <div class="my-1.5">
-            <span class="text-2xl font-mono font-bold text-emerald-400">
+            <span *ngIf="isSystemAdmin" class="text-2xl font-mono font-bold text-emerald-400">
               {{ summary.aiQueuePending }} <span class="text-sm font-normal text-slate-400">คิว</span>
+            </span>
+            <span *ngIf="!isSystemAdmin" class="text-xl font-mono font-bold text-emerald-400">
+              พร้อมใช้งาน
             </span>
           </div>
           <span class="text-[11px] text-emerald-300 flex items-center gap-1">
-            <i class="ri-cpu-line"></i> โหลดต่ำ ประมวลผลทันที
+            <i class="ri-cpu-line"></i>
+            <ng-container *ngIf="isSystemAdmin">
+              <a routerLink="/admin/infrastructure" class="hover:underline">ดูคลัสเตอร์ GPU</a>
+            </ng-container>
+            <ng-container *ngIf="!isSystemAdmin">ประมวลผลชีวมิติปกติ</ng-container>
           </span>
         </div>
 
@@ -350,8 +358,13 @@ export class FleetHealthComponent implements OnInit, OnDestroy {
   constructor(
     private http: HttpClient,
     private tokenService: TokenService,
+    private permissions: PermissionService,
     private cdr: ChangeDetectorRef,
   ) {}
+
+  get isSystemAdmin(): boolean {
+    return this.permissions.isSystemAdmin();
+  }
 
   ngOnInit(): void {
     this.refresh();

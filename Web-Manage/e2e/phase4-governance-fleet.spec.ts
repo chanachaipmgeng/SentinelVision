@@ -42,7 +42,7 @@ test.describe('Phase 4 — Governance, Fleet Health, CCTV & Settings (Module 7)'
 
     // Switch to CCTV Sensors tab
     await page.getByRole('button', { name: /CCTV Sensors/ }).click();
-    const cctvTable = page.locator('table');
+    const cctvTable = page.locator('app-fleet-health table');
     await expect(cctvTable).toBeVisible({ timeout: 10_000 });
 
     // If any camera is disconnected, latency column must NOT read "ปกติ"

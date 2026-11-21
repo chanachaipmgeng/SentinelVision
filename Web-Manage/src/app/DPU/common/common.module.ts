@@ -11,6 +11,13 @@ export const admin: Routes = [
         import('./home-common/home-common.component').then((m) => m.HomeCommonComponent),
     },
     {
+      path: 'infrastructure',
+      loadComponent: () =>
+        import('./infrastructure/platform-infrastructure.component').then(
+          (m) => m.PlatformInfrastructureComponent,
+        ),
+    },
+    {
       path: 'member-manage',
       loadComponent: () =>
         import('./user-management/user-setting/user-setting.component').then((m) => m.UserSettingComponent),

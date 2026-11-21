@@ -5,6 +5,83 @@
 </app-page-header>
 
 <div class="sys-setting-page grid grid-cols-12 gap-x-6 gap-y-4">
+  <div class="col-span-12 flex flex-wrap gap-2">
+    <button
+      type="button"
+      (click)="activeTab = 'tts'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold transition border"
+      [ngClass]="activeTab === 'tts' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'sv-surface-panel sv-text-muted hover:opacity-90'"
+    >
+      <i class="ri-volume-up-line me-1"></i> เสียงพูด (TTS Defaults)
+    </button>
+    <button
+      type="button"
+      (click)="activeTab = 'security'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold transition border"
+      [ngClass]="activeTab === 'security' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'sv-surface-panel sv-text-muted hover:opacity-90'"
+    >
+      <i class="ri-shield-keyhole-line me-1"></i> นโยบายความปลอดภัยกลาง
+    </button>
+    <button
+      type="button"
+      (click)="activeTab = 'platform'"
+      class="px-4 py-2 rounded-xl text-xs font-semibold transition border"
+      [ngClass]="activeTab === 'platform' ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' : 'sv-surface-panel sv-text-muted hover:opacity-90'"
+    >
+      <i class="ri-server-line me-1"></i> โครงสร้างพื้นฐาน &amp; แพ็กเกจ
+    </button>
+  </div>
+
+  <ng-container *ngIf="activeTab === 'security'">
+    <div class="col-span-12 xl:col-span-8">
+      <div class="sv-surface-panel sv-motion-enter rounded-2xl p-5 shadow-lg space-y-4 text-sm">
+        <h5 class="font-bold sv-text-primary mb-0 flex items-center gap-2">
+          <i class="ri-shield-check-line text-emerald-400"></i> นโยบายความปลอดภัยและ PDPA ระดับแพลตฟอร์ม
+        </h5>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="p-3 rounded-xl border sv-border-subtle">
+            <div class="font-semibold sv-text-primary">JWT &amp; Auth Fail-Fast</div>
+            <div class="sv-text-muted mt-1">บังคับ SECRET_KEY >= 32 ตัวอักษร, Kiosk Token แยกสิทธิ์ไม่ให้แก้ไขข้อมูลผู้เช่า</div>
+          </div>
+          <div class="p-3 rounded-xl border sv-border-subtle">
+            <div class="font-semibold sv-text-primary">PDPA PII Masking &amp; Biometric Expiry</div>
+            <div class="sv-text-muted mt-1">ปกปิดเลขบัตรประชาชน/พาสปอร์ตอัตโนมัติ และล้างเวกเตอร์ผู้มาติดต่อเมื่อหมดอายุ</div>
+          </div>
+          <div class="p-3 rounded-xl border sv-border-subtle">
+            <div class="font-semibold sv-text-primary">Multi-Tenant Isolation</div>
+            <div class="sv-text-muted mt-1">แยกขอบเขตการค้นหาใบหน้า 1:N และสิทธิ์ RBAC ออกจากกันอย่างเด็ดขาดทุกบริษัท</div>
+          </div>
+          <div class="p-3 rounded-xl border sv-border-subtle">
+            <div class="font-semibold sv-text-primary">System Admin Management</div>
+            <div class="sv-text-muted mt-1">จัดการสิทธิ์ผู้ดูแลระบบสูงสุดได้ที่ <a routerLink="/admin/admin-manage" class="text-cyan-400 underline">จัดการสิทธิ์ผู้ดูแลระบบ</a> เท่านั้น</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="activeTab === 'platform'">
+    <div class="col-span-12 xl:col-span-8">
+      <div class="sv-surface-panel sv-motion-enter rounded-2xl p-5 shadow-lg space-y-4 text-sm">
+        <h5 class="font-bold sv-text-primary mb-0 flex items-center gap-2">
+          <i class="ri-server-line text-cyan-400"></i> ศูนย์ควบคุมคลัสเตอร์ GPU, Multi-Region DR &amp; โควตาผู้เช่า
+        </h5>
+        <div class="flex flex-wrap gap-3">
+          <a routerLink="/admin/infrastructure" class="ti-btn ti-btn-primary-full modern-btn text-xs px-4 py-2 rounded-lg">
+            <i class="ri-cpu-line me-1"></i> เปิดหน้า Platform Infrastructure &amp; GPU
+          </a>
+          <a routerLink="/admin/manage-companys" class="ti-btn ti-btn-light modern-btn text-xs px-4 py-2 rounded-lg border sv-border-subtle">
+            <i class="ri-building-line me-1"></i> จัดการบริษัท / แพ็กเกจ / โควตา
+          </a>
+          <a routerLink="/admin/error-logs" class="ti-btn ti-btn-light modern-btn text-xs px-4 py-2 rounded-lg border sv-border-subtle">
+            <i class="ri-bug-line me-1"></i> ตรวจสอบ System Error Logs
+          </a>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="activeTab === 'tts'">
   <div class="col-span-12">
     <div class="box modern-card glass animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div class="box-header sys-setting-toolbar">
@@ -80,4 +157,5 @@
       </div>
     </div>
   </div>
+  </ng-container>
 </div>

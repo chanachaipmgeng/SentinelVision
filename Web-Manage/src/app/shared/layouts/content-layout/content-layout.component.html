@@ -4,6 +4,23 @@
   <div class="content">
     <div class="main-content" (click)="togglesidemenuBody()"
       [@routeAnimations]="o.isActivated && o.activatedRoute.routeConfig?.path">
+      <div
+        *ngIf="showSystemAdminCompanyBanner"
+        class="sv-sysadmin-banner mb-3 px-4 py-2.5 rounded-xl border border-amber-500/35 bg-amber-500/10 flex flex-wrap items-center justify-between gap-2 text-xs"
+      >
+        <div class="flex items-center gap-2 text-amber-300 font-medium">
+          <i class="ri-shield-star-line text-base"></i>
+          <span>โหมด System Admin — กำลังดูแลข้อมูลบริษัท: <strong class="underline decoration-amber-400/60">{{ activeCompanyLabel }}</strong></span>
+        </div>
+        <button
+          type="button"
+          (click)="returnToSystemAdmin()"
+          class="ti-btn ti-btn-sm modern-btn px-3 py-1 rounded-lg border border-amber-400/40 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 inline-flex items-center gap-1.5 text-xs font-semibold"
+        >
+          <i class="ri-arrow-left-line"></i>
+          <span>กลับ System Admin Console</span>
+        </button>
+      </div>
       <app-offline-banner></app-offline-banner>
       <router-outlet #o="outlet"></router-outlet>
     </div>

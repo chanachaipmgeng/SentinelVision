@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, Renderer2 } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
@@ -7,6 +8,7 @@ import { UserService } from '../../../DPU/services/user.service';
 import { TokenService } from '../../services/token.service';
 import { ThemeService } from '../../services/theme.service';
 import { IdleTimeoutService } from '../../services/idle-timeout.service';
+import { PermissionService } from '../../services/permission.service';
 import { HeaderComponent } from '../../components/header/header.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { FooterComponent } from '../../components/footer/footer.component';
@@ -22,6 +24,7 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
 @Component({
     selector: 'app-content-layout',
     imports: [
+      CommonModule,
       RouterModule,
       HeaderComponent,
       SidebarComponent,
@@ -53,6 +56,7 @@ export class ContentLayoutComponent implements OnDestroy {
     private router: Router,
     private themeService: ThemeService,
     private idleTimeout: IdleTimeoutService,
+    private permissions: PermissionService,
   ) {
     this.themeService.setShellActive(true);
     this.navSub = this.navServices.items.subscribe((menuItems: Menu[]) => {
@@ -79,6 +83,23 @@ export class ContentLayoutComponent implements OnDestroy {
     this.idleTimeout.stop();
     this.setKioskMode(false);
     this.themeService.setShellActive(false);
+  }
+
+  get showSystemAdminCompanyBanner(): boolean {
+    const url = this.router.url || '';
+    const isCompanyRoute = url.includes('/company/');
+    const isKiosk = url.includes('/company/timestamp-face') || url.includes('/company/scan/');
+    return this.permissions.isSystemAdmin() && isCompanyRoute && !isKiosk;
+  }
+
+  get activeCompanyLabel(): string {
+    const c = this.tokenService.getSelectCompany();
+    if (!c) return '—';
+    return c.companyCode ? `${c.companyCode} — ${c.companyName || ''}`.trim() : c.companyName || c.companyId || '—';
+  }
+
+  returnToSystemAdmin(): void {
+    this.router.navigate(['/admin/manage-companys']);
   }
 
   private syncKioskMode(url: string): void {

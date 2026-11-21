@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { speakText, unlockSpeech } from '../../../shared/utils/tts';
 import {
@@ -15,12 +16,13 @@ import swal from 'sweetalert';
 
 @Component({
     selector: 'app-system-setting',
-    imports: [SharedModule, CommonModule, FormsModule],
+    imports: [SharedModule, CommonModule, FormsModule, RouterModule],
     templateUrl: './system-setting.component.html',
     styleUrl: './system-setting.component.css',
     encapsulation: ViewEncapsulation.None
 })
 export class SystemSettingComponent implements OnInit {
+  activeTab: 'tts' | 'security' | 'platform' = 'tts';
   loading = false;
   saving = false;
   ttsForm: TtsSettings = resolveTtsSettings(null);

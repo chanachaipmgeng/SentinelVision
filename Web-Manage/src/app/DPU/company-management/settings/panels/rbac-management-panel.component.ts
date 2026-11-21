@@ -193,7 +193,9 @@ export class RbacManagementPanelComponent implements OnInit {
     }).subscribe({
       next: (res) => {
         this.loading = false;
-        this.roles = res.roles.roles || [];
+        this.roles = (res.roles.roles || []).filter(
+          (r) => !['SYSTEM_ADMIN', 'ADMIN_SYSTEM'].includes(String(r.code || '').toUpperCase()),
+        );
         this.assignments = res.assignments.items || [];
 
         const empList = Array.isArray(res.employees) ? res.employees : [];

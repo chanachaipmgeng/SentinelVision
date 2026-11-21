@@ -117,6 +117,13 @@ export class NavService implements OnDestroy {
         permission: 'system.admin',
       },
       {
+        icon: 'server',
+        path: '/admin/infrastructure',
+        title: 'Platform Infrastructure',
+        type: 'link',
+        permission: 'system.admin',
+      },
+      {
         icon: 'user',
         path: '/admin/member-manage',
         title: 'Manage members',
@@ -258,14 +265,15 @@ export class NavService implements OnDestroy {
             title: 'Self-service',
             type: 'link',
             permission: 'attendance.read',
-            // Employee portal — soft-hide for company/HR admins (route still open).
-            hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY'],
+            // Employee portal — soft-hide for system & company/HR admins (route still open).
+            hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY', 'SYSTEM_ADMIN', 'ADMIN_SYSTEM'],
           },
           {
             path: '/company/mobile-checkin',
             title: 'Mobile field check-in',
             type: 'link',
             permission: 'attendance.read',
+            hideForRoles: ['SYSTEM_ADMIN', 'ADMIN_SYSTEM'],
           },
           {
             path: '/company/company-location',

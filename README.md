@@ -1,4 +1,4 @@
-# SentinelVision v6.3.0 — Unified Biometric Identity, Attendance, Access Control, Watchlist, Smart Parking & Events Platform
+# SentinelVision v6.4.0 — Unified Biometric Identity, Attendance, Access Control, Watchlist, Smart Parking & Events Platform
 
 **GitHub Repository:** `https://github.com/chanachaipmgeng/SentinelVision.git`
 

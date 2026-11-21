@@ -17,6 +17,7 @@
 - [ARCHITECTURE](ARCHITECTURE.md) — components, face flow, Face Core BFF topology, Enterprise architecture & testing
 - [API](API.md) — DPU routes plus the Face Core calls the BFF makes
 - [API_CONTRACT](API_CONTRACT.md) — Enterprise API contract (envelopes, error taxonomy, pagination, kiosk isolation)
+- [UAT-SIGNOFF-v6.4.0](UAT-SIGNOFF-v6.4.0.md) — รายงานตรวจรับและผลทดสอบ Playwright E2E ครบทุกโมดูล (23/23 passed) สำหรับส่งมอบ `v6.4.0`
 
 Sibling vision hub: [`../face-core`](../face-core) — enable with `docker-compose.face-core.yml`.
 

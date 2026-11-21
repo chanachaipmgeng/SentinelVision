@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, Output } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { EmployeeModel } from '../../../models/employee.model';
@@ -36,6 +36,23 @@ export class EmpListComponent {
   @Output() goToPage = new EventEmitter<number>();
   @Output() nextPage = new EventEmitter<void>();
   @Output() prevPage = new EventEmitter<void>();
+
+  openMenuKey: string | null = null;
+
+  @HostListener('document:click')
+  closeMenu(): void {
+    this.openMenuKey = null;
+  }
+
+  toggleMenu(item: EmployeeModel, ev: Event): void {
+    ev.stopPropagation();
+    const key = this.trackEmp(item);
+    this.openMenuKey = this.openMenuKey === key ? null : key;
+  }
+
+  isMenuOpen(item: EmployeeModel): boolean {
+    return this.openMenuKey === this.trackEmp(item);
+  }
 
   get safeFilterList(): EmployeeModel[] {
     return (this.filterList || []).filter((row): row is EmployeeModel => !!row);

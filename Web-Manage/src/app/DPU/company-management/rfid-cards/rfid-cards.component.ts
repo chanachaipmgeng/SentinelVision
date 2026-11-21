@@ -372,7 +372,7 @@ import {
       <div class="w-full max-w-lg rounded-2xl border border-white/10 bg-[#070d14] p-5 shadow-2xl space-y-4">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
           <div class="flex items-center gap-2 text-purple-400 font-bold">
-            <i class="ri-rfid-line text-lg"></i>
+            <i class="ri-bank-card-2-line text-lg"></i>
             <span>{{ editingCardId ? 'แก้ไขข้อมูลบัตร RFID' : 'ออกบัตร RFID ใหม่' }}</span>
           </div>
           <button type="button" (click)="showIssueModal = false" class="text-slate-400 hover:text-white">

@@ -26,7 +26,11 @@
                   </div>
                   <div>
                     <label class="form-label">นำเข้าไฟล์ CSV หรือ iCal (.ics)</label>
-                    <input type="file" class="form-control" accept=".csv,.ics,.ical,text/csv,text/calendar" (change)="onHolidayFileSelected($event)" />
+                    <label class="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/15 text-cyan-300 text-xs font-medium cursor-pointer transition">
+                      <i class="ri-upload-cloud-2-line text-base"></i>
+                      <span>เลือกไฟล์ CSV / iCal (.ics)</span>
+                      <input type="file" class="hidden" accept=".csv,.ics,.ical,text/csv,text/calendar" (change)="onHolidayFileSelected($event)" />
+                    </label>
                   </div>
                   <p class="text-xs text-gray-500" *ngIf="holidayImportHint">{{ holidayImportHint }}</p>
                 </div>

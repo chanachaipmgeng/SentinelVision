@@ -80,7 +80,11 @@ import { TokenService } from '../../../shared/services/token.service';
 
         <div>
           <label class="form-label">ถ่ายภาพ / แนบภาพหน้างาน</label>
-          <input type="file" accept="image/*" capture="user" class="form-control" (change)="onFileSelected($event)" />
+          <label class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border border-dashed border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/15 text-cyan-300 text-xs font-medium cursor-pointer transition">
+            <i class="ri-camera-line text-base"></i>
+            <span>{{ photoPreview ? 'เปลี่ยนภาพหน้างาน' : 'ถ่ายภาพ / เลือกไฟล์รูปภาพ' }}</span>
+            <input type="file" accept="image/*" capture="user" class="hidden" (change)="onFileSelected($event)" />
+          </label>
           <img *ngIf="photoPreview" [src]="photoPreview" alt="Preview" class="mt-2 rounded-lg max-h-48 object-cover border border-white/10" />
         </div>
 

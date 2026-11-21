@@ -12,10 +12,11 @@ import {
 import { SentinelIdentity, SentinelSiemSettings } from '../sentinel.models';
 import { WatchlistSection } from '../sentinel-routing';
 import { SentinelCommandPanelComponent } from './sentinel-command-panel.component';
+import { ImageDropzoneComponent } from '../../../../shared/components/image-dropzone/image-dropzone.component';
 
 @Component({
     selector: 'app-sentinel-watchlist-panel',
-    imports: [CommonModule, FormsModule, RouterModule, SentinelCommandPanelComponent],
+    imports: [CommonModule, FormsModule, RouterModule, SentinelCommandPanelComponent, ImageDropzoneComponent],
     templateUrl: './sentinel-watchlist-panel.component.html'
 })
 export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {

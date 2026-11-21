@@ -176,13 +176,12 @@
         ></textarea>
       </div>
       <div class="col-span-12">
-        <label class="form-label text-xs font-semibold text-slate-300">รูปถ่ายใบหน้า (สกัด Embedding 512-d อัตโนมัติ)</label>
-        <input
-          type="file"
-          accept="image/*"
-          class="form-control"
-          (change)="onIdentityPhotoSelected($event)"
-        />
+        <app-image-dropzone
+          label="รูปถ่ายใบหน้า (สกัด Embedding 512-d อัตโนมัติ)"
+          sublabel="รองรับ PNG, JPG, WEBP"
+          (fileSelected)="selectedIdentityPhoto = $event"
+          (fileCleared)="selectedIdentityPhoto = null"
+        ></app-image-dropzone>
       </div>
       <div class="col-span-12 flex gap-2">
         <button

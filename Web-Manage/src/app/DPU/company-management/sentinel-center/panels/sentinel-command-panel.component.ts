@@ -14,10 +14,11 @@ import {
   SentinelZone,
 } from '../sentinel.models';
 import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
+import { ImageDropzoneComponent } from '../../../../shared/components/image-dropzone/image-dropzone.component';
 
 @Component({
     selector: 'app-sentinel-command-panel',
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, ImageDropzoneComponent],
     templateUrl: './sentinel-command-panel.component.html'
 })
 export class SentinelCommandPanelComponent implements OnInit {

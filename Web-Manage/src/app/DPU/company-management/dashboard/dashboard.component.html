@@ -225,7 +225,7 @@
             <ul class="dpu-live-feed max-h-[380px] overflow-y-auto" *ngIf="stats.recentActivity?.length">
               @for (activity of stats.recentActivity; track activity.timestampId || $index) {
                 <li class="dpu-live-item" [class.is-new]="isNew(activity)" [class.is-warn]="!isInArea(activity)">
-                  <img class="dpu-live-avatar" [src]="photoUrl(activity)" alt="">
+                  <img class="dpu-live-avatar" [src]="photoUrl(activity)" (error)="onAvatarError($event)" alt="">
                   <div class="dpu-live-body">
                     <div class="dpu-live-row">
                       <strong>{{ activity.employeeName }}</strong>

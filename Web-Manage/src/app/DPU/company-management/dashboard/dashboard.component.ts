@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -19,11 +19,15 @@ import { SetupChecklistComponent } from '../../../shared/components/setup-checkl
 import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizard/welcome-wizard.component';
 import { environment } from '../../../../environments/environment';
 import { ShellUiService } from '../../../shared/services/shell-ui.service';
+import { AuthedImageService } from '../../../shared/services/authed-image.service';
 import {
   BentoGridComponent,
   BentoCardComponent,
   BentoStatComponent,
 } from '../../../shared/components/bento';
+
+export const DEFAULT_AVATAR_DATA_URI =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="8" fill="%230f172a"/><circle cx="20" cy="15" r="7" fill="%2338bdf8"/><path d="M7 36c0-6 6-10 13-10s13 4 13 10" fill="%2338bdf8"/></svg>';
 
 @Component({
     selector: 'app-dashboard',
@@ -118,10 +122,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private langSub?: Subscription;
+  private imageSub?: Subscription;
 
   constructor(
     private dashboardService: DashboardService,
     private translate: TranslateService,
+    private authedImages: AuthedImageService,
+    private cdr: ChangeDetectorRef,
     readonly ui: ShellUiService,
   ) {}
 
@@ -135,11 +142,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.langSub = this.translate.onLangChange.subscribe(() => {
       this.setupCharts();
     });
+    this.imageSub = this.authedImages.loaded$.subscribe(() => {
+      this.cdr.markForCheck();
+    });
   }
 
   ngOnDestroy(): void {
     this.stopPolling();
     this.langSub?.unsubscribe();
+    this.imageSub?.unsubscribe();
   }
 
   toggleLive(): void {
@@ -178,13 +189,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   photoUrl(activity: DashboardActivity): string {
-    if (activity.photoTimestamp) {
-      return `${environment.baseUrl}/images/${activity.photoTimestamp}`;
+    const raw = activity.photoTimestamp || activity.picture;
+    if (raw) {
+      const clean = raw.replace(/^\/?images\//, '').replace(/^\//, '');
+      return this.authedImages.urlFor(clean, DEFAULT_AVATAR_DATA_URI);
     }
-    if (activity.picture) {
-      return `${environment.baseUrl}/images/${activity.picture}`;
-    }
-    return './assets/images/faces/1.jpg';
+    return DEFAULT_AVATAR_DATA_URI;
+  }
+
+  onAvatarError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.src = DEFAULT_AVATAR_DATA_URI;
   }
 
   isInArea(activity: DashboardActivity): boolean {

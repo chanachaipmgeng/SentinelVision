@@ -113,13 +113,12 @@
                   />
                 </div>
                 <div class="col-span-12">
-                  <label class="form-label text-xs font-semibold">เลือกรูปภาพใบหน้าเพื่อจำลองการสแกนหน้า Kiosk/กล้อง</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    class="form-control"
-                    (change)="onScanFileSelected($event)"
-                  />
+                  <app-image-dropzone
+                    label="เลือกรูปภาพใบหน้าเพื่อจำลองการสแกนหน้า Kiosk/กล้อง"
+                    sublabel="จำลอง 1:N Probe Inference"
+                    (fileSelected)="scanSelectedFile = $event"
+                    (fileCleared)="scanSelectedFile = null"
+                  ></app-image-dropzone>
                 </div>
                 <div class="col-span-12 flex flex-col gap-2">
                   <button

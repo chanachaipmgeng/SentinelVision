@@ -12,10 +12,11 @@ import {
 } from '../sentinel.helpers';
 import { SentinelIdentity } from '../sentinel.models';
 import { VisitorSection } from '../sentinel-routing';
+import { ImageDropzoneComponent } from '../../../../shared/components/image-dropzone/image-dropzone.component';
 
 @Component({
     selector: 'app-sentinel-visitors-panel',
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, ImageDropzoneComponent],
     templateUrl: './sentinel-visitors-panel.component.html'
 })
 export class SentinelVisitorsPanelComponent implements OnInit {

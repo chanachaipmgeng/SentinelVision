@@ -564,7 +564,7 @@ html[data-toggled="dpu-sidebar-hidden"] .animated-arrow span {
 
 .main-content {
   animation: dpu-content-in 0.45s var(--dpu-ease) both;
-  padding-block: 0.85rem 1.5rem;
+  padding-block: 0.45rem 1.5rem;
 }
 
 @media (min-width: 992px) {
@@ -1248,6 +1248,7 @@ body.dpu-landing-body .page::before {
 .page-header-breadcrumb,
 .page-header {
   animation: dpu-card-in 0.4s var(--dpu-ease) both;
+  padding-block: 0.35rem 0.5rem !important;
 }
 
 .page-header-breadcrumb .breadcrumb-item a,

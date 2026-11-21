@@ -277,13 +277,12 @@
           <input class="form-control" [(ngModel)]="attendeeForm.seatNumber" placeholder="เช่น VIP-A01" />
         </div>
         <div class="col-span-12">
-          <label class="form-label text-xs font-semibold text-slate-300">รูปถ่ายใบหน้าผู้ร่วมงาน</label>
-          <input
-            type="file"
-            accept="image/*"
-            class="form-control"
-            (change)="onIdentityPhotoSelected($event)"
-          />
+          <app-image-dropzone
+            label="รูปถ่ายใบหน้าผู้ร่วมงาน"
+            sublabel="สกัด Embedding 512-d อัตโนมัติ"
+            (fileSelected)="selectedIdentityPhoto = $event"
+            (fileCleared)="selectedIdentityPhoto = null"
+          ></app-image-dropzone>
         </div>
         <div class="col-span-12">
           <button

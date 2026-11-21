@@ -13,10 +13,11 @@ import {
 } from '../sentinel.helpers';
 import { SentinelEventDwellReport, SentinelEventRule, SentinelIdentity } from '../sentinel.models';
 import { EventsSection } from '../sentinel-routing';
+import { ImageDropzoneComponent } from '../../../../shared/components/image-dropzone/image-dropzone.component';
 
 @Component({
     selector: 'app-sentinel-events-panel',
-    imports: [CommonModule, FormsModule, RouterModule],
+    imports: [CommonModule, FormsModule, RouterModule, ImageDropzoneComponent],
     templateUrl: './sentinel-events-panel.component.html'
 })
 export class SentinelEventsPanelComponent implements OnInit, OnChanges {

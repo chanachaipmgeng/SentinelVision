@@ -22,6 +22,7 @@ import { CommandPaletteComponent } from './components/command-palette/command-pa
 import { NotificationDrawerComponent } from './components/notification-drawer/notification-drawer.component';
 import { OfflineBannerComponent } from './components/offline-banner/offline-banner.component';
 import { BentoGridComponent, BentoCardComponent, BentoStatComponent } from './components/bento';
+import { ImageDropzoneComponent } from './components/image-dropzone/image-dropzone.component';
 
 @NgModule({
   imports: [
@@ -38,6 +39,7 @@ import { BentoGridComponent, BentoCardComponent, BentoStatComponent } from './co
     BentoGridComponent,
     BentoCardComponent,
     BentoStatComponent,
+    ImageDropzoneComponent,
     HeaderComponent,
     SidebarComponent,
     ContentLayoutComponent,
@@ -67,6 +69,7 @@ import { BentoGridComponent, BentoCardComponent, BentoStatComponent } from './co
     BentoGridComponent,
     BentoCardComponent,
     BentoStatComponent,
+    ImageDropzoneComponent,
     TranslateModule,
   ],
   providers: [ColorPickerService, AuthService, TranslateModule],

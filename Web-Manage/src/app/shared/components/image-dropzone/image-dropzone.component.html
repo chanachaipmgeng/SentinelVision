@@ -1,0 +1,102 @@
+<div class="sv-dropzone-wrapper">
+  <!-- Header / Labels -->
+  <div class="sv-dropzone-header mb-1.5 flex items-baseline justify-between" *ngIf="label">
+    <label class="form-label text-xs font-semibold text-slate-800 dark:text-slate-200 mb-0">
+      {{ label }}
+    </label>
+    <span class="text-[11px] text-slate-400 font-normal" *ngIf="sublabel">
+      {{ sublabel }}
+    </span>
+  </div>
+
+  <!-- Hidden File Input -->
+  <input
+    #fileInput
+    type="file"
+    [accept]="accept"
+    class="hidden"
+    (change)="onFileChange($event)"
+  />
+
+  <!-- Dropzone Area (When no file/preview selected) -->
+  <div
+    *ngIf="!currentPreview"
+    class="sv-dropzone"
+    [class.is-dragging]="isDragging"
+    [class.is-compact]="compact"
+    (click)="onTriggerClick()"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+    tabindex="0"
+    (keydown.enter)="onTriggerClick()"
+    (keydown.space)="onTriggerClick(); $event.preventDefault()"
+    role="button"
+    [attr.aria-label]="hint"
+  >
+    <div class="sv-dropzone-icon-wrap">
+      <i class="ri-upload-cloud-2-line sv-dropzone-icon"></i>
+    </div>
+    <div class="sv-dropzone-content">
+      <p class="sv-dropzone-prompt">
+        <span class="font-semibold text-cyan-600 dark:text-cyan-400">คลิกเพื่อเลือกไฟล์</span>
+        <span> หรือ ลากรูปภาพมาวางที่นี่</span>
+      </p>
+      <p class="sv-dropzone-sub">
+        รองรับไฟล์ PNG, JPG, JPEG, WEBP (สูงสุด {{ maxSizeMb }}MB)
+      </p>
+    </div>
+  </div>
+
+  <!-- Preview Card (When file or previewUrl is present) -->
+  <div
+    *ngIf="currentPreview"
+    class="sv-dropzone-preview"
+    (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)"
+    (drop)="onDrop($event)"
+  >
+    <div class="sv-preview-thumb-wrap">
+      <img [src]="currentPreview" alt="Face preview" class="sv-preview-thumb" />
+    </div>
+
+    <div class="sv-preview-meta">
+      <div class="sv-preview-name">
+        {{ selectedFile?.name || 'รูปถ่ายใบหน้า (Face Photo)' }}
+      </div>
+      <div class="sv-preview-details">
+        <span class="badge bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30 text-[10px] px-2 py-0.5 rounded-full font-medium">
+          <i class="ri-checkbox-circle-line me-1"></i>พร้อมประมวลผล
+        </span>
+        <span class="sv-preview-size" *ngIf="selectedFile">
+          {{ formattedFileSize }}
+        </span>
+      </div>
+    </div>
+
+    <div class="sv-preview-actions">
+      <button
+        type="button"
+        class="ti-btn ti-btn-light text-xs py-1.5 px-2.5 font-medium sv-btn-change"
+        (click)="onTriggerClick()"
+        title="เลือกรูปภาพใหม่"
+      >
+        <i class="ri-refresh-line me-1"></i>เปลี่ยนรูป
+      </button>
+      <button
+        type="button"
+        class="ti-btn ti-btn-danger text-xs py-1.5 px-2 font-medium sv-btn-clear"
+        (click)="clear($event)"
+        title="ลบรูปภาพ"
+      >
+        <i class="ri-delete-bin-line"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="errorMessage" class="sv-dropzone-error mt-1.5 text-xs text-rose-500 flex items-center gap-1.5">
+    <i class="ri-error-warning-line"></i>
+    <span>{{ errorMessage }}</span>
+  </div>
+</div>

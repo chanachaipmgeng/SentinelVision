@@ -6,7 +6,13 @@
 
     <div class="sv-welcome__body" [ngSwitch]="step">
       <ng-container *ngSwitchCase="0">
-        <div class="sv-welcome__hero"><i class="ri-shield-flash-line" aria-hidden="true"></i></div>
+        <div class="sv-welcome__hero" aria-hidden="true">
+          <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="14" fill="#0891b2" fill-opacity="0.25"/>
+            <path d="M24 10L36 15V23C36 30.5 30.8 37.4 24 39C17.2 37.4 12 30.5 12 23V15L24 10Z" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 18V26M24 26L28 22M24 26L20 22" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <h2 id="sv-welcome-title" class="sv-welcome__title">{{ 'shell.welcome.step1.title' | translate }}</h2>
         <p class="sv-welcome__text">{{ 'shell.welcome.step1.body' | translate }}</p>
         <p class="sv-welcome__tip">
@@ -29,7 +35,13 @@
       </ng-container>
 
       <ng-container *ngSwitchCase="2">
-        <div class="sv-welcome__hero"><i class="ri-list-check-3" aria-hidden="true"></i></div>
+        <div class="sv-welcome__hero sv-welcome__hero--success" aria-hidden="true">
+          <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="14" fill="#059669" fill-opacity="0.25"/>
+            <path d="M16 24L22 30L32 18" stroke="#34d399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="24" cy="24" r="14" stroke="#10b981" stroke-width="2.5"/>
+          </svg>
+        </div>
         <h2 id="sv-welcome-title" class="sv-welcome__title">{{ 'shell.welcome.step3.title' | translate }}</h2>
         <p class="sv-welcome__text">{{ 'shell.welcome.step3.body' | translate }}</p>
       </ng-container>

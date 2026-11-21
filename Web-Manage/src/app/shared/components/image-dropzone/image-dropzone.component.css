@@ -1,0 +1,247 @@
+.sv-dropzone-wrapper {
+  width: 100%;
+}
+
+.sv-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  outline: none;
+}
+
+.sv-dropzone:hover,
+.sv-dropzone:focus-visible {
+  border-color: #06b6d4;
+  background-color: #f1f5f9;
+}
+
+.sv-dropzone.is-dragging {
+  border-color: #06b6d4 !important;
+  background-color: rgba(6, 182, 212, 0.08) !important;
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+  transform: scale(0.995);
+}
+
+.sv-dropzone.is-compact {
+  padding: 0.85rem 0.75rem;
+}
+
+.sv-dropzone-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: rgba(6, 182, 212, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.sv-dropzone:hover .sv-dropzone-icon-wrap,
+.sv-dropzone.is-dragging .sv-dropzone-icon-wrap {
+  transform: translateY(-2px);
+  background: rgba(6, 182, 212, 0.18);
+}
+
+.sv-dropzone-icon {
+  font-size: 1.5rem;
+  color: #0891b2;
+}
+
+.sv-dropzone-prompt {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.sv-dropzone-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ==========================================================================
+   Preview Card
+   ========================================================================== */
+.sv-dropzone-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.sv-preview-thumb-wrap {
+  flex-shrink: 0;
+}
+
+.sv-preview-thumb {
+  width: 4rem;
+  height: 4rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  background-color: #f1f5f9;
+}
+
+.sv-preview-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sv-preview-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sv-preview-details {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.sv-preview-size {
+  font-size: 0.72rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+}
+
+.sv-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.sv-btn-change {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155 !important;
+}
+
+.sv-btn-change:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.sv-btn-clear {
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: #ef4444 !important;
+}
+
+.sv-btn-clear:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+/* ==========================================================================
+   VaultX Obsidian Glass Dark Mode Overrides
+   ========================================================================== */
+html[data-theme-mode='dark'] .sv-dropzone,
+html[data-theme='dark'] .sv-dropzone,
+html.dark .sv-dropzone,
+.dark .sv-dropzone {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #070d14;
+}
+
+html[data-theme-mode='dark'] .sv-dropzone:hover,
+html[data-theme='dark'] .sv-dropzone:hover,
+html.dark .sv-dropzone:hover,
+.dark .sv-dropzone:hover,
+html[data-theme-mode='dark'] .sv-dropzone:focus-visible,
+html[data-theme='dark'] .sv-dropzone:focus-visible,
+html.dark .sv-dropzone:focus-visible,
+.dark .sv-dropzone:focus-visible {
+  border-color: #22d3ee;
+  background-color: #0b1522;
+}
+
+html[data-theme-mode='dark'] .sv-dropzone.is-dragging,
+html[data-theme='dark'] .sv-dropzone.is-dragging,
+html.dark .sv-dropzone.is-dragging,
+.dark .sv-dropzone.is-dragging {
+  border-color: #22d3ee !important;
+  background-color: rgba(34, 211, 238, 0.08) !important;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.2);
+}
+
+html[data-theme-mode='dark'] .sv-dropzone-prompt,
+html[data-theme='dark'] .sv-dropzone-prompt,
+html.dark .sv-dropzone-prompt,
+.dark .sv-dropzone-prompt {
+  color: #cbd5e1;
+}
+
+html[data-theme-mode='dark'] .sv-dropzone-sub,
+html[data-theme='dark'] .sv-dropzone-sub,
+html.dark .sv-dropzone-sub,
+.dark .sv-dropzone-sub {
+  color: #64748b;
+}
+
+html[data-theme-mode='dark'] .sv-dropzone-preview,
+html[data-theme='dark'] .sv-dropzone-preview,
+html.dark .sv-dropzone-preview,
+.dark .sv-dropzone-preview {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: #070d14;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+}
+
+html[data-theme-mode='dark'] .sv-preview-thumb,
+html[data-theme='dark'] .sv-preview-thumb,
+html.dark .sv-preview-thumb,
+.dark .sv-preview-thumb {
+  border-color: rgba(255, 255, 255, 0.12);
+  background-color: #0d1520;
+}
+
+html[data-theme-mode='dark'] .sv-preview-name,
+html[data-theme='dark'] .sv-preview-name,
+html.dark .sv-preview-name,
+.dark .sv-preview-name {
+  color: #f1f5f9;
+}
+
+html[data-theme-mode='dark'] .sv-preview-size,
+html[data-theme='dark'] .sv-preview-size,
+html.dark .sv-preview-size,
+.dark .sv-preview-size {
+  color: #94a3b8;
+}
+
+html[data-theme-mode='dark'] .sv-btn-change,
+html[data-theme='dark'] .sv-btn-change,
+html.dark .sv-btn-change,
+.dark .sv-btn-change {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #0d1520;
+  color: #cbd5e1 !important;
+}
+
+html[data-theme-mode='dark'] .sv-btn-change:hover,
+html[data-theme='dark'] .sv-btn-change:hover,
+html.dark .sv-btn-change:hover,
+.dark .sv-btn-change:hover {
+  background: #172233;
+  color: #f8fafc !important;
+}

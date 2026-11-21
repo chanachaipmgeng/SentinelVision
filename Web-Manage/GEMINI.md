@@ -18,3 +18,13 @@
   - For disconnected/offline devices or cameras, render `—` in latency/telemetry cells (never `ปกติ`) and disable interactive hardware controls (e.g., ONVIF PTZ buttons) with `[disabled]="cam.status !== 'online'"`.
 - **Admin & System-Admin Guard on Employee-Only Endpoints:** Before calling employee-scoped endpoints on init (e.g., `/employees/company/{companyId}/member/{memberId}` on Self-Service), wait for `permissions.load(companyId)` and check `permissions.isCompanyAdmin() || permissions.isSystemAdmin()` to avoid spurious HTTP 404 console errors.
 - **Timer Cleanup:** Always store `setInterval` handles as `ReturnType<typeof setInterval>` and clear them in `ngOnDestroy()`.
+
+## 4. Performance, Theme Parity & Reusable Wrappers
+- **Root Layout Change Detection:** Keep `ContentLayoutComponent` on `ChangeDetectionStrategy.Default` with **zero** `setInterval` change-detection polling loops. Never switch `ContentLayoutComponent` to `OnPush` without explicit zone triggers (it stalls async child route updates under `<router-outlet>`).
+- **Porcelain Light & VaultX Obsidian Parity:** Never hardcode dark-only surfaces (`bg-[#04080f]`, `text-slate-100`) on Command/Management screens without matching `:root:not(.dark)` / `html[data-theme-mode="light"]` Porcelain Light overrides.
+- **Command UI Wrappers:** Reuse `CommandTopbarComponent`, `MetricRibbonComponent`, and `SurfaceModalComponent` (`src/app/shared/components/command-ui/`) instead of duplicating header/KPI/modal markup. Keep Initial Bundle `< 2.50 MB` by avoiding unused `MaterialModuleModule`, hidden `<app-switcher>`, or legacy Material themes (`indigo-pink.css`).
+
+## 5. Role Separation, Task-Oriented Sidebar & Side-Drawer UX
+- **System Admin vs. Company Admin Scope:** Keep platform-wide telemetry/config (`/admin/infrastructure`, `/admin/system-setting`) strictly under System Admin Console; exclude `SYSTEM_ADMIN` from tenant RBAC (`/company/settings/rbac`); soft-hide employee-only routes (`self-service`, `mobile-checkin`) for `SYSTEM_ADMIN`; display the System Admin Context Banner (`← กลับ System Admin Console`) when inspecting a company.
+- **Task-Oriented Sidebar Sub-Groups:** Group Column 2 sub-items using `groupLabel` (`sidebar.group.*` → `.sv-subpanel__group`) ordered by real workflow (**Daily Operations → Policy/Configuration → Live Kiosk/Terminals**) with TH/EN i18n parity.
+- **Action Density & `<app-side-drawer>` Decluttering:** Keep primary page toolbars focused (collapse secondary utilities like CSV import, ONVIF discovery, and settings links into a `เครื่องมือ ▾` dropdown). Cap list/table row actions to **2 primary buttons** and move secondary controls/forms (e.g., ONVIF PTZ, PDPA Mask, create/import forms) into `<app-side-drawer>`.

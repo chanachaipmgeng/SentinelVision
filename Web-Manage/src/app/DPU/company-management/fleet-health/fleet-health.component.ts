@@ -327,7 +327,7 @@ export class FleetHealthComponent implements OnInit, OnDestroy {
   loading = false;
   activeTab: 'kiosks' | 'cameras' = 'kiosks';
   lastUpdated: Date | null = null;
-  refreshTimer: any = null;
+  refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   summary: FleetSummary = {
     healthScore: 100,

@@ -255,7 +255,7 @@ export class PublicVisitorInviteComponent implements OnInit {
       fd.append('photo', this.selfieFile);
     }
     this.http
-      .post<{ registered: boolean; identity: any; pass: VisitorPass }>(
+      .post<{ registered: boolean; identity: Record<string, unknown>; pass: VisitorPass }>(
         `/sentinel/public/visitor-invite/${encodeURIComponent(this.token)}/complete`,
         fd,
       )

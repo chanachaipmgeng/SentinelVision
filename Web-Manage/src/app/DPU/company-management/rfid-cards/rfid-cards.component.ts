@@ -1,15 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
-import { SentinelApiService } from '../sentinel-center/sentinel-api.service';
+import {
+  RfidCardItem,
+  RfidVerificationResult,
+  SentinelApiService,
+} from '../sentinel-center/sentinel-api.service';
 
 @Component({
   selector: 'app-rfid-cards',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'RFID Physical Access Cards'" [activeTitle]="'Multi-Credential Security'" [title1]="'SentinelVision'"></app-page-header>
@@ -477,11 +480,11 @@ import { SentinelApiService } from '../sentinel-center/sentinel-api.service';
     </div>
   `,
 })
-export class RfidCardsComponent implements OnInit, OnDestroy {
+export class RfidCardsComponent implements OnInit {
   loading = false;
   lastUpdated: Date | null = null;
 
-  cards: any[] = [];
+  cards: RfidCardItem[] = [];
   cardsTotal = 0;
   searchQuery = '';
   statusFilter = '';
@@ -499,12 +502,12 @@ export class RfidCardsComponent implements OnInit, OnDestroy {
   simFacilityCode = 'FAC-01';
   simDoorName = 'Executive Floor Gate';
   simLoading = false;
-  simResult: any = null;
+  simResult: RfidVerificationResult | null = null;
 
   // Issue Modal State
   showIssueModal = false;
   editingCardId: string | null = null;
-  cardForm: any = {
+  cardForm: Partial<RfidCardItem> = {
     cardNumber: '',
     facilityCode: '',
     cardType: 'MIFARE',
@@ -523,8 +526,6 @@ export class RfidCardsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.refreshData();
   }
-
-  ngOnDestroy(): void {}
 
   private get companyId(): string {
     return this.tokenService.getSelectCompany()?.companyId || '';
@@ -558,7 +559,7 @@ export class RfidCardsComponent implements OnInit, OnDestroy {
       });
   }
 
-  private calculateMetrics(items: any[]): void {
+  private calculateMetrics(items: RfidCardItem[]): void {
     this.activeCount = items.filter((c) => c.cardStatus === 'ACTIVE').length;
     this.suspendedCount = items.filter((c) => c.cardStatus === 'SUSPENDED' || c.cardStatus === 'LOST').length;
     this.mifareCount = items.filter((c) => c.cardType === 'MIFARE' || c.cardType === 'DESFIRE').length;
@@ -611,7 +612,7 @@ export class RfidCardsComponent implements OnInit, OnDestroy {
     this.showIssueModal = true;
   }
 
-  editCard(c: any): void {
+  editCard(c: RfidCardItem): void {
     this.editingCardId = c.cardId;
     this.cardForm = { ...c };
     this.showIssueModal = true;
@@ -638,7 +639,7 @@ export class RfidCardsComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleStatus(card: any): void {
+  toggleStatus(card: RfidCardItem): void {
     const cid = this.companyId;
     if (!cid) return;
     const nextStatus = card.cardStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';

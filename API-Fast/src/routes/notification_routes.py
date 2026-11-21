@@ -500,7 +500,7 @@ async def delete_custom_template(
     )
     res = await db.execute(stmt)
     await db.commit()
-    deleted = (res.rowcount or 0) > 0
+    deleted = int(getattr(res, "rowcount", 0) or 0) > 0
     if not deleted:
         raise HTTPException(status_code=404, detail="Template not found")
     return {"ok": True, "deleted": True, "templateId": str(templateId)}

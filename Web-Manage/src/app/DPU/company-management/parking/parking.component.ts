@@ -1,10 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
-import { SentinelApiService } from '../sentinel-center/sentinel-api.service';
+import {
+  LprScanResult,
+  ParkingSpotItem,
+  ParkingTransactionItem,
+  SentinelApiService,
+  VehicleItem,
+} from '../sentinel-center/sentinel-api.service';
 
 interface ParkingOverview {
   totalSpots: number;
@@ -23,13 +28,13 @@ interface ParkingOverview {
     available: number;
     rate: number;
   }>;
-  recentTransactions: any[];
+  recentTransactions: ParkingTransactionItem[];
 }
 
 @Component({
   selector: 'app-parking',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SharedModule],
+  imports: [CommonModule, FormsModule, SharedModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'Smart Parking & LPR'" [activeTitle]="'Vehicle & Parking'" [title1]="'SentinelVision'"></app-page-header>
@@ -795,7 +800,7 @@ interface ParkingOverview {
     </div>
   `,
 })
-export class ParkingComponent implements OnInit, OnDestroy {
+export class ParkingComponent implements OnInit {
   loading = false;
   lastUpdated: Date | null = null;
   activeTab: 'grid' | 'vehicles' | 'transactions' = 'grid';
@@ -815,13 +820,13 @@ export class ParkingComponent implements OnInit, OnDestroy {
     recentTransactions: [],
   };
 
-  parkingSpots: any[] = [];
-  vehicles: any[] = [];
+  parkingSpots: ParkingSpotItem[] = [];
+  vehicles: VehicleItem[] = [];
   vehiclesTotal = 0;
   vehicleSearch = '';
   vehicleOwnerTypeFilter = '';
 
-  transactions: any[] = [];
+  transactions: ParkingTransactionItem[] = [];
   transactionsTotal = 0;
 
   // LPR Simulator State
@@ -830,12 +835,12 @@ export class ParkingComponent implements OnInit, OnDestroy {
   simPlate = '1กข1234';
   simGate = 'North Gate Barrier 1';
   simLoading = false;
-  simResult: any = null;
+  simResult: LprScanResult | null = null;
 
   // Vehicle Modal State
   showVehicleModal = false;
   editingVehicleId: string | null = null;
-  vehicleForm: any = {
+  vehicleForm: Partial<VehicleItem> = {
     licensePlate: '',
     province: 'กรุงเทพมหานคร',
     vehicleType: 'CAR',
@@ -850,7 +855,7 @@ export class ParkingComponent implements OnInit, OnDestroy {
 
   // Spot Modal State
   showSpotModal = false;
-  spotForm: any = {
+  spotForm: Partial<ParkingSpotItem> = {
     spotCode: '',
     zone: 'Zone A',
     floor: '1F',
@@ -867,13 +872,11 @@ export class ParkingComponent implements OnInit, OnDestroy {
     this.refreshData();
   }
 
-  ngOnDestroy(): void {}
-
   private get companyId(): string {
     return this.tokenService.getSelectCompany()?.companyId || '';
   }
 
-  get filteredSpots(): any[] {
+  get filteredSpots(): ParkingSpotItem[] {
     if (this.selectedZone === 'ALL') {
       return this.parkingSpots;
     }
@@ -985,7 +988,7 @@ export class ParkingComponent implements OnInit, OnDestroy {
     this.showVehicleModal = true;
   }
 
-  editVehicle(v: any): void {
+  editVehicle(v: VehicleItem): void {
     this.editingVehicleId = v.vehicleId;
     this.vehicleForm = { ...v };
     this.showVehicleModal = true;

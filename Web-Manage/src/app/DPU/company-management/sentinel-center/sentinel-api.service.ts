@@ -40,6 +40,147 @@ export interface SentinelInvestigationGraph {
   };
 }
 
+export interface ParkingOverviewData {
+  totalSpots: number;
+  occupiedSpots: number;
+  availableSpots: number;
+  occupancyRate: number;
+  totalVehicles: number;
+  activeVehicles: number;
+  blacklistedVehicles: number;
+  entriesToday: number;
+  exitsToday: number;
+  zoneBreakdown: Array<{
+    zone: string;
+    total: number;
+    occupied: number;
+    available: number;
+    rate: number;
+  }>;
+  recentTransactions: ParkingTransactionItem[];
+}
+
+export interface ParkingSpotItem {
+  spotId: string;
+  companyId: string;
+  spotCode: string;
+  zone: string;
+  floor?: string | null;
+  spotType: string;
+  isOccupied: boolean;
+  occupiedVehicleId?: string | null;
+  occupiedPlate?: string | null;
+  occupiedSince?: string | null;
+  status: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface VehicleItem {
+  vehicleId: string;
+  companyId: string;
+  licensePlate: string;
+  province?: string | null;
+  vehicleType: string;
+  brand?: string | null;
+  model?: string | null;
+  color?: string | null;
+  ownerType: string;
+  ownerName?: string | null;
+  ownerContact?: string | null;
+  companyEmployeeId?: string | null;
+  identityId?: string | null;
+  status: string;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface ParkingTransactionItem {
+  transactionId: string;
+  companyId: string;
+  vehicleId?: string | null;
+  spotId?: string | null;
+  licensePlate: string;
+  province?: string | null;
+  entryTime: string;
+  exitTime?: string | null;
+  dwellMinutes?: number | null;
+  gateIn?: string | null;
+  gateOut?: string | null;
+  entryConfidence?: number | null;
+  exitConfidence?: number | null;
+  entrySnapshotUrl?: string | null;
+  exitSnapshotUrl?: string | null;
+  authStatus: string;
+  actionTaken: string;
+  createdAt?: string | null;
+}
+
+export interface LprScanResult {
+  transactionId: string;
+  licensePlate: string;
+  province?: string | null;
+  direction: string;
+  authStatus: string;
+  actionTaken: string;
+  barrierOpen: boolean;
+  reason: string;
+  gate: string;
+  spotAllocated?: {
+    spotId: string;
+    spotCode: string;
+    zone: string;
+    floor?: string | null;
+    spotType: string;
+  } | null;
+  dwellMinutes?: number | null;
+  ownerInfo?: {
+    ownerType: string;
+    ownerName?: string | null;
+    vehicleType: string;
+    brand?: string | null;
+    model?: string | null;
+    color?: string | null;
+  } | null;
+  timestamp: string;
+}
+
+export interface RfidCardItem {
+  cardId: string;
+  companyId: string;
+  cardNumber: string;
+  facilityCode?: string | null;
+  cardType: string;
+  assignedType: string;
+  companyEmployeeId?: string | null;
+  identityId?: string | null;
+  holderName?: string | null;
+  cardStatus: string;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  lastSwipedAt?: string | null;
+  lastDoor?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface RfidVerificationResult {
+  granted: boolean;
+  accessStatus: string;
+  reason: string;
+  cardId?: string;
+  cardNumber: string;
+  cardType?: string;
+  assignedType?: string;
+  holderName?: string | null;
+  companyEmployeeId?: string | null;
+  identityId?: string | null;
+  doorName: string;
+  timestamp: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SentinelApiService {
   constructor(private http: HttpClient) {}
@@ -360,89 +501,107 @@ export class SentinelApiService {
   // P3: Vehicle & Smart Parking APIs
   // =========================================================================
 
-  getParkingOverview(companyId: string): Observable<any> {
-    return this.http.get<any>(`${this.base(companyId)}/parking/overview`);
+  getParkingOverview(companyId: string): Observable<ParkingOverviewData> {
+    return this.http.get<ParkingOverviewData>(`${this.base(companyId)}/parking/overview`);
   }
 
-  getParkingSpots(companyId: string, zone?: string, status?: string): Observable<any[]> {
+  getParkingSpots(companyId: string, zone?: string, status?: string): Observable<ParkingSpotItem[]> {
     let url = `${this.base(companyId)}/parking/spots`;
     const params: string[] = [];
     if (zone) params.push(`zone=${encodeURIComponent(zone)}`);
     if (status) params.push(`status=${encodeURIComponent(status)}`);
     if (params.length > 0) url += `?${params.join('&')}`;
-    return this.http.get<any[]>(url);
+    return this.http.get<ParkingSpotItem[]>(url);
   }
 
-  createParkingSpot(companyId: string, data: any): Observable<any> {
-    return this.http.post<any>(`${this.base(companyId)}/parking/spots`, data);
+  createParkingSpot(companyId: string, data: Partial<ParkingSpotItem>): Observable<ParkingSpotItem> {
+    return this.http.post<ParkingSpotItem>(`${this.base(companyId)}/parking/spots`, data);
   }
 
-  updateParkingSpot(companyId: string, spotId: string, data: any): Observable<any> {
-    return this.http.put<any>(`${this.base(companyId)}/parking/spots/${spotId}`, data);
+  updateParkingSpot(companyId: string, spotId: string, data: Partial<ParkingSpotItem>): Observable<ParkingSpotItem> {
+    return this.http.put<ParkingSpotItem>(`${this.base(companyId)}/parking/spots/${spotId}`, data);
   }
 
-  deleteParkingSpot(companyId: string, spotId: string): Observable<any> {
-    return this.http.delete<any>(`${this.base(companyId)}/parking/spots/${spotId}`);
+  deleteParkingSpot(companyId: string, spotId: string): Observable<{ success: boolean; spotId: string }> {
+    return this.http.delete<{ success: boolean; spotId: string }>(`${this.base(companyId)}/parking/spots/${spotId}`);
   }
 
-  getVehicles(companyId: string, query?: string, ownerType?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+  getVehicles(
+    companyId: string,
+    query?: string,
+    ownerType?: string,
+    limit = 50,
+    offset = 0,
+  ): Observable<{ items: VehicleItem[]; total: number }> {
     let url = `${this.base(companyId)}/vehicles?limit=${limit}&offset=${offset}`;
     if (query) url += `&query=${encodeURIComponent(query)}`;
     if (ownerType) url += `&ownerType=${encodeURIComponent(ownerType)}`;
-    return this.http.get<{ items: any[]; total: number }>(url);
+    return this.http.get<{ items: VehicleItem[]; total: number }>(url);
   }
 
-  createVehicle(companyId: string, data: any): Observable<any> {
-    return this.http.post<any>(`${this.base(companyId)}/vehicles`, data);
+  createVehicle(companyId: string, data: Partial<VehicleItem>): Observable<VehicleItem> {
+    return this.http.post<VehicleItem>(`${this.base(companyId)}/vehicles`, data);
   }
 
-  updateVehicle(companyId: string, vehicleId: string, data: any): Observable<any> {
-    return this.http.put<any>(`${this.base(companyId)}/vehicles/${vehicleId}`, data);
+  updateVehicle(companyId: string, vehicleId: string, data: Partial<VehicleItem>): Observable<VehicleItem> {
+    return this.http.put<VehicleItem>(`${this.base(companyId)}/vehicles/${vehicleId}`, data);
   }
 
-  deleteVehicle(companyId: string, vehicleId: string): Observable<any> {
-    return this.http.delete<any>(`${this.base(companyId)}/vehicles/${vehicleId}`);
+  deleteVehicle(companyId: string, vehicleId: string): Observable<{ success: boolean; vehicleId: string }> {
+    return this.http.delete<{ success: boolean; vehicleId: string }>(`${this.base(companyId)}/vehicles/${vehicleId}`);
   }
 
-  scanLprBarrier(companyId: string, data: any): Observable<any> {
-    return this.http.post<any>(`${this.base(companyId)}/parking/lpr-scan`, data);
+  scanLprBarrier(companyId: string, data: Record<string, unknown>): Observable<LprScanResult> {
+    return this.http.post<LprScanResult>(`${this.base(companyId)}/parking/lpr-scan`, data);
   }
 
-  getParkingTransactions(companyId: string, licensePlate?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+  getParkingTransactions(
+    companyId: string,
+    licensePlate?: string,
+    limit = 50,
+    offset = 0,
+  ): Observable<{ items: ParkingTransactionItem[]; total: number }> {
     let url = `${this.base(companyId)}/parking/transactions?limit=${limit}&offset=${offset}`;
     if (licensePlate) url += `&licensePlate=${encodeURIComponent(licensePlate)}`;
-    return this.http.get<{ items: any[]; total: number }>(url);
+    return this.http.get<{ items: ParkingTransactionItem[]; total: number }>(url);
   }
 
   // =========================================================================
   // P3: RFID Physical Access Card APIs
   // =========================================================================
 
-  getRfidCards(companyId: string, query?: string, cardStatus?: string, assignedType?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+  getRfidCards(
+    companyId: string,
+    query?: string,
+    cardStatus?: string,
+    assignedType?: string,
+    limit = 50,
+    offset = 0,
+  ): Observable<{ items: RfidCardItem[]; total: number }> {
     let url = `${this.base(companyId)}/rfid-cards?limit=${limit}&offset=${offset}`;
     if (query) url += `&query=${encodeURIComponent(query)}`;
     if (cardStatus) url += `&cardStatus=${encodeURIComponent(cardStatus)}`;
     if (assignedType) url += `&assignedType=${encodeURIComponent(assignedType)}`;
-    return this.http.get<{ items: any[]; total: number }>(url);
+    return this.http.get<{ items: RfidCardItem[]; total: number }>(url);
   }
 
-  issueRfidCard(companyId: string, data: any): Observable<any> {
-    return this.http.post<any>(`${this.base(companyId)}/rfid-cards`, data);
+  issueRfidCard(companyId: string, data: Partial<RfidCardItem>): Observable<RfidCardItem> {
+    return this.http.post<RfidCardItem>(`${this.base(companyId)}/rfid-cards`, data);
   }
 
-  updateRfidCard(companyId: string, cardId: string, data: any): Observable<any> {
-    return this.http.put<any>(`${this.base(companyId)}/rfid-cards/${cardId}`, data);
+  updateRfidCard(companyId: string, cardId: string, data: Partial<RfidCardItem>): Observable<RfidCardItem> {
+    return this.http.put<RfidCardItem>(`${this.base(companyId)}/rfid-cards/${cardId}`, data);
   }
 
-  updateRfidCardStatus(companyId: string, cardId: string, cardStatus: string, notes?: string): Observable<any> {
-    return this.http.put<any>(`${this.base(companyId)}/rfid-cards/${cardId}/status`, { cardStatus, notes });
+  updateRfidCardStatus(companyId: string, cardId: string, cardStatus: string, notes?: string): Observable<RfidCardItem> {
+    return this.http.put<RfidCardItem>(`${this.base(companyId)}/rfid-cards/${cardId}/status`, { cardStatus, notes });
   }
 
-  deleteRfidCard(companyId: string, cardId: string): Observable<any> {
-    return this.http.delete<any>(`${this.base(companyId)}/rfid-cards/${cardId}`);
+  deleteRfidCard(companyId: string, cardId: string): Observable<{ success: boolean; cardId: string }> {
+    return this.http.delete<{ success: boolean; cardId: string }>(`${this.base(companyId)}/rfid-cards/${cardId}`);
   }
 
-  verifyRfidAccess(companyId: string, data: any): Observable<any> {
-    return this.http.post<any>(`${this.base(companyId)}/access/verify-rfid`, data);
+  verifyRfidAccess(companyId: string, data: Record<string, unknown>): Observable<RfidVerificationResult> {
+    return this.http.post<RfidVerificationResult>(`${this.base(companyId)}/access/verify-rfid`, data);
   }
 }

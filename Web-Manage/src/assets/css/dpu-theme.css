@@ -3296,3 +3296,274 @@ html[data-theme="light"]:not(.dpu-kiosk-mode) .emp-id-badge {
   margin-top: 0.875rem !important;
 }
 
+/* 10. Universal Operational Action Bar & 6-Segment Metric Ribbon Standard */
+.sv-command-topbar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.sv-command-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+}
+
+.sv-command-sub {
+  font-size: 0.775rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.sv-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #059669;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sv-live-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: sv-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes sv-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.sv-metric-ribbon {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 1.1rem 0;
+  margin-bottom: 1.25rem;
+}
+
+.sv-metric-ribbon--6cols {
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+}
+
+.sv-metric-col {
+  padding: 0 1.25rem;
+  border-right: 1px dashed #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.sv-metric-col:last-child {
+  border-right: none;
+}
+
+.sv-metric-col:hover {
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.sv-metric-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.sv-metric-label {
+  font-size: 0.775rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.sv-metric-trend {
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sv-trend-up, .sv-trend-emerald {
+  color: #10b981;
+}
+
+.sv-trend-warn, .sv-trend-rose {
+  color: #f43f5e;
+}
+
+.sv-trend-amber {
+  color: #f59e0b;
+}
+
+.sv-trend-violet {
+  color: #8b5cf6;
+}
+
+.sv-trend-sky {
+  color: #0284c7;
+}
+
+.sv-trend-cyan {
+  color: #0891b2;
+}
+
+.sv-metric-val {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, sans-serif;
+}
+
+.sv-metric-sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1200px) {
+  .sv-metric-ribbon--6cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 1rem 0;
+  }
+  .sv-metric-ribbon--6cols .sv-metric-col:nth-child(3n) {
+    border-right: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .sv-metric-ribbon {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0;
+  }
+  .sv-metric-col:nth-child(2n) {
+    border-right: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sv-metric-ribbon,
+  .sv-metric-ribbon--6cols {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem 0;
+  }
+  .sv-metric-col {
+    border-right: none !important;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 0.75rem;
+  }
+  .sv-metric-col:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+/* Dark mode overrides for Universal Ribbon & Command Topbar */
+html[data-theme-mode='dark'] .sv-command-topbar,
+html[data-theme='dark'] .sv-command-topbar,
+html.dark .sv-command-topbar,
+.dark .sv-command-topbar {
+  background: #070d14;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme-mode='dark'] .sv-command-title,
+html[data-theme='dark'] .sv-command-title,
+html.dark .sv-command-title,
+.dark .sv-command-title {
+  color: #f1f5f9;
+}
+
+html[data-theme-mode='dark'] .sv-command-sub,
+html[data-theme='dark'] .sv-command-sub,
+html.dark .sv-command-sub,
+.dark .sv-command-sub {
+  color: #94a3b8;
+}
+
+html[data-theme-mode='dark'] .sv-metric-ribbon,
+html[data-theme='dark'] .sv-metric-ribbon,
+html.dark .sv-metric-ribbon,
+.dark .sv-metric-ribbon {
+  background: #070d14;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme-mode='dark'] .sv-metric-col,
+html[data-theme='dark'] .sv-metric-col,
+html.dark .sv-metric-col,
+.dark .sv-metric-col {
+  border-right-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme-mode='dark'] .sv-metric-col:hover,
+html[data-theme='dark'] .sv-metric-col:hover,
+html.dark .sv-metric-col:hover,
+.dark .sv-metric-col:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+html[data-theme-mode='dark'] .sv-metric-label,
+html[data-theme='dark'] .sv-metric-label,
+html.dark .sv-metric-label,
+.dark .sv-metric-label {
+  color: #94a3b8;
+}
+
+html[data-theme-mode='dark'] .sv-metric-val,
+html[data-theme='dark'] .sv-metric-val,
+html.dark .sv-metric-val,
+.dark .sv-metric-val {
+  color: #f1f5f9;
+}
+
+html[data-theme-mode='dark'] .sv-metric-sub,
+html[data-theme='dark'] .sv-metric-sub,
+html.dark .sv-metric-sub,
+.dark .sv-metric-sub {
+  color: #64748b;
+}
+
+/* 11. Safe interactive buffer against floating action docks */
+.main-content {
+  padding-bottom: 5.5rem !important;
+}
+
+.sv-nav-tabs {
+  padding-right: 1.5rem !important;
+}
+
+

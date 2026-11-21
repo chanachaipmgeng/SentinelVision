@@ -58,42 +58,52 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
     template: `
     <app-page-header
       [title]="'sentinel.command.title'"
-      [activeTitle]="'SentinelVision Command'"
-      [title1]="'Security, Access, Watchlist & Events'"
+      [activeTitle]="'Sentinel Command'"
+      [title1]="'Security, Access & Identity Operations'"
     ></app-page-header>
 
-    <div class="space-y-6 mt-4">
-      <div class="sv-command-banner flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80 mb-1">
-            <i class="ri-shield-flash-line text-base"></i>
-            <span>SentinelVision Unified Biometric Platform • InsightFace 512-d HNSW</span>
+    <div class="space-y-4 mt-3">
+      <!-- Tasklyn-style Slim Command Action Bar -->
+      <div class="sv-command-topbar">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2">
+            <span class="sv-live-badge">
+              <span class="sv-live-dot"></span>
+              <span>REALTIME ENGINE • ENTERPRISE BIOMETRIC SECURITY</span>
+            </span>
           </div>
-          <h4 class="text-xl font-bold text-white mb-1">
-            {{ 'sentinel.command.hero' | translate }}
-          </h4>
-          <p class="text-xs text-white/80 mb-0">
+          <div class="flex items-baseline gap-2 mt-0.5">
+            <h4 class="sv-command-title mb-0">
+              {{ 'sentinel.command.hero' | translate }}
+            </h4>
+          </div>
+          <p class="sv-command-sub mb-0">
             {{ 'sentinel.command.subtitle' | translate }}
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+
+        <div class="flex items-center flex-wrap gap-2.5">
           <a
             routerLink="/company/timestamp-face"
-            class="btn-vault text-xs px-4 py-2 inline-flex items-center gap-1.5"
+            class="sv-btn-action"
+            title="Open Live Face Kiosk Station"
           >
-            <i class="ri-camera-lens-line"></i> {{ 'sentinel.command.openKiosk' | translate }}
+            <i class="ri-camera-lens-line"></i>
+            <span>{{ 'sentinel.command.openKiosk' | translate }}</span>
           </a>
           <button
             type="button"
-            class="ti-btn bg-slate-800/80 border border-white/10 text-slate-200 hover:text-white hover:border-cyan-500/40 text-xs px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 transition-all"
+            class="sv-card-btn"
             (click)="reloadOverview()"
+            [disabled]="isLoading"
+            [title]="'sentinel.command.refresh' | translate"
           >
-            <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i> {{ 'sentinel.command.refresh' | translate }}
+            <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i>
           </button>
         </div>
       </div>
 
-      <app-sentinel-kpi-row [overview]="overview"></app-sentinel-kpi-row>
+      <app-sentinel-kpi-row [overview]="overview" (tabSelect)="setTab($event)"></app-sentinel-kpi-row>
 
       <div class="box modern-card glass">
         <div class="box-header flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +119,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('command')"
             >
               <i class="ri-radar-line"></i>
-              <span>ศูนย์เฝ้าระวัง &amp; ทดสอบสแกน 1:N</span>
+              <span>ศูนย์เฝ้าระวัง &amp; ตรวจจับใบหน้าสด (Live Monitor)</span>
             </button>
             <button
               type="button"

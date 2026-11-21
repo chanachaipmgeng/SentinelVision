@@ -109,3 +109,14 @@
     - Guard `@ngx-translate` instant lookup in chart generators (`if (lbl && !lbl.startsWith('prefix.')) return lbl; return fallback;`) because missing keys return the key string itself rather than falsy values.
 - **Floating Action Dock (FAB) Non-Occlusion Invariant**:
   - Global floating action docks (e.g. `.sv-ask-fab` for AI Copilot) MUST specify `bottom: 4.25rem` / `right: 1.35rem` (dock panel `bottom: 7.75rem`) so when the user scrolls down, it neatly stacks above the standard `.scrollToTop` button (`bottom: 1.5rem; right: 1.5rem`) without overlap or occlusion.
+  - Sub-screen containers, navigation bars, and tab panels (`.sv-nav-tabs`) must maintain interactive safe margins (e.g. right safe zone `padding-right: 4.5rem` or scroll bounds) so floating docks never occlude actionable tab controls.
+- **Operational Command Center & Action Bar Invariants (`.sv-command-topbar`)**:
+  - Replace oversized, text-heavy marketing/hero banners with compact, high-density **Operational Action Bars** (`.sv-command-topbar` / `.sv-dashboard-topbar`).
+  - Action Bars must feature an active Engine/Live Status indicator (e.g. `● REALTIME ENGINE • ENTERPRISE BIOMETRIC SECURITY`), concise title/subtitle, search trigger pill, and compact action buttons (`Kiosk`, `Refresh`).
+  - Never display technical backend jargon (e.g., `InsightFace 512-d HNSW`, `1:N`, `pgvector`) or informal wording (e.g., `ในสมองกลเดียว`) in operator-facing UI. Use customer-centric enterprise phrasing.
+- **Universal 6-Segment Metric Ribbon Standard (`sv-metric-ribbon`)**:
+  - For KPI and operational metric rows across management modules (Dashboard, Sentinel Center, Muster Roll, etc.), enforce the unified 1-row ribbon pattern with vertical dashed dividers (`border-dashed`), high-contrast bold values (`font-mono text-2xl`), and semantic status/micro-trend chips.
+  - Responsive behavior: 6 columns on desktop (`>= 992px`), collapsing to 3 on tablet (`< 992px`) and 2/1 on mobile.
+- **Page Header & Title Ergonomics**:
+  - Keep page header titles concise (avoid multi-clause run-on sentences that cause orphan word wraps like "Events" on a second line).
+  - Standardize breadcrumbs and module titles across all enterprise management pages.

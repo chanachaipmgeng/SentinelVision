@@ -18,25 +18,15 @@ import {
     <app-page-header [title]="'RFID Physical Access Cards'" [activeTitle]="'Multi-Credential Security'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
-      <!-- Operational Topbar -->
-      <div class="sv-command-topbar flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-white/10 bg-[#070d14] shadow-xl">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 text-xl shrink-0">
-            <i class="ri-bank-card-2-line"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                MULTI-CREDENTIAL PHYSICAL ACCESS GATEWAY
-              </span>
-              <span *ngIf="lastUpdated" class="text-[11px] text-slate-400">อัปเดตล่าสุด: {{ lastUpdated | date: 'HH:mm:ss' }}</span>
-            </div>
-            <h2 class="text-base font-bold text-slate-100 mt-0.5 mb-0">ศูนย์บริหารบัตรผ่าน RFID และการยืนยันตัวตนหลายรูปแบบ (Multi-Credential)</h2>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
+      <!-- Operational Topbar (Reusable Wrapper) -->
+      <app-command-topbar
+        icon="ri-bank-card-2-line"
+        accent="purple"
+        badgeText="MULTI-CREDENTIAL PHYSICAL ACCESS GATEWAY"
+        title="ศูนย์บริหารบัตรผ่าน RFID และการยืนยันตัวตนหลายรูปแบบ (Multi-Credential)"
+        [lastUpdated]="lastUpdated"
+      >
+        <ng-container actions>
           <button
             type="button"
             (click)="openSimulatorModal()"
@@ -62,11 +52,11 @@ import {
             <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
             <span>รีเฟรช</span>
           </button>
-        </div>
-      </div>
+        </ng-container>
+      </app-command-topbar>
 
-      <!-- Universal 6-Segment Metric Ribbon Standard -->
-      <div class="sv-metric-ribbon grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-white/10 bg-[#070d14] overflow-hidden shadow-lg">
+      <!-- Universal 6-Segment Metric Ribbon Standard (Reusable Wrapper) -->
+      <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Total Badges -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
           <span class="text-xs text-slate-400">บัตร RFID ทั้งหมด</span>
@@ -132,7 +122,7 @@ import {
             <i class="ri-pass-valid-line"></i> บัตรชั่วคราว / แขก
           </span>
         </div>
-      </div>
+      </app-metric-ribbon>
 
       <!-- Search & Filters -->
       <div class="flex flex-wrap items-center justify-between gap-3 p-3 lg:pr-28 rounded-xl border border-white/10 bg-[#070d14]">
@@ -285,87 +275,81 @@ import {
       </div>
     </div>
 
-    <!-- MODAL 1: Swipe Simulator -->
-    <div *ngIf="showSimulatorModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div class="w-full max-w-lg rounded-2xl border border-purple-500/30 bg-[#070d14] p-5 shadow-2xl space-y-4">
-        <div class="flex items-center justify-between border-b border-white/10 pb-3">
-          <div class="flex items-center gap-2 text-purple-400 font-bold">
-            <i class="ri-sensor-line text-lg"></i>
-            <span>จำลองการแตะบัตรผ่านประตู (Swipe Access Simulator)</span>
-          </div>
-          <button type="button" (click)="showSimulatorModal = false" class="text-slate-400 hover:text-white">
-            <i class="ri-close-line text-xl"></i>
-          </button>
+    <!-- MODAL 1: Swipe Simulator (Reusable SurfaceModal Wrapper) -->
+    <app-surface-modal
+      [open]="showSimulatorModal"
+      title="จำลองการแตะบัตรผ่านประตู (Swipe Access Simulator)"
+      icon="ri-sensor-line"
+      accent="purple"
+      (closed)="showSimulatorModal = false"
+    >
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">เลขบัตร RFID (Card Number) *</label>
+          <input
+            type="text"
+            [(ngModel)]="simCardNumber"
+            placeholder="เช่น E0040150CA8419"
+            class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm focus:outline-none focus:border-purple-500"
+          />
         </div>
 
-        <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-slate-400 mb-1">เลขบัตร RFID (Card Number) *</label>
+            <label class="block text-slate-400 mb-1">Facility Code (ตัวเลือก)</label>
             <input
               type="text"
-              [(ngModel)]="simCardNumber"
-              placeholder="เช่น E0040150CA8419"
-              class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm focus:outline-none focus:border-purple-500"
+              [(ngModel)]="simFacilityCode"
+              placeholder="FAC-01"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-purple-500"
             />
           </div>
-
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-slate-400 mb-1">Facility Code (ตัวเลือก)</label>
-              <input
-                type="text"
-                [(ngModel)]="simFacilityCode"
-                placeholder="FAC-01"
-                class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 font-mono focus:outline-none focus:border-purple-500"
-              />
-            </div>
-            <div>
-              <label class="block text-slate-400 mb-1">ประตูตรวจการเข้าถึง (Door)</label>
-              <input
-                type="text"
-                [(ngModel)]="simDoorName"
-                placeholder="Executive Floor Gate"
-                class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-purple-500"
-              />
-            </div>
-          </div>
-
-          <!-- Result HUD Display -->
-          <div *ngIf="simResult" class="p-4 rounded-xl border transition-all" [ngClass]="simResult.granted ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-rose-950/30 border-rose-500/40'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] font-mono font-semibold" [ngClass]="simResult.granted ? 'text-emerald-300' : 'text-rose-300'">
-                {{ simResult.accessStatus }}
-              </span>
-              <span class="text-xs font-mono font-bold" [ngClass]="simResult.granted ? 'text-emerald-400' : 'text-rose-400'">
-                {{ simResult.granted ? 'ACCESS GRANTED ✓' : 'ACCESS DENIED ✕' }}
-              </span>
-            </div>
-            <div class="text-sm font-semibold text-slate-100 mb-1">เหตุผล: {{ simResult.reason }}</div>
-            <div *ngIf="simResult.holderName" class="text-xs text-purple-300">
-              ผู้ถือครอง: <strong>{{ simResult.holderName }}</strong> ({{ simResult.assignedType }})
-            </div>
-            <div class="text-[10px] text-slate-400 font-mono mt-1">
-              {{ simResult.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }} • {{ simResult.doorName }}
-            </div>
+          <div>
+            <label class="block text-slate-400 mb-1">ประตูตรวจการเข้าถึง (Door)</label>
+            <input
+              type="text"
+              [(ngModel)]="simDoorName"
+              placeholder="Executive Floor Gate"
+              class="w-full bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-purple-500"
+            />
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-          <button type="button" (click)="showSimulatorModal = false" class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10">
-            ปิด
-          </button>
-          <button
-            type="button"
-            (click)="triggerSwipe()"
-            [disabled]="!simCardNumber || simLoading"
-            class="ti-btn ti-btn-primary-full modern-btn text-xs px-4 py-1.5 rounded-lg flex items-center gap-1.5"
-          >
-            <i class="ri-sensor-line" [class.animate-spin]="simLoading"></i>
-            <span>ทดสอบแตะบัตร</span>
-          </button>
+        <!-- Result HUD Display -->
+        <div *ngIf="simResult" class="p-4 rounded-xl border transition-all" [ngClass]="simResult.granted ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-rose-950/30 border-rose-500/40'">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-mono font-semibold" [ngClass]="simResult.granted ? 'text-emerald-300' : 'text-rose-300'">
+              {{ simResult.accessStatus }}
+            </span>
+            <span class="text-xs font-mono font-bold" [ngClass]="simResult.granted ? 'text-emerald-400' : 'text-rose-400'">
+              {{ simResult.granted ? 'ACCESS GRANTED ✓' : 'ACCESS DENIED ✕' }}
+            </span>
+          </div>
+          <div class="text-sm font-semibold text-slate-100 mb-1">เหตุผล: {{ simResult.reason }}</div>
+          <div *ngIf="simResult.holderName" class="text-xs text-purple-300">
+            ผู้ถือครอง: <strong>{{ simResult.holderName }}</strong> ({{ simResult.assignedType }})
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono mt-1">
+            {{ simResult.timestamp | date: 'dd/MM/yyyy HH:mm:ss' }} • {{ simResult.doorName }}
+          </div>
         </div>
       </div>
-    </div>
+
+      <ng-container footer>
+        <button type="button" (click)="showSimulatorModal = false" class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10">
+          ปิด
+        </button>
+        <button
+          type="button"
+          (click)="triggerSwipe()"
+          [disabled]="!simCardNumber || simLoading"
+          class="ti-btn ti-btn-primary-full modern-btn text-xs px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+        >
+          <i class="ri-sensor-line" [class.animate-spin]="simLoading"></i>
+          <span>ทดสอบแตะบัตร</span>
+        </button>
+      </ng-container>
+    </app-surface-modal>
 
     <!-- MODAL 2: Issue / Edit Card -->
     <div *ngIf="showIssueModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">

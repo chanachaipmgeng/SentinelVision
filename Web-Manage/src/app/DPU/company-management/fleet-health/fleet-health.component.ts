@@ -68,25 +68,15 @@ interface FleetHealthResponse {
     <app-page-header [title]="'Fleet & Edge Health'" [activeTitle]="'System Health'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
-      <!-- Operational Topbar -->
-      <div class="sv-command-topbar flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-white/10 bg-[#070d14] shadow-xl">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shrink-0">
-            <i class="ri-pulse-line"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                LIVE FLEET TELEMETRY
-              </span>
-              <span *ngIf="lastUpdated" class="text-[11px] text-slate-400">อัปเดตล่าสุด: {{ lastUpdated | date: 'HH:mm:ss' }}</span>
-            </div>
-            <h2 class="text-base font-bold text-slate-100 mt-0.5 mb-0">ศูนย์ตรวจวัดสุขภาพอุปกรณ์และเซ็นเซอร์ Edge</h2>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
+      <!-- Operational Topbar (Reusable Wrapper) -->
+      <app-command-topbar
+        icon="ri-pulse-line"
+        accent="cyan"
+        badgeText="LIVE FLEET TELEMETRY"
+        title="ศูนย์ตรวจวัดสุขภาพอุปกรณ์และเซ็นเซอร์ Edge"
+        [lastUpdated]="lastUpdated"
+      >
+        <ng-container actions>
           <button
             type="button"
             (click)="refresh()"
@@ -100,11 +90,11 @@ interface FleetHealthResponse {
             <i class="ri-device-line me-1"></i>
             <span>จัดการ Kiosk</span>
           </a>
-        </div>
-      </div>
+        </ng-container>
+      </app-command-topbar>
 
-      <!-- 6-Segment Metric Ribbon Standard -->
-      <div class="sv-metric-ribbon grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-white/10 bg-[#070d14] overflow-hidden shadow-lg">
+      <!-- 6-Segment Metric Ribbon Standard (Reusable Wrapper) -->
+      <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Overall Health Score -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
           <span class="text-xs text-slate-400">ดัชนีความพร้อมรวม</span>
@@ -186,7 +176,7 @@ interface FleetHealthResponse {
             <i class="ri-notification-3-line"></i> 24 ชั่วโมงล่าสุด
           </span>
         </div>
-      </div>
+      </app-metric-ribbon>
 
       <!-- Navigation Tabs -->
       <div class="flex items-center gap-2 border-b border-white/10 pb-2">

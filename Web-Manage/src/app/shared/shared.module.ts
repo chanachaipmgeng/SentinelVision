@@ -22,6 +22,11 @@ import { CommandPaletteComponent } from './components/command-palette/command-pa
 import { NotificationDrawerComponent } from './components/notification-drawer/notification-drawer.component';
 import { OfflineBannerComponent } from './components/offline-banner/offline-banner.component';
 import { BentoGridComponent, BentoCardComponent, BentoStatComponent } from './components/bento';
+import {
+  CommandTopbarComponent,
+  MetricRibbonComponent,
+  SurfaceModalComponent,
+} from './components/command-ui';
 import { ImageDropzoneComponent } from './components/image-dropzone/image-dropzone.component';
 
 @NgModule({
@@ -39,6 +44,9 @@ import { ImageDropzoneComponent } from './components/image-dropzone/image-dropzo
     BentoGridComponent,
     BentoCardComponent,
     BentoStatComponent,
+    CommandTopbarComponent,
+    MetricRibbonComponent,
+    SurfaceModalComponent,
     ImageDropzoneComponent,
     HeaderComponent,
     SidebarComponent,
@@ -69,6 +77,9 @@ import { ImageDropzoneComponent } from './components/image-dropzone/image-dropzo
     BentoGridComponent,
     BentoCardComponent,
     BentoStatComponent,
+    CommandTopbarComponent,
+    MetricRibbonComponent,
+    SurfaceModalComponent,
     ImageDropzoneComponent,
     TranslateModule,
   ],

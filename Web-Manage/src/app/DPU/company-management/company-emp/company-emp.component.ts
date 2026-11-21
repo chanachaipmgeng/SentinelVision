@@ -12,12 +12,10 @@ import { RouterModule } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FlatpickrDefaults, FlatpickrModule } from 'angularx-flatpickr';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FileItem, FileUploader, FileUploadModule, ParsedResponseHeaders } from 'ng2-file-upload';
 import swal from 'sweetalert';
 import { HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
-import { MaterialModuleModule } from '../../../material-module/material-module.module';
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { FaceManagementComponent } from '../dialogs/face-management/face-management.component';
@@ -58,10 +56,8 @@ import { clampPageIndex } from '../../../shared/utils/data-table-query';
         SharedModule,
         NgSelectModule,
         RouterModule,
-        MaterialModuleModule,
         TranslateModule,
         FlatpickrModule,
-        MatDatepickerModule,
         FormsModule,
         CommonModule,
         FileUploadModule,

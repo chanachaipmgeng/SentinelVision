@@ -40,25 +40,15 @@ interface ParkingOverview {
     <app-page-header [title]="'Smart Parking & LPR'" [activeTitle]="'Vehicle & Parking'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
-      <!-- Operational Topbar -->
-      <div class="sv-command-topbar flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border border-white/10 bg-[#070d14] shadow-xl">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xl shrink-0">
-            <i class="ri-parking-box-line"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono tracking-wider font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                AUTOMATED LPR BARRIER & CAPACITY ENGINE
-              </span>
-              <span *ngIf="lastUpdated" class="text-[11px] text-slate-400">อัปเดตล่าสุด: {{ lastUpdated | date: 'HH:mm:ss' }}</span>
-            </div>
-            <h2 class="text-base font-bold text-slate-100 mt-0.5 mb-0">ศูนย์บริหารลานจอดรถอัจฉริยะและการตรวจจับป้ายทะเบียน LPR</h2>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
+      <!-- Operational Topbar (Reusable Wrapper) -->
+      <app-command-topbar
+        icon="ri-parking-box-line"
+        accent="cyan"
+        badgeText="AUTOMATED LPR BARRIER & CAPACITY ENGINE"
+        title="ศูนย์บริหารลานจอดรถอัจฉริยะและการตรวจจับป้ายทะเบียน LPR"
+        [lastUpdated]="lastUpdated"
+      >
+        <ng-container actions>
           <button
             type="button"
             (click)="openLprModal()"
@@ -92,11 +82,11 @@ interface ParkingOverview {
             <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
             <span>รีเฟรช</span>
           </button>
-        </div>
-      </div>
+        </ng-container>
+      </app-command-topbar>
 
-      <!-- Universal 6-Segment Metric Ribbon Standard -->
-      <div class="sv-metric-ribbon grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 rounded-2xl border border-white/10 bg-[#070d14] overflow-hidden shadow-lg">
+      <!-- Universal 6-Segment Metric Ribbon Standard (Reusable Wrapper) -->
+      <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Total Spots -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
           <span class="text-xs text-slate-400">ช่องจอดทั้งหมด</span>
@@ -165,7 +155,7 @@ interface ParkingOverview {
             <i class="ri-arrow-up-down-line"></i> สแกนผ่านไม้กั้น
           </span>
         </div>
-      </div>
+      </app-metric-ribbon>
 
       <!-- Main Navigation Tabs -->
       <div class="flex items-center gap-2 border-b border-white/10 pb-2">

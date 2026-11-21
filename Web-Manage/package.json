@@ -16,6 +16,7 @@
     "test:e2e:phase2": "playwright test e2e/phase2-attendance-hr.spec.ts",
     "test:e2e:phase3": "playwright test e2e/phase3a-access-parking-rfid.spec.ts e2e/phase3b-watchlist-visitor-events.spec.ts",
     "test:e2e:phase4": "playwright test e2e/phase4-governance-fleet.spec.ts",
+    "test:e2e:phase5": "playwright test e2e/phase5-theme-motion-perf.spec.ts",
     "test:e2e:all": "playwright test",
     "lint": "eslint \"src/**/*.ts\" \"src/**/*.html\"",
     "build:prod": "ng build --configuration production",

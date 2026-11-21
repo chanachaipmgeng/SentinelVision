@@ -3587,4 +3587,183 @@ html.dark .sv-metric-sub,
   padding-right: 1.5rem !important;
 }
 
+/* ==========================================================================
+   v6.5.0: Porcelain Glass Light Mode Parity, Command UI Wrappers,
+           VaultX Precision Motion & Render Performance
+   ========================================================================== */
+
+/* Semantic Surface Tokens (Dark Default — VaultX Obsidian Glass) */
+.sv-surface-topbar,
+.sv-surface-ribbon,
+.sv-surface-panel,
+.sv-surface-modal {
+  background: #070d14;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.sv-text-primary {
+  color: #f1f5f9;
+}
+
+.sv-text-muted {
+  color: #94a3b8;
+}
+
+.sv-border-subtle {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Porcelain Glass Light Mode Parity (All Management Screens; excludes Kiosk & Landing) */
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-surface-topbar,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-surface-topbar,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-surface-ribbon,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-surface-ribbon,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-surface-panel,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-surface-panel,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-surface-modal,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-surface-modal,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-\[\#070d14\],
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-\[\#070d14\] {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-text-primary,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-text-primary,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-100,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-100,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-200,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-200 {
+  color: #0f172a !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-text-muted,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-text-muted,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-slate-300 {
+  color: #475569 !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .sv-border-subtle,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .sv-border-subtle,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .border-white\/10,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .border-white\/10,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .divide-white\/5 > * + *,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .divide-white\/5 > * + * {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900\/80,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900\/80,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900\/50,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-900\/50,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-950\/60,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-950\/60,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-800,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .bg-slate-800 {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-cyan-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-cyan-300,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-cyan-200,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-cyan-200 {
+  color: #0e7490 !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-emerald-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-emerald-300 {
+  color: #047857 !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-purple-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-purple-300,
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-violet-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-rose-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-rose-300 {
+  color: #be123c !important;
+}
+
+html[data-theme-mode="light"]:not(.dpu-kiosk-mode) .main-content .text-amber-300,
+html[data-theme="light"]:not(.dpu-kiosk-mode) .main-content .text-amber-300 {
+  color: #b45309 !important;
+}
+
+/* VaultX Precision Motion System (GPU-composited transform & opacity only) */
+@keyframes sv-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes sv-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+.sv-motion-enter {
+  animation: sv-fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sv-stagger-1 { animation-delay: 45ms; }
+.sv-stagger-2 { animation-delay: 90ms; }
+.sv-stagger-3 { animation-delay: 135ms; }
+.sv-stagger-4 { animation-delay: 180ms; }
+
+.sv-modal-panel {
+  animation: sv-modal-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sv-surface-topbar,
+.sv-surface-ribbon,
+.modern-card.glass {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.modern-btn:active:not(:disabled),
+.ti-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Render Performance: Skip offscreen layout/paint for long tables & card grids */
+.table-responsive,
+.sv-camera-list,
+.emp-card-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-motion-enter,
+  .sv-modal-panel {
+    animation: none !important;
+  }
+  .modern-btn:active,
+  .ti-btn:active {
+    transform: none !important;
+  }
+}
+
+
 

@@ -11,7 +11,6 @@ import { HeaderComponent } from '../../components/header/header.component';
 import { SidebarComponent } from '../../components/sidebar/sidebar.component';
 import { FooterComponent } from '../../components/footer/footer.component';
 import { TabToTopComponent } from '../../components/tab-to-top/tab-to-top.component';
-import { SwitcherComponent } from '../../components/switcher/switcher.component';
 import { HoverEffectSidebarDirective } from '../../directives/hover-effect-sidebar.directive';
 import { CommandPaletteComponent } from '../../components/command-palette/command-palette.component';
 import { NotificationDrawerComponent } from '../../components/notification-drawer/notification-drawer.component';
@@ -28,7 +27,6 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
       SidebarComponent,
       FooterComponent,
       TabToTopComponent,
-      SwitcherComponent,
       HoverEffectSidebarDirective,
       CommandPaletteComponent,
       NotificationDrawerComponent,
@@ -38,12 +36,12 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
     templateUrl: './content-layout.component.html',
     styleUrl: './content-layout.component.scss',
     animations: [routeAnimations],
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    changeDetection: ChangeDetectionStrategy.Default,
 })
 export class ContentLayoutComponent implements OnDestroy {
   public menuItems!: Menu[];
   private routerSub?: Subscription;
-  private cdTimer?: ReturnType<typeof setInterval>;
+  private navSub?: Subscription;
 
   constructor(
     public navServices: NavService,
@@ -57,13 +55,10 @@ export class ContentLayoutComponent implements OnDestroy {
     private idleTimeout: IdleTimeoutService,
   ) {
     this.themeService.setShellActive(true);
-    this.navServices.items.subscribe((menuItems: Menu[]) => {
+    this.navSub = this.navServices.items.subscribe((menuItems: Menu[]) => {
       this.menuItems = menuItems;
-    });
-    this.cdTimer = setInterval(() => {
-      // require view to be updated
       this.ref.markForCheck();
-    }, 100);
+    });
 
     this.syncKioskMode(this.router.url);
     this.routerSub = this.router.events
@@ -72,16 +67,14 @@ export class ContentLayoutComponent implements OnDestroy {
         this.syncKioskMode(e.urlAfterRedirects || e.url);
         // Re-read idle minutes when the selected company / shell route changes.
         this.idleTimeout.reloadForSelectedCompany();
+        this.ref.markForCheck();
       });
     // Admin SPA idle logout (company session-settings); skipped for kiosk sessions.
     this.idleTimeout.start();
   }
 
   ngOnDestroy(): void {
-    if (this.cdTimer) {
-      clearInterval(this.cdTimer);
-      this.cdTimer = undefined;
-    }
+    this.navSub?.unsubscribe();
     this.routerSub?.unsubscribe();
     this.idleTimeout.stop();
     this.setKioskMode(false);

@@ -6,6 +6,12 @@ import { dataURLtoFile, isAllowedFaceImage } from '../company-emp.helpers';
 export interface FaceUploadItem {
   file: File;
   preview: string;
+  qualityChecking?: boolean;
+  qualityReport?: {
+    ok: boolean;
+    reason?: string;
+    scores?: Record<string, unknown>;
+  };
 }
 
 export interface FaceAngleStep {

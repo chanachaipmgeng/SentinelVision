@@ -29,6 +29,8 @@ export interface NotificationPrefs {
 }
 
 export interface NotificationTemplateRow {
+  templateId?: string;
+  companyId?: string | null;
   eventKey?: string;
   locale?: string;
   channel?: string;
@@ -40,4 +42,5 @@ export interface NotificationTemplatesView {
   builtins: NotificationTemplateRow[];
   custom: NotificationTemplateRow[];
   i18nKeys: Record<string, string>;
+  samplePayloads?: Record<string, Record<string, string>>;
 }

@@ -2,6 +2,8 @@
 
 Base URL in Docker: same origin as the UI (nginx), e.g. `http://localhost`.
 
+> 📘 **Enterprise API Contract Reference:** For the authoritative contract specification (Standard Response envelopes, Unified Error Taxonomy `{ "error": { "code", "message", "status", "requestId" } }`, Pagination contracts, Kiosk Token isolation, and WebSocket/SSE protocols), see [docs/API_CONTRACT.md](API_CONTRACT.md).
+
 **API v1 (Phase D6):** every public router is also mounted under `/api/v1` (e.g. `/api/v1/auth/login`). `/companies` is an alias of the legacy `/companys` spelling (both at root and under `/api/v1`). Errors use `{ "error": { "code", "message", "status", "requestId?" }, "detail" }` — `detail` mirrors `error.message` for older clients; 5xx never echoes raw exception text. Punch create (`POST /timestamp/company/{id}`) and employee import (`POST …/import`, `…/import-jobs`) honour `Idempotency-Key` (replay returns the first response).
 
 **App rate limits (Phase D7):** login / identify / import are limited in-process (Redis when `REDIS_URL` is set) in addition to nginx `limit_req` → HTTP `429` `{ "error": { "code": "rate_limited" } }`.
@@ -53,6 +55,10 @@ Every other route needs a Bearer token in the `Authorization` header. `?token=` 
 | POST | `/notifications/company/{companyId}/test` | JWT | Enqueue test notification across configured channels (email / LINE / webhook / Telegram / Discord / in_app). Webhook tests include `X-DPU-Signature-256: v1=<hmac>`. |
 | GET | `/notifications/company/{companyId}/outbox` | JWT | List recent Outbox deliveries (`status`, `attempts`, `event`, `channel`, `lastError`) for the company. |
 | GET | `/notifications/pending-count` | JWT | Optional `?companyId=` filter for pending outbox count. |
+| GET | `/notifications/company/{companyId}/templates` | JWT | List built-in and company custom notification templates + i18n catalog + sample payloads. |
+| PUT | `/notifications/company/{companyId}/templates` | JWT | Upsert company custom notification template override. |
+| POST | `/notifications/company/{companyId}/templates/preview` | JWT | Render template with mock sample data for instant UI verification. |
+| DELETE | `/notifications/company/{companyId}/templates/{templateId}` | JWT | Delete company custom template override (reverts to system builtin). |
 
 ## Face Recognition & Kiosk
 
@@ -61,6 +67,7 @@ All `/face/members/{memberId}/*` and `/face/encodings/{faceEncodingId}` routes v
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
 | POST | `/face/members/{memberId}/add-face` | JWT | multipart `file` enroll (dispatched via `run_on_face_gpu`; records `member.biometricConsentAt` and stores image via `storage_service`). |
+| POST | `/face/check-quality` | JWT / Kiosk | Pre-flight quality assessment: evaluates brightness (40-220), sharpness (Laplacian var >= 80), face ratio (4%-85%), and head pose (+-30 deg) before embedding extraction. |
 | POST | `/face/members/detect` | JWT / Kiosk | Lightweight face bbox detection for preview. |
 | POST | `/face/members/check-face-emp` | JWT / Kiosk | multipart `files` + `companyId` + liveness → match payload. |
 | POST | `/face/members/identify` | JWT / Kiosk | single frame + `companyId` → name/confidence (no timestamp). |

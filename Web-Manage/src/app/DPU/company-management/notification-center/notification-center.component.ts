@@ -12,10 +12,17 @@ import {
   DeadLetterRow,
   InboxNotification,
   NotificationPrefs,
+  NotificationTemplateRow,
   NotificationTemplatesView,
 } from './notification.models';
 
 type Tab = 'inbox' | 'dead-letter' | 'history' | 'prefs' | 'templates';
+
+interface EventCatalogOption {
+  key: string;
+  label: string;
+  category: 'attendance' | 'security' | 'system';
+}
 
 @Component({
     selector: 'app-notification-center',
@@ -52,13 +59,48 @@ export class NotificationCenterComponent implements OnInit {
   templates: NotificationTemplatesView = { builtins: [], custom: [], i18nKeys: {} };
   mutedRaw = '';
   prefsSavedMsg = '';
+
+  // Event category options
+  readonly eventOptions: EventCatalogOption[] = [
+    { key: 'attendance.checked_in', label: 'ลงเวลาเข้างาน (Check-in)', category: 'attendance' },
+    { key: 'attendance.checked_out', label: 'ลงเวลาออกงาน (Check-out)', category: 'attendance' },
+    { key: 'attendance.late_arrival', label: 'แจ้งเตือนเข้างานสาย (Late Arrival)', category: 'attendance' },
+    { key: 'attendance.missing', label: 'ยังไม่ลงเวลาเข้างาน (Missing Check-in)', category: 'attendance' },
+    { key: 'sentinel.blacklist_hit', label: '🚨 พบบุคคลต้องห้าม (Blacklist Alert)', category: 'security' },
+    { key: 'sentinel.vip_detected', label: '🌟 ต้อนรับแขกผู้บริหาร (VIP Arrival)', category: 'security' },
+    { key: 'sentinel.poi_detected', label: '⚠️ พบบุคคลเฝ้าระวัง (POI Alert)', category: 'security' },
+    { key: 'sentinel.door_alarm', label: '🚪 สัญญาณเตือนประตู (Access Alarm)', category: 'security' },
+    { key: 'sentinel.emergency_muster', label: '🦺 รายงานจุดรวมพล (Emergency Muster)', category: 'security' },
+    { key: 'import.finished', label: 'นำเข้าข้อมูลพนักงานเสร็จสิ้น (Import Finished)', category: 'system' },
+    { key: 'system.test', label: 'ทดสอบระบบแจ้งเตือน (System Test)', category: 'system' },
+  ];
+
+  // Event variable map
+  readonly eventVariableMap: Record<string, string[]> = {
+    'attendance.checked_in': ['employeeName', 'time', 'location'],
+    'attendance.checked_out': ['employeeName', 'time'],
+    'attendance.late_arrival': ['employeeName', 'shiftName', 'lateMinutes', 'time'],
+    'attendance.missing': ['missingCount', 'date'],
+    'sentinel.blacklist_hit': ['personName', 'zoneName', 'cameraName', 'time', 'similarity'],
+    'sentinel.vip_detected': ['personName', 'zoneName', 'time'],
+    'sentinel.poi_detected': ['personName', 'zoneName', 'time'],
+    'sentinel.door_alarm': ['doorName', 'alarmType', 'time'],
+    'sentinel.emergency_muster': ['zoneName', 'evacuatedCount', 'missingCount', 'time'],
+    'import.finished': ['jobId', 'ok', 'failed'],
+    'system.test': [],
+  };
+
   customDraft = {
     eventKey: 'attendance.checked_in',
     locale: 'th',
-    channel: 'IN_APP',
+    channel: 'line',
     subject: '',
     bodyTemplate: '',
   };
+
+  livePreviewText = '';
+  previewLoading = false;
+  templateCategoryFilter: 'all' | 'attendance' | 'security' | 'system' = 'all';
 
   constructor(private http: HttpClient, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -71,6 +113,15 @@ export class NotificationCenterComponent implements OnInit {
   setTab(tab: Tab): void {
     this.activeTab = tab;
     this.reload();
+  }
+
+  get currentAvailableVariables(): string[] {
+    return this.eventVariableMap[this.customDraft.eventKey] || ['employeeName', 'time', 'location'];
+  }
+
+  get filteredEventOptions(): EventCatalogOption[] {
+    if (this.templateCategoryFilter === 'all') return this.eventOptions;
+    return this.eventOptions.filter((opt) => opt.category === this.templateCategoryFilter);
   }
 
   reload(): void {
@@ -121,6 +172,11 @@ export class NotificationCenterComponent implements OnInit {
           next: (t) => {
             this.templates = t || this.templates;
             this.loading = false;
+            if (!this.customDraft.bodyTemplate) {
+              this.loadDefaultTemplateForCurrentEvent();
+            } else {
+              this.updateLivePreview();
+            }
           },
           error: () => (this.loading = false),
         });
@@ -185,26 +241,110 @@ export class NotificationCenterComponent implements OnInit {
       });
   }
 
+  onEventKeyChange(): void {
+    this.loadDefaultTemplateForCurrentEvent();
+  }
+
+  loadDefaultTemplateForCurrentEvent(): void {
+    // Check if custom template exists first
+    const custom = (this.templates?.custom || []).find(
+      (c) =>
+        c.eventKey === this.customDraft.eventKey &&
+        c.locale === this.customDraft.locale &&
+        c.channel === this.customDraft.channel,
+    );
+    if (custom) {
+      this.customDraft.subject = custom.subject || '';
+      this.customDraft.bodyTemplate = custom.bodyTemplate || '';
+      this.updateLivePreview();
+      return;
+    }
+
+    // Fall back to built-in template
+    const builtin = (this.templates?.builtins || []).find(
+      (b) =>
+        b.eventKey === this.customDraft.eventKey &&
+        b.locale === this.customDraft.locale &&
+        b.channel === this.customDraft.channel,
+    );
+    if (builtin) {
+      this.customDraft.subject = builtin.subject || '';
+      this.customDraft.bodyTemplate = builtin.bodyTemplate || '';
+    } else {
+      this.customDraft.subject = '';
+      this.customDraft.bodyTemplate = '';
+    }
+    this.updateLivePreview();
+  }
+
+  insertVariable(varName: string): void {
+    const token = `{${varName}}`;
+    this.customDraft.bodyTemplate = (this.customDraft.bodyTemplate || '') + ' ' + token;
+    this.updateLivePreview();
+  }
+
+  updateLivePreview(): void {
+    if (!this.companyId || !this.customDraft.eventKey || !this.customDraft.bodyTemplate.trim()) {
+      this.livePreviewText = this.customDraft.bodyTemplate || '(ยังไม่มีข้อความ)';
+      return;
+    }
+    this.previewLoading = true;
+    this.http
+      .post<{ rendered: string }>(`/notifications/company/${this.companyId}/templates/preview`, {
+        eventKey: this.customDraft.eventKey,
+        bodyTemplate: this.customDraft.bodyTemplate,
+      })
+      .subscribe({
+        next: (res) => {
+          this.livePreviewText = res.rendered || '';
+          this.previewLoading = false;
+        },
+        error: () => {
+          this.livePreviewText = this.customDraft.bodyTemplate;
+          this.previewLoading = false;
+        },
+      });
+  }
+
+  editCustomTemplate(t: NotificationTemplateRow): void {
+    this.customDraft = {
+      eventKey: t.eventKey || 'attendance.checked_in',
+      locale: t.locale || 'th',
+      channel: t.channel || 'line',
+      subject: t.subject || '',
+      bodyTemplate: t.bodyTemplate || '',
+    };
+    this.updateLivePreview();
+  }
+
+  deleteCustomTemplate(t: NotificationTemplateRow): void {
+    if (!t.templateId || !confirm(`ต้องการลบ Custom Template '${t.eventKey}' และรีเซ็ตกลับเป็นค่าเริ่มต้นหรือไม่?`)) {
+      return;
+    }
+    this.http
+      .delete(`/notifications/company/${this.companyId}/templates/${t.templateId}`)
+      .subscribe({
+        next: () => {
+          this.reload();
+          this.loadDefaultTemplateForCurrentEvent();
+        },
+      });
+  }
+
   saveCustomTemplate(): void {
     if (!this.companyId || !this.customDraft.eventKey.trim() || !this.customDraft.bodyTemplate.trim()) {
       return;
     }
     this.http
       .put(`/notifications/company/${this.companyId}/templates`, {
-        templates: [
-          {
-            eventKey: this.customDraft.eventKey.trim(),
-            locale: this.customDraft.locale,
-            channel: this.customDraft.channel,
-            subject: this.customDraft.subject.trim(),
-            bodyTemplate: this.customDraft.bodyTemplate.trim(),
-          },
-        ],
+        eventKey: this.customDraft.eventKey.trim(),
+        locale: this.customDraft.locale,
+        channel: this.customDraft.channel,
+        subject: this.customDraft.subject.trim(),
+        bodyTemplate: this.customDraft.bodyTemplate.trim(),
       })
       .subscribe({
         next: () => {
-          this.customDraft.subject = '';
-          this.customDraft.bodyTemplate = '';
           this.reload();
         },
       });

@@ -24,5 +24,6 @@
 - [GEMINI.md](../../GEMINI.md) — กฎสถาปัตยกรรมและมาตรฐานวิศวกรรม Enterprise
 - [docs/ARCHITECTURE.md](../ARCHITECTURE.md) — สถาปัตยกรรมระบบฉบับเต็ม
 - [docs/API.md](../API.md) — สรุป REST & WebSocket Endpoints
+- [docs/API_CONTRACT.md](../API_CONTRACT.md) — ข้อกำหนดและมาตรฐานสัญญา API ฉบับ Enterprise (Response Envelopes, Error Taxonomy, Pagination, Scoping)
 - [docs/USER-MANUAL-SENTINELVISION.md](../USER-MANUAL-SENTINELVISION.md) — คู่มือผู้ใช้งาน
 - [docs/RUNBOOK.md](../RUNBOOK.md) — คู่มือปฏิบัติการและการกู้คืนระบบ

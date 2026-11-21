@@ -27,6 +27,7 @@ alwaysApply: false
 | Path | Mode |
 |------|------|
 | `POST /face/members/{id}/add-face` | enroll (via `run_on_face_gpu`) |
+| `POST /face/check-quality` | pre-flight quality scoring (brightness, blur, pose) |
 | `POST /face/members/check-face-emp` | multi-frame + liveness match (**companyId** required, via `run_on_face_gpu`) |
 | `POST /face/members/identify` | 1 frame, label only (**companyId** required) |
 | `POST /face/members/check-in` | secure: liveness + timestamp (optional `punchType`: `AUTO` \| `CHECK_IN` \| `CHECK_OUT`) |

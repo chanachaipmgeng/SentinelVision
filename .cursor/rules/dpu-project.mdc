@@ -57,6 +57,9 @@ Code is **baked into images** — rebuild after source changes (`api`, `api-gpu1
 - Kiosk WebSocket `session` carries `token`, continuously enforces `token_exp`, and caps per-connection in-flight tasks via `asyncio.Semaphore(4)`
 - Hybrid Check-In / Check-Out (`AUTO` / `CHECK_IN` / `CHECK_OUT`), per-company work shifts (`shift:{companyId}`), and `.xlsx`/`.csv` exports are aligned to `Asia/Bangkok` timezone
 - Writes are audited asynchronously (`asyncio.create_task(_audit(...))`); notifications go through `notification_outbox` with `SELECT ... FOR UPDATE SKIP LOCKED` and `asyncio.to_thread`
+- Enterprise API Contract: All endpoints conform to `docs/API_CONTRACT.md` (unified ErrorResponse `{ "error": { "code", "message", "status", "requestId" } }` and standard pagination)
+- Image Quality Pre-flight: Biometric enrollment runs pre-flight quality assessment (Brightness 40-220, Laplacian variance >= 80, Pose <= 30 deg) with VaultX Quality HUD in `emp-face-enroll-modal`
+- Notification Templates: Support attendance and sentinel security events (`sentinel.blacklist_hit`, `sentinel.vip_detected`, `sentinel.door_alarm`, etc.) with `POST /templates/preview` and `DELETE /templates/{id}`
 
 ## Agent defaults
 

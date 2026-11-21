@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
 import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 import { SharedModule } from '../../../../shared/shared.module';
 import { playCaptureBeep, unlockBeepAudio } from '../../../../shared/utils/beep';
@@ -72,6 +73,8 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
   switchingCamera = false;
   enrollReady = false;
   enrollHint = '';
+  qualityOverride = false;
+  currentFaceRatio: number | null = null;
 
   private ttsSettings: TtsSettings = resolveTtsSettings(null);
   private faceDetector: BrowserFaceDetector | null = null;
@@ -172,9 +175,43 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
     }
     this.faceStatus =
       this.uploadFaceItems.length > 0
-        ? `เลือกแล้ว ${this.uploadFaceItems.length} รูป — กดบันทึกเพื่อลงทะเบียน`
+        ? `เลือกแล้ว ${this.uploadFaceItems.length} รูป — กำลังตรวจคุณภาพภาพถ่าย`
         : 'เลือกไฟล์รูปใบหน้าเพื่อลงทะเบียน';
+    this.checkUploadQuality(this.uploadFaceItems);
     this.cdr.detectChanges();
+  }
+
+  checkUploadQuality(items: FaceUploadItem[]): void {
+    for (const item of items) {
+      if (item.qualityReport || item.qualityChecking) continue;
+      item.qualityChecking = true;
+      const form = new FormData();
+      form.append('file', item.file);
+      form.append('angle', 'FRONT');
+      this.http.post<{ ok: boolean; reason: string; scores?: Record<string, unknown> }>(
+        environment.baseUrl + '/face/check-quality',
+        form,
+      ).subscribe({
+        next: (res) => {
+          item.qualityChecking = false;
+          item.qualityReport = {
+            ok: !!res?.ok,
+            reason: res?.reason || 'คุณภาพผ่านเกณฑ์',
+            scores: res?.scores || {},
+          };
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          item.qualityChecking = false;
+          item.qualityReport = {
+            ok: true,
+            reason: 'ข้ามการตรวจสอบคุณภาพ',
+            scores: {},
+          };
+          this.cdr.detectChanges();
+        },
+      });
+    }
   }
 
   removeUploadFaceItem(index: number): void {
@@ -209,10 +246,10 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
       void this.uploadAllAngles();
       return;
     }
-    if (!this.isFaceDetected || !this.enrollReady) {
+    if (!this.isFaceDetected || (!this.enrollReady && !this.qualityOverride)) {
       swal(
         'ยังไม่พร้อม',
-        this.enrollHint || 'กรุณาวางใบหน้าให้อยู่ในกรอบและผ่านเกณฑ์คุณภาพก่อน',
+        this.enrollHint || 'กรุณาวางใบหน้าให้อยู่ในกรอบและผ่านเกณฑ์คุณภาพก่อน หรือเลือกติ๊กถูกเพื่อบังคับบันทึก (Override)',
         'info',
       );
       return;
@@ -446,6 +483,7 @@ export class EmpFaceEnrollModalComponent implements OnDestroy {
             );
             enrollReady = server.enrollReady;
             enrollMessage = this.friendlyEnrollHint(server.enrollMessage, server.faceRatio, server.minFaceRatio);
+            this.currentFaceRatio = server.faceRatio ?? null;
             if (server.box) {
               nextBox = server.box;
             } else {

@@ -5,7 +5,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
@@ -17,7 +17,12 @@ from ..models.notification_platform import (
 from ..models.system_setting import SystemSetting
 from ..security.deps import assert_company_access, get_current_member
 from ..services.notification_service import NotificationOutbox, enqueue, retry_dead_letter
-from ..services.notification_templates import DEFAULT_TEMPLATES, EVENT_I18N_KEYS
+from ..services.notification_templates import (
+    DEFAULT_TEMPLATES,
+    EVENT_I18N_KEYS,
+    EVENT_SAMPLE_PAYLOADS,
+    preview_template,
+)
 from ..services.outbox_crypto import encrypt_secret, redact_payload_for_api
 from ..services import rbac_service
 
@@ -450,7 +455,55 @@ async def list_templates(
         }
         for r in rows
     ]
-    return {"builtins": DEFAULT_TEMPLATES, "custom": custom, "i18nKeys": EVENT_I18N_KEYS}
+    return {
+        "builtins": DEFAULT_TEMPLATES,
+        "custom": custom,
+        "i18nKeys": EVENT_I18N_KEYS,
+        "samplePayloads": EVENT_SAMPLE_PAYLOADS,
+    }
+
+
+@router.post("/company/{companyId}/templates/preview")
+async def preview_template_route(
+    companyId: UUID,
+    body: dict,
+    member=Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Render a notification template with mock sample data for instant UI verification."""
+    await assert_company_access(db, member, companyId)
+    event_key = str((body or {}).get("eventKey") or "").strip()
+    body_template = str((body or {}).get("bodyTemplate") or "")
+    custom_payload = (body or {}).get("customPayload")
+    if not event_key:
+        raise HTTPException(status_code=400, detail="eventKey required")
+    rendered = preview_template(body_template, event_key, custom_payload)
+    return {
+        "eventKey": event_key,
+        "rendered": rendered,
+        "samplePayload": EVENT_SAMPLE_PAYLOADS.get(event_key, {}),
+    }
+
+
+@router.delete("/company/{companyId}/templates/{templateId}")
+async def delete_custom_template(
+    companyId: UUID,
+    templateId: UUID,
+    member=Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a company custom template override (reverts to system builtin)."""
+    await assert_company_access(db, member, companyId)
+    stmt = delete(NotificationTemplate).where(
+        NotificationTemplate.companyId == companyId,
+        NotificationTemplate.templateId == templateId,
+    )
+    res = await db.execute(stmt)
+    await db.commit()
+    deleted = (res.rowcount or 0) > 0
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Template not found")
+    return {"ok": True, "deleted": True, "templateId": str(templateId)}
 
 
 @router.put("/company/{companyId}/templates")
@@ -461,9 +514,18 @@ async def upsert_template(
     db: AsyncSession = Depends(get_db),
 ):
     await assert_company_access(db, member, companyId)
-    event_key = str((body or {}).get("eventKey") or "").strip()
-    locale = str((body or {}).get("locale") or "th")[:10]
-    channel = str((body or {}).get("channel") or "line")[:20]
+    templates_list = (body or {}).get("templates")
+    if isinstance(templates_list, list) and len(templates_list) > 0:
+        target_item = templates_list[0]
+    else:
+        target_item = body or {}
+
+    event_key = str(target_item.get("eventKey") or "").strip()
+    locale = str(target_item.get("locale") or "th")[:10]
+    channel = str(target_item.get("channel") or "line")[:20]
+    subject = target_item.get("subject")
+    body_template = str(target_item.get("bodyTemplate") or "")
+
     if not event_key:
         raise HTTPException(status_code=400, detail="eventKey required")
     existing = (
@@ -477,8 +539,8 @@ async def upsert_template(
         )
     ).scalar_one_or_none()
     if existing:
-        existing.subject = (body or {}).get("subject")
-        existing.bodyTemplate = str((body or {}).get("bodyTemplate") or existing.bodyTemplate)
+        existing.subject = subject
+        existing.bodyTemplate = body_template or existing.bodyTemplate
         row = existing
     else:
         row = NotificationTemplate(
@@ -486,8 +548,8 @@ async def upsert_template(
             eventKey=event_key,
             locale=locale,
             channel=channel,
-            subject=(body or {}).get("subject"),
-            bodyTemplate=str((body or {}).get("bodyTemplate") or ""),
+            subject=subject,
+            bodyTemplate=body_template,
         )
         db.add(row)
     await db.commit()

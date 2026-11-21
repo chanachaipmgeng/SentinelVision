@@ -37,6 +37,7 @@ docker compose up --build
 | [docs/SENTINELVISION-ROADMAP.md](docs/SENTINELVISION-ROADMAP.md) | **แผนแม่บทและสถาปัตยกรรม SentinelVision (Phase 1–6 Complete)** |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | โครงสร้างระบบ, Dual `pgvector` HNSW Pipeline, Edge AI, AI Copilot & Investigation Graph |
 | [docs/API.md](docs/API.md) | สรุป Endpoint ทั้งหมด (Auth/2FA/SSO, Face, SentinelVision Security/Access/Events/Graph/Copilot, Attendance, HR/PDPA) |
+| [docs/API_CONTRACT.md](docs/API_CONTRACT.md) | **สัญญา API ระดับ Enterprise** (Response Envelopes, Error Taxonomy, Pagination, Scoping & Streaming Protocols) |
 | [docs/USER-MANUAL-SENTINELVISION.md](docs/USER-MANUAL-SENTINELVISION.md) | คู่มือการใช้งานระบบ SentinelVision สำหรับผู้ดูแลและผู้ปฏิบัติงาน |
 | [docs/BACKLOG.md](docs/BACKLOG.md) | สรุปสถานะ **Enterprise & SentinelVision Roadmap (Phase 1–6 Completed)** |
 | [docs/DEPLOY-SERVER.md](docs/DEPLOY-SERVER.md) | **คู่มือติดตั้งบนเซิร์ฟเวอร์** (clone / Docker / GPU·CPU / seed mock) |

@@ -1111,5 +1111,22 @@
   "dashboard.status.checkOut": "ออกงาน",
   "dashboard.status.pending": "รอนุมัติ",
   "Smart parking & LPR": "ลานจอดรถอัจฉริยะและ LPR",
-  "RFID physical access cards": "บัตรผ่านทางกายภาพ RFID"
+  "RFID physical access cards": "บัตรผ่านทางกายภาพ RFID",
+  "sidebar.group.overview": "ภาพรวม & โครงสร้างระบบ",
+  "sidebar.group.tenants": "จัดการบริษัท & ผู้ใช้งาน",
+  "sidebar.group.platform": "ตั้งค่าระบบ & บันทึกข้อผิดพลาด",
+  "sidebar.group.dailyOps": "ปฏิบัติการประจำวัน",
+  "sidebar.group.hrPolicy": "นโยบายเวลา & วันหยุด",
+  "sidebar.group.kioskMobile": "เครื่องสแกน & มือถือ",
+  "sidebar.group.credentials": "บัตรผ่าน & ยานพาหนะ",
+  "sidebar.group.setupKiosk": "ตั้งค่า & จุดสแกน",
+  "sidebar.group.monitoring": "เฝ้าระวังและย้อนหลัง",
+  "sidebar.group.setup": "ตั้งค่าอุปกรณ์กล้อง",
+  "sidebar.group.devicesHealth": "สุขภาพระบบ & อุปกรณ์",
+  "sidebar.group.auditNotif": "ตรวจสอบ & การแจ้งเตือน",
+  "sidebar.group.accessSettings": "สิทธิ์และการตั้งค่า",
+  "cctv.cameras.tools": "เครื่องมือ",
+  "cctv.cameras.controlDetail": "ควบคุม / รายละเอียด",
+  "cctv.cameras.ptzTitle": "ควบคุมทิศทางกล้อง (ONVIF PTZ)",
+  "cctv.cameras.ptzOfflineHint": "ต้องเชื่อมต่อกล้อง (Online) จึงจะควบคุม PTZ ได้"
 }

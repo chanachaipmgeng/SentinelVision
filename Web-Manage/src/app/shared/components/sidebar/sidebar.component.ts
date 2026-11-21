@@ -18,6 +18,7 @@ export interface SidebarSubItem {
   badgeValue?: string;
   badgeClass?: string;
   badgeText?: string;
+  groupLabel?: string;
 }
 
 export interface SidebarModuleGroup {
@@ -326,6 +327,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
           badgeValue: m.badgeValue,
           badgeClass: m.badgeClass,
           badgeText: m.badgeText,
+          groupLabel: m.groupLabel,
         });
       } else if (m.children?.length) {
         for (const c of m.children) {
@@ -337,6 +339,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
               badgeValue: c.badgeValue,
               badgeClass: c.badgeClass,
               badgeText: c.badgeText,
+              groupLabel: c.groupLabel,
             });
           }
         }

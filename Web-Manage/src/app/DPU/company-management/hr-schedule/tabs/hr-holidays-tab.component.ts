@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SideDrawerComponent } from '../../../../shared/components/side-drawer/side-drawer.component';
 import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HrScheduleApiService } from '../hr-schedule-api.service';
@@ -15,7 +16,7 @@ import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 
 @Component({
     selector: 'app-hr-holidays-tab',
-    imports: [CommonModule, FormsModule, SharedModule],
+    imports: [CommonModule, FormsModule, SharedModule, SideDrawerComponent],
     templateUrl: './hr-holidays-tab.component.html'
 })
 export class HrHolidaysTabComponent implements OnInit {
@@ -27,6 +28,7 @@ export class HrHolidaysTabComponent implements OnInit {
   holidayImportHint = '';
   holidayPresetYear = new Date().getFullYear();
   newHoliday = defaultNewHoliday();
+  drawerOpen = false;
 
   constructor(private api: HrScheduleApiService, private token: TokenService) {
     this.companyId = this.token.getSelectCompany()?.companyId || '';
@@ -53,6 +55,7 @@ export class HrHolidaysTabComponent implements OnInit {
     if (!this.newHoliday.holidayDate || !this.newHoliday.name.trim()) return;
     this.api.createHoliday(this.companyId, this.newHoliday).subscribe(() => {
       this.newHoliday = defaultNewHoliday();
+      this.drawerOpen = false;
       this.loadHolidays();
       this.flash('เพิ่มวันหยุดบริษัทเรียบร้อย');
     });

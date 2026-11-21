@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -104,6 +104,7 @@ export class CamerasComponent implements OnInit {
   snapshotPreview: string | null = null;
   createOpen = false;
   detailOpen = false;
+  toolsOpen = false;
   selected: CameraRow | null = null;
   importing = false;
   discoveringOnvif = false;
@@ -217,7 +218,18 @@ export class CamerasComponent implements OnInit {
     this.searchTerm = '';
   }
 
+  @HostListener('document:click')
+  closeTools(): void {
+    this.toolsOpen = false;
+  }
+
+  toggleTools(ev: Event): void {
+    ev.stopPropagation();
+    this.toolsOpen = !this.toolsOpen;
+  }
+
   openCreate(): void {
+    this.toolsOpen = false;
     this.detailOpen = false;
     this.resetDraft();
     this.createOpen = true;

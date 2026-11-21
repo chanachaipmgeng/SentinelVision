@@ -27,32 +27,53 @@
         hidden
         (change)="onCsvSelected($event)"
       />
-      <button
-        type="button"
-        class="ti-btn ti-btn-light modern-btn"
-        (click)="triggerCsvPick()"
-        [disabled]="importing"
-      >
-        <i class="ri-file-upload-line" aria-hidden="true"></i>
-        {{ 'cctv.cameras.importCsv' | translate }}
-      </button>
+      <div class="relative inline-block" (click)="$event.stopPropagation()">
+        <button
+          type="button"
+          class="ti-btn ti-btn-light modern-btn"
+          (click)="toggleTools($event)"
+          [attr.aria-expanded]="toolsOpen"
+        >
+          <i class="ri-tools-line" aria-hidden="true"></i>
+          {{ 'cctv.cameras.tools' | translate }}
+          <i class="ri-arrow-down-s-line text-sm" aria-hidden="true"></i>
+        </button>
+        <div
+          *ngIf="toolsOpen"
+          class="absolute right-0 mt-1.5 w-52 rounded-xl border border-defaultborder bg-bodybg shadow-xl z-40 py-1.5"
+        >
+          <button
+            type="button"
+            class="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/5 transition"
+            (click)="toolsOpen = false; triggerCsvPick()"
+            [disabled]="importing"
+          >
+            <i class="ri-file-upload-line text-cyan-400" aria-hidden="true"></i>
+            <span>{{ 'cctv.cameras.importCsv' | translate }}</span>
+          </button>
+          <button
+            type="button"
+            class="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/5 transition"
+            (click)="toolsOpen = false; discoverOnvif()"
+            [disabled]="discoveringOnvif"
+          >
+            <i class="ri-radar-line text-sky-400" aria-hidden="true"></i>
+            <span>{{ discoveringOnvif ? 'Scanning...' : 'Discover ONVIF' }}</span>
+          </button>
+          <a
+            routerLink="/company/settings/ai"
+            class="w-full px-3 py-2 text-left text-xs flex items-center gap-2 hover:bg-white/5 transition"
+            (click)="toolsOpen = false"
+          >
+            <i class="ri-settings-3-line text-slate-400" aria-hidden="true"></i>
+            <span>{{ 'settingsHub.navTitle' | translate }}</span>
+          </a>
+        </div>
+      </div>
       <a routerLink="/company/live-wall" class="ti-btn ti-btn-light modern-btn">
         <i class="ri-grid-line" aria-hidden="true"></i>
         {{ 'cctv.liveWall.nav' | translate }}
       </a>
-      <a routerLink="/company/settings/ai" class="ti-btn ti-btn-light modern-btn">
-        <i class="ri-settings-3-line" aria-hidden="true"></i>
-        {{ 'settingsHub.navTitle' | translate }}
-      </a>
-      <button
-        type="button"
-        class="ti-btn ti-btn-light modern-btn"
-        (click)="discoverOnvif()"
-        [disabled]="discoveringOnvif"
-      >
-        <i class="ri-radar-line" aria-hidden="true"></i>
-        {{ discoveringOnvif ? 'Scanning...' : 'Discover ONVIF' }}
-      </button>
       <button type="button" class="ti-btn ti-btn-primary-full modern-btn" (click)="openCreate()">
         <i class="ri-add-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.add' | translate }}
@@ -149,23 +170,6 @@
             </div>
           </div>
           <div class="sv-camera-row__actions" (click)="$event.stopPropagation()">
-            <div class="flex items-center gap-1 mr-1" [title]="cam.status === 'online' ? 'ONVIF PTZ' : 'PTZ ใช้ได้เมื่อกล้องออนไลน์'">
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'LEFT')" aria-label="PTZ Left">◀</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'UP')" aria-label="PTZ Up">▲</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'DOWN')" aria-label="PTZ Down">▼</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'RIGHT')" aria-label="PTZ Right">▶</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'ZOOM_IN')" aria-label="PTZ Zoom In">+</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'ZOOM_OUT')" aria-label="PTZ Zoom Out">−</button>
-              <button type="button" class="ti-btn ti-btn-light modern-btn !px-2 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'STOP')" aria-label="PTZ Stop">■</button>
-            </div>
-            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="togglePrivacyMask(cam)">
-              <i class="ri-eye-off-line" aria-hidden="true"></i>
-              PDPA Mask
-            </button>
-            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="openDetail(cam)">
-              <i class="ri-eye-line" aria-hidden="true"></i>
-              {{ 'Detail' | translate }}
-            </button>
             <a
               class="ti-btn ti-btn-light modern-btn text-xs"
               [routerLink]="['/company/live-wall']"
@@ -174,6 +178,10 @@
               <i class="ri-play-circle-line" aria-hidden="true"></i>
               {{ 'cctv.cameras.live' | translate }}
             </a>
+            <button type="button" class="ti-btn ti-btn-light modern-btn text-xs" (click)="openDetail(cam)">
+              <i class="ri-sliders-line" aria-hidden="true"></i>
+              {{ 'cctv.cameras.controlDetail' | translate }}
+            </button>
           </div>
         </li>
       </ul>
@@ -416,6 +424,24 @@
       </div>
     </div>
 
+    <div class="rounded-lg border border-dpu-border bg-dpu-surface p-3 space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-semibold text-dpu-ink">{{ 'cctv.cameras.ptzTitle' | translate }}</span>
+        <span class="text-[11px] text-dpu-muted" *ngIf="cam.status !== 'online'">
+          {{ 'cctv.cameras.ptzOfflineHint' | translate }}
+        </span>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5" [title]="cam.status === 'online' ? 'ONVIF PTZ' : 'PTZ ใช้ได้เมื่อกล้องออนไลน์'">
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'LEFT')" aria-label="PTZ Left">◀</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'UP')" aria-label="PTZ Up">▲</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'DOWN')" aria-label="PTZ Down">▼</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'RIGHT')" aria-label="PTZ Right">▶</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'ZOOM_IN')" aria-label="PTZ Zoom In">+</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'ZOOM_OUT')" aria-label="PTZ Zoom Out">−</button>
+        <button type="button" class="ti-btn ti-btn-light modern-btn !px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed" [disabled]="cam.status !== 'online'" (click)="sendPtz(cam, 'STOP')" aria-label="PTZ Stop">■</button>
+      </div>
+    </div>
+
     <div class="flex flex-wrap gap-2 pt-1">
       <a
         class="ti-btn ti-btn-light modern-btn"
@@ -425,6 +451,10 @@
         <i class="ri-play-circle-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.live' | translate }}
       </a>
+      <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="togglePrivacyMask(cam)">
+        <i class="ri-eye-off-line" aria-hidden="true"></i>
+        PDPA Mask
+      </button>
       <button type="button" class="ti-btn ti-btn-light modern-btn" (click)="openRoiEditor(cam)">
         <i class="ri-scan-line" aria-hidden="true"></i>
         {{ 'cctv.cameras.roi' | translate }}

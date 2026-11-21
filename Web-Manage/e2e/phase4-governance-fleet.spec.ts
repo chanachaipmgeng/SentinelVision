@@ -54,16 +54,25 @@ test.describe('Phase 4 — Governance, Fleet Health, CCTV & Settings (Module 7)'
     tracker.assertClean();
   });
 
-  test('4.3 Cameras / CCTV: page header present & offline PTZ buttons disabled', async ({ page }) => {
+  test('4.3 Cameras / CCTV: page header, tools dropdown & offline PTZ disabled in drawer', async ({ page }) => {
     const tracker = attachErrorTracker(page);
     await loginAndSelectCompany(page);
 
     await page.goto('/#/company/cameras');
     await expect(page.locator('app-company-cameras app-page-header')).toBeVisible({ timeout: 15_000 });
 
+    // Verify toolbar Tools dropdown reveals Discover ONVIF
+    const toolsBtn = page.locator('app-company-cameras').getByRole('button', { name: /เครื่องมือ|Tools/ });
+    await expect(toolsBtn).toBeVisible({ timeout: 10_000 });
+    await toolsBtn.click();
+    await expect(page.locator('app-company-cameras').getByRole('button', { name: /Discover ONVIF/ })).toBeVisible();
+    await toolsBtn.click();
+
     const offlineCam = page.locator('.sv-camera-row', { hasText: /offline/i }).first();
     if (await offlineCam.isVisible().catch(() => false)) {
-      const ptzLeft = offlineCam.getByRole('button', { name: 'PTZ Left' });
+      await offlineCam.getByRole('button', { name: /ควบคุม \/ รายละเอียด|Control \/ Detail/ }).click();
+      const ptzLeft = page.locator('app-side-drawer').getByRole('button', { name: 'PTZ Left' });
+      await expect(ptzLeft).toBeVisible({ timeout: 10_000 });
       await expect(ptzLeft).toBeDisabled();
     }
 

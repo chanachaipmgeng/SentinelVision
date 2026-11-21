@@ -71,10 +71,12 @@ test.describe('Phase 2 — Attendance, HR Schedule & Face Kiosk (Module 2)', () 
     await page.goto('/#/company/hr-schedule/leaves');
     await expect(page.locator('.main-content .box').first()).toBeVisible({ timeout: 15_000 });
 
-    // Holidays: verify styled CSV/iCal upload button + Create & Delete E2E holiday
+    // Holidays: open side-drawer, verify styled CSV/iCal upload button + Create & Delete E2E holiday
     const holidayName = e2eTag('Holiday');
     await page.goto('/#/company/hr-schedule/holidays');
-    await expect(page.getByText(/เลือกไฟล์ CSV \/ iCal/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.sv-subpanel__group').first()).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('button', { name: /\+ เพิ่มวันหยุด \/ นำเข้า/ }).click();
+    await expect(page.getByText(/เลือกไฟล์ CSV \/ iCal/)).toBeVisible({ timeout: 10_000 });
 
     await page.locator('input[type="date"]').first().fill('2026-12-29');
     await page.locator('input[placeholder*="วันสงกรานต์"]').fill(holidayName);

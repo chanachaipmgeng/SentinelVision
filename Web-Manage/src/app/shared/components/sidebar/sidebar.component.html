@@ -75,21 +75,29 @@
 
         <!-- Module Sub-Screens List -->
         <ul class="sv-subpanel__list">
-          <li *ngFor="let item of mod.items">
-            <a
-              class="sv-subitem"
-              [routerLink]="item.path ? [item.path] : null"
-              [class.is-active]="isSubItemActive(item)"
-              (click)="menuOpen()">
-              <span class="sv-subitem__dot" aria-hidden="true"></span>
-              <span class="sv-subitem__text">{{ item.title | translate }}</span>
-              <span
-                *ngIf="item.badgeValue"
-                class="badge !bg-{{ item.badgeClass || 'primary' }}/15 !text-{{ item.badgeText || 'primary' }} !py-[0.15rem] !px-[0.4rem] !text-[0.65rem] ms-auto shrink-0">
-                {{ item.badgeValue }}
-              </span>
-            </a>
-          </li>
+          <ng-container *ngFor="let item of mod.items; let i = index">
+            <li
+              class="sv-subpanel__group"
+              *ngIf="item.groupLabel && item.groupLabel !== mod.items[i - 1]?.groupLabel"
+            >
+              {{ item.groupLabel | translate }}
+            </li>
+            <li>
+              <a
+                class="sv-subitem"
+                [routerLink]="item.path ? [item.path] : null"
+                [class.is-active]="isSubItemActive(item)"
+                (click)="menuOpen()">
+                <span class="sv-subitem__dot" aria-hidden="true"></span>
+                <span class="sv-subitem__text">{{ item.title | translate }}</span>
+                <span
+                  *ngIf="item.badgeValue"
+                  class="badge !bg-{{ item.badgeClass || 'primary' }}/15 !text-{{ item.badgeText || 'primary' }} !py-[0.15rem] !px-[0.4rem] !text-[0.65rem] ms-auto shrink-0">
+                  {{ item.badgeValue }}
+                </span>
+              </a>
+            </li>
+          </ng-container>
         </ul>
       </ngx-simplebar>
     </div>

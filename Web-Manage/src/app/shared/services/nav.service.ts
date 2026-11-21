@@ -37,6 +37,8 @@ export interface Menu {
    * (route remains reachable by direct URL). Example: self-service for HR_ADMIN.
    */
   hideForRoles?: string[];
+  /** Optional task-oriented sub-group heading inside Column 2 of the dual-rail sidebar. */
+  groupLabel?: string;
 }
 
 @Injectable({
@@ -115,6 +117,7 @@ export class NavService implements OnDestroy {
         title: 'Admin Dashboard',
         type: 'link',
         permission: 'system.admin',
+        groupLabel: 'sidebar.group.overview',
       },
       {
         icon: 'server',
@@ -122,13 +125,7 @@ export class NavService implements OnDestroy {
         title: 'Platform Infrastructure',
         type: 'link',
         permission: 'system.admin',
-      },
-      {
-        icon: 'user',
-        path: '/admin/member-manage',
-        title: 'Manage members',
-        type: 'link',
-        permission: 'system.admin',
+        groupLabel: 'sidebar.group.overview',
       },
       {
         icon: 'buildings',
@@ -136,6 +133,15 @@ export class NavService implements OnDestroy {
         title: 'Manage companies',
         type: 'link',
         permission: 'system.admin',
+        groupLabel: 'sidebar.group.tenants',
+      },
+      {
+        icon: 'user',
+        path: '/admin/member-manage',
+        title: 'Manage members',
+        type: 'link',
+        permission: 'system.admin',
+        groupLabel: 'sidebar.group.tenants',
       },
       {
         icon: 'user-check',
@@ -143,6 +149,7 @@ export class NavService implements OnDestroy {
         title: 'Manage admin permissions',
         type: 'link',
         permission: 'system.admin',
+        groupLabel: 'sidebar.group.tenants',
       },
       {
         icon: 'cog',
@@ -150,6 +157,7 @@ export class NavService implements OnDestroy {
         title: 'System settings / TTS',
         type: 'link',
         permission: 'system.admin',
+        groupLabel: 'sidebar.group.platform',
       },
       {
         icon: 'bug',
@@ -157,6 +165,7 @@ export class NavService implements OnDestroy {
         title: 'Error logs',
         type: 'link',
         permission: 'system.admin',
+        groupLabel: 'sidebar.group.platform',
       },
     ];
   }
@@ -235,30 +244,70 @@ export class NavService implements OnDestroy {
         moduleId: 'ATTENDANCE',
         permission: 'attendance.read',
         children: [
-          {
-            path: '/company/scan/attendance',
-            title: 'Live attendance scan',
-            type: 'link',
-            permission: 'attendance.read',
-          },
-          { path: '/company/timestamp-log', title: 'Attendance history', type: 'link', permission: 'attendance.read' },
-          {
-            path: '/company/warning-timestamp-log',
-            title: 'Approve out-of-area punches',
-            type: 'link',
-            permission: 'attendance.approve',
-          },
+          { path: '/company/timestamp-log', title: 'Attendance history', type: 'link', permission: 'attendance.read', groupLabel: 'sidebar.group.dailyOps' },
           {
             path: '/company/approval-inbox',
             title: 'Approval inbox',
             type: 'link',
             permission: 'attendance.approve',
+            groupLabel: 'sidebar.group.dailyOps',
+          },
+          {
+            path: '/company/warning-timestamp-log',
+            title: 'Approve out-of-area punches',
+            type: 'link',
+            permission: 'attendance.approve',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/reports',
             title: 'Attendance reports',
             type: 'link',
             permission: 'attendance.read',
+            groupLabel: 'sidebar.group.dailyOps',
+          },
+          {
+            path: '/company/hr-schedule/shifts',
+            title: 'Work shifts & policies',
+            type: 'link',
+            permission: 'hr.shifts',
+            groupLabel: 'sidebar.group.hrPolicy',
+          },
+          {
+            path: '/company/hr-schedule/leaves',
+            title: 'Leave management',
+            type: 'link',
+            permission: 'hr.shifts',
+            groupLabel: 'sidebar.group.hrPolicy',
+          },
+          {
+            path: '/company/hr-schedule/holidays',
+            title: 'Company holidays',
+            type: 'link',
+            permission: 'hr.shifts',
+            groupLabel: 'sidebar.group.hrPolicy',
+          },
+          {
+            path: '/company/company-location',
+            title: 'Punch locations (GPS)',
+            type: 'link',
+            permission: 'company.settings',
+            groupLabel: 'sidebar.group.hrPolicy',
+          },
+          {
+            path: '/company/scan/attendance',
+            title: 'Live attendance scan',
+            type: 'link',
+            permission: 'attendance.read',
+            groupLabel: 'sidebar.group.kioskMobile',
+          },
+          {
+            path: '/company/mobile-checkin',
+            title: 'Mobile field check-in',
+            type: 'link',
+            permission: 'attendance.read',
+            hideForRoles: ['SYSTEM_ADMIN', 'ADMIN_SYSTEM'],
+            groupLabel: 'sidebar.group.kioskMobile',
           },
           {
             path: '/company/self-service',
@@ -267,37 +316,7 @@ export class NavService implements OnDestroy {
             permission: 'attendance.read',
             // Employee portal — soft-hide for system & company/HR admins (route still open).
             hideForRoles: ['HR_ADMIN', 'ADMIN_COMPANY', 'SYSTEM_ADMIN', 'ADMIN_SYSTEM'],
-          },
-          {
-            path: '/company/mobile-checkin',
-            title: 'Mobile field check-in',
-            type: 'link',
-            permission: 'attendance.read',
-            hideForRoles: ['SYSTEM_ADMIN', 'ADMIN_SYSTEM'],
-          },
-          {
-            path: '/company/company-location',
-            title: 'Punch locations (GPS)',
-            type: 'link',
-            permission: 'company.settings',
-          },
-          {
-            path: '/company/hr-schedule/shifts',
-            title: 'Work shifts & policies',
-            type: 'link',
-            permission: 'hr.shifts',
-          },
-          {
-            path: '/company/hr-schedule/leaves',
-            title: 'Leave management',
-            type: 'link',
-            permission: 'hr.shifts',
-          },
-          {
-            path: '/company/hr-schedule/holidays',
-            title: 'Company holidays',
-            type: 'link',
-            permission: 'hr.shifts',
+            groupLabel: 'sidebar.group.kioskMobile',
           },
         ],
       },
@@ -312,34 +331,40 @@ export class NavService implements OnDestroy {
         permission: 'sentinel.manage',
         children: [
           {
-            path: '/company/scan/access-control',
-            title: 'Live door scan',
-            type: 'link',
-          },
-          {
             path: '/company/access-control/zones',
             title: 'Door zones & unlock',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/access-control/logs',
             title: 'Access logs',
             type: 'link',
-          },
-          {
-            path: '/company/access-control/settings',
-            title: 'Access Control & IoT Relay settings',
-            type: 'link',
-          },
-          {
-            path: '/company/parking',
-            title: 'Smart parking & LPR',
-            type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/rfid-cards',
             title: 'RFID physical access cards',
             type: 'link',
+            groupLabel: 'sidebar.group.credentials',
+          },
+          {
+            path: '/company/parking',
+            title: 'Smart parking & LPR',
+            type: 'link',
+            groupLabel: 'sidebar.group.credentials',
+          },
+          {
+            path: '/company/access-control/settings',
+            title: 'Access Control & IoT Relay settings',
+            type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
+          },
+          {
+            path: '/company/scan/access-control',
+            title: 'Live door scan',
+            type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
           },
         ],
       },
@@ -354,24 +379,28 @@ export class NavService implements OnDestroy {
         permission: 'sentinel.manage',
         children: [
           {
-            path: '/company/scan/watchlist',
-            title: 'Live watchlist camera',
+            path: '/company/watchlist/incidents',
+            title: 'Incident alerts',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/watchlist/identities',
             title: 'Watchlist Blacklist / POI / VIP',
             type: 'link',
-          },
-          {
-            path: '/company/watchlist/incidents',
-            title: 'Incident alerts',
-            type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/watchlist/settings',
             title: 'Security alert settings',
             type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
+          },
+          {
+            path: '/company/scan/watchlist',
+            title: 'Live watchlist camera',
+            type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
           },
         ],
       },
@@ -386,24 +415,28 @@ export class NavService implements OnDestroy {
         permission: 'sentinel.manage',
         children: [
           {
-            path: '/company/scan/visitor',
-            title: 'Live visitor scan',
-            type: 'link',
-          },
-          {
             path: '/company/visitors/passes',
             title: 'Visitor pass',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/visitors/muster-roll',
             title: 'Muster roll',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/visitors/settings',
             title: 'Visitor & PDPA settings',
             type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
+          },
+          {
+            path: '/company/scan/visitor',
+            title: 'Live visitor scan',
+            type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
           },
         ],
       },
@@ -418,24 +451,28 @@ export class NavService implements OnDestroy {
         permission: 'sentinel.manage',
         children: [
           {
-            path: '/company/scan/event',
-            title: 'Live event scan',
-            type: 'link',
-          },
-          {
             path: '/company/events/campaigns',
             title: 'Event campaigns & attendees',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/events/checkins',
             title: 'Live event check-in stats',
             type: 'link',
+            groupLabel: 'sidebar.group.dailyOps',
           },
           {
             path: '/company/events/settings',
             title: 'Event settings',
             type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
+          },
+          {
+            path: '/company/scan/event',
+            title: 'Live event scan',
+            type: 'link',
+            groupLabel: 'sidebar.group.setupKiosk',
           },
         ],
       },
@@ -450,52 +487,58 @@ export class NavService implements OnDestroy {
         permission: 'cameras.read',
         children: [
           {
-            path: '/company/cameras',
-            title: 'cctv.cameras.nav',
-            type: 'link',
-            permission: 'cameras.read',
-          },
-          {
             path: '/company/live-wall',
             title: 'cctv.liveWall.nav',
             type: 'link',
             permission: 'cameras.read',
-          },
-          {
-            path: '/company/playback',
-            title: 'cctv.playback.nav',
-            type: 'link',
-            permission: 'cameras.read',
+            groupLabel: 'sidebar.group.monitoring',
           },
           {
             path: '/company/e-map',
             title: 'emap.nav',
             type: 'link',
             permission: 'cameras.read',
+            groupLabel: 'sidebar.group.monitoring',
           },
           {
             path: '/company/face-monitor',
             title: 'faceMonitor.nav',
             type: 'link',
             permission: 'cameras.read',
+            groupLabel: 'sidebar.group.monitoring',
           },
           {
             path: '/company/presence',
             title: 'presence.nav',
             type: 'link',
             permission: 'cameras.read',
+            groupLabel: 'sidebar.group.monitoring',
+          },
+          {
+            path: '/company/playback',
+            title: 'cctv.playback.nav',
+            type: 'link',
+            permission: 'cameras.read',
+            groupLabel: 'sidebar.group.monitoring',
+          },
+          {
+            path: '/company/cameras',
+            title: 'cctv.cameras.nav',
+            type: 'link',
+            permission: 'cameras.read',
+            groupLabel: 'sidebar.group.setup',
           },
         ],
       },
 
       { headTitle: 'GOVERNANCE — Governance', moduleId: 'GOVERNANCE', permission: 'audit.read' },
       {
-        icon: 'list-ul',
-        path: '/company/audit-log',
-        title: 'Audit log',
+        icon: 'heart-rate',
+        path: '/company/fleet-health',
+        title: 'Fleet & Edge Health',
         type: 'link',
         moduleId: 'GOVERNANCE',
-        permission: 'audit.read',
+        groupLabel: 'sidebar.group.devicesHealth',
       },
       {
         icon: 'devices',
@@ -503,21 +546,16 @@ export class NavService implements OnDestroy {
         title: 'Manage kiosk devices',
         type: 'link',
         moduleId: 'GOVERNANCE',
+        groupLabel: 'sidebar.group.devicesHealth',
       },
       {
-        icon: 'heart-rate',
-        path: '/company/fleet-health',
-        title: 'Fleet & Edge Health',
+        icon: 'list-ul',
+        path: '/company/audit-log',
+        title: 'Audit log',
         type: 'link',
         moduleId: 'GOVERNANCE',
-      },
-      {
-        icon: 'user-check',
-        path: '/company/settings/rbac',
-        title: 'Roles & Permissions (RBAC)',
-        type: 'link',
-        moduleId: 'GOVERNANCE',
-        permission: 'company.settings',
+        permission: 'audit.read',
+        groupLabel: 'sidebar.group.auditNotif',
       },
       {
         icon: 'notification',
@@ -525,13 +563,7 @@ export class NavService implements OnDestroy {
         title: 'Notification Center',
         type: 'link',
         moduleId: 'GOVERNANCE',
-      },
-      {
-        icon: 'shield-alt-2',
-        path: '/company/profile-security',
-        title: 'Profile & Security',
-        type: 'link',
-        moduleId: 'GOVERNANCE',
+        groupLabel: 'sidebar.group.auditNotif',
       },
       {
         icon: 'cog',
@@ -540,6 +572,24 @@ export class NavService implements OnDestroy {
         type: 'link',
         moduleId: 'GOVERNANCE',
         permission: 'company.settings',
+        groupLabel: 'sidebar.group.accessSettings',
+      },
+      {
+        icon: 'user-check',
+        path: '/company/settings/rbac',
+        title: 'Roles & Permissions (RBAC)',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+        permission: 'company.settings',
+        groupLabel: 'sidebar.group.accessSettings',
+      },
+      {
+        icon: 'shield-alt-2',
+        path: '/company/profile-security',
+        title: 'Profile & Security',
+        type: 'link',
+        moduleId: 'GOVERNANCE',
+        groupLabel: 'sidebar.group.accessSettings',
       },
     ];
   }

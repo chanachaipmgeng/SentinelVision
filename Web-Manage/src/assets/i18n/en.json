@@ -1111,5 +1111,22 @@
   "dashboard.status.checkOut": "Checked Out",
   "dashboard.status.pending": "Pending",
   "Smart parking & LPR": "Smart Parking & LPR",
-  "RFID physical access cards": "RFID Physical Access Cards"
+  "RFID physical access cards": "RFID Physical Access Cards",
+  "sidebar.group.overview": "Overview & Infrastructure",
+  "sidebar.group.tenants": "Tenants & Accounts",
+  "sidebar.group.platform": "Platform Config & Logs",
+  "sidebar.group.dailyOps": "Daily Operations",
+  "sidebar.group.hrPolicy": "HR Schedule & Policies",
+  "sidebar.group.kioskMobile": "Kiosk & Mobile",
+  "sidebar.group.credentials": "Credentials & Parking",
+  "sidebar.group.setupKiosk": "Configuration & Kiosk",
+  "sidebar.group.monitoring": "Live & Playback",
+  "sidebar.group.setup": "Camera Registry",
+  "sidebar.group.devicesHealth": "Fleet & Devices",
+  "sidebar.group.auditNotif": "Audit & Notifications",
+  "sidebar.group.accessSettings": "Access & Settings",
+  "cctv.cameras.tools": "Tools",
+  "cctv.cameras.controlDetail": "Control / Detail",
+  "cctv.cameras.ptzTitle": "Camera PTZ Control (ONVIF)",
+  "cctv.cameras.ptzOfflineHint": "Camera must be online to send PTZ commands"
 }

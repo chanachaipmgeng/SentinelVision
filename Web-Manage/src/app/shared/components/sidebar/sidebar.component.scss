@@ -150,6 +150,24 @@
   gap: 0.22rem;
 }
 
+.sv-subpanel__group {
+  margin: 0.65rem 0 0.18rem;
+  padding: 0.45rem 0.68rem 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.78);
+  border-top: 1px dashed rgba(148, 163, 184, 0.18);
+  list-style: none;
+
+  &:first-child {
+    margin-top: 0.1rem;
+    padding-top: 0.15rem;
+    border-top: none;
+  }
+}
+
 .sv-subitem {
   display: flex;
   align-items: center;

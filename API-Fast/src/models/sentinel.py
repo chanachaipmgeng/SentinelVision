@@ -270,3 +270,201 @@ class SentinelEventRegistration(Base):
         Index("sentinel_event_reg_company_idx", "companyId", "email"),
     )
 
+
+class SentinelVehicle(Base):
+    """Registered vehicles for LPR, employee parking, VIPs, and visitor pass tracking."""
+
+    __tablename__ = "sentinel_vehicle"
+
+    vehicleId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    licensePlate: Mapped[str] = mapped_column("license_plate", String(50), nullable=False)
+    province: Mapped[str | None] = mapped_column("province", String(100), nullable=True)
+    vehicleType: Mapped[str] = mapped_column(
+        "vehicle_type", String(30), nullable=False, default="CAR", server_default="CAR"
+    )
+    brand: Mapped[str | None] = mapped_column("brand", String(100), nullable=True)
+    model: Mapped[str | None] = mapped_column("model", String(100), nullable=True)
+    color: Mapped[str | None] = mapped_column("color", String(50), nullable=True)
+    ownerType: Mapped[str] = mapped_column(
+        "owner_type", String(30), nullable=False, default="EMPLOYEE", server_default="EMPLOYEE"
+    )
+    ownerName: Mapped[str | None] = mapped_column("owner_name", String(160), nullable=True)
+    ownerContact: Mapped[str | None] = mapped_column("owner_contact", String(100), nullable=True)
+    companyEmployeeId: Mapped[uuid.UUID | None] = mapped_column(
+        "company_employee_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_employee.company_employeeId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    identityId: Mapped[uuid.UUID | None] = mapped_column(
+        "identity_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_identity.identityId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    status: Mapped[str] = mapped_column(
+        "status", String(30), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )
+    notes: Mapped[str | None] = mapped_column("notes", Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        "updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("sentinel_vehicle_company_plate_idx", "companyId", "license_plate"),
+        Index("sentinel_vehicle_company_status_idx", "companyId", "status"),
+    )
+
+
+class SentinelParkingSpot(Base):
+    """Physical parking spots with real-time occupancy status and zone allocation."""
+
+    __tablename__ = "sentinel_parking_spot"
+
+    spotId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    spotCode: Mapped[str] = mapped_column("spot_code", String(50), nullable=False)
+    zone: Mapped[str] = mapped_column("zone", String(100), nullable=False)
+    floor: Mapped[str | None] = mapped_column("floor", String(50), nullable=True)
+    spotType: Mapped[str] = mapped_column(
+        "spot_type", String(30), nullable=False, default="STANDARD", server_default="STANDARD"
+    )
+    isOccupied: Mapped[bool] = mapped_column(
+        "is_occupied", Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    occupiedVehicleId: Mapped[uuid.UUID | None] = mapped_column(
+        "occupied_vehicle_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_vehicle.vehicleId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    occupiedPlate: Mapped[str | None] = mapped_column("occupied_plate", String(50), nullable=True)
+    occupiedSince: Mapped[datetime | None] = mapped_column("occupied_since", DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(
+        "status", String(30), nullable=False, default="AVAILABLE", server_default="AVAILABLE"
+    )
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        "updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("sentinel_parking_spot_company_code_idx", "companyId", "spot_code"),
+        Index("sentinel_parking_spot_company_zone_idx", "companyId", "zone"),
+        Index("sentinel_parking_spot_company_status_idx", "companyId", "status"),
+    )
+
+
+class SentinelParkingTransaction(Base):
+    """LPR barrier scan transaction records, dwell time, and authorization logging."""
+
+    __tablename__ = "sentinel_parking_transaction"
+
+    transactionId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    vehicleId: Mapped[uuid.UUID | None] = mapped_column(
+        "vehicle_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_vehicle.vehicleId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    spotId: Mapped[uuid.UUID | None] = mapped_column(
+        "spot_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_parking_spot.spotId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    licensePlate: Mapped[str] = mapped_column("license_plate", String(50), nullable=False)
+    province: Mapped[str | None] = mapped_column("province", String(100), nullable=True)
+    entryTime: Mapped[datetime] = mapped_column("entry_time", DateTime(timezone=True), server_default=func.now())
+    exitTime: Mapped[datetime | None] = mapped_column("exit_time", DateTime(timezone=True), nullable=True)
+    dwellMinutes: Mapped[int | None] = mapped_column("dwell_minutes", Integer, nullable=True)
+    gateIn: Mapped[str | None] = mapped_column("gate_in", String(100), nullable=True)
+    gateOut: Mapped[str | None] = mapped_column("gate_out", String(100), nullable=True)
+    entryConfidence: Mapped[float | None] = mapped_column("entry_confidence", Float, nullable=True)
+    exitConfidence: Mapped[float | None] = mapped_column("exit_confidence", Float, nullable=True)
+    entrySnapshotUrl: Mapped[str | None] = mapped_column("entry_snapshot_url", String(500), nullable=True)
+    exitSnapshotUrl: Mapped[str | None] = mapped_column("exit_snapshot_url", String(500), nullable=True)
+    authStatus: Mapped[str] = mapped_column(
+        "auth_status", String(30), nullable=False, default="AUTHORIZED", server_default="AUTHORIZED"
+    )
+    actionTaken: Mapped[str] = mapped_column(
+        "action_taken", String(50), nullable=False, default="BARRIER_OPEN", server_default="BARRIER_OPEN"
+    )
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("sentinel_parking_tx_company_plate_idx", "companyId", "license_plate"),
+        Index("sentinel_parking_tx_company_entry_idx", "companyId", "entry_time"),
+        Index("sentinel_parking_tx_company_status_idx", "companyId", "auth_status"),
+    )
+
+
+class SentinelRfidCard(Base):
+    """Physical RFID cards (Mifare, HID, etc.) linked to employees or visitor passes."""
+
+    __tablename__ = "sentinel_rfid_card"
+
+    cardId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    companyId: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.companyId", ondelete="CASCADE"),
+        nullable=False,
+    )
+    cardNumber: Mapped[str] = mapped_column("card_number", String(100), nullable=False)
+    facilityCode: Mapped[str | None] = mapped_column("facility_code", String(50), nullable=True)
+    cardType: Mapped[str] = mapped_column(
+        "card_type", String(30), nullable=False, default="MIFARE", server_default="MIFARE"
+    )
+    assignedType: Mapped[str] = mapped_column(
+        "assigned_type", String(30), nullable=False, default="EMPLOYEE", server_default="EMPLOYEE"
+    )
+    companyEmployeeId: Mapped[uuid.UUID | None] = mapped_column(
+        "company_employee_id",
+        UUID(as_uuid=True),
+        ForeignKey("company_employee.company_employeeId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    identityId: Mapped[uuid.UUID | None] = mapped_column(
+        "identity_id",
+        UUID(as_uuid=True),
+        ForeignKey("sentinel_identity.identityId", ondelete="SET NULL"),
+        nullable=True,
+    )
+    holderName: Mapped[str | None] = mapped_column("holder_name", String(160), nullable=True)
+    cardStatus: Mapped[str] = mapped_column(
+        "card_status", String(30), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )
+    issuedAt: Mapped[datetime] = mapped_column("issued_at", DateTime(timezone=True), server_default=func.now())
+    expiresAt: Mapped[datetime | None] = mapped_column("expires_at", DateTime(timezone=True), nullable=True)
+    lastSwipedAt: Mapped[datetime | None] = mapped_column("last_swiped_at", DateTime(timezone=True), nullable=True)
+    lastDoor: Mapped[str | None] = mapped_column("last_door", String(100), nullable=True)
+    notes: Mapped[str | None] = mapped_column("notes", Text, nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime(timezone=True), server_default=func.now())
+    updatedAt: Mapped[datetime] = mapped_column(
+        "updated_at", DateTime(timezone=True), default=func.now(), server_default=func.now(), onupdate=func.now()
+    )
+    deletedAt: Mapped[datetime | None] = mapped_column("deleted_at", DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("sentinel_rfid_card_company_number_idx", "companyId", "card_number"),
+        Index("sentinel_rfid_card_company_status_idx", "companyId", "card_status"),
+    )
+
+

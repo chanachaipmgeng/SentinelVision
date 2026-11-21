@@ -1107,5 +1107,7 @@
   "dashboard.status.late": "Late",
   "dashboard.status.outArea": "Out of Area",
   "dashboard.status.checkOut": "Checked Out",
-  "dashboard.status.pending": "Pending"
+  "dashboard.status.pending": "Pending",
+  "Smart parking & LPR": "Smart Parking & LPR",
+  "RFID physical access cards": "RFID Physical Access Cards"
 }

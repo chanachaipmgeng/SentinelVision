@@ -355,4 +355,94 @@ export class SentinelApiService {
         }),
       );
   }
+
+  // =========================================================================
+  // P3: Vehicle & Smart Parking APIs
+  // =========================================================================
+
+  getParkingOverview(companyId: string): Observable<any> {
+    return this.http.get<any>(`${this.base(companyId)}/parking/overview`);
+  }
+
+  getParkingSpots(companyId: string, zone?: string, status?: string): Observable<any[]> {
+    let url = `${this.base(companyId)}/parking/spots`;
+    const params: string[] = [];
+    if (zone) params.push(`zone=${encodeURIComponent(zone)}`);
+    if (status) params.push(`status=${encodeURIComponent(status)}`);
+    if (params.length > 0) url += `?${params.join('&')}`;
+    return this.http.get<any[]>(url);
+  }
+
+  createParkingSpot(companyId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.base(companyId)}/parking/spots`, data);
+  }
+
+  updateParkingSpot(companyId: string, spotId: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.base(companyId)}/parking/spots/${spotId}`, data);
+  }
+
+  deleteParkingSpot(companyId: string, spotId: string): Observable<any> {
+    return this.http.delete<any>(`${this.base(companyId)}/parking/spots/${spotId}`);
+  }
+
+  getVehicles(companyId: string, query?: string, ownerType?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+    let url = `${this.base(companyId)}/vehicles?limit=${limit}&offset=${offset}`;
+    if (query) url += `&query=${encodeURIComponent(query)}`;
+    if (ownerType) url += `&ownerType=${encodeURIComponent(ownerType)}`;
+    return this.http.get<{ items: any[]; total: number }>(url);
+  }
+
+  createVehicle(companyId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.base(companyId)}/vehicles`, data);
+  }
+
+  updateVehicle(companyId: string, vehicleId: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.base(companyId)}/vehicles/${vehicleId}`, data);
+  }
+
+  deleteVehicle(companyId: string, vehicleId: string): Observable<any> {
+    return this.http.delete<any>(`${this.base(companyId)}/vehicles/${vehicleId}`);
+  }
+
+  scanLprBarrier(companyId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.base(companyId)}/parking/lpr-scan`, data);
+  }
+
+  getParkingTransactions(companyId: string, licensePlate?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+    let url = `${this.base(companyId)}/parking/transactions?limit=${limit}&offset=${offset}`;
+    if (licensePlate) url += `&licensePlate=${encodeURIComponent(licensePlate)}`;
+    return this.http.get<{ items: any[]; total: number }>(url);
+  }
+
+  // =========================================================================
+  // P3: RFID Physical Access Card APIs
+  // =========================================================================
+
+  getRfidCards(companyId: string, query?: string, cardStatus?: string, assignedType?: string, limit = 50, offset = 0): Observable<{ items: any[]; total: number }> {
+    let url = `${this.base(companyId)}/rfid-cards?limit=${limit}&offset=${offset}`;
+    if (query) url += `&query=${encodeURIComponent(query)}`;
+    if (cardStatus) url += `&cardStatus=${encodeURIComponent(cardStatus)}`;
+    if (assignedType) url += `&assignedType=${encodeURIComponent(assignedType)}`;
+    return this.http.get<{ items: any[]; total: number }>(url);
+  }
+
+  issueRfidCard(companyId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.base(companyId)}/rfid-cards`, data);
+  }
+
+  updateRfidCard(companyId: string, cardId: string, data: any): Observable<any> {
+    return this.http.put<any>(`${this.base(companyId)}/rfid-cards/${cardId}`, data);
+  }
+
+  updateRfidCardStatus(companyId: string, cardId: string, cardStatus: string, notes?: string): Observable<any> {
+    return this.http.put<any>(`${this.base(companyId)}/rfid-cards/${cardId}/status`, { cardStatus, notes });
+  }
+
+  deleteRfidCard(companyId: string, cardId: string): Observable<any> {
+    return this.http.delete<any>(`${this.base(companyId)}/rfid-cards/${cardId}`);
+  }
+
+  verifyRfidAccess(companyId: string, data: any): Observable<any> {
+    return this.http.post<any>(`${this.base(companyId)}/access/verify-rfid`, data);
+  }
 }

@@ -212,6 +212,16 @@ export const companyRoutes: Routes = [
         import('./fleet-health/fleet-health.component').then((m) => m.FleetHealthComponent),
     },
     {
+      path: 'company/parking',
+      loadComponent: () =>
+        import('./parking/parking.component').then((m) => m.ParkingComponent),
+    },
+    {
+      path: 'company/rfid-cards',
+      loadComponent: () =>
+        import('./rfid-cards/rfid-cards.component').then((m) => m.RfidCardsComponent),
+    },
+    {
       path: 'company/e-map',
       loadComponent: () =>
         import('./e-map/e-map.component').then((m) => m.EMapComponent),

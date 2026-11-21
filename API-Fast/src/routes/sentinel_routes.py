@@ -1022,3 +1022,372 @@ async def receive_dr_replication(request: Request):
     except Exception:
         raise HTTPException(status_code=400, detail="Malformed replication JSON") from None
     return await apply_incoming_replication_event(envelope)
+
+
+# ============================================================================
+# P3: Vehicle LPR & Smart Parking Management Endpoints
+# ============================================================================
+
+
+def _serialize_vehicle(v: Any) -> dict[str, Any]:
+    return {
+        "vehicleId": str(v.vehicleId),
+        "companyId": str(v.companyId),
+        "licensePlate": v.licensePlate,
+        "province": v.province,
+        "vehicleType": v.vehicleType,
+        "brand": v.brand,
+        "model": v.model,
+        "color": v.color,
+        "ownerType": v.ownerType,
+        "ownerName": v.ownerName,
+        "ownerContact": v.ownerContact,
+        "companyEmployeeId": str(v.companyEmployeeId) if v.companyEmployeeId else None,
+        "identityId": str(v.identityId) if v.identityId else None,
+        "status": v.status,
+        "notes": v.notes,
+        "createdAt": v.createdAt.isoformat() if v.createdAt else None,
+        "updatedAt": v.updatedAt.isoformat() if v.updatedAt else None,
+    }
+
+
+def _serialize_spot(s: Any) -> dict[str, Any]:
+    return {
+        "spotId": str(s.spotId),
+        "companyId": str(s.companyId),
+        "spotCode": s.spotCode,
+        "zone": s.zone,
+        "floor": s.floor,
+        "spotType": s.spotType,
+        "isOccupied": s.isOccupied,
+        "occupiedVehicleId": str(s.occupiedVehicleId) if s.occupiedVehicleId else None,
+        "occupiedPlate": s.occupiedPlate,
+        "occupiedSince": s.occupiedSince.isoformat() if s.occupiedSince else None,
+        "status": s.status,
+        "createdAt": s.createdAt.isoformat() if s.createdAt else None,
+        "updatedAt": s.updatedAt.isoformat() if s.updatedAt else None,
+    }
+
+
+def _serialize_parking_tx(tx: Any) -> dict[str, Any]:
+    return {
+        "transactionId": str(tx.transactionId),
+        "companyId": str(tx.companyId),
+        "vehicleId": str(tx.vehicleId) if tx.vehicleId else None,
+        "spotId": str(tx.spotId) if tx.spotId else None,
+        "licensePlate": tx.licensePlate,
+        "province": tx.province,
+        "entryTime": tx.entryTime.isoformat() if tx.entryTime else None,
+        "exitTime": tx.exitTime.isoformat() if tx.exitTime else None,
+        "dwellMinutes": tx.dwellMinutes,
+        "gateIn": tx.gateIn,
+        "gateOut": tx.gateOut,
+        "entryConfidence": tx.entryConfidence,
+        "exitConfidence": tx.exitConfidence,
+        "entrySnapshotUrl": tx.entrySnapshotUrl,
+        "exitSnapshotUrl": tx.exitSnapshotUrl,
+        "authStatus": tx.authStatus,
+        "actionTaken": tx.actionTaken,
+        "createdAt": tx.createdAt.isoformat() if tx.createdAt else None,
+    }
+
+
+def _serialize_rfid_card(c: Any) -> dict[str, Any]:
+    return {
+        "cardId": str(c.cardId),
+        "companyId": str(c.companyId),
+        "cardNumber": c.cardNumber,
+        "facilityCode": c.facilityCode,
+        "cardType": c.cardType,
+        "assignedType": c.assignedType,
+        "companyEmployeeId": str(c.companyEmployeeId) if c.companyEmployeeId else None,
+        "identityId": str(c.identityId) if c.identityId else None,
+        "holderName": c.holderName,
+        "cardStatus": c.cardStatus,
+        "issuedAt": c.issuedAt.isoformat() if c.issuedAt else None,
+        "expiresAt": c.expiresAt.isoformat() if c.expiresAt else None,
+        "lastSwipedAt": c.lastSwipedAt.isoformat() if c.lastSwipedAt else None,
+        "lastDoor": c.lastDoor,
+        "notes": c.notes,
+        "createdAt": c.createdAt.isoformat() if c.createdAt else None,
+        "updatedAt": c.updatedAt.isoformat() if c.updatedAt else None,
+    }
+
+
+@router.get("/company/{companyId}/parking/overview")
+async def get_parking_overview_endpoint(
+    companyId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import get_parking_overview
+
+    await assert_request_company_access(request, db, companyId)
+    return await get_parking_overview(db, companyId)
+
+
+@router.get("/company/{companyId}/parking/spots")
+async def get_parking_spots_endpoint(
+    companyId: UUID,
+    request: Request,
+    zone: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    isOccupied: Optional[bool] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import list_parking_spots
+
+    await assert_request_company_access(request, db, companyId)
+    spots = await list_parking_spots(db, companyId, zone=zone, status_filter=status, is_occupied=isOccupied)
+    return [_serialize_spot(s) for s in spots]
+
+
+@router.post("/company/{companyId}/parking/spots")
+async def create_parking_spot_endpoint(
+    companyId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import upsert_parking_spot
+
+    await assert_request_company_access(request, db, companyId)
+    spot = await upsert_parking_spot(db, companyId, data)
+    return _serialize_spot(spot)
+
+
+@router.put("/company/{companyId}/parking/spots/{spotId}")
+async def update_parking_spot_endpoint(
+    companyId: UUID,
+    spotId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import upsert_parking_spot
+
+    await assert_request_company_access(request, db, companyId)
+    spot = await upsert_parking_spot(db, companyId, data, spot_id=spotId)
+    return _serialize_spot(spot)
+
+
+@router.delete("/company/{companyId}/parking/spots/{spotId}")
+async def delete_parking_spot_endpoint(
+    companyId: UUID,
+    spotId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import delete_parking_spot
+
+    await assert_request_company_access(request, db, companyId)
+    await delete_parking_spot(db, companyId, spotId)
+    return {"success": True, "spotId": str(spotId)}
+
+
+@router.get("/company/{companyId}/vehicles")
+async def get_vehicles_endpoint(
+    companyId: UUID,
+    request: Request,
+    query: Optional[str] = Query(None),
+    ownerType: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import list_vehicles
+
+    await assert_request_company_access(request, db, companyId)
+    vehicles, total = await list_vehicles(
+        db, companyId, query=query, owner_type=ownerType, status_filter=status, limit=limit, offset=offset
+    )
+    return {
+        "items": [_serialize_vehicle(v) for v in vehicles],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.post("/company/{companyId}/vehicles")
+async def create_vehicle_endpoint(
+    companyId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import create_or_update_vehicle
+
+    await assert_request_company_access(request, db, companyId)
+    veh = await create_or_update_vehicle(db, companyId, data)
+    return _serialize_vehicle(veh)
+
+
+@router.put("/company/{companyId}/vehicles/{vehicleId}")
+async def update_vehicle_endpoint(
+    companyId: UUID,
+    vehicleId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import create_or_update_vehicle
+
+    await assert_request_company_access(request, db, companyId)
+    veh = await create_or_update_vehicle(db, companyId, data, vehicle_id=vehicleId)
+    return _serialize_vehicle(veh)
+
+
+@router.delete("/company/{companyId}/vehicles/{vehicleId}")
+async def delete_vehicle_endpoint(
+    companyId: UUID,
+    vehicleId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import delete_vehicle
+
+    await assert_request_company_access(request, db, companyId)
+    await delete_vehicle(db, companyId, vehicleId)
+    return {"success": True, "vehicleId": str(vehicleId)}
+
+
+@router.post("/company/{companyId}/parking/lpr-scan")
+async def post_lpr_scan_endpoint(
+    companyId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import lpr_barrier_scan
+
+    await assert_request_company_access(request, db, companyId)
+    return await lpr_barrier_scan(db, companyId, data)
+
+
+@router.get("/company/{companyId}/parking/transactions")
+async def get_parking_transactions_endpoint(
+    companyId: UUID,
+    request: Request,
+    licensePlate: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.parking_service import list_parking_transactions
+
+    await assert_request_company_access(request, db, companyId)
+    txs, total = await list_parking_transactions(
+        db, companyId, license_plate=licensePlate, limit=limit, offset=offset
+    )
+    return {
+        "items": [_serialize_parking_tx(tx) for tx in txs],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+# ============================================================================
+# P3: RFID Physical Access Card Management Endpoints
+# ============================================================================
+
+
+@router.get("/company/{companyId}/rfid-cards")
+async def get_rfid_cards_endpoint(
+    companyId: UUID,
+    request: Request,
+    query: Optional[str] = Query(None),
+    cardStatus: Optional[str] = Query(None),
+    assignedType: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import list_rfid_cards
+
+    await assert_request_company_access(request, db, companyId)
+    cards, total = await list_rfid_cards(
+        db, companyId, query=query, card_status=cardStatus, assigned_type=assignedType, limit=limit, offset=offset
+    )
+    return {
+        "items": [_serialize_rfid_card(c) for c in cards],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.post("/company/{companyId}/rfid-cards")
+async def create_rfid_card_endpoint(
+    companyId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import issue_or_update_rfid_card
+
+    await assert_request_company_access(request, db, companyId)
+    card = await issue_or_update_rfid_card(db, companyId, data)
+    return _serialize_rfid_card(card)
+
+
+@router.put("/company/{companyId}/rfid-cards/{cardId}")
+async def update_rfid_card_endpoint(
+    companyId: UUID,
+    cardId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import issue_or_update_rfid_card
+
+    await assert_request_company_access(request, db, companyId)
+    card = await issue_or_update_rfid_card(db, companyId, data, card_id=cardId)
+    return _serialize_rfid_card(card)
+
+
+@router.put("/company/{companyId}/rfid-cards/{cardId}/status")
+async def update_rfid_card_status_endpoint(
+    companyId: UUID,
+    cardId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import update_rfid_card_status
+
+    await assert_request_company_access(request, db, companyId)
+    new_status = data.get("cardStatus") or data.get("status") or "ACTIVE"
+    notes = data.get("notes")
+    card = await update_rfid_card_status(db, companyId, cardId, new_status, notes=notes)
+    return _serialize_rfid_card(card)
+
+
+@router.delete("/company/{companyId}/rfid-cards/{cardId}")
+async def delete_rfid_card_endpoint(
+    companyId: UUID,
+    cardId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import delete_rfid_card
+
+    await assert_request_company_access(request, db, companyId)
+    await delete_rfid_card(db, companyId, cardId)
+    return {"success": True, "cardId": str(cardId)}
+
+
+@router.post("/company/{companyId}/access/verify-rfid")
+async def verify_rfid_access_endpoint(
+    companyId: UUID,
+    request: Request,
+    data: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+):
+    from ..services.rfid_service import verify_rfid_access
+
+    await assert_request_company_access(request, db, companyId)
+    return await verify_rfid_access(db, companyId, data)
+

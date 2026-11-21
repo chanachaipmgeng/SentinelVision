@@ -1107,5 +1107,7 @@
   "dashboard.status.late": "สาย",
   "dashboard.status.outArea": "นอกพื้นที่",
   "dashboard.status.checkOut": "ออกงาน",
-  "dashboard.status.pending": "รอนุมัติ"
+  "dashboard.status.pending": "รอนุมัติ",
+  "Smart parking & LPR": "ลานจอดรถอัจฉริยะและ LPR",
+  "RFID physical access cards": "บัตรผ่านทางกายภาพ RFID"
 }

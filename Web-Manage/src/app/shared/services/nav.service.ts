@@ -323,6 +323,16 @@ export class NavService implements OnDestroy {
             title: 'Access Control & IoT Relay settings',
             type: 'link',
           },
+          {
+            path: '/company/parking',
+            title: 'Smart parking & LPR',
+            type: 'link',
+          },
+          {
+            path: '/company/rfid-cards',
+            title: 'RFID physical access cards',
+            type: 'link',
+          },
         ],
       },
 

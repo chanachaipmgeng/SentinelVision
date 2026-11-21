@@ -17,7 +17,6 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { CheckinMapComponent } from '../../../shared/components/checkin-map/checkin-map.component';
 import { SetupChecklistComponent } from '../../../shared/components/setup-checklist/setup-checklist.component';
 import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizard/welcome-wizard.component';
-import { environment } from '../../../../environments/environment';
 import { ShellUiService } from '../../../shared/services/shell-ui.service';
 import { AuthedImageService } from '../../../shared/services/authed-image.service';
 import {

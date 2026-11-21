@@ -9,7 +9,6 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException, status
-import qrcode
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +17,8 @@ from ..models.sentinel import SentinelEvent, SentinelEventRegistration, Sentinel
 
 def _generate_qr_data_url(data: str) -> Optional[str]:
     try:
+        import qrcode
+
         qr = qrcode.QRCode(box_size=6, border=2)
         qr.add_data(data)
         qr.make(fit=True)

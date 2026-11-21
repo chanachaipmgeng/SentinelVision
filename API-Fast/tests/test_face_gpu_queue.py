@@ -25,14 +25,16 @@ async def _reset_queue():
 async def test_priority_checkin_before_detect():
     release = threading.Event()
     markers: dict[str, float] = {}
-    t0 = time.monotonic()
+    order: list[str] = []
+    t0 = time.perf_counter()
 
     def hold():
         release.wait(timeout=2.0)
 
     def mark(name: str):
         def work():
-            markers[name] = time.monotonic() - t0
+            order.append(name)
+            markers[name] = time.perf_counter() - t0
             time.sleep(0.01)
             return name
 
@@ -55,7 +57,8 @@ async def test_priority_checkin_before_detect():
     release.set()
     await hold_task
     await asyncio.gather(detect_task, check_task)
-    assert markers["c"] < markers["d"]
+    assert order == ["c", "d"]
+    assert markers["c"] <= markers["d"]
 
 
 @pytest.mark.asyncio

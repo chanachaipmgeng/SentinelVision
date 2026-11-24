@@ -29,6 +29,8 @@ API-Fast/**/*.webp
 # YOLOv8 ONNX weights (download via scripts/download_yolov8n_onnx.py)
 API-Fast/models/*.onnx
 !API-Fast/models/.gitkeep
+# Legacy face-api.js frontend models (server uses InsightFace buffalo_l on GPU)
+Web-Manage/src/assets/models/
 
 # Scratch spreadsheets & load-test result dumps (keep curated reports under docs/)
 API-Fast/*.xlsx
@@ -52,12 +54,22 @@ venv/
 
 # Logs & OS
 *.log
+_ci_*.log
+*.log.*
 .DS_Store
 Thumbs.db
+desktop.ini
+ehthumbs.db
 
 # IDE
 .idea/
 .vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Local overrides
+docker-compose.override.yml
+*.local.env
 
 # Media dumps
 *.mp4
@@ -69,6 +81,9 @@ Thumbs.db
 backups/
 
 .playwright-mcp/
+test-results/
+playwright-report/
+blob-report/
 Web-Manage/test-results/
 Web-Manage/playwright-report/
 Web-Manage/blob-report/
@@ -93,6 +108,8 @@ docker/nginx/ssl/
 docker/nginx/certs/
 
 # Python caches, test & coverage artifacts
+.hypothesis/
+API-Fast/.hypothesis/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

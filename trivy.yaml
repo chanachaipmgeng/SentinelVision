@@ -17,8 +17,6 @@ scan:
     - API-Fast/enrolled_images
     - API-Fast/uploaded_images
     - API-Fast/temp_images
-    # Face detection model protos (60 MB text) — nothing to scan, slows the secret scanner down.
-    - Web-Manage/src/assets/models
   skip-files:
     # Vendored icon-font package shipped as a static asset; its dev lockfile is never installed.
     - Web-Manage/src/assets/iconfonts/boxicons/package-lock.json

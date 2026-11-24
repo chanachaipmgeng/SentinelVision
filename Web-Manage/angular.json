@@ -64,9 +64,6 @@
               {
                 "glob": "**/*",
                 "input": "src/assets",
-                "ignore": [
-                  "**/models/**"
-                ],
                 "output": "/assets"
               },
               "src/favicon.ico",

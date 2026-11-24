@@ -17,6 +17,3 @@ scan:
     - API-Fast/enrolled_images
     - API-Fast/uploaded_images
     - API-Fast/temp_images
-  skip-files:
-    # Vendored icon-font package shipped as a static asset; its dev lockfile is never installed.
-    - Web-Manage/src/assets/iconfonts/boxicons/package-lock.json

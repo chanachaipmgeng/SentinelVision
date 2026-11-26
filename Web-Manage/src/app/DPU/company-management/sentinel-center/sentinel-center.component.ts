@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -40,6 +40,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
  */
 @Component({
     selector: 'app-sentinel-center',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         FormsModule,
@@ -68,8 +69,15 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
         <div class="flex flex-col gap-1">
           <div class="flex items-center gap-2">
             <span class="sv-live-badge">
-              <span class="sv-live-dot"></span>
-              <span>REALTIME ENGINE • ENTERPRISE BIOMETRIC SECURITY</span>
+              <span
+                class="sv-live-dot"
+                [ngClass]="{
+                  '!bg-emerald-400': wsStatus === 'connected',
+                  '!bg-amber-400': wsStatus === 'reconnecting',
+                  '!bg-slate-400': wsStatus === 'offline'
+                }"
+              ></span>
+              <span>REALTIME ENGINE • {{ wsStatus === 'connected' ? 'LIVE WS' : (wsStatus === 'reconnecting' ? 'RECONNECTING' : 'STANDBY') }}</span>
             </span>
           </div>
           <div class="flex items-baseline gap-2 mt-0.5">
@@ -96,6 +104,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
             class="sv-card-btn"
             (click)="reloadOverview()"
             [disabled]="isLoading"
+            [attr.aria-label]="'sentinel.command.refresh' | translate"
             [title]="'sentinel.command.refresh' | translate"
           >
             <i class="ri-refresh-line" [class.animate-spin]="isLoading"></i>
@@ -119,7 +128,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('command')"
             >
               <i class="ri-radar-line"></i>
-              <span>ศูนย์เฝ้าระวัง &amp; ตรวจจับใบหน้าสด (Live Monitor)</span>
+              <span>{{ 'sentinel.tabs.command' | translate }}</span>
             </button>
             <button
               type="button"
@@ -128,7 +137,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('watchlist')"
             >
               <i class="ri-shield-user-line"></i>
-              <span>Watchlist / Blacklist &amp; VIP</span>
+              <span>{{ 'sentinel.tabs.watchlist' | translate }}</span>
             </button>
             <button
               type="button"
@@ -137,7 +146,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('access')"
             >
               <i class="ri-door-lock-line"></i>
-              <span>Access Control &amp; โซนประตู</span>
+              <span>{{ 'sentinel.tabs.access' | translate }}</span>
             </button>
             <button
               type="button"
@@ -146,7 +155,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('visitors')"
             >
               <i class="ri-user-shared-line"></i>
-              <span>ผู้มาติดต่อ (Visitor Pass)</span>
+              <span>{{ 'sentinel.tabs.visitors' | translate }}</span>
             </button>
             <button
               type="button"
@@ -155,7 +164,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('events')"
             >
               <i class="ri-ticket-2-line"></i>
-              <span>งานอีเวนต์ &amp; สัมมนา</span>
+              <span>{{ 'sentinel.tabs.events' | translate }}</span>
             </button>
             <button
               type="button"
@@ -164,7 +173,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('muster')"
             >
               <i class="ri-Broadcast-line"></i>
-              <span>เช็คยอดคนในอาคาร &amp; Edge AI</span>
+              <span>{{ 'sentinel.tabs.muster' | translate }}</span>
             </button>
             <button
               type="button"
@@ -173,7 +182,7 @@ import { SentinelGraphPanelComponent } from './panels/sentinel-graph-panel.compo
               (click)="setTab('graph')"
             >
               <i class="ri-node-tree"></i>
-              <span>Investigation Graph</span>
+              <span>{{ 'sentinel.tabs.graph' | translate }}</span>
             </button>
           </nav>
           <div *ngIf="moduleScoped" class="flex flex-wrap items-center justify-between gap-3 w-full">
@@ -279,8 +288,13 @@ export class SentinelCenterComponent implements OnInit {
   overview: SentinelOverview | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private incidentWs: WebSocket | null = null;
   private wsClosedByComponent = false;
+  private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private wsToastTimer: ReturnType<typeof setTimeout> | null = null;
+  private wsReconnectAttempts = 0;
+  wsStatus: 'connected' | 'reconnecting' | 'offline' = 'offline';
 
   constructor(
     private api: SentinelApiService,
@@ -326,6 +340,7 @@ export class SentinelCenterComponent implements OnInit {
         if (tab && LEGACY_TAB_REDIRECTS[tab]) {
           this.router.navigateByUrl(LEGACY_TAB_REDIRECTS[tab], { replaceUrl: true });
         }
+        this.cdr.markForCheck();
       });
 
     if (this.companyId) {
@@ -334,18 +349,40 @@ export class SentinelCenterComponent implements OnInit {
     }
     this.destroyRef.onDestroy(() => {
       this.wsClosedByComponent = true;
+      this.clearWsTimers();
       this.incidentWs?.close();
       this.incidentWs = null;
+      this.wsStatus = 'offline';
     });
   }
 
+  private clearWsTimers(): void {
+    if (this.wsReconnectTimer !== null) {
+      clearTimeout(this.wsReconnectTimer);
+      this.wsReconnectTimer = null;
+    }
+    if (this.wsToastTimer !== null) {
+      clearTimeout(this.wsToastTimer);
+      this.wsToastTimer = null;
+    }
+  }
+
   private connectIncidentStream(): void {
-    if (!this.companyId || typeof WebSocket === 'undefined') return;
+    if (!this.companyId || this.wsClosedByComponent || typeof WebSocket === 'undefined') return;
+    if (this.wsReconnectTimer !== null) {
+      clearTimeout(this.wsReconnectTimer);
+      this.wsReconnectTimer = null;
+    }
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${proto}//${window.location.host}/sentinel/ws/incidents/${this.companyId}`;
     try {
       const ws = new WebSocket(url);
       this.incidentWs = ws;
+      ws.onopen = () => {
+        this.wsReconnectAttempts = 0;
+        this.wsStatus = 'connected';
+        this.cdr.markForCheck();
+      };
       ws.onmessage = (evt: MessageEvent) => {
         try {
           const msg = JSON.parse(String(evt.data || '{}'));
@@ -359,41 +396,67 @@ export class SentinelCenterComponent implements OnInit {
           // ignore malformed frames
         }
       };
-      ws.onclose = () => {
-        if (!this.wsClosedByComponent) {
-          setTimeout(() => {
-            if (!this.wsClosedByComponent) this.connectIncidentStream();
-          }, 5000);
+      ws.onclose = (evt: CloseEvent) => {
+        this.incidentWs = null;
+        if (this.wsClosedByComponent || evt.code === 4401 || evt.code === 4403) {
+          this.wsStatus = 'offline';
+          this.cdr.markForCheck();
+          return;
         }
+        this.wsStatus = 'reconnecting';
+        const baseDelay = Math.min(30000, 2000 * Math.pow(2, this.wsReconnectAttempts));
+        const jitter = Math.floor(Math.random() * 500);
+        this.wsReconnectAttempts = Math.min(this.wsReconnectAttempts + 1, 8);
+        this.cdr.markForCheck();
+        this.wsReconnectTimer = setTimeout(() => {
+          this.wsReconnectTimer = null;
+          if (!this.wsClosedByComponent) this.connectIncidentStream();
+        }, baseDelay + jitter);
       };
     } catch {
-      // fallback silently when WS is unavailable
+      this.wsStatus = 'offline';
+      this.cdr.markForCheck();
     }
   }
 
   setTab(tab: SentinelTab): void {
     if (this.moduleScoped) return;
     this.activeTab = tab;
+    this.cdr.markForCheck();
   }
 
   showToast(msg: string): void {
     this.toastMessage = msg;
-    setTimeout(() => {
-      if (this.toastMessage === msg) this.toastMessage = '';
+    this.cdr.markForCheck();
+    if (this.wsToastTimer !== null) {
+      clearTimeout(this.wsToastTimer);
+    }
+    this.wsToastTimer = setTimeout(() => {
+      this.wsToastTimer = null;
+      if (this.toastMessage === msg) {
+        this.toastMessage = '';
+        this.cdr.markForCheck();
+      }
     }, 4000);
   }
 
   reloadOverview(): void {
     if (!this.companyId) return;
     this.isLoading = true;
-    this.api.getOverview(this.companyId).subscribe({
-      next: (res) => {
-        this.overview = res;
-        this.isLoading = false;
-      },
-      error: () => {
-        this.isLoading = false;
-      },
-    });
+    this.cdr.markForCheck();
+    this.api
+      .getOverview(this.companyId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.overview = res;
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoading = false;
+          this.cdr.markForCheck();
+        },
+      });
   }
 }

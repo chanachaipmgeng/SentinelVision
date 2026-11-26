@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
-import swal from 'sweetalert';
+import swal from '../../../../shared/utils/vault-swal';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import { downloadMusterCsv } from '../sentinel.helpers';

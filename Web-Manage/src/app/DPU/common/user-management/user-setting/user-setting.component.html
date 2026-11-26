@@ -19,7 +19,7 @@
         <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn" (click)="deleteSelect()">
           <i class="ri-delete-bin-line"></i><span>{{ 'Delete' | translate }}</span>
         </button>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()">
           <i class="ri-add-line"></i><span>เพิ่มสมาชิก</span>
         </button>
       </ng-container>
@@ -85,7 +85,7 @@
                   </td>
                   <td class="text-end">
                     <div class="inline-flex gap-2">
-                      <button type="button" class="dpu-icon-btn" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                      <button type="button" class="dpu-icon-btn" (click)="view(item)"><i class="ri-pencil-line"></i></button>
                       <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" (click)="delete(item)"><i class="ri-delete-bin-line"></i></button>
                     </div>
                   </td>
@@ -100,74 +100,70 @@
   </div>
 </div>
 
-<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold">{{ action === 'edit' ? 'แก้ไขสมาชิก' : 'เพิ่มสมาชิก' }}</h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem]" data-hs-overlay="#modal-detail" #closeModal>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body px-4">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 text-center">
-            <span class="avatar avatar-xxl avatar-rounded">
-              <img [src]="selectModel.getPicture()" alt="">
-              <span class="badge rounded-full bg-primary avatar-badge">
-                <input ng2FileSelect [uploader]="uploaderProfile" type="file" accept="image/*" class="absolute w-full h-full opacity-0">
-                <i class="fe fe-camera text-[.625rem]"></i>
-              </span>
-            </span>
-          </div>
-          <div class="col-span-12">
-            <label class="form-label">Username</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.username">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">Password</label>
-            <input type="password" class="form-control" [(ngModel)]="selectModel.password">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" [(ngModel)]="confirmPassword">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Name' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.firstName">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Last name' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.lastName">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Email' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.email">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Mobile' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.phoneNumber">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">บทบาท</label>
-            <ng-select [(ngModel)]="selectModel.role" [clearable]="false" [appendTo]="'body'">
-              <ng-option [value]="0">ผู้ใช้งานทั่วไป</ng-option>
-              <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
-            </ng-select>
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Status' | translate }}</label>
-            <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
-              <ng-option [value]="0">{{ 'Unactive' | translate }}</ng-option>
-              <ng-option [value]="1">{{ 'Active' | translate }}</ng-option>
-            </ng-select>
-          </div>
-        </div>
-      </div>
-      <div class="ti-modal-footer">
-        <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">{{ 'Cancel' | translate }}</button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
-      </div>
+<app-surface-modal
+  modalId="modal-detail"
+  [open]="showModal"
+  [title]="action === 'edit' ? 'แก้ไขสมาชิก' : 'เพิ่มสมาชิก'"
+  icon="ri-user-settings-line"
+  size="xl"
+  [closeOnBackdrop]="false"
+  (closed)="closeModal()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12 text-center">
+      <span class="avatar avatar-xxl avatar-rounded">
+        <img [src]="selectModel.getPicture()" alt="">
+        <span class="badge rounded-full bg-primary avatar-badge">
+          <input ng2FileSelect [uploader]="uploaderProfile" type="file" accept="image/*" class="absolute w-full h-full opacity-0">
+          <i class="ri-camera-line text-[.625rem]"></i>
+        </span>
+      </span>
+    </div>
+    <div class="col-span-12">
+      <label class="form-label">Username</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.username">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">Password</label>
+      <input type="password" class="form-control sv-input" [(ngModel)]="selectModel.password">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">Confirm Password</label>
+      <input type="password" class="form-control sv-input" [(ngModel)]="confirmPassword">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Name' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.firstName">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Last name' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.lastName">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Email' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.email">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Mobile' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.phoneNumber">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">บทบาท</label>
+      <ng-select [(ngModel)]="selectModel.role" [clearable]="false" [appendTo]="'body'">
+        <ng-option [value]="0">ผู้ใช้งานทั่วไป</ng-option>
+        <ng-option [value]="1">ผู้ดูแลบริษัท</ng-option>
+      </ng-select>
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Status' | translate }}</label>
+      <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
+        <ng-option [value]="0">{{ 'Unactive' | translate }}</ng-option>
+        <ng-option [value]="1">{{ 'Active' | translate }}</ng-option>
+      </ng-select>
     </div>
   </div>
-</div>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light" (click)="closeModal()">{{ 'Cancel' | translate }}</button>
+    <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
+  </ng-container>
+</app-surface-modal>

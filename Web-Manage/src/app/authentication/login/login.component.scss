@@ -866,16 +866,52 @@
 
 @media (max-width: 575.98px) {
   .dpu-login__wrapper {
-    padding: 1rem;
+    padding: 0.75rem 1rem 1.25rem;
+  }
+
+  .dpu-login__topbar {
+    margin-bottom: 0.75rem;
+  }
+
+  .dpu-login__grid {
+    gap: 1rem;
+  }
+
+  .dpu-login__hud-badge {
+    margin-bottom: 0.45rem;
   }
 
   .dpu-login__hud-title {
-    font-size: 1.75rem;
+    font-size: 1.45rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .dpu-login__hud-desc {
+    display: none;
+  }
+
+  .dpu-auth__brand img {
+    height: 2rem;
+    margin-bottom: 0.35rem;
   }
 
   .dpu-auth__panel {
-    padding: 1.75rem 1.25rem 1.5rem;
+    padding: 1.25rem 1.1rem 1.15rem;
   }
+
+  .dpu-login__mode-switch {
+    margin-bottom: 0.85rem;
+  }
+
+  .dpu-login__form-fields {
+    gap: 0.7rem;
+  }
+}
+
+.dpu-login__btn:disabled,
+.dpu-auth__submit:disabled {
+  cursor: not-allowed !important;
+  opacity: 0.55;
 }
 
 @media (prefers-reduced-motion: reduce) {

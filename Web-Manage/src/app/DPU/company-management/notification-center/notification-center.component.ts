@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -8,6 +9,7 @@ import { EmptyStateComponent } from '../../../shared/components/empty-state/empt
 import { SharedModule } from '../../../shared/shared.module';
 import { TokenService } from '../../../shared/services/token.service';
 import { TranslateModule } from '@ngx-translate/core';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import {
   DeadLetterRow,
   InboxNotification,
@@ -40,6 +42,8 @@ interface EventCatalogOption {
     encapsulation: ViewEncapsulation.None
 })
 export class NotificationCenterComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   companyId = '';
   activeTab: Tab = 'inbox';
   loading = false;
@@ -128,7 +132,7 @@ export class NotificationCenterComponent implements OnInit {
     if (!this.companyId) return;
     this.loading = true;
     if (this.activeTab === 'inbox') {
-      this.http.get<InboxNotification[]>(`/notifications/company/${this.companyId}/inbox`).subscribe({
+      this.http.get<InboxNotification[]>(`/notifications/company/${this.companyId}/inbox`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (rows) => {
           this.inbox = rows || [];
           this.applyInboxFilter();
@@ -137,7 +141,7 @@ export class NotificationCenterComponent implements OnInit {
         error: () => (this.loading = false),
       });
     } else if (this.activeTab === 'dead-letter') {
-      this.http.get<DeadLetterRow[]>(`/notifications/company/${this.companyId}/dead-letter`).subscribe({
+      this.http.get<DeadLetterRow[]>(`/notifications/company/${this.companyId}/dead-letter`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (rows) => {
           this.deadLetter = rows || [];
           this.loading = false;
@@ -149,7 +153,7 @@ export class NotificationCenterComponent implements OnInit {
         .get<(DeadLetterRow & { status?: string; sentAt?: string | null })[]>(
           `/notifications/company/${this.companyId}/outbox?limit=100`,
         )
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (rows) => {
             this.outboxHistory = rows || [];
             this.loading = false;
@@ -157,7 +161,7 @@ export class NotificationCenterComponent implements OnInit {
           error: () => (this.loading = false),
         });
     } else if (this.activeTab === 'prefs') {
-      this.http.get<NotificationPrefs>(`/notifications/company/${this.companyId}/preferences/me`).subscribe({
+      this.http.get<NotificationPrefs>(`/notifications/company/${this.companyId}/preferences/me`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (p) => {
           this.prefs = { ...this.prefs, ...(p || {}) };
           this.mutedRaw = (this.prefs.mutedEvents || []).join('\n');
@@ -168,7 +172,7 @@ export class NotificationCenterComponent implements OnInit {
     } else if (this.activeTab === 'templates') {
       this.http
         .get<NotificationTemplatesView>(`/notifications/company/${this.companyId}/templates`)
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (t) => {
             this.templates = t || this.templates;
             this.loading = false;
@@ -202,13 +206,13 @@ export class NotificationCenterComponent implements OnInit {
     if (!id) return;
     this.http
       .post(`/notifications/company/${this.companyId}/inbox/${id}/read`, {})
-      .subscribe(() => this.reload());
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
   }
 
   markAllRead(): void {
     this.http
       .post(`/notifications/company/${this.companyId}/inbox/read-all`, {})
-      .subscribe(() => this.reload());
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
   }
 
   retryDead(row: DeadLetterRow): void {
@@ -216,7 +220,7 @@ export class NotificationCenterComponent implements OnInit {
     if (!id) return;
     this.http
       .post(`/notifications/company/${this.companyId}/dead-letter/${id}/retry`, {})
-      .subscribe(() => this.reload());
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload());
   }
 
   i18nEntries(): { event: string; key: string }[] {
@@ -233,7 +237,7 @@ export class NotificationCenterComponent implements OnInit {
     this.prefsSavedMsg = '';
     this.http
       .put(`/notifications/company/${this.companyId}/preferences/me`, this.prefs)
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.prefsSavedMsg = 'บันทึกค่ากำหนดการแจ้งเตือนแล้ว';
           this.reload();
@@ -294,7 +298,7 @@ export class NotificationCenterComponent implements OnInit {
         eventKey: this.customDraft.eventKey,
         bodyTemplate: this.customDraft.bodyTemplate,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.livePreviewText = res.rendered || '';
           this.previewLoading = false;
@@ -317,13 +321,20 @@ export class NotificationCenterComponent implements OnInit {
     this.updateLivePreview();
   }
 
-  deleteCustomTemplate(t: NotificationTemplateRow): void {
-    if (!t.templateId || !confirm(`ต้องการลบ Custom Template '${t.eventKey}' และรีเซ็ตกลับเป็นค่าเริ่มต้นหรือไม่?`)) {
+  async deleteCustomTemplate(t: NotificationTemplateRow): Promise<void> {
+    if (!t.templateId) return;
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'ลบ Custom Template',
+      message: `ต้องการลบ Custom Template '${t.eventKey}' และรีเซ็ตกลับเป็นค่าเริ่มต้นหรือไม่?`,
+      variant: 'danger',
+      confirmText: 'ลบและรีเซ็ต',
+    });
+    if (!confirmed) {
       return;
     }
     this.http
       .delete(`/notifications/company/${this.companyId}/templates/${t.templateId}`)
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.reload();
           this.loadDefaultTemplateForCurrentEvent();
@@ -343,7 +354,7 @@ export class NotificationCenterComponent implements OnInit {
         subject: this.customDraft.subject.trim(),
         bodyTemplate: this.customDraft.bodyTemplate.trim(),
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.reload();
         },

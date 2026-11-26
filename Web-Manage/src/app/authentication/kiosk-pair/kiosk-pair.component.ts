@@ -2,31 +2,44 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../shared/services/auth.service';
 import { KioskSession, TokenService } from '../../shared/services/token.service';
 import { CompanyModel } from '../../DPU/models/company.model';
 
 /**
- * Kiosk pairing screen. The admin creates a device under HR → Security and reads the one-time
- * code aloud / types it here. The device-scoped token pair never appears in a URL; it is kept in
- * sessionStorage for this tab only and refreshed via /auth/kiosk/refresh.
+ * Kiosk pairing screen. The admin creates a device under HR → Security and types the one-time
+ * code here. The device-scoped token pair never appears in a URL; it is kept in sessionStorage
+ * for this tab only and refreshed via /auth/kiosk/refresh.
  */
 @Component({
-    selector: 'app-kiosk-pair',
-    imports: [CommonModule, FormsModule, RouterModule],
-    template: `
+  selector: 'app-kiosk-pair',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule, TranslateModule],
+  template: `
     <div class="dpu-pair">
-      <div class="dpu-pair__card">
-        <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="IVAP" class="dpu-pair__logo" />
+      <header class="dpu-pair__topbar">
+        <a routerLink="/" class="dpu-pair__back">
+          <i class="ri-arrow-left-line"></i>
+          <span>{{ lang === 'th' ? 'กลับสู่หน้าหลัก' : 'Back to Home' }}</span>
+        </a>
+        <div class="dpu-pair__lang" role="group" aria-label="Language selection">
+          <button type="button" [class.is-active]="lang === 'th'" (click)="setLang('th')">TH</button>
+          <span>/</span>
+          <button type="button" [class.is-active]="lang === 'en'" (click)="setLang('en')">EN</button>
+        </div>
+      </header>
+
+      <main id="main-content" class="dpu-pair__card" tabindex="-1">
+        <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="Sentinel by IVAP" class="dpu-pair__logo" />
         <p class="dpu-pair__byline">Sentinel by IVAP</p>
-        <h1 class="dpu-pair__title">จับคู่ตู้ Kiosk</h1>
+        <h1 class="dpu-pair__title">{{ 'kioskPair.title' | translate }}</h1>
         <p class="dpu-pair__subtitle">
-          กรอกรหัสจับคู่ 8 หลักที่ผู้ดูแลระบบสร้างจากเมนู HR &rarr; ความปลอดภัย &rarr; ตู้ Kiosk
-          (รหัสใช้ได้ครั้งเดียวและหมดอายุใน {{ ttlMinutes }} นาที)
+          {{ 'kioskPair.subtitle' | translate: { ttl: ttlMinutes } }}
         </p>
 
         <form (ngSubmit)="pair()" autocomplete="off">
-          <label for="pairing-code" class="dpu-pair__label">รหัสจับคู่</label>
+          <label for="pairing-code" class="dpu-pair__label">{{ 'kioskPair.codeLabel' | translate }}</label>
           <input
             id="pairing-code"
             class="dpu-pair__input"
@@ -49,46 +62,89 @@ import { CompanyModel } from '../../DPU/models/company.model';
             @if (busy) {
               <span class="dpu-pair__spinner"></span>
             }
-            จับคู่อุปกรณ์
+            {{ 'kioskPair.submit' | translate }}
           </button>
         </form>
 
         <p class="dpu-pair__hint">
-          เมื่อจับคู่แล้ว แท็บเล็ตนี้จะเข้าถึงได้เฉพาะหน้าสแกนใบหน้าของบริษัทที่ผูกไว้เท่านั้น
-          หากปิดแท็บ จะต้องขอรหัสจับคู่ใหม่จากผู้ดูแลระบบ
+          {{ 'kioskPair.hint' | translate }}
         </p>
-        <a routerLink="/auth/login" class="dpu-pair__link">เข้าสู่ระบบในฐานะผู้ดูแลแทน</a>
-      </div>
+        <a routerLink="/auth/login" class="dpu-pair__link">{{ 'kioskPair.adminLogin' | translate }}</a>
+      </main>
     </div>
   `,
-    styles: [
-        `
+  styles: [
+    `
       :host { display: block; min-height: 100vh; }
       .dpu-pair {
         min-height: 100vh;
-        display: grid;
-        place-items: center;
-        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        gap: 1rem;
         background:
-          radial-gradient(circle at 20% 20%, rgba(15, 118, 110, 0.35), transparent 45%),
-          radial-gradient(circle at 80% 80%, rgba(94, 234, 212, 0.18), transparent 50%),
-          #042f2e;
-        color: #ecfeff;
+          radial-gradient(ellipse 80% 55% at 50% -10%, rgba(20, 184, 166, 0.22), transparent 60%),
+          radial-gradient(circle at 85% 85%, rgba(6, 182, 212, 0.12), transparent 50%),
+          #04080f;
+        color: #f1f5f9;
         font-family: inherit;
+      }
+      .dpu-pair__topbar {
+        width: min(28rem, 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+      }
+      .dpu-pair__back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: #94a3b8;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s ease;
+      }
+      .dpu-pair__back:hover { color: #5eead4; }
+      .dpu-pair__lang {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: #64748b;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        padding: 0.25rem 0.6rem;
+      }
+      .dpu-pair__lang button {
+        border: 0;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0.15rem 0.3rem;
+        border-radius: 9999px;
+      }
+      .dpu-pair__lang button.is-active {
+        color: #041217;
+        background: #2dd4bf;
       }
       .dpu-pair__card {
         width: min(28rem, 100%);
-        padding: 2rem 2rem 1.5rem;
+        padding: 2rem 1.75rem 1.5rem;
         border-radius: 1.25rem;
         border: 1px solid transparent;
         background:
-          linear-gradient(180deg, rgba(4, 47, 46, 0.88), rgba(2, 24, 23, 0.82)) padding-box,
-          linear-gradient(180deg, rgba(94, 234, 212, 0.5), rgba(255, 255, 255, 0.08) 45%, transparent) border-box;
-        backdrop-filter: blur(16px) saturate(1.15);
-        -webkit-backdrop-filter: blur(16px) saturate(1.15);
+          linear-gradient(180deg, rgba(10, 18, 30, 0.92), rgba(5, 10, 18, 0.96)) padding-box,
+          linear-gradient(180deg, rgba(45, 212, 191, 0.45), rgba(255, 255, 255, 0.08) 45%, transparent) border-box;
+        backdrop-filter: blur(18px) saturate(1.15);
+        -webkit-backdrop-filter: blur(18px) saturate(1.15);
         box-shadow:
           0 1px 0 rgba(255, 255, 255, 0.08) inset,
-          0 24px 60px rgba(0, 0, 0, 0.35);
+          0 24px 60px rgba(0, 0, 0, 0.5);
         text-align: center;
       }
       .dpu-pair__logo { height: 2.4rem; margin: 0 auto 0.55rem; }
@@ -98,41 +154,41 @@ import { CompanyModel } from '../../DPU/models/company.model';
         font-weight: 700;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: rgba(204, 251, 241, 0.82);
+        color: #5eead4;
       }
-      .dpu-pair__title { margin: 0 0 0.5rem; font-size: 1.6rem; font-weight: 800; }
-      .dpu-pair__subtitle { margin: 0 0 1.5rem; font-size: 0.9rem; color: rgba(236, 254, 255, 0.78); line-height: 1.5; }
-      .dpu-pair__label { display: block; text-align: start; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.35rem; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(236, 254, 255, 0.7); }
+      .dpu-pair__title { margin: 0 0 0.5rem; font-size: 1.55rem; font-weight: 800; color: #f8fafc; }
+      .dpu-pair__subtitle { margin: 0 0 1.4rem; font-size: 0.88rem; color: #cbd5e1; line-height: 1.55; }
+      .dpu-pair__label { display: block; text-align: start; font-size: 0.78rem; font-weight: 700; margin-bottom: 0.35rem; letter-spacing: 0.04em; text-transform: uppercase; color: #94a3b8; }
       .dpu-pair__input {
         width: 100%;
-        padding: 0.9rem 1rem;
+        padding: 0.85rem 1rem;
         border-radius: 0.85rem;
-        border: 1px solid rgba(94, 234, 212, 0.4);
-        background: rgba(255, 255, 255, 0.06);
-        color: #fff;
-        font-size: 1.9rem;
+        border: 1px solid rgba(45, 212, 191, 0.35);
+        background: rgba(15, 23, 42, 0.7);
+        color: #f8fafc;
+        font-size: 1.75rem;
         font-weight: 800;
-        letter-spacing: 0.35em;
+        letter-spacing: 0.3em;
         text-align: center;
         text-transform: uppercase;
         font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       }
       .dpu-pair__input:focus {
         outline: none;
-        border-color: #5eead4;
-        box-shadow: 0 0 0 4px rgba(94, 234, 212, 0.25), 0 0 22px -4px rgba(45, 212, 191, 0.45);
-        background: rgba(255, 255, 255, 0.09);
+        border-color: #2dd4bf;
+        box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.2), 0 0 22px -4px rgba(20, 184, 166, 0.45);
+        background: rgba(15, 23, 42, 0.9);
       }
-      .dpu-pair__error { margin: 0.75rem 0 0; color: #fecaca; font-size: 0.85rem; font-weight: 600; }
+      .dpu-pair__error { margin: 0.75rem 0 0; color: #fca5a5; font-size: 0.85rem; font-weight: 600; }
       .dpu-pair__btn {
         width: 100%;
-        margin-top: 1.25rem;
+        margin-top: 1.2rem;
         padding: 0.9rem 1rem;
         border: 0;
         border-radius: 999px;
         background: linear-gradient(135deg, #0f766e, #14b8a6);
         color: #fff;
-        font-size: 1rem;
+        font-size: 0.98rem;
         font-weight: 800;
         cursor: pointer;
         display: inline-flex;
@@ -147,19 +203,23 @@ import { CompanyModel } from '../../DPU/models/company.model';
         filter: brightness(1.05);
         box-shadow: 0 8px 28px -2px rgba(20, 184, 166, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.28);
       }
-      .dpu-pair__btn:disabled { opacity: 0.55; cursor: not-allowed; }
+      .dpu-pair__btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed !important;
+      }
       .dpu-pair__spinner {
         width: 1rem; height: 1rem; border-radius: 50%;
         border: 2px solid rgba(255, 255, 255, 0.4); border-top-color: #fff;
         animation: dpu-spin 0.8s linear infinite;
       }
       @keyframes dpu-spin { to { transform: rotate(360deg); } }
-      .dpu-pair__hint { margin: 1.25rem 0 0.5rem; font-size: 0.78rem; color: rgba(236, 254, 255, 0.62); line-height: 1.5; }
-      .dpu-pair__link { font-size: 0.8rem; color: #5eead4; text-decoration: underline; }
+      .dpu-pair__hint { margin: 1.15rem 0 0.55rem; font-size: 0.78rem; color: #94a3b8; line-height: 1.5; }
+      .dpu-pair__link { font-size: 0.82rem; color: #5eead4; text-decoration: underline; }
     `,
-    ]
+  ],
 })
 export class KioskPairComponent implements OnInit, OnDestroy {
+  lang = 'th';
   code = '';
   error = '';
   busy = false;
@@ -169,9 +229,13 @@ export class KioskPairComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private tokenService: TokenService,
     private router: Router,
+    private translate: TranslateService,
   ) {}
 
   ngOnInit(): void {
+    const saved = localStorage.getItem('dpu-lang') || localStorage.getItem('sv_lang');
+    this.lang = saved === 'en' ? 'en' : (this.translate.currentLang || this.translate.defaultLang || 'th');
+    this.translate.use(this.lang);
     document.documentElement.classList.add('dpu-kiosk-mode');
     if (this.tokenService.isKioskSession()) {
       this.router.navigate(['/company/timestamp-face']);
@@ -180,6 +244,17 @@ export class KioskPairComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     document.documentElement.classList.remove('dpu-kiosk-mode');
+  }
+
+  setLang(code: 'th' | 'en'): void {
+    this.lang = code;
+    this.translate.use(code);
+    try {
+      localStorage.setItem('dpu-lang', code);
+      localStorage.setItem('sv_lang', code);
+    } catch {
+      /* ignore */
+    }
   }
 
   normalized(): string {
@@ -213,13 +288,13 @@ export class KioskPairComponent implements OnInit, OnDestroy {
         this.busy = false;
         const detail = err?.error?.detail;
         if (err?.status === 429) {
-          this.error = 'พยายามจับคู่บ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
+          this.error = this.translate.instant('kioskPair.errorRateLimit');
         } else if (typeof detail === 'string' && /expired/i.test(detail)) {
-          this.error = 'รหัสจับคู่หมดอายุแล้ว กรุณาขอรหัสใหม่จากผู้ดูแลระบบ';
+          this.error = this.translate.instant('kioskPair.errorExpired');
         } else if (typeof detail === 'string' && /revoked/i.test(detail)) {
-          this.error = 'อุปกรณ์นี้ถูกเพิกถอนสิทธิ์แล้ว กรุณาลงทะเบียนอุปกรณ์ใหม่';
+          this.error = this.translate.instant('kioskPair.errorRevoked');
         } else {
-          this.error = 'รหัสจับคู่ไม่ถูกต้องหรือถูกใช้ไปแล้ว';
+          this.error = this.translate.instant('kioskPair.errorInvalid');
         }
       },
     });

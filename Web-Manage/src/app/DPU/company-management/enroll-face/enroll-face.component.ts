@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild, OnInit } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, NgZone, OnDestroy, ViewChild, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap, RouterModule } from '@angular/router';
+import swal from '../../../shared/utils/vault-swal';
 import { environment } from '../../../../environments/environment';
 import { CommonModule } from '@angular/common';
 import { Subscription, combineLatest } from 'rxjs';
@@ -37,7 +39,6 @@ import type { CameraFailureKind } from './camera';
 import {
   boxCenterDist,
   drawSmoothOverlay,
-  iou,
   lerpBox,
   matchScore as matchScoreHelper,
   nmsBoxes as nmsBoxesHelper,
@@ -73,17 +74,38 @@ import {
   isWatchlistChrome,
   resolveStationRouteContext,
   shouldEnableDoorRelay,
-  stationModeBusyCountLabel,
   stationModeBusyLabel,
   stationModeCaptureHint,
   stationModeDeniedLabel,
   stationModeDeniedMessage,
   stationModeEmptyHint,
-  stationModeOutcomeLabel,
   stationModeRequiresGps,
   stationModeTitle,
-  stationModeTtsKey,
 } from '../scan-hub/scan-station-mode';
+import {
+  describeGeolocationErrorCode,
+  filterLocationsWithinRadius,
+  haversineDistanceKm,
+} from './kiosk-geo.service';
+import {
+  CheckInApiResponse,
+  CheckInFeedItem,
+  FaceTrack,
+  KioskAttendance,
+  KioskPunchMode,
+  KioskRosterPerson,
+  KioskWsDetectMessage,
+  buildCheckInFeedRecord,
+  buildKioskStatusMessage,
+  mergeOverlappingFaceTracks,
+  resolveStationModeHudUpdate,
+} from './kiosk-check-in.helpers';
+export type {
+  CheckInFeedItem,
+  KioskAttendance,
+  KioskPunchMode,
+  KioskRosterPerson,
+} from './kiosk-check-in.helpers';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FocusTrapDirective } from '../../../shared/directives/focus-trap.directive';
 import { LocaleFormatService } from '../../../shared/services/locale-format.service';
@@ -96,134 +118,6 @@ import { SentinelEventRule, SentinelZone } from '../sentinel-center/sentinel.mod
 /** GPU pending depth at/above this enters degraded mode (slower detect + banner). */
 const KIOSK_DEGRADED_QUEUE_PENDING = 8;
 
-export type KioskPunchMode = 'AUTO' | 'CHECK_IN' | 'BREAK_OUT' | 'BREAK_IN' | 'CHECK_OUT';
-
-interface KioskWsDetectMessage {
-  frameWidth?: number;
-  frameHeight?: number;
-  faces?: Array<Record<string, unknown>>;
-  queue?: { pending?: number };
-}
-
-interface CheckInMember {
-  fullName?: string;
-  firstName?: string;
-  lastName?: string;
-  memberId?: string;
-  username?: string;
-}
-
-interface CheckInEmployee {
-  fullName?: string;
-  firstName?: string;
-  employeeId?: string;
-  department?: string;
-  position?: string;
-  member?: CheckInMember;
-}
-
-interface CheckInTimestamp {
-  timestampType?: number | string;
-  isLate?: boolean;
-  lateMinutes?: number;
-  overtimeMinutes?: number;
-  timestamp?: string;
-  photoTimestamp?: string | null;
-  photoUrl?: string;
-  locationName?: string;
-  timestampId?: string;
-}
-
-/** HTTP identify / check-in / modular station payloads (shape varies by mode). */
-interface CheckInApiResponse {
-  employee?: CheckInEmployee;
-  member?: CheckInMember;
-  timestamp?: CheckInTimestamp;
-  subjectName?: string;
-  memberId?: string;
-  confidencePercent?: number;
-  distance?: number;
-  matchQuality?: string | null;
-  isWarning?: boolean;
-  accessGranted?: boolean;
-  decision?: string;
-  identityType?: string;
-  welcomeMessage?: string;
-  seatNumber?: string | number;
-  duplicate?: boolean;
-}
-
-export interface CheckInFeedItem {
-  id: string;
-  employeeName: string;
-  employeeId: string;
-  department: string;
-  position: string;
-  statusLabel: string;
-  statusKind: 'success' | 'warning' | 'error' | 'info';
-  locationName: string;
-  timestamp: Date;
-  photoUrl: string | null;
-  message: string;
-  confidencePercent?: number | null;
-  matchQuality?: string | null;
-  distance?: number | null;
-  timestampType?: number;
-  isLate?: boolean;
-  lateMinutes?: number;
-  overtimeMinutes?: number;
-}
-
-export interface KioskRosterPerson {
-  company_employeeId: string;
-  employeeId: string;
-  employeeName: string;
-  picture?: string | null;
-  department?: string;
-  position?: string;
-  timestamp?: string | Date;
-  timestampType?: number;
-  locationName?: string;
-  photoTimestamp?: string | null;
-  approvalStatus?: string;
-  isLate?: boolean;
-  lateMinutes?: number;
-  overtimeMinutes?: number;
-}
-
-export interface KioskAttendance {
-  summary: {
-    checkedInCount: number;
-    inAreaCount: number;
-    checkedOutCount?: number;
-    outsideCount: number;
-    lateCount?: number;
-    day?: string;
-  };
-  checkedIn: KioskRosterPerson[];
-}
-
-type TrackPhase = 'watching' | 'capturing' | 'checking_in' | 'done' | 'cooldown';
-
-interface FaceTrack {
-  id: number;
-  box: SmoothBox;
-  /** Latest raw detection; render loop eases `box` toward this each frame. */
-  targetBox: SmoothBox;
-  firstSeenAt: number;
-  lastSeenAt: number;
-  label: string | null;
-  memberId: string | null;
-  confidence: number | null;
-  phase: TrackPhase;
-  lastIdentifyAt: number;
-  identifyInFlight: boolean;
-  captureFrames: string[];
-  captureTimer: ReturnType<typeof setInterval> | null;
-  retryAfter: number;
-  statusText: string | null;
-}
-
 @Component({
     selector: 'app-enroll-face',
     imports: [CommonModule, FormsModule, SharedModule, RouterModule, TranslateModule, FocusTrapDirective],
@@ -231,6 +125,7 @@ interface FaceTrack {
     styleUrl: './enroll-face.component.scss'
 })
 export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   @ViewChild('video') video!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvas') canvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('clockTime') clockTimeEl?: ElementRef<HTMLElement>;
@@ -574,7 +469,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       .post(`/sentinel/company/${this.companyId}/zones/${this.zoneId}/trigger`, {
         reason: 'kiosk_emergency_unlock',
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.doorStatus = 'unlocked';
           this.notify('สั่งปลดล็อกประตูฉุกเฉินแล้ว', 'info');
@@ -592,7 +487,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   /** Forget the device session on this tablet (admin must issue a new pairing code). */
   unpairKiosk(): void {
     this.destroyWs = true;
-    this.authService.logout(this.tokenService.getRefreshToken()).subscribe({
+    this.authService.logout(this.tokenService.getRefreshToken()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.tokenService.signOut(),
       error: () => this.tokenService.signOut(),
     });
@@ -692,9 +587,9 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   ngOnInit() {
     document.documentElement.classList.add('dpu-kiosk-mode');
     this.applyLargeTextClass();
-    this.imageSub = this.authedImages.loaded$.subscribe(() => this.cdr.detectChanges());
+    this.imageSub = this.authedImages.loaded$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.cdr.detectChanges());
     // Keep chrome/mode in sync when Angular reuses this component across scan routes.
-    this.routeCtxSub = combineLatest([this.route.paramMap, this.route.queryParamMap]).subscribe(
+    this.routeCtxSub = combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(
       ([params, query]) => this.onStationRouteParams(params, query),
     );
     this.getCurrentLocation();
@@ -770,7 +665,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       .get<{ hmacKey?: string }>(
         `${environment.baseUrl}/timestamp/company/${this.companyId}/offline-sync-key`,
       )
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           if (res?.hmacKey) {
             this.offlineHmacKey = res.hmacKey;
@@ -852,7 +747,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
                 longitude: row.longitude,
                 note: row.note || 'Face kiosk offline HMAC sync',
               })
-              .subscribe({
+              .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
                 next: () => resolve(),
                 error: (err) => reject(err),
               });
@@ -883,7 +778,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
           formData.append('totpOrPin', row.totpOrPin);
         }
         await new Promise<void>((resolve, reject) => {
-          this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
+          this.http.post(environment.baseUrl + this.checkInEndpoint, formData).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: () => resolve(),
             error: (err) => reject(err),
           });
@@ -922,7 +817,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       .get<{ version?: string; textTh?: string; textEn?: string }>(
         `/hr/company/${this.companyId}/pdpa/consent-policy`,
       )
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (policy) => {
         this.consentPolicy = policy || null;
         const accepted = sessionStorage.getItem(this.consentStorageKey());
@@ -965,7 +860,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     if (!this.companyId) {
       return;
     }
-    this.moduleConfig.getModuleConfig(this.companyId).subscribe({
+    this.moduleConfig.getModuleConfig(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (cfg) => {
         this.enableDoorRelayOnAttendance = !!cfg.scanActionRules?.enableDoorRelayOnAttendance;
         // `/company/timestamp-face` has no :stationMode — keep ATTENDANCE chrome, but honor
@@ -992,7 +887,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       return;
     }
     if (this.showAccessChrome || this.showVisitorChrome) {
-      this.http.get<SentinelZone[]>(`/sentinel/company/${this.companyId}/zones`).subscribe({
+      this.http.get<SentinelZone[]>(`/sentinel/company/${this.companyId}/zones`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (rows) => {
           this.zones = (rows || []).map((z) => ({
             zoneId: z.zoneId,
@@ -1008,7 +903,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       });
     }
     if (this.showEventChrome) {
-      this.http.get<SentinelEventRule[]>(`/sentinel/company/${this.companyId}/events`).subscribe({
+      this.http.get<SentinelEventRule[]>(`/sentinel/company/${this.companyId}/events`).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (rows) => {
           this.events = (rows || []).map((e) => ({
             eventId: e.eventId,
@@ -1061,7 +956,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   }
 
   private loadTtsSettings(): void {
-    this.systemSettingService.getTtsSettings().subscribe({
+    this.systemSettingService.getTtsSettings().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (settings) => {
         this.ttsSettings = settings;
       },
@@ -1136,7 +1031,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   }
 
   getCompanyLocation() {
-    this.comLocationService.getLists(this.companyId).subscribe((result) => {
+    this.comLocationService.getLists(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
       this.locationList = result;
       this.getCurrentLocation();
     });
@@ -1485,42 +1380,20 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   }
 
   private buildStatusMessage(): string {
-    if (this.adminPreviewMode) {
-      return 'Admin preview — ไม่มีกล้อง; ตรวจ layout / status pills ได้';
-    }
-    if (this.cameraFailed) {
-      return this.cameraRecoveryTitle || 'ไม่สามารถเปิดกล้องได้ — ดูขั้นตอนด้านล่าง';
-    }
-    if (this.gpsRequired && !this.hasValidLocation) {
-      return this.errorMessage
-        ? `รอ GPS: ${this.errorMessage}`
-        : 'กำลังขอพิกัดจากเบราว์เซอร์ — ยังไม่สแกนจนกว่าได้ GPS';
-    }
-    if (this.tracks.length === 0) {
-      const serverDetect = this.wsConnected && Date.now() >= this.serverDetectPausedUntil;
-      const link = this.wsConnected
-        ? serverDetect
-          ? 'ตรวจจับด้วย GPU เซิร์ฟเวอร์'
-          : 'stream เชื่อมแล้ว'
-        : 'stream กำลังเชื่อม...';
-      return `โหมด stream (${link}) — เดินผ่านกล้องได้หลายคน`;
-    }
-    const names = this.tracks
-      .map((t) => t.label)
-      .filter((n): n is string => !!n)
-      .slice(0, 3);
-    const busy = this.checkingInCount;
-    const parts: string[] = [`พบ ${this.tracks.length} ใบหน้า`];
-    if (names.length) {
-      parts.push(names.join(', '));
-    }
-    if (busy > 0) {
-      parts.push(stationModeBusyCountLabel(this.stationMode, busy));
-    }
-    if (this.queuePending > 0) {
-      parts.push(`คิว GPU ${this.queuePending}`);
-    }
-    return parts.join(' · ');
+    return buildKioskStatusMessage({
+      adminPreviewMode: this.adminPreviewMode,
+      cameraFailed: this.cameraFailed,
+      cameraRecoveryTitle: this.cameraRecoveryTitle,
+      gpsRequired: this.gpsRequired,
+      hasValidLocation: this.hasValidLocation,
+      errorMessage: this.errorMessage,
+      tracks: this.tracks,
+      wsConnected: this.wsConnected,
+      serverDetectActive: this.wsConnected && Date.now() >= this.serverDetectPausedUntil,
+      checkingInCount: this.checkingInCount,
+      stationMode: this.stationMode,
+      queuePending: this.queuePending,
+    });
   }
 
   private kioskWsUrl(): string {
@@ -1617,7 +1490,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     // Rotation: the refresh token we hold is single-use; the server returns a new pair.
     this.authService
       .refreshSession(refresh.replace('Bearer ', ''), this.tokenService.isKioskSession())
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (tokens) => {
           if (tokens.accessToken) {
             this.tokenService.saveToken(tokens.accessToken);
@@ -1765,29 +1638,11 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
 
   /** Apply modular scan payload fields (door / VIP / event seat) onto kiosk HUD state. */
   private applyStationModeResult(response: CheckInApiResponse | null | undefined): void {
-    if (!response) {
-      return;
-    }
-    if (response.accessGranted === true || response.decision === 'ACCESS_GRANTED') {
-      this.doorStatus = 'unlocked';
-    } else if (response.accessGranted === false || response.decision === 'ACCESS_DENIED') {
-      this.doorStatus = 'denied';
-    } else if (this.doorRelayEnabled && !response.duplicate) {
-      // UNIFIED_HYBRID / enableDoorRelayOnAttendance: attendance success implies relay attempt.
-      this.doorStatus = 'unlocked';
-    }
-
-    const identityType = String(response.identityType || '').toUpperCase();
-    if (identityType === 'VIP' || response.decision === 'VIP_GREET') {
-      this.vipArrivalName =
-        response.subjectName || response.employee?.fullName || response.member?.fullName || 'VIP';
-    }
-    if (response.welcomeMessage) {
-      this.welcomeBanner = String(response.welcomeMessage);
-    }
-    if (response.seatNumber != null && response.seatNumber !== '') {
-      this.seatNumber = String(response.seatNumber);
-    }
+    const hud = resolveStationModeHudUpdate(response, this.doorRelayEnabled);
+    if (hud.doorStatus) this.doorStatus = hud.doorStatus;
+    if (hud.vipArrivalName) this.vipArrivalName = hud.vipArrivalName;
+    if (hud.welcomeBanner) this.welcomeBanner = hud.welcomeBanner;
+    if (hud.seatNumber) this.seatNumber = hud.seatNumber;
   }
 
   private updateTracks(detections: SmoothBox[], now: number) {
@@ -1881,49 +1736,12 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
 
   /** Collapse ghost tracks that still overlap after a motion miss. */
   private mergeOverlappingTracks(): void {
-    if (this.tracks.length <= 1) {
-      return;
-    }
-    const drop = new Set<number>();
-    for (let i = 0; i < this.tracks.length; i++) {
-      if (drop.has(this.tracks[i].id)) {
-        continue;
+    this.tracks = mergeOverlappingFaceTracks(this.tracks, this.trackMergeIou, (lose) => {
+      if (lose.captureTimer) {
+        clearInterval(lose.captureTimer);
+        lose.captureTimer = null;
       }
-      for (let j = i + 1; j < this.tracks.length; j++) {
-        if (drop.has(this.tracks[j].id)) {
-          continue;
-        }
-        const a = this.tracks[i];
-        const b = this.tracks[j];
-        if (iou(a.targetBox, b.targetBox) < this.trackMergeIou && iou(a.box, b.box) < this.trackMergeIou) {
-          continue;
-        }
-        // Keep the richer / older track.
-        const keepA =
-          (a.memberId ? 1 : 0) !== (b.memberId ? 1 : 0)
-            ? !!a.memberId
-            : a.firstSeenAt <= b.firstSeenAt;
-        const keep = keepA ? a : b;
-        const lose = keepA ? b : a;
-        if (!keep.memberId && lose.memberId) {
-          keep.memberId = lose.memberId;
-          keep.label = lose.label;
-          keep.confidence = lose.confidence;
-          keep.phase = lose.phase;
-        } else if (!keep.label && lose.label) {
-          keep.label = lose.label;
-          keep.confidence = lose.confidence ?? keep.confidence;
-        }
-        if (lose.captureTimer) {
-          clearInterval(lose.captureTimer);
-          lose.captureTimer = null;
-        }
-        drop.add(lose.id);
-      }
-    }
-    if (drop.size > 0) {
-      this.tracks = this.tracks.filter((t) => !drop.has(t.id));
-    }
+    });
   }
 
   private drawAllTracks(displaySize: { width: number; height: number }) {
@@ -2031,7 +1849,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     formData.append('file', this.dataURLtoFile(dataUrl, `live_${trackId}.jpg`));
     formData.append('companyId', this.companyId);
     formData.append('stationMode', this.stationMode);
-    this.http.post(environment.baseUrl + `/face/members/identify`, formData).subscribe({
+    this.http.post(environment.baseUrl + `/face/members/identify`, formData).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         const body = response as CheckInApiResponse;
         const t = this.tracks.find((x) => x.id === trackId);
@@ -2171,7 +1989,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       formData.append('totpOrPin', this.totpOrPin);
     }
 
-    this.http.post(environment.baseUrl + this.checkInEndpoint, formData).subscribe({
+    this.http.post(environment.baseUrl + this.checkInEndpoint, formData).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response) => {
         this.checkInInFlight = Math.max(0, this.checkInInFlight - 1);
         const body = response as {
@@ -2239,163 +2057,41 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     isDuplicate = false,
   ) {
     this.applyStationModeResult(response);
-    const employee = response.employee || {};
-    const member = response.member || employee.member || {};
-    // Prefer subjectName from modular decision engine when present.
-    if (response.subjectName && !employee.fullName && !member.fullName) {
-      employee.fullName = response.subjectName;
-    }
-    const ts = response.timestamp || {};
-    const tsTypeRaw = ts.timestampType;
-    const tsTypeNum =
-      typeof tsTypeRaw === 'number'
-        ? tsTypeRaw
-        : typeof tsTypeRaw === 'string' && /^\d+$/.test(tsTypeRaw)
-          ? Number(tsTypeRaw)
-          : tsTypeRaw === 'WARNING' || tsTypeRaw === 'Warning'
-            ? 0
-            : tsTypeRaw === 'CHECK_OUT'
-              ? 2
-              : tsTypeRaw === 'BREAK_OUT'
-                ? 4
-                : tsTypeRaw === 'BREAK_IN'
-                  ? 5
-                  : 1;
-    const isWarning = !!response.isWarning || tsTypeNum === 0;
-    const isCheckOut = tsTypeNum === 2;
-    const isBreakOut = tsTypeNum === 4;
-    const isBreakIn = tsTypeNum === 5;
-    const isLate = !!ts.isLate;
-    const lateMinutes = Number(ts.lateMinutes || 0);
-    const overtimeMinutes = Number(ts.overtimeMinutes || 0);
-    const employeeName =
-      employee.fullName ||
-      member.fullName ||
-      `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
-      track?.label ||
-      'พนักงาน';
-    const firstName =
-      (member.firstName || employee.firstName || employeeName.split(/\s+/)[0] || '').trim();
-    const employeeCode = employee.employeeId || member.username || '';
-    const confidencePercent = Number(
-      response.confidencePercent ?? ((1 - Number(response.distance || 0)) * 100),
-    );
-    const time = ts.timestamp ? new Date(ts.timestamp) : new Date();
-    const timeLabel = time.toLocaleTimeString('th', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    const resolved = buildCheckInFeedRecord({
+      response,
+      frames,
+      trackLabel: track?.label,
+      trackMemberId: track?.memberId,
+      stationMode: this.stationMode,
+      showAttendancePanel: this.showAttendancePanel,
+      isDuplicate,
+      baseUrl: environment.baseUrl || '',
+      resolveAuthedImage: (file) => this.authedImage(file),
     });
-    const photoFile = ts.photoTimestamp || null;
-    const photoUrl = photoFile
-      ? this.authedImage(photoFile)
-      : frames.length
-        ? frames[Math.floor(frames.length / 2)]
-        : ts.photoUrl
-          ? `${environment.baseUrl || ''}${ts.photoUrl}`.replace(/([^:]\/)\/+/g, '$1')
-          : null;
 
     if (track) {
       track.phase = isDuplicate ? 'cooldown' : 'done';
-      track.label = employeeName;
-      track.memberId = response.memberId || member.memberId || track.memberId;
-      track.confidence = Number.isFinite(confidencePercent) ? confidencePercent : track.confidence;
+      track.label = resolved.employeeName;
+      track.memberId = resolved.memberId;
+      track.confidence = Number.isFinite(resolved.confidencePercent)
+        ? resolved.confidencePercent
+        : track.confidence;
     }
 
-    const attendanceLabel = isWarning
-      ? 'Warning — นอกพื้นที่'
-      : isCheckOut
-        ? overtimeMinutes > 0
-          ? `ออกงาน (OT ${overtimeMinutes} นาที)`
-          : 'ลงเวลาออกงาน'
-        : isBreakOut
-          ? 'พักนอก (Break-Out)'
-          : isBreakIn
-            ? 'พักเข้า (Break-In)'
-            : isLate && lateMinutes > 0
-              ? `เข้างาน (สาย ${lateMinutes} นาที)`
-              : 'ลงเวลาเข้างาน';
-
-    const outcomeKind = isDuplicate
-      ? 'duplicate'
-      : isWarning
-        ? 'warning'
-        : response.accessGranted === false ||
-            String(response.decision || '').toUpperCase() === 'ACCESS_DENIED'
-          ? 'denied'
-          : 'success';
-
-    const statusLabel = stationModeOutcomeLabel(this.stationMode, outcomeKind, {
-      decision: response.decision,
-      accessGranted: response.accessGranted,
-      identityType: response.identityType,
-      welcomeMessage: response.welcomeMessage,
-      seatNumber: response.seatNumber,
-      attendanceLabel: isDuplicate
-        ? isWarning
-          ? 'บันทึกแล้ว (Warning)'
-          : 'ลงเวลาไปแล้ว'
-        : attendanceLabel,
-    });
-
-    let statusKind: CheckInFeedItem['statusKind'] =
-      outcomeKind === 'denied'
-        ? 'error'
-        : isWarning || isLate
-          ? 'warning'
-          : 'success';
-    if (isBreakOut || isBreakIn || isDuplicate) {
-      statusKind = 'info';
-    }
-
-    const item: CheckInFeedItem = {
-      id: ts.timestampId || `${Date.now()}`,
-      employeeName,
-      employeeId: employee.employeeId || member.username || '-',
-      department: employee.department || '-',
-      position: employee.position || '-',
-      statusLabel,
-      statusKind,
-      locationName:
-        ts.locationName ||
-        (isWarning && this.showAttendancePanel ? 'นอกพื้นที่ลงเวลา' : '-'),
-      timestamp: time,
-      photoUrl,
-      message: `${employeeName} · ${timeLabel}`,
-      confidencePercent: Number.isFinite(confidencePercent) ? confidencePercent : null,
-      matchQuality: response.matchQuality ?? null,
-      distance: response.distance != null ? Number(response.distance) : null,
-      timestampType: tsTypeNum,
-      isLate,
-      lateMinutes,
-      overtimeMinutes,
-    };
-
-    this.prependFeed(item);
+    this.prependFeed(resolved.item);
     if (isDuplicate) {
       playDuplicateBeep();
-    } else if (isWarning || outcomeKind === 'denied') {
+    } else if (resolved.isWarning || resolved.outcomeKind === 'denied') {
       playWarningBeep();
     } else {
       playCheckInBeep();
     }
-    const speechKey: TtsTemplateKey = stationModeTtsKey(
-      this.stationMode,
-      isDuplicate ? 'duplicate' : isWarning ? 'warning' : 'success',
-    );
-    this.speakCheckIn(speechKey, {
-      name: employeeName,
-      firstName,
-      employeeId: employeeCode,
+    this.speakCheckIn(resolved.speechKey, {
+      name: resolved.employeeName,
+      firstName: resolved.firstName,
+      employeeId: resolved.employeeCode,
     });
-    this.notify(
-      isDuplicate
-        ? `${employeeName} ${statusLabel} (ไม่บันทึกซ้ำ)`
-        : isWarning
-          ? `Warning: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`
-          : `${statusLabel}: ${employeeName} (${item.confidencePercent?.toFixed(1) ?? '-'}%)`,
-      isDuplicate ? 'info' : isWarning || outcomeKind === 'denied' ? 'warning' : 'success',
-    );
+    this.notify(resolved.toastMessage, resolved.toastKind);
   }
 
   /** Crop face from live video using box in display (canvas) coordinates. */
@@ -2430,7 +2126,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     if (!this.companyId) return;
     this.http
       .get<KioskAttendance>(`${environment.baseUrl}/face/kiosk-attendance/${this.companyId}`)
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (data) => {
           this.ngZone.run(() => {
             this.attendance = data;
@@ -2533,8 +2229,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       text: 'กรุณากรอกรหัส PIN ผู้ดูแล (ค่าเริ่มต้น: 1234)',
       content: { element: 'input', attributes: { type: 'password', placeholder: 'PIN 4-6 หลัก' } } as never,
       buttons: ['ยกเลิก', 'ปลดล็อก'],
-    }).then((val: string | null) => {
-      if (val === null) return;
+    }).then((val) => {
+      if (val === null || val === false || val === undefined) return;
       if (String(val).trim() === expectedPin) {
         this.modeNavLocked = false;
         this.notify('ปลดล็อกแถบสลับโหมดแล้ว', 'success');
@@ -2553,8 +2249,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       text: 'สำหรับพนักงานที่ยังไม่ยินยอมข้อมูลใบหน้า PDPA — กรอกรหัสพนักงาน',
       content: { element: 'input', attributes: { type: 'text', placeholder: 'เช่น EMP-001' } } as never,
       buttons: ['ยกเลิก', 'ลงเวลา'],
-    }).then((code: string | null) => {
-      const empCode = String(code || '').trim();
+    }).then((code) => {
+      const empCode = typeof code === 'string' ? code.trim() : '';
       if (!empCode) return;
       this.http
         .post<{ employeeName?: string; employeeCode?: string }>(
@@ -2567,7 +2263,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
             note: 'PIN_FALLBACK_KIOSK',
           },
         )
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (res) => {
             this.notify(`ลงเวลาสำเร็จ: ${res?.employeeName || empCode} (PIN Fallback)`, 'success');
           },
@@ -2627,21 +2323,7 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
       (position) => this.ngZone.run(() => this.applyGeoPosition(position)),
       (error) => {
         this.ngZone.run(() => {
-          let message = 'ขอตำแหน่งไม่สำเร็จ';
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              message = 'ผู้ใช้ปฏิเสธการแชร์ตำแหน่ง — อนุญาต Location ในเบราว์เซอร์';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              message = 'อ่านตำแหน่งไม่ได้ (เครื่องไม่มี GPS / สัญญาณไม่พอ)';
-              break;
-            case error.TIMEOUT:
-              message = 'ขอตำแหน่งหมดเวลา — กด Retry GPS หรือรีเฟรชหน้า';
-              break;
-            default:
-              message = 'ขอตำแหน่งไม่สำเร็จ';
-          }
-          this.applyGeoFailure(message, error);
+          this.applyGeoFailure(describeGeolocationErrorCode(error.code), error);
         });
       },
       options,
@@ -2659,22 +2341,8 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
     }
   }
 
-  private toRad(value: number): number {
-    return (value * Math.PI) / 180;
-  }
-
   getDistance(lat1: string, lon1: string, lat2: string, lon2: string): number {
-    const R = 6371;
-    const dLat = this.toRad(parseFloat(lat2) - parseFloat(lat1));
-    const dLon = this.toRad(parseFloat(lon2) - parseFloat(lon1));
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(parseFloat(lat1))) *
-        Math.cos(this.toRad(parseFloat(lat2))) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    return haversineDistanceKm(lat1, lon1, lat2, lon2);
   }
 
   searchCompanyLocation() {
@@ -2682,14 +2350,10 @@ export class EnrollFaceComponent implements AfterViewInit, OnDestroy, OnInit {
   }
 
   getFilteredLocations(): CompanyLocationModel[] {
-    return this.locationList.filter((location) => {
-      const distance = this.getDistance(
-        this.location.latitude.toString(),
-        this.location.longitude.toString(),
-        location.latitude.toString(),
-        location.longitude.toString(),
-      );
-      return distance <= location.radius;
-    });
+    return filterLocationsWithinRadius(
+      this.location.latitude,
+      this.location.longitude,
+      this.locationList,
+    );
   }
 }

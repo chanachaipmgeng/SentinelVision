@@ -2,7 +2,7 @@
 
 <div class="dpu-list-page notification-center">
   <app-page-toolbar [title]="'Notification Center' | translate"></app-page-toolbar>
-  <p class="text-sm text-dpu-muted mb-4">กล่องแจ้งเตือนในแอป · Dead-letter · ค่ากำหนดส่วนตัว</p>
+  <p class="text-sm text-dpu-muted mb-4">{{ 'notifications.page.subtitle' | translate }}</p>
 
   <div class="flex flex-wrap gap-2 mb-4">
     <button
@@ -47,7 +47,7 @@
     </button>
   </div>
 
-  <app-empty-state *ngIf="loading" [loading]="true" message="กำลังโหลด…"></app-empty-state>
+  <app-empty-state *ngIf="loading" [loading]="true" [message]="'notifications.page.loading' | translate"></app-empty-state>
 
   <div *ngIf="!loading && activeTab === 'inbox'" class="box modern-card glass card-surface">
     <div class="box-header flex flex-wrap justify-between items-center gap-2">
@@ -55,12 +55,12 @@
       <div class="flex flex-wrap gap-2 items-center">
         <input
           type="search"
-          class="form-control"
+          class="form-control sv-input"
           style="min-width: 12rem"
           [(ngModel)]="searchTerm"
           (ngModelChange)="applyInboxFilter()"
-          placeholder="ค้นหาแจ้งเตือน..."
-          aria-label="ค้นหาแจ้งเตือน"
+          [placeholder]="'notifications.page.searchPlaceholder' | translate"
+          [attr.aria-label]="'notifications.page.searchAria' | translate"
         />
         <button type="button" class="ti-btn ti-btn-light" (click)="markAllRead()">
           {{ 'Mark all read' | translate }}

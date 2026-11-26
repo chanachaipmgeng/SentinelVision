@@ -108,7 +108,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.lang = this.translate.currentLang || this.translate.defaultLang || localStorage.getItem('sv_lang') || 'th';
+    const storedLang = localStorage.getItem('dpu-lang') || localStorage.getItem('sv_lang');
+    this.lang = storedLang === 'en' ? 'en' : (this.translate.currentLang || this.translate.defaultLang || 'th');
+    this.translate.use(this.lang);
     this.loginForm = this.formBuilder.group({
       username: ['', Validators.required],
       password: ['', Validators.required],
@@ -126,7 +128,9 @@ export class LoginComponent implements OnInit, OnDestroy {
   setLang(code: string): void {
     this.lang = code;
     this.translate.use(code);
+    this.tickClock();
     try {
+      localStorage.setItem('dpu-lang', code);
       localStorage.setItem('sv_lang', code);
     } catch {}
   }
@@ -711,13 +715,14 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   private tickClock(): void {
     const now = new Date();
-    this.nowTime = now.toLocaleTimeString('th-TH', {
+    const locale = this.lang === 'en' ? 'en-US' : 'th-TH';
+    this.nowTime = now.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
     });
-    this.nowDate = now.toLocaleDateString('th-TH', {
+    this.nowDate = now.toLocaleDateString(locale, {
       weekday: 'short',
       day: 'numeric',
       month: 'short',

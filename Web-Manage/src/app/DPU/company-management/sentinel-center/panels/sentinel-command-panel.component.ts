@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { TokenService } from '../../../../shared/services/token.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SentinelApiService } from '../sentinel-api.service';
@@ -15,13 +17,16 @@ import {
 } from '../sentinel.models';
 import { apiErrorMessage } from '../../../../shared/utils/http-error-body';
 import { ImageDropzoneComponent } from '../../../../shared/components/image-dropzone/image-dropzone.component';
+import { ConfirmDialogService } from '../../../../shared/services/confirm-dialog.service';
 
 @Component({
     selector: 'app-sentinel-command-panel',
-    imports: [CommonModule, FormsModule, RouterModule, ImageDropzoneComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, ImageDropzoneComponent],
     templateUrl: './sentinel-command-panel.component.html'
 })
 export class SentinelCommandPanelComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   @Output() toast = new EventEmitter<string>();
   @Output() overviewChanged = new EventEmitter<void>();
 
@@ -59,14 +64,14 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   loadDrTopology(): void {
-    this.api.getDrTopology(this.companyId).subscribe({
+    this.api.getDrTopology(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => (this.drTopology = res),
       error: () => undefined,
     });
   }
 
   loadSiemSettings(): void {
-    this.api.getSiemSettings(this.companyId).subscribe({
+    this.api.getSiemSettings(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (s: SentinelSiemSettings) => {
         this.siemForm = {
           siemWebhookUrl: s.siemWebhookUrl || '',
@@ -85,7 +90,7 @@ export class SentinelCommandPanelComponent implements OnInit {
     if ((this.siemForm.siemWebhookSecret || '').trim()) {
       body['siemWebhookSecret'] = this.siemForm.siemWebhookSecret.trim();
     }
-    this.api.putSiemSettings(this.companyId, body).subscribe({
+    this.api.putSiemSettings(this.companyId, body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (s) => {
         this.siemSaving = false;
         this.siemForm.siemWebhookSecret = '';
@@ -101,7 +106,7 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   testSiemSettings(): void {
-    this.api.testSiemSettings(this.companyId).subscribe({
+    this.api.testSiemSettings(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         const body = res as { queued?: boolean; reason?: string };
         this.toast.emit(
@@ -113,11 +118,11 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   loadZones(): void {
-    this.api.getZones(this.companyId).subscribe((rows) => (this.zones = rows || []));
+    this.api.getZones(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => (this.zones = rows || []));
   }
 
   loadEvents(): void {
-    this.api.getEvents(this.companyId).subscribe((rows) => (this.events = rows || []));
+    this.api.getEvents(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => (this.events = rows || []));
   }
 
   loadIncidents(): void {
@@ -128,7 +133,7 @@ export class SentinelCommandPanelComponent implements OnInit {
         this.incidentFilterStatus || undefined,
         this.incidentFilterZoneId || undefined
       )
-      .subscribe((rows) => (this.incidents = rows || []));
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => (this.incidents = rows || []));
   }
 
   onScanFileSelected(event: Event): void {
@@ -145,7 +150,7 @@ export class SentinelCommandPanelComponent implements OnInit {
     if (this.scanForm.eventId) fd.append('eventId', this.scanForm.eventId);
     if (this.scanForm.totpOrPin) fd.append('totpOrPin', this.scanForm.totpOrPin);
 
-    this.api.unifiedScan(this.companyId, fd).subscribe({
+    this.api.unifiedScan(this.companyId, fd).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.isScanning = false;
         this.lastScanResult = res;
@@ -165,7 +170,7 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   acknowledgeIncident(incidentId: string): void {
-    this.api.acknowledgeIncident(this.companyId, incidentId).subscribe({
+    this.api.acknowledgeIncident(this.companyId, incidentId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.emit('รับทราบเหตุการณ์แล้ว');
         this.loadIncidents();
@@ -175,7 +180,7 @@ export class SentinelCommandPanelComponent implements OnInit {
   }
 
   assignIncident(incidentId: string): void {
-    this.api.assignIncident(this.companyId, incidentId).subscribe({
+    this.api.assignIncident(this.companyId, incidentId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.toast.emit('มอบหมายเหตุการณ์แล้ว');
         this.loadIncidents();
@@ -184,10 +189,17 @@ export class SentinelCommandPanelComponent implements OnInit {
     });
   }
 
-  closeIncident(incidentId: string): void {
-    const note = window.prompt('บันทึกการปิดเคส (Resolution Note):', 'ตรวจสอบและดำเนินการเรียบร้อย');
+  async closeIncident(incidentId: string): Promise<void> {
+    const note = await this.confirmDialog.prompt({
+      title: 'ปิดเหตุการณ์ความปลอดภัย',
+      message: 'ระบุบันทึกการปิดเคส (Resolution Note):',
+      defaultValue: 'ตรวจสอบและดำเนินการเรียบร้อย',
+      placeholder: 'Resolution note...',
+      confirmText: 'ปิดเคส',
+      variant: 'warning',
+    });
     if (note === null) return;
-    this.api.closeIncident(this.companyId, incidentId).subscribe({
+    this.api.closeIncident(this.companyId, incidentId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         const suffix = note.trim() ? ` (${note.trim()})` : '';
         this.toast.emit(`ปิดเหตุการณ์แล้ว${suffix}`);

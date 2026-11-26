@@ -20,7 +20,7 @@
         <button *ngIf="someSelected" type="button" class="ti-btn ti-btn-danger-full modern-btn dpu-tool-btn" (click)="deleteSelect()">
           <i class="ri-delete-bin-line"></i><span>{{ 'Delete' | translate }}</span>
         </button>
-        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()" data-hs-overlay="#modal-detail">
+        <button type="button" class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn" (click)="new()">
           <i class="ri-add-line"></i><span>เพิ่มบริษัท</span>
         </button>
       </ng-container>
@@ -92,7 +92,7 @@
                   </td>
                   <td class="text-end">
                     <div class="inline-flex gap-2 flex-wrap justify-end">
-                      <button type="button" class="dpu-icon-btn" title="แก้ไข / โควตา" (click)="view(item)" data-hs-overlay="#modal-detail"><i class="ri-pencil-line"></i></button>
+                      <button type="button" class="dpu-icon-btn" title="แก้ไข / โควตา" (click)="view(item)"><i class="ri-pencil-line"></i></button>
                       <button *ngIf="lifecycleLabel(item)==='ACTIVE'" type="button" class="dpu-icon-btn" title="ระงับ" (click)="suspend(item)"><i class="ri-pause-circle-line"></i></button>
                       <button *ngIf="lifecycleLabel(item)==='SUSPENDED'" type="button" class="dpu-icon-btn" title="เปิดใช้งาน" (click)="resume(item)"><i class="ri-play-circle-line"></i></button>
                       <button *ngIf="lifecycleLabel(item)!=='OFFBOARDED'" type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="Offboard" (click)="offboard(item)"><i class="ri-logout-box-r-line"></i></button>
@@ -110,93 +110,89 @@
   </div>
 </div>
 
-<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold">{{ action === 'edit' ? 'แก้ไขบริษัท' : 'เพิ่มบริษัท' }}</h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem]" data-hs-overlay="#modal-detail" #closeModal>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body px-4">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 text-center">
-            <span class="avatar avatar-xxl avatar-rounded">
-              <img [src]="selectModel.getPicture()" alt="">
-              <span class="badge rounded-full bg-primary avatar-badge">
-                <input ng2FileSelect [uploader]="uploaderProfile" type="file" accept="image/*" class="absolute w-full h-full opacity-0">
-                <i class="fe fe-camera text-[.625rem]"></i>
-              </span>
-            </span>
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Company name' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.companyName">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Company ID' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.companyCode">
-          </div>
-          <div class="col-span-12">
-            <label class="form-label">{{ 'Company info' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.companyInfo">
-          </div>
-          <div class="col-span-12">
-            <label class="form-label">{{ 'Address' | translate }}</label>
-            <textarea class="form-control" rows="3" [(ngModel)]="selectModel.address"></textarea>
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">เจ้าของ</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.ownerName">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Mobile' | translate }}</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.contact">
-          </div>
-          <div class="col-span-12">
-            <label class="form-label">{{ 'Status' | translate }}</label>
-            <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
-              <ng-option [value]="0">Pending</ng-option>
-              <ng-option [value]="1">Public</ng-option>
-            </ng-select>
-          </div>
+<app-surface-modal
+  modalId="modal-detail"
+  [open]="showModal"
+  [title]="action === 'edit' ? 'แก้ไขบริษัท' : 'เพิ่มบริษัท'"
+  icon="ri-building-2-line"
+  size="xl"
+  [closeOnBackdrop]="false"
+  (closed)="closeModal()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12 text-center">
+      <span class="avatar avatar-xxl avatar-rounded">
+        <img [src]="selectModel.getPicture()" alt="">
+        <span class="badge rounded-full bg-primary avatar-badge">
+          <input ng2FileSelect [uploader]="uploaderProfile" type="file" accept="image/*" class="absolute w-full h-full opacity-0">
+          <i class="ri-camera-line text-[.625rem]"></i>
+        </span>
+      </span>
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Company name' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.companyName">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Company ID' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.companyCode">
+    </div>
+    <div class="col-span-12">
+      <label class="form-label">{{ 'Company info' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.companyInfo">
+    </div>
+    <div class="col-span-12">
+      <label class="form-label">{{ 'Address' | translate }}</label>
+      <textarea class="form-control sv-input" rows="3" [(ngModel)]="selectModel.address"></textarea>
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">เจ้าของ</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.ownerName">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Mobile' | translate }}</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.contact">
+    </div>
+    <div class="col-span-12">
+      <label class="form-label">{{ 'Status' | translate }}</label>
+      <ng-select [(ngModel)]="selectModel.status" [clearable]="false" [appendTo]="'body'">
+        <ng-option [value]="0">Pending</ng-option>
+        <ng-option [value]="1">Public</ng-option>
+      </ng-select>
+    </div>
 
-          <div class="col-span-12 border-t pt-3" *ngIf="action === 'edit'">
-            <h6 class="font-semibold mb-2">โควตา / แพ็กเกจ (D5)</h6>
-            <div class="grid grid-cols-12 gap-3">
-              <div class="col-span-12 md:col-span-6">
-                <label class="form-label">Package</label>
-                <ng-select [(ngModel)]="quotaDraft.packageCode" [clearable]="true" [appendTo]="'body'">
-                  <ng-option *ngFor="let p of packages" [value]="p">{{ p }}</ng-option>
-                </ng-select>
-              </div>
-              <div class="col-span-12 md:col-span-6">
-                <label class="form-label">GPU priority</label>
-                <input type="number" class="form-control" [(ngModel)]="quotaDraft.gpuPriority">
-              </div>
-              <div class="col-span-12 md:col-span-6">
-                <label class="form-label">Max devices (ว่าง = ไม่จำกัด)</label>
-                <input type="number" class="form-control" [(ngModel)]="quotaDraft.maxDevices">
-              </div>
-              <div class="col-span-12 md:col-span-6">
-                <label class="form-label">Max employees (ว่าง = ไม่จำกัด)</label>
-                <input type="number" class="form-control" [(ngModel)]="quotaDraft.maxEmployees">
-              </div>
-              <div class="col-span-12 text-[0.75rem] text-dpu-muted" *ngIf="quotaUsage">
-                ใช้งานอยู่: อุปกรณ์ {{ quotaUsage.devices ?? 0 }} · พนักงาน {{ quotaUsage.employees ?? 0 }}
-              </div>
-              <div class="col-span-12">
-                <button type="button" class="ti-btn ti-btn-secondary-full" (click)="saveQuotas()">บันทึกโควตา</button>
-              </div>
-            </div>
-          </div>
+    <div class="col-span-12 border-t sv-border-subtle pt-3" *ngIf="action === 'edit'">
+      <h6 class="font-semibold mb-2">โควตา / แพ็กเกจ (D5)</h6>
+      <div class="grid grid-cols-12 gap-3">
+        <div class="col-span-12 md:col-span-6">
+          <label class="form-label">Package</label>
+          <ng-select [(ngModel)]="quotaDraft.packageCode" [clearable]="true" [appendTo]="'body'">
+            <ng-option *ngFor="let p of packages" [value]="p">{{ p }}</ng-option>
+          </ng-select>
         </div>
-      </div>
-      <div class="ti-modal-footer">
-        <button type="button" class="ti-btn ti-btn-light" data-hs-overlay="#modal-detail">{{ 'Cancel' | translate }}</button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
+        <div class="col-span-12 md:col-span-6">
+          <label class="form-label">GPU priority</label>
+          <input type="number" class="form-control sv-input" [(ngModel)]="quotaDraft.gpuPriority">
+        </div>
+        <div class="col-span-12 md:col-span-6">
+          <label class="form-label">Max devices (ว่าง = ไม่จำกัด)</label>
+          <input type="number" class="form-control sv-input" [(ngModel)]="quotaDraft.maxDevices">
+        </div>
+        <div class="col-span-12 md:col-span-6">
+          <label class="form-label">Max employees (ว่าง = ไม่จำกัด)</label>
+          <input type="number" class="form-control sv-input" [(ngModel)]="quotaDraft.maxEmployees">
+        </div>
+        <div class="col-span-12 text-[0.75rem] text-dpu-muted" *ngIf="quotaUsage">
+          ใช้งานอยู่: อุปกรณ์ {{ quotaUsage.devices ?? 0 }} · พนักงาน {{ quotaUsage.employees ?? 0 }}
+        </div>
+        <div class="col-span-12">
+          <button type="button" class="ti-btn ti-btn-secondary-full" (click)="saveQuotas()">บันทึกโควตา</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light" (click)="closeModal()">{{ 'Cancel' | translate }}</button>
+    <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save()">{{ 'Save' | translate }}</button>
+  </ng-container>
+</app-surface-modal>

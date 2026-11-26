@@ -48,9 +48,9 @@
         <!-- Admin quick link -->
         <div *ngIf="adminRole"
           class="header-element header-apps py-[1rem] md:px-[0.5rem] px-2 hs-dropdown ti-dropdown md:!block !hidden [--placement:bottom-left]">
-          <button aria-label="สิทธิ์การใช้งาน" id="dropdown-apps" type="button"
+          <button [attr.aria-label]="'shell.header.permissions' | translate" id="dropdown-apps" type="button"
             class="hs-dropdown-toggle ti-dropdown-toggle sv-header-btn !p-0 !border-0 flex-shrink-0 !rounded-full !shadow-none text-xs">
-            <i class="bx bx-grid-alt header-link-icon text-[1.125rem]"></i>
+            <i class="ri-layout-grid-line header-link-icon text-[1.125rem]"></i>
           </button>
           <div class="p-3 main-header-dropdown !-mt-3 hs-dropdown-menu ti-dropdown-menu !w-[14rem] border-0 hidden"
             aria-labelledby="dropdown-apps">
@@ -85,8 +85,8 @@
         <div class="header-element header-fullscreen py-[1rem] md:px-[0.5rem] px-2">
           <a aria-label="Fullscreen" appFullscreen (click)="toggleFullScreen()"
             class="sv-header-btn inline-flex flex-shrink-0 justify-center items-center gap-2 !rounded-full">
-            <i class="bx bx-fullscreen full-screen-open header-link-icon" [hidden]="!fullScreenIconVisible"></i>
-            <i class="bx bx-exit-fullscreen full-screen-close header-link-icon"
+            <i class="ri-fullscreen-line full-screen-open header-link-icon" [hidden]="!fullScreenIconVisible"></i>
+            <i class="ri-fullscreen-exit-line full-screen-close header-link-icon"
               [hidden]="!exitFullScreenIconVisible"></i>
           </a>
         </div>

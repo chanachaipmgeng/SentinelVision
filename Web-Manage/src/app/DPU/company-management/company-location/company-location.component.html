@@ -50,8 +50,7 @@
             <button
               type="button"
               class="ti-btn ti-btn-primary-full modern-btn loc-tool-btn"
-              (click)="new()"
-              data-hs-overlay="#modal-detail">
+              (click)="new()">
               <i class="ri-add-line"></i>
               <span>{{ 'Add location' | translate }}</span>
             </button>
@@ -133,8 +132,7 @@
                   type="button"
                   class="loc-icon-btn"
                   title="แก้ไข"
-                  (click)="openEdit(item)"
-                  data-hs-overlay="#modal-detail">
+                  (click)="openEdit(item)">
                   <i class="ri-pencil-line"></i>
                 </button>
                 <button type="button" class="loc-icon-btn loc-icon-btn--danger" title="ลบ" (click)="delete(item)">
@@ -212,8 +210,7 @@
           <button
             type="button"
             class="ti-btn ti-btn-primary-full modern-btn loc-tool-btn"
-            (click)="openEdit(item)"
-            data-hs-overlay="#modal-detail">
+            (click)="openEdit(item)">
             <i class="ri-pencil-line"></i>
             <span>{{ 'Edit' | translate }}</span>
           </button>
@@ -244,95 +241,85 @@
 </div>
 
 <!-- Create / Edit modal -->
-<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out loc-modal-box">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor">
-          {{ action === 'edit' ? 'แก้ไขสถานที่' : 'เพิ่มสถานที่' }}
-        </h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
-          data-hs-overlay="#modal-detail" #closeModal>
-          <span class="sr-only">Close</span>
-          <i class="ri-close-line"></i>
-        </button>
+<app-surface-modal
+  modalId="modal-detail"
+  [open]="showModal"
+  [title]="action === 'edit' ? 'แก้ไขสถานที่' : 'เพิ่มสถานที่'"
+  icon="ri-map-pin-2-line"
+  size="2xl"
+  [closeOnBackdrop]="false"
+  (closed)="closeModal()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12">
+      <label class="form-label">{{ 'Location name' | translate }}</label>
+      <input [(ngModel)]="selectModel.locationName" type="text" placeholder="เช่น สำนักงานใหญ่"
+        class="form-control sv-input">
+    </div>
+
+    <div class="col-span-12">
+      <div class="loc-maps-hint loc-maps-hint--info">
+        คลิกแผนที่เพื่อปักหมุด หรือกรอกพิกัดด้านล่าง — รัศมีหน่วยกิโลเมตร (เหมือนเดิม)
       </div>
+    </div>
 
-      <div class="ti-modal-body px-4 loc-modal-body">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12">
-            <label class="form-label">{{ 'Location name' | translate }}</label>
-            <input [(ngModel)]="selectModel.locationName" type="text" placeholder="เช่น สำนักงานใหญ่"
-              class="form-control">
-          </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Type' | translate }}</label>
+      <ng-select [(ngModel)]="selectModel.locationType" [clearable]="false" [appendTo]="'body'">
+        <ng-option [value]="0">{{ 'PERMANENT' | translate }}</ng-option>
+        <ng-option [value]="1">{{ 'TEMPORARY' | translate }}</ng-option>
+      </ng-select>
+    </div>
 
-          <div class="col-span-12">
-            <div class="loc-maps-hint loc-maps-hint--info">
-              คลิกแผนที่เพื่อปักหมุด หรือกรอกพิกัดด้านล่าง — รัศมีหน่วยกิโลเมตร (เหมือนเดิม)
-            </div>
-          </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">รัศมี (กม.)</label>
+      <input [(ngModel)]="selectModel.radius" type="number" step="0.1" min="0" class="form-control sv-input"
+        (ngModelChange)="changeMarker()">
+    </div>
 
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Type' | translate }}</label>
-            <ng-select [(ngModel)]="selectModel.locationType" [clearable]="false" [appendTo]="'body'">
-              <ng-option [value]="0">{{ 'PERMANENT' | translate }}</ng-option>
-              <ng-option [value]="1">{{ 'TEMPORARY' | translate }}</ng-option>
-            </ng-select>
-          </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">วันที่เริ่มต้น</label>
+      <input type="date" class="form-control sv-input" [(ngModel)]="selectModel.startDate">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">วันที่สิ้นสุด</label>
+      <input type="date" class="form-control sv-input" [(ngModel)]="selectModel.endDate">
+    </div>
 
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">รัศมี (กม.)</label>
-            <input [(ngModel)]="selectModel.radius" type="number" step="0.1" min="0" class="form-control"
-              (ngModelChange)="changeMarker()">
-          </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Latitude' | translate }}</label>
+      <input type="number" step="any" class="form-control sv-input" [(ngModel)]="selectModel.latitude"
+        (ngModelChange)="changeMarker()">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">{{ 'Longitude' | translate }}</label>
+      <input type="number" step="any" class="form-control sv-input" [(ngModel)]="selectModel.longitude"
+        (ngModelChange)="changeMarker()">
+    </div>
 
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">วันที่เริ่มต้น</label>
-            <input type="date" class="form-control" [(ngModel)]="selectModel.startDate">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">วันที่สิ้นสุด</label>
-            <input type="date" class="form-control" [(ngModel)]="selectModel.endDate">
-          </div>
-
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Latitude' | translate }}</label>
-            <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.latitude"
-              (ngModelChange)="changeMarker()">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">{{ 'Longitude' | translate }}</label>
-            <input type="number" step="any" class="form-control" [(ngModel)]="selectModel.longitude"
-              (ngModelChange)="changeMarker()">
-          </div>
-
-          <div class="col-span-12">
-            <label class="form-label">แผนที่ — คลิกเพื่อปักหมุด</label>
-            <div class="loc-modal-map">
-              <app-geofence-map
-                #editGeofenceMap
-                [lat]="mapCenter.lat"
-                [lng]="mapCenter.lng"
-                [radiusKm]="editRadiusKm"
-                [zoom]="12"
-                [editable]="true"
-                height="320px"
-                (positionChange)="onEditMapPosition($event)">
-              </app-geofence-map>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle"
-          data-hs-overlay="#modal-detail">
-          ยกเลิก
-        </button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" [disabled]="saving" (click)="save()">
-          {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
-        </button>
+    <div class="col-span-12">
+      <label class="form-label">แผนที่ — คลิกเพื่อปักหมุด</label>
+      <div class="loc-modal-map">
+        <app-geofence-map
+          #editGeofenceMap
+          [lat]="mapCenter.lat"
+          [lng]="mapCenter.lng"
+          [radiusKm]="editRadiusKm"
+          [zoom]="12"
+          [editable]="true"
+          height="320px"
+          (positionChange)="onEditMapPosition($event)">
+        </app-geofence-map>
       </div>
     </div>
   </div>
-</div>
+
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light align-middle" (click)="closeModal()">
+      ยกเลิก
+    </button>
+    <button type="button" class="ti-btn bg-primary text-white !font-medium" [disabled]="saving" (click)="save()">
+      {{ saving ? 'กำลังบันทึก...' : 'บันทึก' }}
+    </button>
+  </ng-container>
+</app-surface-modal>

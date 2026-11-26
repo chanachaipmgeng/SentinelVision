@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivate, CanActivateChild, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, CanActivate, CanActivateChild, Router, RouterStateSnapshot } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { TokenService } from './token.service';
@@ -13,15 +13,15 @@ export class RoleGuard implements CanActivate, CanActivateChild {
     private permissions: PermissionService,
   ) {}
 
-  canActivate(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
-    return this.allow(route);
+  canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> | boolean {
+    return this.allow(route, state?.url || '');
   }
 
-  canActivateChild(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
-    return this.allow(route);
+  canActivateChild(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> | boolean {
+    return this.allow(route, state?.url || '');
   }
 
-  private allow(route: ActivatedRouteSnapshot): Observable<boolean> | boolean {
+  private allow(route: ActivatedRouteSnapshot, url: string): Observable<boolean> | boolean {
     if (!this.tokenService.getToken()) {
       this.router.navigate(['/auth/login']);
       return false;
@@ -67,6 +67,10 @@ export class RoleGuard implements CanActivate, CanActivateChild {
       );
     }
 
+    if (!requiredPerm && area === 'company') {
+      requiredPerm = PermissionService.permissionForPath(url) || '';
+    }
+
     if (requiredPerm) {
       return this.permissions.load(companyId).pipe(
         map(() => {
@@ -76,12 +80,14 @@ export class RoleGuard implements CanActivate, CanActivateChild {
           }
           return ok;
         }),
-        catchError(() => of(true)), // fail open to company shell; API still enforces
+        catchError(() => {
+          this.router.navigate(['/error/403']);
+          return of(false);
+        }),
       );
     }
 
-    // Company pages: ensure permissions are loaded for nav filtering; do not
-    // block entry here (individual routes may set data.permission).
+    // Company pages without an explicit permission gate still warm up the snapshot.
     if (area === 'company' && companyId) {
       this.permissions.load(companyId).subscribe();
     }

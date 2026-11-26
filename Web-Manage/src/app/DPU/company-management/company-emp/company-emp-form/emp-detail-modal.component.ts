@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { FlatpickrDefaults, FlatpickrModule } from 'angularx-flatpickr';
@@ -17,8 +17,7 @@ import { PositionModel } from '../../../models/position.model';
     templateUrl: './emp-detail-modal.component.html'
 })
 export class EmpDetailModalComponent {
-  @ViewChild('closeModal') public childModal?: ElementRef;
-
+  @Input() open = false;
   @Input() selectModel: EmployeeModel = new EmployeeModel();
   @Input() itemsList: EmployeeModel[] = [];
   @Input() departmentList: DepartmentModel[] = [];
@@ -26,6 +25,7 @@ export class EmpDetailModalComponent {
   @Input() uploaderProfile: FileUploader | undefined;
 
   @Output() save = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
 
   compareDepartment = (a: DepartmentModel | null, b: DepartmentModel | null): boolean =>
     !!a?.departmentId && !!b?.departmentId && a.departmentId === b.departmentId;
@@ -38,6 +38,6 @@ export class EmpDetailModalComponent {
   }
 
   clickClose(): void {
-    this.childModal?.nativeElement?.click();
+    this.closed.emit();
   }
 }

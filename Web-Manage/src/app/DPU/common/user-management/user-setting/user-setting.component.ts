@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -14,7 +14,7 @@ import { UserService } from '../../../services/user.service';
 import { UserProfileModel } from '../../../models/user.model';
 import { TokenService } from '../../../../shared/services/token.service';
 import { environment } from '../../../../../environments/environment';
-import swal from 'sweetalert';
+import swal from '../../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-user-setting',
@@ -39,13 +39,12 @@ import swal from 'sweetalert';
     encapsulation: ViewEncapsulation.None
 })
 export class UserSettingComponent implements OnInit {
-  @ViewChild('closeModal') public childModal?: ElementRef;
-
   readonly pageSize = 10;
   readonly adminRole = 99;
 
   action: 'add' | 'edit' = 'add';
   loading = false;
+  showModal = false;
   allSelected = false;
   someSelected = false;
   confirmPassword = '';
@@ -184,12 +183,18 @@ export class UserSettingComponent implements OnInit {
     this.action = 'add';
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel();
+    this.showModal = true;
   }
 
   view(item: UserProfileModel) {
     this.action = 'edit';
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel(item);
+    this.showModal = true;
+  }
+
+  closeModal() {
+    this.showModal = false;
   }
 
   save() {
@@ -212,7 +217,7 @@ export class UserSettingComponent implements OnInit {
         next: () => {
           swal('สำเร็จ', 'บันทึกข้อมูลสมาชิก', 'success');
           this.load();
-          this.childModal?.nativeElement.click();
+          this.closeModal();
         },
         error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
       });

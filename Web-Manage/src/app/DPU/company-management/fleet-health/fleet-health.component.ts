@@ -66,15 +66,15 @@ interface FleetHealthResponse {
   imports: [CommonModule, FormsModule, RouterLink, SharedModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'Fleet & Edge Health'" [activeTitle]="'System Health'" [title1]="'SentinelVision'"></app-page-header>
+    <app-page-header [title]="'fleet.pageTitle' | translate" [activeTitle]="'System Health'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
       <!-- Operational Topbar (Reusable Wrapper) -->
       <app-command-topbar
         icon="ri-pulse-line"
         accent="cyan"
-        badgeText="LIVE FLEET TELEMETRY"
-        title="ศูนย์ตรวจวัดสุขภาพอุปกรณ์และเซ็นเซอร์ Edge"
+        [badgeText]="'fleet.badge' | translate"
+        [title]="'fleet.title' | translate"
         [lastUpdated]="lastUpdated"
       >
         <ng-container actions>
@@ -85,11 +85,11 @@ interface FleetHealthResponse {
             class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5"
           >
             <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
-            <span>รีเฟรชข้อมูล</span>
+            <span>{{ 'fleet.refresh' | translate }}</span>
           </button>
           <a routerLink="/company/devices" class="ti-btn ti-btn-primary-full modern-btn text-xs px-3 py-1.5 rounded-lg">
             <i class="ri-device-line me-1"></i>
-            <span>จัดการ Kiosk</span>
+            <span>{{ 'fleet.manageKiosks' | translate }}</span>
           </a>
         </ng-container>
       </app-command-topbar>
@@ -98,7 +98,7 @@ interface FleetHealthResponse {
       <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Overall Health Score -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">ดัชนีความพร้อมรวม</span>
+          <span class="text-xs text-slate-400">{{ 'fleet.metric.score' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold" [ngClass]="summary.healthScore >= 90 ? 'text-emerald-400' : (summary.healthScore >= 70 ? 'text-amber-400' : 'text-rose-400')">
               {{ summary.healthScore }}%
@@ -109,79 +109,79 @@ interface FleetHealthResponse {
             [ngClass]="summary.healthScore >= 90 ? 'text-emerald-400' : (summary.healthScore >= 70 ? 'text-amber-400' : 'text-rose-400')"
           >
             <i [class]="summary.healthScore >= 90 ? 'ri-shield-check-line' : (summary.healthScore >= 70 ? 'ri-error-warning-line' : 'ri-close-circle-line')"></i>
-            {{ summary.healthScore >= 90 ? 'เสถียรภาพสูง' : (summary.healthScore >= 70 ? 'เฝ้าระวัง' : 'วิกฤต / ออฟไลน์') }}
+            {{ (summary.healthScore >= 90 ? 'fleet.metric.healthy' : (summary.healthScore >= 70 ? 'fleet.metric.warn' : 'fleet.metric.crit')) | translate }}
           </span>
         </div>
 
         <!-- Metric 2: Kiosks Online -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">Kiosk ออนไลน์</span>
+          <span class="text-xs text-slate-400">{{ 'fleet.metric.kiosksOnline' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-cyan-400">
               {{ summary.kiosksOnline }} <span class="text-sm font-normal text-slate-400">/ {{ summary.kiosksTotal }}</span>
             </span>
           </div>
           <span class="text-[11px] text-cyan-300 flex items-center gap-1">
-            <i class="ri-macbook-line"></i> ประจำจุดเข้า-ออก
+            <i class="ri-macbook-line"></i> {{ 'fleet.metric.kiosksSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 3: CCTV Connected -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">กล้อง CCTV</span>
+          <span class="text-xs text-slate-400">{{ 'fleet.metric.cctv' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-violet-400">
               {{ summary.camerasConnected }} <span class="text-sm font-normal text-slate-400">/ {{ summary.camerasTotal }}</span>
             </span>
           </div>
           <span class="text-[11px] text-violet-300 flex items-center gap-1">
-            <i class="ri-vidicon-line"></i> สตรีมเรียลไทม์
+            <i class="ri-vidicon-line"></i> {{ 'fleet.metric.cctvSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 4: Active Zones -->
         <div class="p-4 border-b lg:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">โซนควบคุมสิทธิ์</span>
+          <span class="text-xs text-slate-400">{{ 'fleet.metric.zones' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-sky-400">
-              {{ summary.zonesActive }} <span class="text-sm font-normal text-slate-400">โซน</span>
+              {{ summary.zonesActive }}
             </span>
           </div>
           <span class="text-[11px] text-sky-300 flex items-center gap-1">
-            <i class="ri-door-lock-line"></i> Anti-Passback ป้องกัน
+            <i class="ri-door-lock-line"></i> {{ 'fleet.metric.zonesSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 5: AI Engine Status (Cluster Queue for System Admin; Ready status for Company Admin) -->
         <div class="p-4 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">{{ isSystemAdmin ? 'AI GPU Queue' : 'สถานะระบบ AI' }}</span>
+          <span class="text-xs text-slate-400">{{ (isSystemAdmin ? 'fleet.metric.aiQueue' : 'fleet.metric.aiStatus') | translate }}</span>
           <div class="my-1.5">
             <span *ngIf="isSystemAdmin" class="text-2xl font-mono font-bold text-emerald-400">
-              {{ summary.aiQueuePending }} <span class="text-sm font-normal text-slate-400">คิว</span>
+              {{ summary.aiQueuePending }}
             </span>
             <span *ngIf="!isSystemAdmin" class="text-xl font-mono font-bold text-emerald-400">
-              พร้อมใช้งาน
+              {{ 'fleet.metric.aiReady' | translate }}
             </span>
           </div>
           <span class="text-[11px] text-emerald-300 flex items-center gap-1">
             <i class="ri-cpu-line"></i>
             <ng-container *ngIf="isSystemAdmin">
-              <a routerLink="/admin/infrastructure" class="hover:underline">ดูคลัสเตอร์ GPU</a>
+              <a routerLink="/admin/infrastructure" class="hover:underline">{{ 'fleet.metric.aiViewCluster' | translate }}</a>
             </ng-container>
-            <ng-container *ngIf="!isSystemAdmin">ประมวลผลชีวมิติปกติ</ng-container>
+            <ng-container *ngIf="!isSystemAdmin">{{ 'fleet.metric.aiNormal' | translate }}</ng-container>
           </span>
         </div>
 
         <!-- Metric 6: Unread Alerts -->
         <div class="p-4 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">เหตุการณ์รอตรวจ</span>
+          <span class="text-xs text-slate-400">{{ 'fleet.metric.alerts' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold" [ngClass]="summary.unreadAlerts > 0 ? 'text-amber-400' : 'text-slate-300'">
-              {{ summary.unreadAlerts }} <span class="text-sm font-normal text-slate-400">รายการ</span>
+              {{ summary.unreadAlerts }}
             </span>
           </div>
           <span class="text-[11px] text-slate-400 flex items-center gap-1">
-            <i class="ri-notification-3-line"></i> 24 ชั่วโมงล่าสุด
+            <i class="ri-notification-3-line"></i> {{ 'fleet.metric.alertsWindow' | translate }}
           </span>
         </div>
       </app-metric-ribbon>
@@ -211,17 +211,17 @@ interface FleetHealthResponse {
       </div>
 
       <!-- Tab Content: Kiosks -->
-      <div *ngIf="activeTab === 'kiosks'" class="rounded-2xl border border-white/10 bg-[#070d14] overflow-hidden shadow-xl">
+      <div *ngIf="activeTab === 'kiosks'" class="rounded-2xl border border-white/10 sv-surface-panel overflow-hidden shadow-xl">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
-              <tr class="border-b border-white/10 bg-slate-900/50 text-slate-400 uppercase text-[10px] font-mono tracking-wider">
-                <th class="py-3 px-4">ชื่ออุปกรณ์ Kiosk</th>
-                <th class="py-3 px-4">โหมดการทำงาน (Station Mode)</th>
-                <th class="py-3 px-4">เวอร์ชัน & รหัสฮาร์ดแวร์</th>
-                <th class="py-3 px-4">สถานะการเชื่อมต่อ</th>
-                <th class="py-3 px-4">ส่งสัญญาณล่าสุด (Heartbeat)</th>
-                <th class="py-3 px-4 text-right">การจัดการ</th>
+              <tr class="border-b border-white/10 sv-subpanel text-slate-400 uppercase text-[10px] font-mono tracking-wider">
+                <th class="py-3 px-4">{{ 'fleet.col.kioskName' | translate }}</th>
+                <th class="py-3 px-4">{{ 'fleet.col.stationMode' | translate }}</th>
+                <th class="py-3 px-4">{{ 'fleet.col.version' | translate }}</th>
+                <th class="py-3 px-4">{{ 'fleet.col.status' | translate }}</th>
+                <th class="py-3 px-4">{{ 'fleet.col.heartbeat' | translate }}</th>
+                <th class="py-3 px-4 text-right">{{ 'fleet.col.actions' | translate }}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-white/5">

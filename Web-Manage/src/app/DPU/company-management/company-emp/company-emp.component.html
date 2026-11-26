@@ -55,8 +55,8 @@
                 accept=".zip,application/zip,application/x-zip-compressed"
                 (change)="onImportPhotosSelected($event)">
               <button type="button"
-                class="hs-dropdown-toggle ti-btn ti-btn-primary-full modern-btn emp-tool-btn emp-tool-btn--primary"
-                (click)="new()" data-hs-overlay="#modal-detail">
+                class="ti-btn ti-btn-primary-full modern-btn emp-tool-btn emp-tool-btn--primary"
+                (click)="new()">
                 <i class="ri-add-line"></i>
                 <span class="emp-tool-label">{{ 'Create' | translate }}</span>
               </button>
@@ -106,12 +106,14 @@
 
 <app-emp-detail-modal
   #detailModal
+  [open]="showDetailModal"
   [selectModel]="selectModel"
   [itemsList]="itemsList"
   [departmentList]="departmentList"
   [positionList]="positionList"
   [uploaderProfile]="uploaderProfile"
   (save)="save()"
+  (closed)="closeDetailModal()"
 ></app-emp-detail-modal>
 
 <app-emp-face-enroll-modal
@@ -120,34 +122,26 @@
   [selectModel]="selectModel"
 ></app-emp-face-enroll-modal>
 
-<div id="modal-face-management" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out max-w-4xl">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <div>
-          <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor !mb-0">{{ 'Manage enrolled faces' | translate }}</h6>
-          <p class="mb-0 text-xs text-dpu-muted" *ngIf="selectedMemberName">{{ selectedMemberName }}</p>
-        </div>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor" data-hs-overlay="#modal-face-management">
-          <span class="sr-only">Close</span>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body px-4 max-h-[75vh] overflow-y-auto">
-        <app-face-management
-          *ngIf="selectedMemberId"
-          [memberId]="selectedMemberId"
-          [memberName]="selectedMemberName">
-        </app-face-management>
-      </div>
-      <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle" data-hs-overlay="#modal-face-management">
-          {{ 'Close' | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+<app-surface-modal
+  modalId="modal-face-management"
+  [open]="showFaceManagementModal"
+  [title]="'Manage enrolled faces' | translate"
+  [subtitle]="selectedMemberName"
+  icon="ri-gallery-line"
+  size="2xl"
+  (closed)="closeFaceManagementModal()"
+>
+  <app-face-management
+    *ngIf="selectedMemberId"
+    [memberId]="selectedMemberId"
+    [memberName]="selectedMemberName">
+  </app-face-management>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light align-middle" (click)="closeFaceManagementModal()">
+      {{ 'Close' | translate }}
+    </button>
+  </ng-container>
+</app-surface-modal>
 
 <app-emp-import-overlay
   [isImporting]="isImporting"

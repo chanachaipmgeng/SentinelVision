@@ -154,7 +154,7 @@
               </span>
               <span
                 class="sv-camera-badge"
-                [class.sv-camera-badge--people]="!!cam.aiConfig?.peopleEnabled"
+                [class.sv-camera-badge--people]="!!cam.aiConfig.peopleEnabled"
                 *ngIf="cam.aiConfig"
               >
                 {{ cameraPeopleLabel(cam) | translate }}

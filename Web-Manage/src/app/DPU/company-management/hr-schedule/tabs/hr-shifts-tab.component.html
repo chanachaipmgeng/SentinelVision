@@ -1,72 +1,72 @@
 <div class="grid grid-cols-12 gap-5">
-  <div class="col-span-12 lg:col-span-5 p-5 rounded-xl border border-white/10 bg-slate-900/60 shadow-lg backdrop-blur-md">
+  <div class="col-span-12 lg:col-span-5 p-5 rounded-xl border border-white/10 card-surface sv-surface-panel shadow-lg">
     <h6 class="font-bold text-slate-100 flex items-center gap-2 mb-4">
-      <i class="ri-time-line text-cyan-400"></i> เพิ่มกะเวลาทำงานใหม่ (รองรับกะข้ามคืน)
+      <i class="ri-time-line text-cyan-400"></i> {{ 'hrShifts.formTitle' | translate }}
     </h6>
     <div class="grid grid-cols-12 gap-3.5">
       <div class="col-span-12">
-        <label class="form-label text-slate-300 text-xs font-semibold">ชื่อกะทำงาน</label>
-        <input class="form-control" [(ngModel)]="newShift.name" placeholder="เช่น กะเช้า / กะดึกข้ามคืน" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.nameLabel' | translate }}</label>
+        <input class="form-control sv-input" [(ngModel)]="newShift.name" [placeholder]="'hrShifts.namePlaceholder' | translate" />
       </div>
       <div class="col-span-6">
-        <label class="form-label text-slate-300 text-xs font-semibold">เวลาเข้างาน (HH:MM)</label>
-        <input type="time" class="form-control" [(ngModel)]="newShift.startTime" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.startLabel' | translate }}</label>
+        <input type="time" class="form-control sv-input" [(ngModel)]="newShift.startTime" />
       </div>
       <div class="col-span-6">
-        <label class="form-label text-slate-300 text-xs font-semibold">เวลาเลิกงาน (HH:MM)</label>
-        <input type="time" class="form-control" [(ngModel)]="newShift.endTime" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.endLabel' | translate }}</label>
+        <input type="time" class="form-control sv-input" [(ngModel)]="newShift.endTime" />
       </div>
       <div class="col-span-4">
-        <label class="form-label text-slate-300 text-xs font-semibold">อนุโลมสาย (นาที)</label>
-        <input type="number" min="0" max="180" class="form-control" [(ngModel)]="newShift.graceMinutes" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.graceLabel' | translate }}</label>
+        <input type="number" min="0" max="180" class="form-control sv-input" [(ngModel)]="newShift.graceMinutes" />
       </div>
       <div class="col-span-4">
-        <label class="form-label text-slate-300 text-xs font-semibold">ปัดเวลา (นาที)</label>
-        <input type="number" min="0" max="60" class="form-control" [(ngModel)]="newShift.roundingMinutes" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.roundingLabel' | translate }}</label>
+        <input type="number" min="0" max="60" class="form-control sv-input" [(ngModel)]="newShift.roundingMinutes" />
       </div>
       <div class="col-span-4">
-        <label class="form-label text-slate-300 text-xs font-semibold">พัก (นาที)</label>
-        <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.breakMinutes" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.breakLabel' | translate }}</label>
+        <input type="number" min="0" max="480" class="form-control sv-input" [(ngModel)]="newShift.breakMinutes" />
       </div>
       <div class="col-span-6">
-        <label class="form-label text-slate-300 text-xs font-semibold">เกณฑ์ OT หลังเลิกงาน (นาที)</label>
-        <input type="number" min="0" max="480" class="form-control" [(ngModel)]="newShift.otThresholdMinutes" />
+        <label class="form-label text-slate-300 text-xs font-semibold">{{ 'hrShifts.otLabel' | translate }}</label>
+        <input type="number" min="0" max="480" class="form-control sv-input" [(ngModel)]="newShift.otThresholdMinutes" />
       </div>
       <div class="col-span-6 flex flex-col justify-end gap-2">
         <label class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" class="form-check-input !rounded" [(ngModel)]="newShift.isCrossMidnight" />
-          <span>กะข้ามเที่ยงคืน (Night Shift)</span>
+          <span>{{ 'hrShifts.crossMidnight' | translate }}</span>
         </label>
         <label class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
           <input type="checkbox" class="form-check-input !rounded" [(ngModel)]="newShift.isDefault" />
-          <span>ตั้งเป็นกะหลักของบริษัท</span>
+          <span>{{ 'hrShifts.setDefault' | translate }}</span>
         </label>
       </div>
       <div class="col-span-12 pt-2 flex gap-2">
         <button type="button" class="btn-vault flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold" (click)="createShift()">
           <i [class]="editingShiftId ? 'ri-save-line' : 'ri-add-line'"></i>
-          {{ editingShiftId ? 'อัปเดตกะเวลาทำงาน' : 'บันทึกกะเวลาทำงาน' }}
+          {{ (editingShiftId ? 'hrShifts.updateBtn' : 'hrShifts.saveBtn') | translate }}
         </button>
         <button *ngIf="editingShiftId" type="button" class="ti-btn ti-btn-light py-2.5 px-4 rounded-lg text-sm" (click)="cancelEditShift()">
-          ยกเลิก
+          {{ 'hrShifts.cancelBtn' | translate }}
         </button>
       </div>
     </div>
   </div>
 
-  <div class="col-span-12 lg:col-span-7 min-w-0 p-5 rounded-xl border border-white/10 bg-slate-900/60 shadow-lg backdrop-blur-md">
+  <div class="col-span-12 lg:col-span-7 min-w-0 p-5 rounded-xl border border-white/10 card-surface sv-surface-panel shadow-lg">
     <h6 class="font-bold text-slate-100 flex items-center gap-2 mb-4">
-      <i class="ri-list-check text-cyan-400"></i> รายการกะเวลาทำงานทั้งหมด ({{ shifts.length }})
+      <i class="ri-list-check text-cyan-400"></i> {{ 'hrShifts.listTitle' | translate }} ({{ shifts.length }})
     </h6>
     <div class="table-responsive">
       <table class="table whitespace-nowrap min-w-full">
         <thead>
-          <tr class="border-b border-white/10 bg-black/30 text-slate-400 text-xs uppercase tracking-wider">
-            <th class="text-start py-3 px-3">ชื่อกะ</th>
-            <th class="text-start py-3 px-3">เวลาเข้า - ออก</th>
-            <th class="text-start py-3 px-3">อนุโลม / ปัด / พัก / OT</th>
-            <th class="text-start py-3 px-3">รูปแบบ</th>
-            <th class="text-end py-3 px-3">จัดการ</th>
+          <tr class="border-b border-white/10 sv-subpanel text-slate-400 text-xs uppercase tracking-wider">
+            <th class="text-start py-3 px-3">{{ 'hrShifts.col.name' | translate }}</th>
+            <th class="text-start py-3 px-3">{{ 'hrShifts.col.time' | translate }}</th>
+            <th class="text-start py-3 px-3">{{ 'hrShifts.col.rules' | translate }}</th>
+            <th class="text-start py-3 px-3">{{ 'hrShifts.col.type' | translate }}</th>
+            <th class="text-end py-3 px-3">{{ 'hrShifts.col.actions' | translate }}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-white/5">
@@ -77,16 +77,15 @@
             </td>
             <td class="text-slate-300 py-3 px-3 font-mono text-xs">{{ s.startTime }} - {{ s.endTime }}</td>
             <td class="text-slate-300 py-3 px-3 text-xs">
-              สาย {{ s.graceMinutes }} · ปัด {{ s.roundingMinutes || 0 }} · พัก
-              {{ s.breakMinutes || 0 }} · OT≥{{ s.otThresholdMinutes || 0 }}
+              {{ s.graceMinutes }} / {{ s.roundingMinutes || 0 }} / {{ s.breakMinutes || 0 }} / OT≥{{ s.otThresholdMinutes || 0 }}
             </td>
             <td class="py-3 px-3">
-              <span *ngIf="s.isCrossMidnight" class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-xs">ข้ามคืน</span>
-              <span *ngIf="!s.isCrossMidnight" class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-xs">ปกติ</span>
+              <span *ngIf="s.isCrossMidnight" class="badge bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full text-xs">{{ 'hrShifts.typeNight' | translate }}</span>
+              <span *ngIf="!s.isCrossMidnight" class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-xs">{{ 'hrShifts.typeDay' | translate }}</span>
             </td>
             <td class="text-end py-3 px-3 space-x-1.5">
               <button type="button" class="ti-btn ti-btn-sm ti-btn-primary !px-2.5 !py-1 !rounded-md" (click)="startEditShift(s)">
-                <i class="ri-edit-line"></i> แก้ไข
+                <i class="ri-edit-line"></i> {{ 'hrShifts.editBtn' | translate }}
               </button>
               <button type="button" class="ti-btn ti-btn-sm ti-btn-danger !px-2.5 !py-1 !rounded-md" (click)="deleteShift(s.shiftId)">
                 <i class="ri-delete-bin-line"></i> ลบ
@@ -155,10 +154,10 @@
         <tbody class="divide-y divide-white/5">
           <tr *ngFor="let emp of employees" class="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
             <td class="text-slate-100 font-medium py-3 px-3">
-              {{ emp.member?.firstName }} {{ emp.member?.lastName }}
+              {{ emp.member.firstName }} {{ emp.member.lastName }}
               <span class="text-cyan-400 font-mono text-xs ml-1">({{ emp.employeeId || '-' }})</span>
             </td>
-            <td class="text-slate-300 py-3 px-3 text-xs">{{ emp.department?.thName || '-' }}</td>
+            <td class="text-slate-300 py-3 px-3 text-xs">{{ emp.department.thName || '-' }}</td>
             <td class="py-2.5 px-3">
               <select
                 class="form-control form-control-sm !bg-slate-950/70 !border-white/10 !text-slate-200"
@@ -237,7 +236,7 @@
       <tbody class="divide-y divide-white/5">
         <tr *ngFor="let emp of employees" class="hover:bg-white/[0.02]">
           <td class="py-2 px-3 font-medium text-slate-100 sticky left-0 bg-slate-950/95 z-10">
-            {{ emp.member?.firstName }} {{ emp.member?.lastName }}
+            {{ emp.member.firstName }} {{ emp.member.lastName }}
           </td>
           <td *ngFor="let d of rosterDays" class="py-1.5 px-1 text-center">
             <select

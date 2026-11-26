@@ -7,7 +7,7 @@ import { TimestampService } from '../../services/timestamp.service';
 import { TokenService } from '../../../shared/services/token.service';
 import { NavService } from '../../../shared/services/nav.service';
 import { TimestampModel } from '../../models/timestamp.model';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-warning-timetamp',

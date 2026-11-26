@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  ElementRef,
   OnInit,
   ViewChild,
   ViewEncapsulation,
@@ -17,7 +16,7 @@ import {
 import { CompanyLocationModel } from '../../models/company-location.model';
 import { CompanyLocationService } from '../../services/company-location.service';
 import { TokenService } from '../../../shared/services/token.service';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-company-location',
@@ -35,13 +34,13 @@ import swal from 'sweetalert';
 })
 export class CompanyLocationComponent implements OnInit {
   @ViewChild('editGeofenceMap') editGeofenceMap?: GeofenceMapComponent;
-  @ViewChild('closeModal') public childModal?: ElementRef;
 
   readonly pageSize = 8;
 
   action: 'add' | 'edit' = 'add';
   loading = false;
   saving = false;
+  showModal = false;
   companyId = '';
 
   itemsList: CompanyLocationModel[] = [];
@@ -265,6 +264,7 @@ export class CompanyLocationComponent implements OnInit {
     this.selectModel.startDate = today;
     this.selectModel.endDate = today;
     this.center = this.mapCenter;
+    this.showModal = true;
     this.scheduleEditMapInvalidate();
   }
 
@@ -279,7 +279,12 @@ export class CompanyLocationComponent implements OnInit {
       this.selectModel.endDate = String(this.selectModel.endDate).slice(0, 10);
     }
     this.center = this.mapCenter;
+    this.showModal = true;
     this.scheduleEditMapInvalidate();
+  }
+
+  closeModal() {
+    this.showModal = false;
   }
 
   openEdit(item: CompanyLocationModel) {
@@ -332,7 +337,7 @@ export class CompanyLocationComponent implements OnInit {
           this.saving = false;
           swal('สำเร็จ', 'บันทึกข้อมูลสำเร็จ', 'success');
           this.getLocation();
-          this.childModal?.nativeElement.click();
+          this.closeModal();
         },
         error: (err) => {
           this.saving = false;

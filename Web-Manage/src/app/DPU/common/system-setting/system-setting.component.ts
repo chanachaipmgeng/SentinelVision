@@ -12,7 +12,7 @@ import {
   resolveTtsSettings,
 } from '../../../shared/utils/tts-templates';
 import { SystemSettingService } from '../../services/system-setting.service';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-system-setting',

@@ -108,15 +108,15 @@
                       <span class="dpu-landing__console-dot dpu-landing__console-dot--yellow"></span>
                       <span class="dpu-landing__console-dot dpu-landing__console-dot--green"></span>
                     </div>
-                    <span class="font-mono text-[0.7rem] text-slate-300">SENTINELVISION COMMAND CENTER v4.0.0</span>
+                    <span class="font-mono text-[0.7rem] text-slate-300 truncate">{{ 'landing.preview.topbar' | translate }}</span>
                   </div>
-                  <div class="flex items-center gap-3 text-[0.68rem]">
-                    <span class="inline-flex items-center gap-1.5 text-emerald-400">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                      SYSTEM ONLINE
+                  <div class="flex items-center gap-3 text-[0.68rem] shrink-0">
+                    <span class="inline-flex items-center gap-1.5 text-emerald-400 whitespace-nowrap">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                      {{ 'landing.preview.online' | translate }}
                     </span>
-                    <span class="hidden sm:inline-block text-slate-400 font-mono">6 STATION MODES</span>
-                    <span class="hidden md:inline-block text-cyan-400 font-mono">512-d ENGINE</span>
+                    <span class="hidden sm:inline-block text-slate-400 font-mono whitespace-nowrap">{{ 'landing.preview.modesBadge' | translate }}</span>
+                    <span class="hidden md:inline-block text-cyan-400 font-mono whitespace-nowrap">{{ 'landing.preview.engineBadge' | translate }}</span>
                   </div>
                 </div>
 
@@ -124,11 +124,11 @@
                 <div class="dpu-landing__console-body">
                   <!-- Left: Live Face Detection Screen -->
                   <div class="dpu-landing__console-panel dpu-landing__console-panel--video relative flex flex-col justify-between p-3.5 rounded-xl border border-white/10 bg-gradient-to-b from-slate-950/90 to-slate-900/90 overflow-hidden">
-                    <div class="flex items-center justify-between z-10">
-                      <span class="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[0.68rem] font-bold tracking-wider border border-teal-500/30 flex items-center gap-1.5">
-                        <i class="ri-record-circle-line text-red-400"></i> LIVE KIOSK TERMINAL #01
+                    <div class="flex items-center justify-between z-10 gap-2">
+                      <span class="px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 text-[0.68rem] font-bold tracking-wider border border-teal-500/30 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="ri-record-circle-line text-red-400"></i> {{ 'landing.preview.terminalLabel' | translate }}
                       </span>
-                      <span class="text-[0.68rem] font-mono text-slate-400">FPS: 60 • 14ms</span>
+                      <span class="text-[0.68rem] font-mono text-slate-400 whitespace-nowrap">60 FPS • 14ms</span>
                     </div>
 
                     <!-- Target Face Detection HUD -->
@@ -140,26 +140,26 @@
                         <div class="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-cyan-300"></div>
                         <i class="ri-user-smile-line text-5xl text-cyan-300/40"></i>
                         <div
-                          class="absolute px-2.5 py-0.5 rounded-full text-[0.65rem] font-black tracking-wider uppercase flex items-center gap-1 shadow-md"
+                          class="absolute px-2.5 py-0.5 rounded-full text-[0.65rem] font-black tracking-wider uppercase flex items-center gap-1 shadow-md whitespace-nowrap"
                           style="bottom: -11px; background-color: #22d3ee; color: #041217; z-index: 25; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.45); border: 1px solid rgba(255, 255, 255, 0.4);">
-                          <i class="ri-check-line text-[0.7rem] font-black"></i> MATCH 99.4%
+                          <i class="ri-check-line text-[0.7rem] font-black"></i> {{ 'landing.preview.matchBadge' | translate }}
                         </div>
                       </div>
                     </div>
 
                     <!-- Bottom Scanned Identity Result -->
                     <div class="z-10 bg-slate-900/85 backdrop-blur-md rounded-lg p-2.5 border border-white/10 flex items-center justify-between gap-3">
-                      <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 font-bold text-xs">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 font-bold text-xs shrink-0">
                           CK
                         </div>
-                        <div>
-                          <div class="text-xs font-bold text-white leading-tight">Chana Chai (Engineering)</div>
-                          <div class="text-[0.68rem] text-slate-400">Turnstile 01 • Access Granted</div>
+                        <div class="min-w-0">
+                          <div class="text-xs font-bold text-white leading-tight truncate">{{ 'landing.preview.personName' | translate }}</div>
+                          <div class="text-[0.68rem] text-slate-400 truncate">{{ 'landing.preview.personSub' | translate }}</div>
                         </div>
                       </div>
-                      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[0.68rem] font-bold border border-emerald-500/30">
-                        UNLOCKED
+                      <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[0.68rem] font-bold border border-emerald-500/30 whitespace-nowrap shrink-0">
+                        {{ 'landing.preview.unlocked' | translate }}
                       </span>
                     </div>
                   </div>
@@ -168,9 +168,9 @@
                   <div class="dpu-landing__console-panel dpu-landing__console-panel--events flex flex-col p-3 rounded-xl border border-white/10 bg-gradient-to-b from-slate-950/90 to-slate-900/90 overflow-hidden">
                     <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
                       <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                        <i class="ri-shield-flash-line text-cyan-400"></i> SECURITY LOGS
+                        <i class="ri-shield-flash-line text-cyan-400"></i> {{ 'landing.preview.logsHeader' | translate }}
                       </span>
-                      <span class="text-[0.65rem] text-cyan-400">AUTO-TRIAGE ACTIVE</span>
+                      <span class="text-[0.65rem] text-cyan-400 whitespace-nowrap">{{ 'landing.preview.autoTriage' | translate }}</span>
                     </div>
 
                     <div class="flex flex-col gap-2 overflow-hidden flex-1 justify-between">
@@ -178,8 +178,8 @@
                         <div class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-amber-400"></span>
                           <div>
-                            <div class="font-semibold text-slate-200 text-[0.75rem]">VIP Arrival: Dr. Prasit</div>
-                            <div class="text-[0.65rem] text-slate-400">Executive Floor (Zone A)</div>
+                            <div class="font-semibold text-slate-200 text-[0.75rem]">{{ 'landing.preview.log1Title' | translate }}</div>
+                            <div class="text-[0.65rem] text-slate-400">{{ 'landing.preview.log1Sub' | translate }}</div>
                           </div>
                         </div>
                         <span class="text-[0.65rem] font-mono text-slate-400">08:42:15</span>
@@ -189,8 +189,8 @@
                         <div class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-sky-400"></span>
                           <div>
-                            <div class="font-semibold text-slate-200 text-[0.75rem]">Door Unlocked: North Gate</div>
-                            <div class="text-[0.65rem] text-slate-400">IoT Relay Authenticated</div>
+                            <div class="font-semibold text-slate-200 text-[0.75rem]">{{ 'landing.preview.log2Title' | translate }}</div>
+                            <div class="text-[0.65rem] text-slate-400">{{ 'landing.preview.log2Sub' | translate }}</div>
                           </div>
                         </div>
                         <span class="text-[0.65rem] font-mono text-slate-400">08:41:50</span>
@@ -200,8 +200,8 @@
                         <div class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-violet-400"></span>
                           <div>
-                            <div class="font-semibold text-slate-200 text-[0.75rem]">Visitor Pass: Thanaporn</div>
-                            <div class="text-[0.65rem] text-slate-400">OCR Scanned • PDPA Auto-Purge</div>
+                            <div class="font-semibold text-slate-200 text-[0.75rem]">{{ 'landing.preview.log3Title' | translate }}</div>
+                            <div class="text-[0.65rem] text-slate-400">{{ 'landing.preview.log3Sub' | translate }}</div>
                           </div>
                         </div>
                         <span class="text-[0.65rem] font-mono text-slate-400">08:40:22</span>
@@ -211,8 +211,8 @@
                         <div class="flex items-center gap-2">
                           <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                           <div>
-                            <div class="font-semibold text-slate-200 text-[0.75rem]">Shift Check-in: Manasvee</div>
-                            <div class="text-[0.65rem] text-slate-400">Shift Morning • On-Time</div>
+                            <div class="font-semibold text-slate-200 text-[0.75rem]">{{ 'landing.preview.log4Title' | translate }}</div>
+                            <div class="text-[0.65rem] text-slate-400">{{ 'landing.preview.log4Sub' | translate }}</div>
                           </div>
                         </div>
                         <span class="text-[0.65rem] font-mono text-slate-400">08:38:09</span>
@@ -326,7 +326,7 @@
                 <div>
                   <div class="dpu-landing__mode-badge">
                     <i [class]="m.icon"></i>
-                    <span>{{ m.code }}</span>
+                    <span>{{ m.badgeKey | translate }}</span>
                   </div>
                   <h3>{{ m.titleKey | translate }}</h3>
                   <p>{{ m.descKey | translate }}</p>

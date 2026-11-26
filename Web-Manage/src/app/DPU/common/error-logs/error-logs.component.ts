@@ -19,7 +19,7 @@ import {
   toDataTableParams,
 } from '../../../shared/utils/data-table-query';
 import { apiErrorMessage } from '../../../shared/utils/http-error-body';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 interface ErrorLogRow {
   id: string;

@@ -89,7 +89,7 @@ export class NavService implements OnDestroy {
       });
     if (window.innerWidth < 991) {
       // Detect Route change sidebar close
-      this.router.events.subscribe(() => {
+      this.router.events.pipe(takeUntil(this.unsubscriber)).subscribe(() => {
         this.collapseSidebar = true;
         this.megaMenu = false;
         this.levelMenu = false;

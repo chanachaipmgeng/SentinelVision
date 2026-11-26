@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -15,7 +15,7 @@ import { CompanyService } from '../../services/company.service';
 import { CompanyModel } from '../../models/company.model';
 import { TokenService } from '../../../shared/services/token.service';
 import { environment } from '../../../../environments/environment';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-company-manage',
@@ -41,11 +41,10 @@ import swal from 'sweetalert';
     encapsulation: ViewEncapsulation.None
 })
 export class CompanyManageComponent implements OnInit {
-  @ViewChild('closeModal') public childModal?: ElementRef;
-
   readonly pageSize = 10;
   action: 'add' | 'edit' = 'add';
   loading = false;
+  showModal = false;
   allSelected = false;
   someSelected = false;
   pageIndex = 0;
@@ -197,11 +196,13 @@ export class CompanyManageComponent implements OnInit {
     this.selectModel.latitude = 0;
     this.selectModel.longitude = 0;
     this.selectModel.picture = '';
+    this.showModal = true;
   }
 
   view(item: CompanyModel) {
     this.action = 'edit';
     this.selectModel = new CompanyModel(item);
+    this.showModal = true;
     this.quotaDraft = {
       packageCode: item.packageCode || '',
       maxDevices: item.maxDevices ?? null,
@@ -221,6 +222,10 @@ export class CompanyManageComponent implements OnInit {
       },
       error: () => {},
     });
+  }
+
+  closeModal() {
+    this.showModal = false;
   }
 
   lifecycleLabel(item: CompanyModel): string {
@@ -312,7 +317,7 @@ export class CompanyManageComponent implements OnInit {
         next: () => {
           swal('สำเร็จ', 'บันทึกข้อมูลบริษัท', 'success');
           this.load();
-          this.childModal?.nativeElement.click();
+          this.closeModal();
         },
         error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
       });

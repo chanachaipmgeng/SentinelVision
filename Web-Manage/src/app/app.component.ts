@@ -1,11 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, ChildrenOutletContexts } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { routeAnimations } from './shared/animations/route-animations';
 import { ThemeService } from './shared/services/theme.service';
+import { ConfirmDialogHostComponent } from './shared/components/command-ui/confirm-dialog-host.component';
+
 @Component({
     selector: 'app-root',
-    imports: [CommonModule, RouterOutlet],
+    imports: [CommonModule, RouterOutlet, ConfirmDialogHostComponent],
     templateUrl: './app.component.html',
     styleUrl: './app.component.scss',
     animations: [routeAnimations]
@@ -14,13 +17,20 @@ export class AppComponent implements OnInit {
   title = 'SentinelVision';
   public isSpinner = true;
 
-  constructor(private contexts: ChildrenOutletContexts, private themeService: ThemeService) {}
+  constructor(
+    private contexts: ChildrenOutletContexts,
+    private themeService: ThemeService,
+    private translate: TranslateService,
+  ) {}
 
   getRouteAnimationData() {
     return this.contexts.getContext('primary')?.route?.snapshot?.data?.['animation'];
   }
 
   ngOnInit() {
+    const savedLang = localStorage.getItem('dpu-lang') || localStorage.getItem('sv_lang') || 'th';
+    this.translate.setDefaultLang('th');
+    this.translate.use(savedLang === 'en' ? 'en' : 'th');
     this.applyDpuThemeDefaults();
   }
 

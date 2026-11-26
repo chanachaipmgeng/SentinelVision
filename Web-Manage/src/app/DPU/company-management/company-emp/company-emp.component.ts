@@ -1,19 +1,13 @@
 import { CommonModule } from '@angular/common';
-import {
-  AfterViewInit,
-  ChangeDetectorRef,
-  Component,
-  ElementRef,
-  OnDestroy,
-  ViewChild, OnInit,
-} from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, ViewChild, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { FlatpickrDefaults, FlatpickrModule } from 'angularx-flatpickr';
 import { FileItem, FileUploader, FileUploadModule, ParsedResponseHeaders } from 'ng2-file-upload';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 import { SharedModule } from '../../../shared/shared.module';
@@ -71,7 +65,8 @@ import { clampPageIndex } from '../../../shared/utils/data-table-query';
     templateUrl: './company-emp.component.html',
     styleUrl: './company-emp.component.css'
 })
-export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
+export class CompanyEmpComponent implements OnDestroy, OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   @ViewChild('detailModal') detailModal?: EmpDetailModalComponent;
   @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
   @ViewChild('importFileInput') importFileInput?: ElementRef<HTMLInputElement>;
@@ -100,14 +95,13 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
   _searchTerm = '';
   sortBy: string | null = 'employeeId';
   sortDir: 'asc' | 'desc' | null = 'asc';
+  showDetailModal = false;
+  showFaceManagementModal = false;
   isEdit = false;
   isImporting = false;
   importProgress: EmployeeImportProgress | null = null;
   importStatusText = 'กรุณารอสักครู่ ระบบกำลังบันทึกข้อมูลและใบหน้า';
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
-
-  private readonly bodyModalIds = ['modal-face', 'modal-detail', 'modal-face-management'];
-  private movedModalNodes: HTMLElement[] = [];
 
   get searchTerm(): string {
     return this._searchTerm;
@@ -154,7 +148,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
       this.listViewMode = 'cards';
     }
     this.pageSize = pageSizeForView(this.listViewMode);
-    this.importService.state$.subscribe((s) => {
+    this.importService.state$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((s) => {
       this.isImporting = s.isImporting;
       this.importProgress = s.progress;
       this.importStatusText = s.statusText;
@@ -162,21 +156,9 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
     });
   }
 
-  ngAfterViewInit(): void {
-    this.bodyModalIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el && el.parentElement !== document.body) {
-        document.body.appendChild(el);
-        this.movedModalNodes.push(el);
-      }
-    });
-  }
-
   ngOnDestroy(): void {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.faceEnrollModal?.closeFaceEnrollModal();
-    this.movedModalNodes.forEach((el) => el.remove());
-    this.movedModalNodes = [];
   }
 
   ngOnInit(): void {
@@ -208,13 +190,13 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
   }
 
   getDepartment(): void {
-    this.departmentService.getLists(this.companyId).subscribe((result) => {
+    this.departmentService.getLists(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
       this.departmentList = result;
     });
   }
 
   getPosition(): void {
-    this.positionService.getLists(this.companyId).subscribe((result) => {
+    this.positionService.getLists(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
       this.positionList = result;
     });
   }
@@ -231,7 +213,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
         sortBy: this.sortBy,
         sortDir: this.sortDir || 'asc',
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (page) => {
           this.serverTotal = page.total;
           if (!this.listViewPreferenceLocked) {
@@ -300,7 +282,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
       buttons: ['Cancel', 'Yes,Delete it!'],
     }).then((willDelete: unknown) => {
       if (willDelete) {
-        this.employeeService.delete(this.companyId, item).subscribe(() => {
+        this.employeeService.delete(this.companyId, item).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
           swal('Save Success!!', 'บันทึกข้อมูลสำเร็จ', 'success');
           this.ngOnInit();
         });
@@ -318,7 +300,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
       buttons: ['ยกเลิก', 'ยืนยันพ้นสภาพ (Offboard)'],
     }).then((confirmed: unknown) => {
       if (!confirmed) return;
-      this.employeeService.offboard(this.companyId, item.company_employeeId).subscribe({
+      this.employeeService.offboard(this.companyId, item.company_employeeId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           swal(
             'ดำเนินการสำเร็จ',
@@ -366,15 +348,22 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
   new(): void {
     this.isEdit = false;
     this.selectModel = new EmployeeModel();
+    this.showDetailModal = true;
   }
 
   view(item: EmployeeModel): void {
     this.isEdit = true;
     this.selectModel = item;
+    this.showDetailModal = true;
+  }
+
+  closeDetailModal(): void {
+    this.showDetailModal = false;
   }
 
   async openFaceEnroll(item: EmployeeModel): Promise<void> {
-    this.view(item);
+    this.isEdit = true;
+    this.selectModel = item;
     await this.faceEnrollModal?.openForEmployee(item);
   }
 
@@ -387,11 +376,17 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
         [first, last].filter(Boolean).join(' ').trim() ||
         item.employeeId ||
         item.member.memberId;
+      this.showFaceManagementModal = true;
     }
   }
 
+  closeFaceManagementModal(): void {
+    this.showFaceManagementModal = false;
+    this.selectedMemberId = null;
+  }
+
   downloadImportTemplate(): void {
-    this.employeeService.downloadImportTemplate(this.companyId).subscribe({
+    this.employeeService.downloadImportTemplate(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -439,7 +434,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
         skip: { text: 'นำเข้าโดยไม่มีรูป', value: 'skip' },
         zip: { text: 'แนบ ZIP รูป', value: 'zip' },
       },
-    }).then((choice: string | null) => {
+    }).then((choice) => {
       if (!choice) {
         this.importService.setPendingExcel(null);
         return;
@@ -546,7 +541,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
         if (this.selectModel.companyRoleType === undefined || this.selectModel.companyRoleType === null) {
           this.selectModel.companyRoleType = 0;
         }
-        this.employeeService.save(this.selectModel, this.companyId).subscribe({
+        this.employeeService.save(this.selectModel, this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: () => {
             swal('Save Success!!', 'บันทึกข้อมูลสำเร็จ', 'success');
             this.ngOnInit();
@@ -555,7 +550,7 @@ export class CompanyEmpComponent implements OnDestroy, AfterViewInit, OnInit {
           error: (err) => this.showSaveError(err),
         });
       } else {
-        this.employeeService.update(this.selectModel, this.companyId).subscribe({
+        this.employeeService.update(this.selectModel, this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: () => {
             swal('Save Success!!', 'บันทึกข้อมูลสำเร็จ', 'success');
             this.ngOnInit();

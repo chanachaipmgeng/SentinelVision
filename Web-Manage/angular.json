@@ -16,7 +16,7 @@
         "@schematics/angular:standalone": {
           "skipTests": true
         },
-        "@schematics/angularirective": {
+        "@schematics/angular:directive": {
           "skipTests": true
         },
         "@schematics/angular:guard": {
@@ -25,13 +25,13 @@
         "@schematics/angular:interceptor": {
           "skipTests": true
         },
-        "@schematics/angularipe": {
+        "@schematics/angular:pipe": {
           "skipTests": true
         },
         "@schematics/angular:resolver": {
           "skipTests": true
         },
-        "@schematics/angularervice": {
+        "@schematics/angular:service": {
           "skipTests": true
         }
       },
@@ -44,8 +44,7 @@
           "options": {
             "allowedCommonJsDependencies": [
               "can-use-dom",
-              "leaflet",
-              "sweetalert"
+              "leaflet"
             ],
             "outputPath": "dist/preview",
             "index": "src/index.html",
@@ -70,8 +69,7 @@
               "src/.htaccess"
             ],
             "styles": [
-              "src/styles.scss",
-              "./node_modules/font-awesome/css/font-awesome.css"
+              "src/styles.scss"
             ],
             "scripts": [
               "node_modules/preline/dist/preline.js"
@@ -82,13 +80,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "2500kb",
-                  "maximumError": "6mb"
+                  "maximumWarning": "2400kb",
+                  "maximumError": "3mb"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "5mb",
-                  "maximumError": "5mb"
+                  "maximumWarning": "64kb",
+                  "maximumError": "128kb"
                 }
               ],
               "fileReplacements": [
@@ -149,8 +147,7 @@
               "src/.htaccess"
             ],
             "styles": [
-              "src/styles.scss",
-              "./node_modules/font-awesome/css/font-awesome.css"
+              "src/styles.scss"
             ],
             "scripts": [
               "node_modules/preline/dist/preline.js"

@@ -7,7 +7,7 @@ import { TokenService } from '../../../shared/services/token.service';
 import { TimestampService } from '../../services/timestamp.service';
 import { EmployeeService } from '../../services/employee.service';
 import { TimestampModel } from '../../models/timestamp.model';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-company-reports',

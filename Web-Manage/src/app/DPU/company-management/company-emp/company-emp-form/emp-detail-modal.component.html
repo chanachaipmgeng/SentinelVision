@@ -1,25 +1,21 @@
-<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">ข้อมูลพนักงาน
-        </h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
-          data-hs-overlay="#modal-detail">
-          <span class="sr-only">Close</span>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body px-4">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="xl:col-span-12 col-span-12">
-            <div class="mb-0 text-center">
-              <span class="avatar avatar-xxl avatar-rounded">
-                <img [src]="selectModel?.getPicture?.() || './assets/images/faces/1.jpg'" alt="" id="profile-img">
+<app-surface-modal
+  modalId="modal-detail"
+  [open]="open"
+  title="ข้อมูลพนักงาน"
+  icon="ri-user-3-line"
+  size="xl"
+  [closeOnBackdrop]="false"
+  (closed)="clickClose()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <div class="xl:col-span-12 col-span-12">
+      <div class="mb-0 text-center">
+        <span class="avatar avatar-xxl avatar-rounded">
+          <img [src]="selectModel.getPicture() || './assets/images/faces/1.jpg'" alt="" id="profile-img">
                 <span class="badge rounded-full bg-primary avatar-badge">
                   <input ng2FileSelect [uploader]="uploaderProfile" type="file" name="photo"
                     class="absolute w-full h-full opacity-[0]" id="profile-change">
-                  <i class="fe fe-camera text-[.625rem]"></i>
+                  <i class="ri-camera-line text-[.625rem]"></i>
                 </span>
               </span>
             </div>
@@ -144,14 +140,10 @@
             </ng-select>
           </div>
         </div>
-      </div>
-      <div class="ti-modal-footer">
-        <button #closeModal type="button" class="hs-dropdown-toggle ti-btn  ti-btn-light align-middle"
-          data-hs-overlay="#modal-detail">
-          ยกเลิก
-        </button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save.emit()">{{ 'Save' | translate }}</button>
-      </div>
-    </div>
-  </div>
-</div>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light align-middle" (click)="clickClose()">
+      ยกเลิก
+    </button>
+    <button type="button" class="ti-btn bg-primary text-white !font-medium" (click)="save.emit()">{{ 'Save' | translate }}</button>
+  </ng-container>
+</app-surface-modal>

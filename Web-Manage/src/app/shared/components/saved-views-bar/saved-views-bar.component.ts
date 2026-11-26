@@ -13,7 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import swal from 'sweetalert';
+import swal from '../../utils/vault-swal';
 import { TokenService } from '../../services/token.service';
 import {
   SAVED_VIEW_NAME_MAX,

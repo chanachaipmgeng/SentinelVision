@@ -82,13 +82,13 @@
                   </thead>
                   <tbody>
                     <tr *ngFor="let emp of employees" class="border-b border-defaultborder">
-                      <td class="font-medium">{{ emp.member?.firstName }} {{ emp.member?.lastName }}</td>
-                      <td>{{ emp.member?.email }}</td>
+                      <td class="font-medium">{{ emp.member.firstName }} {{ emp.member.lastName }}</td>
+                      <td>{{ emp.member.email }}</td>
                       <td>
-                        <span *ngIf="emp.member?.biometricConsentAt" class="badge bg-success/10 text-success">
+                        <span *ngIf="emp.member.biometricConsentAt" class="badge bg-success/10 text-success">
                           {{ emp.member.biometricConsentAt | date: 'dd/MM/yyyy HH:mm' }}
                         </span>
-                        <span *ngIf="!emp.member?.biometricConsentAt" class="badge bg-slate-700/40 text-slate-300 border border-white/10">
+                        <span *ngIf="!emp.member.biometricConsentAt" class="badge bg-slate-700/40 text-slate-300 border border-white/10">
                           ยังไม่ระบุ / รอลงทะเบียน
                         </span>
                       </td>
@@ -96,21 +96,21 @@
                         <button
                           type="button"
                           class="ti-btn ti-btn-sm ti-btn-light"
-                          (click)="exportDsar(emp.member?.memberId)"
+                          (click)="exportDsar(emp.member.memberId)"
                         >
                           DSAR
                         </button>
                         <button
                           type="button"
                           class="ti-btn ti-btn-sm ti-btn-success"
-                          (click)="grantConsent(emp.member?.memberId)"
+                          (click)="grantConsent(emp.member.memberId)"
                         >
                           บันทึกความยินยอม
                         </button>
                         <button
                           type="button"
                           class="ti-btn ti-btn-sm ti-btn-danger"
-                          (click)="revokeConsent(emp.member?.memberId)"
+                          (click)="revokeConsent(emp.member.memberId)"
                         >
                           Erasure
                         </button>

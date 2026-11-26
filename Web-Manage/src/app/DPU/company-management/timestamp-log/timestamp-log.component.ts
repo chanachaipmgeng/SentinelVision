@@ -23,7 +23,7 @@ import { TimestampModel } from '../../models/timestamp.model';
 import { EmployeeModel } from '../../models/employee.model';
 import { EmployeeService } from '../../services/employee.service';
 import { clampPageIndex } from '../../../shared/utils/data-table-query';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 interface TimestampLogViewFilters {
   q: string;

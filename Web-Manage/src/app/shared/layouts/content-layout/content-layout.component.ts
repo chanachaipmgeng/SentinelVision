@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, Renderer2 } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { Subscription, filter } from 'rxjs';
 import { Menu, NavService } from '../../services/nav.service';
 import { routeAnimations } from '../../services/animations/route.animations';
@@ -26,6 +27,7 @@ const KIOSK_MODE_CLASS = 'dpu-kiosk-mode';
     imports: [
       CommonModule,
       RouterModule,
+      TranslateModule,
       HeaderComponent,
       SidebarComponent,
       FooterComponent,

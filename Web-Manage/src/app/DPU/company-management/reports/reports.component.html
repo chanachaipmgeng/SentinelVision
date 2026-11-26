@@ -1,4 +1,4 @@
-<app-page-header [title]="'รายงานสรุปการลงเวลา (Attendance Reports)'" [activeTitle]="'ข้อมูลเวลา & รายงาน'" [title1]="'รายงาน'"></app-page-header>
+<app-page-header [title]="'reports.page.title' | translate" [activeTitle]="'reports.page.group' | translate" [title1]="'reports.page.breadcrumb' | translate"></app-page-header>
 
 <div class="dpu-list-page grid grid-cols-12 gap-6">
   <!-- Filter Card -->
@@ -6,7 +6,7 @@
     <div class="box modern-card glass card-surface-cyan">
       <div class="box-header flex items-center justify-between border-b border-white/10 p-4">
         <div class="box-title flex items-center gap-2 text-slate-100 font-bold">
-          <i class="ri-filter-3-line text-cyan-400 text-lg"></i> {{ 'Filter' | translate }} & ขอบเขตข้อมูล
+          <i class="ri-filter-3-line text-cyan-400 text-lg"></i> {{ 'Filter' | translate }} &amp; {{ 'reports.page.filterSuffix' | translate }}
         </div>
         <span class="badge bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-xs px-2.5 py-1 rounded-full">
           Sentinel Analytics
@@ -16,31 +16,31 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="form-label text-slate-300 text-xs font-semibold">{{ 'From date' | translate }}</label>
-            <input type="date" class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.startDate" />
+            <input type="date" class="form-control sv-input" [(ngModel)]="draft.startDate" />
           </div>
           <div>
             <label class="form-label text-slate-300 text-xs font-semibold">{{ 'To date' | translate }}</label>
-            <input type="date" class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.endDate" />
+            <input type="date" class="form-control sv-input" [(ngModel)]="draft.endDate" />
           </div>
         </div>
         <div>
           <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Employee (blank = whole company)' | translate }}</label>
-          <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.company_employeeId">
-            <option value="">— {{ 'All' | translate }} (พนักงานทั้งหมดของบริษัท) —</option>
+          <select class="form-control sv-input" [(ngModel)]="draft.company_employeeId">
+            <option value="">— {{ 'All' | translate }} ({{ 'reports.page.allEmployees' | translate }}) —</option>
             <option *ngFor="let e of employees" [value]="e.company_employeeId">{{ e.label }}</option>
           </select>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Mode' | translate }}</label>
-            <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.mode">
-              <option value="raw">{{ 'Raw punches' | translate }} (บันทึกรายครั้ง)</option>
-              <option value="payroll">{{ 'Payroll summary' | translate }} (สรุปกะและโอที)</option>
+            <select class="form-control sv-input" [(ngModel)]="draft.mode">
+              <option value="raw">{{ 'Raw punches' | translate }} ({{ 'reports.page.rawNote' | translate }})</option>
+              <option value="payroll">{{ 'Payroll summary' | translate }} ({{ 'reports.page.payrollNote' | translate }})</option>
             </select>
           </div>
           <div>
             <label class="form-label text-slate-300 text-xs font-semibold">{{ 'Format' | translate }}</label>
-            <select class="form-control !bg-slate-950/70 !border-white/10 !text-slate-200" [(ngModel)]="draft.format">
+            <select class="form-control sv-input" [(ngModel)]="draft.format">
               <option value="xlsx">Excel Workbook (.xlsx)</option>
               <option value="csv">Comma-Separated Values (.csv)</option>
             </select>
@@ -49,7 +49,7 @@
 
         <div class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2">
           <p class="text-xs text-slate-400 mb-0">
-            <i class="ri-information-line text-cyan-400 me-1"></i> รองรับการส่งออกข้อมูลดิบและสรุปค่ากะพร้อมคำนวณสาย
+            <i class="ri-information-line text-cyan-400 me-1"></i> {{ 'reports.page.helper' | translate }}
           </p>
           <div class="flex flex-wrap items-center gap-2">
             <button
@@ -60,7 +60,7 @@
             >
               <i class="ri-eye-line" *ngIf="!previewLoading"></i>
               <i class="ri-refresh-line animate-spin" *ngIf="previewLoading"></i>
-              ดูตัวอย่างข้อมูล ({{ previewTotal }})
+              {{ 'reports.page.previewBtn' | translate }} ({{ previewTotal }})
             </button>
             <button type="button" class="btn-vault flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold" [disabled]="busy" (click)="export()">
               <i *ngIf="!busy" class="ri-download-2-line"></i>

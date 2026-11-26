@@ -14,7 +14,7 @@ import { TokenService } from '../../../shared/services/token.service';
 import { VALID_STATION_MODES } from '../../services/company-module-config.service';
 import { KeyboardTableDirective } from '../../../shared/directives/keyboard-table.directive';
 import { LocaleDatePipe } from '../../../shared/pipes/locale-date.pipe';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 export interface KioskDeviceRow {
   deviceId: string;

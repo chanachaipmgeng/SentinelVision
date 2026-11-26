@@ -13,17 +13,17 @@
       <div>
         <h6 class="font-bold text-base text-slate-100 mb-1">
           <i class="ri-shield-keyhole-line text-cyan-400 me-1"></i>
-          การส่งต่อเหตุการณ์ความปลอดภัย (SIEM Webhook Export)
+          {{ 'sentinel.watchlist.siemTitle' | translate }}
         </h6>
         <p class="text-xs text-slate-400 mb-0">
-          ส่งเหตุการณ์ตรวจพบ Blacklist / POI / VIP ไปยังระบบ SIEM ภายนอกพร้อมลายเซ็น HMAC-SHA256
+          {{ 'sentinel.watchlist.siemDesc' | translate }}
         </p>
       </div>
       <span
         *ngIf="siemForm.hasSiemWebhookSecret"
         class="badge bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 text-xs rounded-full"
       >
-        ตั้งค่า Secret แล้ว
+        {{ 'sentinel.watchlist.secretSet' | translate }}
       </span>
     </div>
 

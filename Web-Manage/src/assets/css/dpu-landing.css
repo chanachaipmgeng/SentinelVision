@@ -483,6 +483,7 @@
   max-width: 34rem;
   color: #cbd5e1;
   font-size: clamp(1rem, 2.2vw, 1.15rem);
+  text-wrap: balance;
 }
 
 .dpu-landing__cta-row {
@@ -491,6 +492,17 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   justify-content: center;
+}
+
+@media (max-width: 639.98px) {
+  .dpu-landing__cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dpu-landing__cta-row a {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Product visual fold */
@@ -1366,6 +1378,11 @@ html.dpu-landing-cursor body.dpu-landing-body button {
 .dpu-landing__cta-banner h2 {
   position: relative;
   font-size: clamp(1.6rem, 4vw, 2.25rem);
+  text-wrap: balance;
+}
+
+.dpu-landing__section-head h2 {
+  text-wrap: balance;
 }
 
 .dpu-landing__cta-banner p {

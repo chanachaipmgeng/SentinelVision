@@ -11,7 +11,12 @@ import { catchError, map } from 'rxjs/operators';
 import { TokenService } from './token.service';
 import { AuthService } from './auth.service';
 
-const KIOSK_ROUTE = '/company/timestamp-face';
+const KIOSK_ROUTES = ['/company/timestamp-face', '/company/scan/'];
+
+function isKioskAllowedPath(url: string): boolean {
+  const path = url || '';
+  return KIOSK_ROUTES.some((prefix) => path.startsWith(prefix));
+}
 
 @Injectable({
   providedIn: 'root'
@@ -26,16 +31,18 @@ export class AuthGuard implements CanActivate {
 
   /**
    * Kiosk devices authenticate through the pairing screen (`/kiosk/pair`), never through a
-   * token in the URL. A kiosk session may only open the kiosk route itself.
+   * token in the URL. A kiosk session may only open the kiosk / modular scan routes.
    */
   private redirectFor(url: string): string {
-    return (url || '').startsWith(KIOSK_ROUTE) ? '/kiosk/pair' : '/auth/login';
+    return isKioskAllowedPath(url) ? '/kiosk/pair' : '/auth/login';
   }
 
   private allow(state: RouterStateSnapshot): boolean {
     const url = state?.url || '';
-    if (url == '/') {
-      this.router.navigate(['/admin/member-manage']);
+    if (url === '/' || url === '') {
+      const role = String(this.tokenService.getUser()?.member?.role ?? '');
+      const isSysAdmin = role === '99' || role.toUpperCase() === 'ADMIN_SYSTEM';
+      this.router.navigate([isSysAdmin ? '/admin/home' : '/company/dashboard']);
     }
     return true;
   }
@@ -48,10 +55,10 @@ export class AuthGuard implements CanActivate {
   private check(state: RouterStateSnapshot): boolean | Observable<boolean | UrlTree> {
     const url = state?.url || '';
     if (this.tokenService.isKioskSession()) {
-      if (url.startsWith(KIOSK_ROUTE)) {
+      if (isKioskAllowedPath(url)) {
         return true;
       }
-      this.router.navigate([KIOSK_ROUTE]);
+      this.router.navigate(['/company/timestamp-face']);
       return false;
     }
     if (this.tokenService.getToken()) {

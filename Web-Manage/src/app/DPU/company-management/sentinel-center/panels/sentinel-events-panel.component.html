@@ -1,17 +1,17 @@
 <!-- Section: Check-ins & Booth Dwell -->
 <div *ngIf="section === 'checkins'" class="space-y-6">
   <div class="grid grid-cols-12 gap-4">
-    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5">
-      <div class="text-xs text-slate-400">แคมเปญงานอีเวนต์ที่เปิดอยู่</div>
-      <div class="text-2xl font-bold text-cyan-300 mt-1">{{ events.length }} งาน</div>
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 sv-subpanel">
+      <div class="text-xs text-slate-400">{{ 'sentinel.events.activeCampaigns' | translate }}</div>
+      <div class="text-2xl font-bold text-cyan-300 mt-1">{{ events.length }}</div>
     </div>
-    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5">
-      <div class="text-xs text-slate-400">ลงทะเบียนเข้างานรวม</div>
-      <div class="text-2xl font-bold text-teal-300 mt-1">{{ totalRegistered }} / {{ totalCapacity }} ที่นั่ง</div>
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-teal-500/20 bg-teal-500/5 sv-subpanel">
+      <div class="text-xs text-slate-400">{{ 'sentinel.events.totalRegistered' | translate }}</div>
+      <div class="text-2xl font-bold text-teal-300 mt-1">{{ totalRegistered }} / {{ totalCapacity }}</div>
     </div>
-    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-      <div class="text-xs text-slate-400">สแกนใบหน้าเช็คอินเข้างานแล้ว</div>
-      <div class="text-2xl font-bold text-emerald-300 mt-1">{{ totalCheckedIn }} คน</div>
+    <div class="col-span-12 sm:col-span-4 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 sv-subpanel">
+      <div class="text-xs text-slate-400">{{ 'sentinel.events.checkedIn' | translate }}</div>
+      <div class="text-2xl font-bold text-emerald-300 mt-1">{{ totalCheckedIn }}</div>
     </div>
   </div>
 
@@ -21,14 +21,14 @@
       <div>
         <h6 class="font-bold text-base text-slate-100 mb-0">
           <i class="ri-bar-chart-grouped-line text-cyan-400 me-1"></i>
-          สถิติการสแกนใบหน้าเข้างานอีเวนต์แบบสด (Live Event Check-in Status)
+          {{ 'sentinel.events.liveProgress' | translate }}
         </h6>
         <p class="text-xs text-slate-400 mb-0">
-          ติดตามอัตราผู้เข้าร่วมงานที่เดินผ่านจุดสแกน Kiosk และเปิดหน้าจอต้อนรับรายแคมเปญ
+          {{ 'sentinel.events.liveProgressDesc' | translate }}
         </p>
       </div>
       <a routerLink="/company/events/campaigns" class="ti-btn ti-btn-light text-xs font-semibold">
-        <i class="ri-add-line me-1"></i> จัดการแคมเปญ &amp; ผู้ร่วมงาน
+        <i class="ri-add-line me-1"></i> {{ 'sentinel.events.manageCampaigns' | translate }}
       </a>
     </div>
 

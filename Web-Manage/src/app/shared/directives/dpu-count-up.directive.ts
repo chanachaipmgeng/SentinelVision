@@ -6,7 +6,7 @@ import { Directive, ElementRef, Input, OnDestroy, OnInit } from '@angular/core';
 })
 export class DpuCountUpDirective implements OnInit, OnDestroy {
   @Input('dpuCountUp') target = 0;
-  @Input() duration = 1400;
+  @Input() duration = 700;
   @Input() decimals = 0;
   @Input() suffix = '';
   @Input() prefix = '';
@@ -20,6 +20,16 @@ export class DpuCountUpDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const node = this.el.nativeElement;
+    const to = Number(this.target) || 0;
+    const finalText = `${this.prefix}${to.toFixed(this.decimals || 0)}${this.suffix}`;
+    node.setAttribute('aria-label', finalText);
+
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      node.textContent = finalText;
+      this.started = true;
+      return;
+    }
+
     node.textContent = `${this.prefix}0${this.suffix}`;
 
     if (typeof IntersectionObserver === 'undefined') {
@@ -34,7 +44,7 @@ export class DpuCountUpDirective implements OnInit, OnDestroy {
           this.observer?.disconnect();
         }
       },
-      { threshold: 0.45 },
+      { threshold: 0.15 },
     );
     this.observer.observe(node);
   }

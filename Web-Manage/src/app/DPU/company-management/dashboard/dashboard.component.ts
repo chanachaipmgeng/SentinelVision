@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -11,39 +11,28 @@ import {
   DashboardStats,
 } from '../../services/dashboard.service';
 import { SharedModule } from '../../../shared/shared.module';
-import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
-import { StatChipComponent } from '../../../shared/components/stat-chip/stat-chip.component';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { CheckinMapComponent } from '../../../shared/components/checkin-map/checkin-map.component';
 import { SetupChecklistComponent } from '../../../shared/components/setup-checklist/setup-checklist.component';
 import { WelcomeWizardComponent } from '../../../shared/components/welcome-wizard/welcome-wizard.component';
 import { ShellUiService } from '../../../shared/services/shell-ui.service';
 import { AuthedImageService } from '../../../shared/services/authed-image.service';
-import {
-  BentoGridComponent,
-  BentoCardComponent,
-  BentoStatComponent,
-} from '../../../shared/components/bento';
 
 export const DEFAULT_AVATAR_DATA_URI =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="8" fill="%230f172a"/><circle cx="20" cy="15" r="7" fill="%2338bdf8"/><path d="M7 36c0-6 6-10 13-10s13 4 13 10" fill="%2338bdf8"/></svg>';
 
 @Component({
     selector: 'app-dashboard',
+    changeDetection: ChangeDetectionStrategy.OnPush,
     imports: [
         CommonModule,
         RouterModule,
         NgxEchartsModule,
         SharedModule,
-        PageToolbarComponent,
-        StatChipComponent,
         EmptyStateComponent,
         CheckinMapComponent,
         SetupChecklistComponent,
         WelcomeWizardComponent,
-        BentoGridComponent,
-        BentoCardComponent,
-        BentoStatComponent,
     ],
     templateUrl: './dashboard.component.html',
     styleUrls: [
@@ -137,6 +126,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.startPolling();
     this.langSub = this.translate.onLangChange.subscribe(() => {
       this.setupCharts();
+      this.cdr.markForCheck();
     });
     this.imageSub = this.authedImages.loaded$.subscribe(() => {
       this.cdr.markForCheck();
@@ -156,6 +146,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.loadStats(false);
     } else {
       this.stopPolling();
+      this.cdr.markForCheck();
     }
   }
 
@@ -166,6 +157,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.isRefreshing = true;
     }
     this.error = null;
+    this.cdr.markForCheck();
     this.dashboardService.getStats().subscribe({
       next: (data) => {
         this.applyLiveDiff(data.recentActivity || []);
@@ -174,12 +166,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.lastUpdated = new Date();
         this.isLoading = false;
         this.isRefreshing = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.error = 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ';
         console.error(err);
         this.isLoading = false;
         this.isRefreshing = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -226,6 +220,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (fresh.size) {
       setTimeout(() => {
         this.newHighlightIds = new Set();
+        this.cdr.markForCheck();
       }, 8000);
     }
   }

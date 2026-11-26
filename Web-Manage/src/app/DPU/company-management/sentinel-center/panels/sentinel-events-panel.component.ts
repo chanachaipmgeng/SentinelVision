@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import {
@@ -17,7 +18,7 @@ import { ImageDropzoneComponent } from '../../../../shared/components/image-drop
 
 @Component({
     selector: 'app-sentinel-events-panel',
-    imports: [CommonModule, FormsModule, RouterModule, ImageDropzoneComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, ImageDropzoneComponent],
     templateUrl: './sentinel-events-panel.component.html'
 })
 export class SentinelEventsPanelComponent implements OnInit, OnChanges {

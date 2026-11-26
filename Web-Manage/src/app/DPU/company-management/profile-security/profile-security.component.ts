@@ -6,7 +6,7 @@ import { SharedModule } from '../../../shared/shared.module';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { AuthService } from '../../../shared/services/auth.service';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiErrorMessage } from '../../../shared/utils/http-error-body';
 @Component({

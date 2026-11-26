@@ -1,17 +1,13 @@
-<div id="modal-face" class="hs-overlay hidden ti-modal [--overlay-backdrop:false]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold text-defaulttextcolor" id="mail-ComposeLabel">บันทึกใบหน้า
-        </h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold !text-defaulttextcolor"
-          data-hs-overlay="#modal-face" (click)="closeFaceEnrollModal()">
-          <span class="sr-only">Close</span>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body">
-        <div class="relative border-b border-dashed dark:border-defaultborder/10 p-4">
+<app-surface-modal
+  modalId="modal-face"
+  [open]="open"
+  title="บันทึกใบหน้า"
+  icon="ri-camera-lens-line"
+  size="xl"
+  [closeOnBackdrop]="false"
+  (closed)="closeFaceEnrollModal()"
+>
+  <div class="relative border-b border-dashed dark:border-defaultborder/10 p-2">
           <div class="face-enroll-mode-actions flex flex-wrap justify-center gap-2 mb-4">
             <button type="button" class="ti-btn !mb-0"
               [ngClass]="faceEnrollMode === 'camera' ? 'ti-btn-primary-full' : 'ti-btn-light'"
@@ -189,26 +185,22 @@
             <p class="mt-3 mb-0 text-center text-sm text-defaulttextcolor">{{ faceStatus }}</p>
           </div>
         </div>
-      </div>
-      <div class="ti-modal-footer">
-        <button #closeModalFace type="button" class="hs-dropdown-toggle ti-btn ti-btn-light align-middle"
-          data-hs-overlay="#modal-face" (click)="closeFaceEnrollModal()">
-          ยกเลิก
-        </button>
-        <button type="button" class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="isUploadingFace || switchingCamera || !selectModel?.member?.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !((isFaceDetected && enrollReady) || qualityOverride)) : (!uploadFaceItems.length || isCheckingUploadQuality || (hasInvalidUploadPhotos && !qualityOverride)))"
-          (click)="captureImage()">
-          @if (isUploadingFace) {
-            {{ uploadProgressLabel || 'กำลังบันทึก...' }}
-          } @else if (faceEnrollMode === 'upload') {
-            บันทึก {{ uploadFaceItems.length || '' }} รูป
-          } @else if (allAnglesCaptured) {
-            บันทึก 5 มุม
-          } @else {
-            ถ่ายมุมนี้
-          }
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light align-middle" (click)="closeFaceEnrollModal()">
+      ยกเลิก
+    </button>
+    <button type="button" class="ti-btn bg-primary text-white !font-medium"
+      [disabled]="isUploadingFace || switchingCamera || !selectModel.member.memberId || (faceEnrollMode === 'camera' ? (!allAnglesCaptured && !((isFaceDetected && enrollReady) || qualityOverride)) : (!uploadFaceItems.length || isCheckingUploadQuality || (hasInvalidUploadPhotos && !qualityOverride)))"
+      (click)="captureImage()">
+      @if (isUploadingFace) {
+        {{ uploadProgressLabel || 'กำลังบันทึก...' }}
+      } @else if (faceEnrollMode === 'upload') {
+        บันทึก {{ uploadFaceItems.length || '' }} รูป
+      } @else if (allAnglesCaptured) {
+        บันทึก 5 มุม
+      } @else {
+        ถ่ายมุมนี้
+      }
+    </button>
+  </ng-container>
+</app-surface-modal>

@@ -179,8 +179,25 @@ export class PermissionService {
     if (path.includes('company-info')) {
       return 'company.read';
     }
-    if (path.includes('access-control') || path.includes('watchlist') || path.includes('visitor') || path.includes('event')) {
+    if (
+      path.includes('access-control') ||
+      path.includes('watchlist') ||
+      path.includes('visitor') ||
+      path.includes('event') ||
+      path.includes('parking') ||
+      path.includes('rfid-cards')
+    ) {
       return 'sentinel.manage';
+    }
+    if (
+      path.includes('cameras') ||
+      path.includes('live-wall') ||
+      path.includes('playback') ||
+      path.includes('e-map') ||
+      path.includes('face-monitor') ||
+      path.includes('presence')
+    ) {
+      return 'cameras.read';
     }
     if (path.includes('scan-hub') || path.includes('dashboard') || path.includes('sentinel-center')) {
       return 'company.read';

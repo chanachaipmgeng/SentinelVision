@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit, Renderer2, Inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, Renderer2, Inject, ViewEncapsulation } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -28,7 +28,8 @@ import { DpuMouseGlowComponent } from './fx/dpu-mouse-glow.component';
         DpuCursorDotComponent,
     ],
     templateUrl: './landing-page.component.html',
-    styleUrl: './landing-page.component.scss'
+    styleUrls: ['./landing-page.component.scss', '../../assets/css/dpu-landing.css'],
+    encapsulation: ViewEncapsulation.None
 })
 export class LandingPageComponent implements OnInit, OnDestroy {
   lang = 'th';
@@ -53,12 +54,12 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   ];
 
   readonly kioskModes = [
-    { code: 'ATTENDANCE', icon: 'ri-calendar-check-line', tone: 'cyan', titleKey: 'landing.kiosk.mode.attendance.title', descKey: 'landing.kiosk.mode.attendance.desc' },
-    { code: 'ACCESS_CONTROL', icon: 'ri-door-lock-line', tone: 'sky', titleKey: 'landing.kiosk.mode.access.title', descKey: 'landing.kiosk.mode.access.desc' },
-    { code: 'WATCHLIST_MONITOR', icon: 'ri-alarm-warning-line', tone: 'rose', titleKey: 'landing.kiosk.mode.watchlist.title', descKey: 'landing.kiosk.mode.watchlist.desc' },
-    { code: 'VISITOR_CHECKIN', icon: 'ri-user-shared-line', tone: 'violet', titleKey: 'landing.kiosk.mode.visitor.title', descKey: 'landing.kiosk.mode.visitor.desc' },
-    { code: 'EVENT_CHECKIN', icon: 'ri-ticket-2-line', tone: 'amber', titleKey: 'landing.kiosk.mode.event.title', descKey: 'landing.kiosk.mode.event.desc' },
-    { code: 'UNIFIED_HYBRID', icon: 'ri-apps-2-line', tone: 'teal', titleKey: 'landing.kiosk.mode.unified.title', descKey: 'landing.kiosk.mode.unified.desc' },
+    { code: 'ATTENDANCE', badgeKey: 'landing.kiosk.badge.attendance', icon: 'ri-calendar-check-line', tone: 'cyan', titleKey: 'landing.kiosk.mode.attendance.title', descKey: 'landing.kiosk.mode.attendance.desc' },
+    { code: 'ACCESS_CONTROL', badgeKey: 'landing.kiosk.badge.access', icon: 'ri-door-lock-line', tone: 'sky', titleKey: 'landing.kiosk.mode.access.title', descKey: 'landing.kiosk.mode.access.desc' },
+    { code: 'WATCHLIST_MONITOR', badgeKey: 'landing.kiosk.badge.watchlist', icon: 'ri-alarm-warning-line', tone: 'rose', titleKey: 'landing.kiosk.mode.watchlist.title', descKey: 'landing.kiosk.mode.watchlist.desc' },
+    { code: 'VISITOR_CHECKIN', badgeKey: 'landing.kiosk.badge.visitor', icon: 'ri-user-shared-line', tone: 'violet', titleKey: 'landing.kiosk.mode.visitor.title', descKey: 'landing.kiosk.mode.visitor.desc' },
+    { code: 'EVENT_CHECKIN', badgeKey: 'landing.kiosk.badge.event', icon: 'ri-ticket-2-line', tone: 'amber', titleKey: 'landing.kiosk.mode.event.title', descKey: 'landing.kiosk.mode.event.desc' },
+    { code: 'UNIFIED_HYBRID', badgeKey: 'landing.kiosk.badge.unified', icon: 'ri-apps-2-line', tone: 'teal', titleKey: 'landing.kiosk.mode.unified.title', descKey: 'landing.kiosk.mode.unified.desc' },
   ];
 
   readonly metrics = [
@@ -91,7 +92,9 @@ export class LandingPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.lang = this.translate.currentLang || this.translate.defaultLang || 'th';
+    const saved = localStorage.getItem('dpu-lang') || localStorage.getItem('sv_lang');
+    this.lang = saved === 'en' ? 'en' : (this.translate.currentLang || this.translate.defaultLang || 'th');
+    this.translate.use(this.lang);
     this.renderer.addClass(this.document.body, 'dpu-landing-body');
     this.maybeRedirectAuthenticated();
   }
@@ -105,6 +108,7 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     this.translate.use(code);
     try {
       localStorage.setItem('dpu-lang', code);
+      localStorage.setItem('sv_lang', code);
     } catch {
       /* ignore */
     }

@@ -67,10 +67,10 @@
                 <div>
                   <h6 class="font-bold text-base text-slate-100 mb-0">
                     <i class="ri-scan-2-line text-cyan-400 me-1"></i>
-                    ทดสอบสแกนใบหน้าอัจฉริยะ 1:N (Unified Scan Engine)
+                    {{ 'sentinel.commandPanel.scanTitle' | translate }}
                   </h6>
                   <p class="text-xs text-slate-400 mb-0">
-                    ตรวจสอบพร้อมกันทั้ง พนักงาน, Blacklist, VIP, Visitor และผู้ร่วมงาน Event
+                    {{ 'sentinel.commandPanel.scanDesc' | translate }}
                   </p>
                 </div>
               </div>
@@ -128,7 +128,7 @@
                     (click)="runUnifiedScan()"
                   >
                     <i class="ri-qr-scan-2-line me-1"></i>
-                    {{ isScanning ? 'กำลังประมวลผลด้วย InsightFace GPU...' : 'เริ่มตรวจสอบใบหน้า 1:N ทันที' }}
+                    {{ (isScanning ? 'sentinel.commandPanel.processing' : 'sentinel.commandPanel.runScan') | translate }}
                   </button>
                   <a
                     *ngIf="scanForm.stationMode === 'ACCESS_CONTROL'"

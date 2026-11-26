@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { SharedModule } from '../../../../shared/shared.module';
@@ -12,7 +12,7 @@ import { PositionService } from '../../../services/position.service';
 import { PositionModel } from '../../../models/position.model';
 import { TokenService } from '../../../../shared/services/token.service';
 import { downloadCsv } from '../../../company-management/sentinel-center/sentinel.helpers';
-import swal from 'sweetalert';
+import swal from '../../../../shared/utils/vault-swal';
 
 @Component({
     selector: 'app-position',
@@ -35,11 +35,10 @@ import swal from 'sweetalert';
     encapsulation: ViewEncapsulation.None
 })
 export class PositionComponent {
-  @ViewChild('closeModal') public childModal?: ElementRef;
-
   readonly pageSize = 10;
   companyId = '';
   loading = false;
+  showModal = false;
   allSelected = false;
   someSelected = false;
   isEdit = false;
@@ -162,11 +161,17 @@ export class PositionComponent {
   new() {
     this.isEdit = false;
     this.selectModel = new PositionModel();
+    this.showModal = true;
   }
 
   view(item: PositionModel) {
     this.isEdit = true;
     this.selectModel = new PositionModel(item);
+    this.showModal = true;
+  }
+
+  closeModal() {
+    this.showModal = false;
   }
 
   save() {
@@ -189,7 +194,7 @@ export class PositionComponent {
         next: () => {
           swal('สำเร็จ', 'บันทึกข้อมูลสำเร็จ', 'success');
           this.getPosition();
-          this.childModal?.nativeElement.click();
+          this.closeModal();
         },
         error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
       });

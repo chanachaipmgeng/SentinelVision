@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { TokenService } from '../../../../shared/services/token.service';
 import { SentinelApiService } from '../sentinel-api.service';
 import {
@@ -16,7 +17,7 @@ import { ImageDropzoneComponent } from '../../../../shared/components/image-drop
 
 @Component({
     selector: 'app-sentinel-watchlist-panel',
-    imports: [CommonModule, FormsModule, RouterModule, SentinelCommandPanelComponent, ImageDropzoneComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TranslateModule, SentinelCommandPanelComponent, ImageDropzoneComponent],
     templateUrl: './sentinel-watchlist-panel.component.html'
 })
 export class SentinelWatchlistPanelComponent implements OnInit, OnChanges {

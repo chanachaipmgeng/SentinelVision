@@ -2,7 +2,7 @@
 
 <div class="dpu-scan-hub space-y-5">
   <div class="col-span-12">
-    <app-page-toolbar title="Scan mode & module settings">
+    <app-page-toolbar [title]="'scanHub.toolbar.title' | translate">
       <ng-container chips>
         <app-stat-chip>{{ 'Enabled' | translate }} {{ enabledCount }}/{{ toggleableCount }}</app-stat-chip>
         <app-stat-chip tone="ok" *ngIf="config.defaultStationMode">
@@ -62,15 +62,15 @@
         colSpan="col-span-12 xl:col-span-8"
         accentTone="cyan"
         headerIcon="ri-scan-2-line"
-        title="Biometric Face Scan Terminal"
-        subtitle="Real-time multi-person verification & kiosk automation engine"
-        badge="PRIMARY TERMINAL"
+        [title]="'scanHub.hero.title' | translate"
+        [subtitle]="'scanHub.hero.subtitle' | translate"
+        [badge]="'scanHub.hero.badge' | translate"
         badgeTone="cyan"
       >
         <div headerExtra class="flex items-center gap-2">
           <span class="sv-bento-chip-active">
             <span class="sv-pulse-dot"></span>
-            <span>READY</span>
+            <span>{{ 'scanHub.hero.ready' | translate }}</span>
           </span>
         </div>
 

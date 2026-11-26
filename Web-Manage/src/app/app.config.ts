@@ -1,12 +1,16 @@
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
-import { RouterModule, RouterOutlet, provideRouter, withViewTransitions } from '@angular/router';
-import { provideAnimations } from '@angular/platform-browser/animations'
+import {
+  provideRouter,
+  withHashLocation,
+  withInMemoryScrolling,
+  withViewTransitions,
+} from '@angular/router';
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { preferReducedMotion } from './shared/utils/motion';
 
 import { App_Route } from './app.routes';
-import { ColorPickerModule, ColorPickerService } from 'ngx-color-picker';
 import { ToastrModule } from 'ngx-toastr';
-import { HTTP_INTERCEPTORS, provideHttpClient, HttpClient, withInterceptorsFromDi } from "@angular/common/http";
+import { HTTP_INTERCEPTORS, provideHttpClient, HttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { HttpRequestInterceptor } from './shared/services/http-request.interceptor';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
@@ -38,6 +42,8 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptorsFromDi()),
     provideRouter(
       App_Route,
+      withHashLocation(),
+      withInMemoryScrolling({ scrollPositionRestoration: 'top' }),
       withViewTransitions({
         skipInitialTransition: true,
         onViewTransitionCreated: ({ transition }) => {
@@ -47,15 +53,18 @@ export const appConfig: ApplicationConfig = {
         },
       }),
     ),
-    RouterOutlet, ColorPickerModule, ColorPickerService, provideAnimations(),
-  importProvidersFrom(RouterModule.forRoot(App_Route, { initialNavigation: 'enabledNonBlocking', useHash: true }), TranslateModule.forRoot(provideTranslation()), ToastrModule.forRoot({
-    timeOut: 15000, // 15 seconds
-    closeButton: true,
-    progressBar: true,
-  })),
+    provideAnimations(),
+    importProvidersFrom(
+      TranslateModule.forRoot(provideTranslation()),
+      ToastrModule.forRoot({
+        timeOut: 15000, // 15 seconds
+        closeButton: true,
+        progressBar: true,
+      }),
+    ),
     httpInterceptorProviders,
-    // Lazy-load echarts so the chart library is not in the initial main bundle.
-    provideEchartsCore({ echarts: () => import('echarts') }),
+    // Lazy-load tree-shaken echarts core so the chart library stays out of initial bundle.
+    provideEchartsCore({ echarts: () => import('./shared/utils/echarts-custom').then((m) => m.default) }),
   ]
 };
 

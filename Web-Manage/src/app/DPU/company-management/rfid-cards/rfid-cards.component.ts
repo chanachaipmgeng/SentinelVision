@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../shared/shared.module';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { TokenService } from '../../../shared/services/token.service';
 import {
   RfidCardItem,
@@ -15,15 +16,15 @@ import {
   imports: [CommonModule, FormsModule, SharedModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'RFID Physical Access Cards'" [activeTitle]="'Multi-Credential Security'" [title1]="'SentinelVision'"></app-page-header>
+    <app-page-header [title]="'rfid.pageTitle' | translate" [activeTitle]="'Multi-Credential Security'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
       <!-- Operational Topbar (Reusable Wrapper) -->
       <app-command-topbar
         icon="ri-bank-card-2-line"
         accent="purple"
-        badgeText="MULTI-CREDENTIAL PHYSICAL ACCESS GATEWAY"
-        title="ศูนย์บริหารบัตรผ่าน RFID และการยืนยันตัวตนหลายรูปแบบ (Multi-Credential)"
+        [badgeText]="'rfid.badge' | translate"
+        [title]="'rfid.title' | translate"
         [lastUpdated]="lastUpdated"
       >
         <ng-container actions>
@@ -33,7 +34,7 @@ import {
             class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-purple-500/40 text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 flex items-center gap-1.5"
           >
             <i class="ri-sensor-line"></i>
-            <span>จำลองแตะบัตร (Swipe Simulator)</span>
+            <span>{{ 'rfid.simSwipe' | translate }}</span>
           </button>
           <button
             type="button"
@@ -41,7 +42,7 @@ import {
             class="ti-btn ti-btn-primary-full modern-btn text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
           >
             <i class="ri-add-line"></i>
-            <span>ออกบัตร RFID ใหม่</span>
+            <span>{{ 'rfid.issueCard' | translate }}</span>
           </button>
           <button
             type="button"
@@ -50,7 +51,7 @@ import {
             class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5"
           >
             <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
-            <span>รีเฟรช</span>
+            <span>{{ 'rfid.refresh' | translate }}</span>
           </button>
         </ng-container>
       </app-command-topbar>
@@ -59,40 +60,40 @@ import {
       <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Total Badges -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">บัตร RFID ทั้งหมด</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.total' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-slate-100">{{ cardsTotal }}</span>
           </div>
           <span class="text-[11px] text-cyan-400 flex items-center gap-1 font-medium">
-            <i class="ri-database-2-line"></i> ทะเบียนบัตรในระบบ
+            <i class="ri-database-2-line"></i> {{ 'rfid.metric.totalSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 2: Active Badges -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">ใช้งานปกติ (Active)</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.active' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-emerald-400">{{ activeCount }}</span>
           </div>
           <span class="text-[11px] text-emerald-300 flex items-center gap-1 font-medium">
-            <i class="ri-shield-check-line"></i> ได้รับสิทธิ์ผ่านประตู
+            <i class="ri-shield-check-line"></i> {{ 'rfid.metric.activeSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 3: Suspended/Lost Badges -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">ระงับ / สูญหาย</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.suspended' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold" [ngClass]="suspendedCount > 0 ? 'text-rose-400' : 'text-slate-400'">{{ suspendedCount }}</span>
           </div>
           <span class="text-[11px] text-rose-300 flex items-center gap-1 font-medium">
-            <i class="ri-lock-2-line"></i> ปฏิเสธการเข้าถึง
+            <i class="ri-lock-2-line"></i> {{ 'rfid.metric.suspendedSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 4: MIFARE Technology -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">เทคโนโลยี MIFARE</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.mifare' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-purple-400">{{ mifareCount }}</span>
           </div>
@@ -103,29 +104,29 @@ import {
 
         <!-- Metric 5: Employee Badges -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">บัตรพนักงาน</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.employees' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-cyan-400">{{ employeeCount }}</span>
           </div>
           <span class="text-[11px] text-cyan-300 flex items-center gap-1 font-medium">
-            <i class="ri-user-star-line"></i> ผูกตัวตนบุคลากร
+            <i class="ri-user-star-line"></i> {{ 'rfid.metric.employeesSub' | translate }}
           </span>
         </div>
 
         <!-- Metric 6: Visitor Badges -->
         <div class="p-4 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">บัตรผู้มาติดต่อ</span>
+          <span class="text-xs text-slate-400">{{ 'rfid.metric.visitors' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-amber-400">{{ visitorCount }}</span>
           </div>
           <span class="text-[11px] text-amber-300 flex items-center gap-1 font-medium">
-            <i class="ri-pass-valid-line"></i> บัตรชั่วคราว / แขก
+            <i class="ri-pass-valid-line"></i> {{ 'rfid.metric.visitorsSub' | translate }}
           </span>
         </div>
       </app-metric-ribbon>
 
       <!-- Search & Filters -->
-      <div class="flex flex-wrap items-center justify-between gap-3 p-3 lg:pr-28 rounded-xl border border-white/10 bg-[#070d14]">
+      <div class="flex flex-wrap items-center justify-between gap-3 p-3 lg:pr-28 rounded-xl border border-white/10 sv-surface-panel">
         <div class="flex items-center gap-2 flex-1 max-w-md">
           <div class="relative w-full">
             <i class="ri-search-line absolute left-3 top-2.5 text-slate-500"></i>
@@ -134,11 +135,11 @@ import {
               [(ngModel)]="searchQuery"
               (keyup.enter)="loadCards()"
               placeholder="ค้นหาเลขบัตร, ชื่อผู้ถือครอง, บันทึก..."
-              class="w-full bg-slate-900 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              class="w-full sv-input rounded-lg pl-9 pr-3 py-1.5 text-xs placeholder-slate-500 focus:outline-none focus:border-purple-500"
             />
           </div>
           <button type="button" (click)="loadCards()" class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10">
-            ค้นหา
+            {{ 'Search' | translate }}
           </button>
         </div>
 
@@ -146,7 +147,7 @@ import {
           <select
             [(ngModel)]="statusFilter"
             (change)="loadCards()"
-            class="bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-purple-500"
+            class="sv-input rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-500"
           >
             <option value="">ทุกสถานะบัตร</option>
             <option value="ACTIVE">ปกติ (ACTIVE)</option>
@@ -158,7 +159,7 @@ import {
           <select
             [(ngModel)]="assignedTypeFilter"
             (change)="loadCards()"
-            class="bg-slate-900 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-purple-500"
+            class="sv-input rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-purple-500"
           >
             <option value="">ทุกประเภทผู้ถือครอง</option>
             <option value="EMPLOYEE">พนักงาน (EMPLOYEE)</option>
@@ -169,7 +170,7 @@ import {
       </div>
 
       <!-- RFID Cards Table -->
-      <div class="rounded-xl border border-white/10 bg-[#070d14] overflow-hidden shadow-xl">
+      <div class="rounded-xl border border-white/10 sv-surface-panel overflow-hidden shadow-xl">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
             <thead class="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/10">
@@ -501,6 +502,9 @@ export class RfidCardsComponent implements OnInit {
     notes: '',
   };
 
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(ConfirmDialogService);
+
   constructor(
     private sentinelApi: SentinelApiService,
     private tokenService: TokenService,
@@ -632,10 +636,16 @@ export class RfidCardsComponent implements OnInit {
     });
   }
 
-  deleteCard(cardId: string): void {
+  async deleteCard(cardId: string): Promise<void> {
     const cid = this.companyId;
     if (!cid) return;
-    if (confirm('ต้องการลบข้อมูลบัตร RFID นี้หรือไม่?')) {
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'ลบบัตร RFID',
+      message: 'ต้องการลบข้อมูลบัตร RFID นี้หรือไม่?',
+      variant: 'danger',
+      confirmText: 'ลบบัตร',
+    });
+    if (confirmed) {
       this.sentinelApi.deleteRfidCard(cid, cardId).subscribe({
         next: () => this.loadCards(),
       });

@@ -91,7 +91,7 @@
                     <select class="form-control" [(ngModel)]="newLeave['company_employeeId']">
                       <option value="">-- เลือกพนักงาน --</option>
                       <option *ngFor="let emp of employees" [value]="emp.company_employeeId">
-                        {{ emp.member?.firstName }} {{ emp.member?.lastName }} ({{ emp.employeeId || emp.member?.email }})
+                        {{ emp.member.firstName }} {{ emp.member.lastName }} ({{ emp.employeeId || emp.member.email }})
                       </option>
                     </select>
                   </div>

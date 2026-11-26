@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../../shared/shared.module';
 import { TokenService } from '../../../../shared/services/token.service';
@@ -36,6 +37,7 @@ export interface ShiftSwapRow {
     templateUrl: './hr-shifts-tab.component.html'
 })
 export class HrShiftsTabComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   @Output() status = new EventEmitter<string>();
 
   companyId = '';
@@ -76,16 +78,16 @@ export class HrShiftsTabComponent implements OnInit {
   }
 
   loadShifts(): void {
-    this.api.getShifts(this.companyId).subscribe((res) => {
+    this.api.getShifts(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((res) => {
       this.shifts = res?.shifts || [];
     });
   }
 
   loadDepartmentsAndEmployees(): void {
-    this.api.getDepartments(this.companyId).subscribe((rows) => {
+    this.api.getDepartments(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => {
       this.departments = rows || [];
     });
-    this.api.getEmployees(this.companyId).subscribe((rows) => {
+    this.api.getEmployees(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => {
       this.employees = rows || [];
     });
   }
@@ -93,7 +95,7 @@ export class HrShiftsTabComponent implements OnInit {
   createShift(): void {
     if (!this.newShift.name.trim()) return;
     if (this.editingShiftId) {
-      this.api.updateShift(this.companyId, this.editingShiftId, this.newShift).subscribe(() => {
+      this.api.updateShift(this.companyId, this.editingShiftId, this.newShift).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
         this.editingShiftId = null;
         this.newShift = defaultNewShift();
         this.loadShifts();
@@ -101,7 +103,7 @@ export class HrShiftsTabComponent implements OnInit {
       });
       return;
     }
-    this.api.createShift(this.companyId, this.newShift).subscribe(() => {
+    this.api.createShift(this.companyId, this.newShift).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.newShift = defaultNewShift();
       this.loadShifts();
       this.flash('บันทึกกะเวลาทำงานเรียบร้อย');
@@ -130,7 +132,7 @@ export class HrShiftsTabComponent implements OnInit {
   }
 
   deleteShift(shiftId: string): void {
-    this.api.deleteShift(this.companyId, shiftId).subscribe(() => {
+    this.api.deleteShift(this.companyId, shiftId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.loadShifts();
       this.loadDepartmentsAndEmployees();
       this.flash('ลบกะเวลาทำงานเรียบร้อย');
@@ -140,13 +142,13 @@ export class HrShiftsTabComponent implements OnInit {
   assignDeptShift(departmentId: string, shiftId: string): void {
     this.api
       .assignShift(this.companyId, { departmentId, shiftId: shiftId || null })
-      .subscribe(() => this.flash('อัปเดตกะเวลาทำงานของแผนกแล้ว'));
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.flash('อัปเดตกะเวลาทำงานของแผนกแล้ว'));
   }
 
   assignEmpShift(company_employeeId: string, shiftId: string): void {
     this.api
       .assignShift(this.companyId, { company_employeeId, shiftId: shiftId || null })
-      .subscribe(() => this.flash('อัปเดตกะเวลาทำงานรายบุคคลแล้ว'));
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.flash('อัปเดตกะเวลาทำงานรายบุคคลแล้ว'));
   }
 
   private buildMonthDays(ym: string): string[] {
@@ -170,7 +172,7 @@ export class HrShiftsTabComponent implements OnInit {
       .get<RosterEntryRow[]>(`/hr/company/${this.companyId}/roster`, {
         params: { startDate, endDate },
       })
-      .subscribe((rows) => {
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => {
         const next: Record<string, RosterEntryRow> = {};
         for (const r of rows || []) {
           next[`${r.company_employeeId}|${r.workDate}`] = r;
@@ -200,7 +202,7 @@ export class HrShiftsTabComponent implements OnInit {
           },
         ],
       })
-      .subscribe(() => {
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
         this.rosterMap[`${empId}|${day}`] = {
           company_employeeId: empId,
           workDate: day,
@@ -228,7 +230,7 @@ export class HrShiftsTabComponent implements OnInit {
           isFlexible: this.genFlexible,
         },
       })
-      .subscribe(() => {
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
         this.loadRoster();
         this.flash('สร้างตารางเวรหมุนเวียนทั้งเดือนเรียบร้อย');
       });
@@ -237,7 +239,7 @@ export class HrShiftsTabComponent implements OnInit {
   loadShiftSwaps(): void {
     this.http
       .get<ShiftSwapRow[]>(`/hr/company/${this.companyId}/shift-swaps`)
-      .subscribe((rows) => {
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe((rows) => {
         this.shiftSwaps = rows || [];
       });
   }
@@ -247,7 +249,7 @@ export class HrShiftsTabComponent implements OnInit {
       .post(`/hr/company/${this.companyId}/shift-swaps/${swapId}/approval`, {
         status: decision,
       })
-      .subscribe(() => {
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
         this.loadShiftSwaps();
         this.loadRoster();
         this.flash(decision === 'APPROVED' ? 'อนุมัติการสลับกะแล้ว' : 'ปฏิเสธคำขอสลับกะแล้ว');

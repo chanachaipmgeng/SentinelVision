@@ -19,7 +19,7 @@ import { KpiGridComponent, KpiItem } from '../../../shared/components/kpi-grid/k
 import { SavedViewsBarComponent } from '../../../shared/components/saved-views-bar/saved-views-bar.component';
 import { SideDrawerComponent } from '../../../shared/components/side-drawer/side-drawer.component';
 import { SkeletonLoaderComponent } from '../../../shared/components/skeleton-loader/skeleton-loader.component';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 interface ApprovalInboxViewFilters {
   q: string;

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
@@ -19,7 +19,7 @@ import { environment } from '../../../../environments/environment';
 import { EmpFaceEnrollModalComponent } from '../../company-management/company-emp/company-emp-enroll/emp-face-enroll-modal.component';
 import { FaceManagementComponent } from '../../company-management/dialogs/face-management/face-management.component';
 import { apiErrorMessage } from '../../../shared/utils/http-error-body';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 type ConsentPolicy = {
   version: string;
@@ -54,17 +54,16 @@ type ConsentPolicy = {
     encapsulation: ViewEncapsulation.None
 })
 export class AdminManageComponent implements OnInit {
-  @ViewChild('closeModal') public childModal?: ElementRef;
   @ViewChild('faceEnrollModal') faceEnrollModal?: EmpFaceEnrollModalComponent;
-  @ViewChild('openFaceOverlay') openFaceOverlay?: ElementRef<HTMLButtonElement>;
-  @ViewChild('openConsentOverlay') openConsentOverlay?: ElementRef<HTMLButtonElement>;
-  @ViewChild('closeConsentOverlay') closeConsentOverlay?: ElementRef<HTMLButtonElement>;
 
   readonly pageSize = 10;
   readonly adminRole = 99;
 
   action: 'add' | 'edit' = 'add';
   loading = false;
+  showModal = false;
+  showConsentModal = false;
+  showFaceManagementModal = false;
   allSelected = false;
   someSelected = false;
   confirmPassword = '';
@@ -205,6 +204,7 @@ export class AdminManageComponent implements OnInit {
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel();
     this.selectModel.role = this.adminRole;
+    this.showModal = true;
   }
 
   view(item: UserProfileModel) {
@@ -212,6 +212,11 @@ export class AdminManageComponent implements OnInit {
     this.confirmPassword = '';
     this.selectModel = new UserProfileModel(item);
     this.selectModel.role = this.adminRole;
+    this.showModal = true;
+  }
+
+  closeModal() {
+    this.showModal = false;
   }
 
   consentText(): string {
@@ -231,7 +236,7 @@ export class AdminManageComponent implements OnInit {
     this.pendingConsentMember = item;
     this.consentLoading = true;
     this.consentPolicy = null;
-    this.openConsentOverlay?.nativeElement?.click();
+    this.showConsentModal = true;
     try {
       this.consentPolicy = await firstValueFrom(this.userService.getSystemConsentPolicy());
     } catch (err) {
@@ -245,7 +250,7 @@ export class AdminManageComponent implements OnInit {
   closeConsentDialog(): void {
     this.pendingConsentMember = null;
     this.consentGranting = false;
-    this.closeConsentOverlay?.nativeElement?.click();
+    this.showConsentModal = false;
   }
 
   async acceptConsentAndEnroll(): Promise<void> {
@@ -270,16 +275,17 @@ export class AdminManageComponent implements OnInit {
       member: item,
       companyId: '',
     });
-    this.openFaceOverlay?.nativeElement?.click();
     await this.faceEnrollModal?.openForEmployee(this.faceEnrollSelectModel);
   }
 
   openFaceManagementModal(item: UserProfileModel): void {
     this.selectedMemberId = item?.memberId || '';
     this.selectedMemberName = item?.getFullname?.() || item?.username || '';
+    this.showFaceManagementModal = true;
   }
 
   onFaceManagementClosed(): void {
+    this.showFaceManagementModal = false;
     this.selectedMemberId = '';
     this.load();
   }
@@ -326,7 +332,7 @@ export class AdminManageComponent implements OnInit {
         next: () => {
           swal('สำเร็จ', 'บันทึกผู้ดูแลระบบ', 'success');
           this.load();
-          this.childModal?.nativeElement.click();
+          this.closeModal();
         },
         error: () => swal('Error', 'บันทึกไม่สำเร็จ', 'error'),
       });

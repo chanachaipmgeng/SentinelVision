@@ -1,15 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { SharedModule } from '../../../shared/shared.module';
-import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { TokenService } from '../../../shared/services/token.service';
 import { PermissionService } from '../../../shared/services/permission.service';
 import { TimestampService } from '../../services/timestamp.service';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 type Tab = 'attendance' | 'leave' | 'regularization' | 'ot' | 'swap';
 
@@ -61,12 +60,13 @@ interface SelfOtRow {
 
 @Component({
     selector: 'app-employee-self-service',
-    imports: [CommonModule, FormsModule, RouterModule, SharedModule, PageToolbarComponent, EmptyStateComponent],
+    imports: [CommonModule, FormsModule, RouterModule, SharedModule],
     templateUrl: './self-service.component.html',
     styleUrls: ['./self-service.component.css', '../../../shared/styles/dpu-list-page.css'],
     encapsulation: ViewEncapsulation.None
 })
 export class SelfServiceComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   companyId = '';
   memberId = '';
   companyEmployeeId = '';
@@ -146,7 +146,7 @@ export class SelfServiceComponent implements OnInit {
     }
     this.loading = true;
     this.loadError = '';
-    this.permissions.load(this.companyId).subscribe({
+    this.permissions.load(this.companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.isCompanyAdminViewer = this.permissions.isCompanyAdmin() || this.permissions.isSystemAdmin();
         if (this.isCompanyAdminViewer) {
@@ -180,7 +180,7 @@ export class SelfServiceComponent implements OnInit {
       .get<{ company_employeeId?: string; companyEmployeeId?: string }>(
         `/employees/company/${this.companyId}/member/${this.memberId}`,
       )
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (emp) => {
           this.companyEmployeeId = emp?.company_employeeId || emp?.companyEmployeeId || '';
           this.missingEmployeeRecord = !this.companyEmployeeId;
@@ -211,7 +211,7 @@ export class SelfServiceComponent implements OnInit {
     if (this.activeTab === 'attendance') {
       this.timestamps
         .getListsSearch(this.companyId, this.companyEmployeeId)
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (rows) => {
             this.attendance = rows || [];
             this.loading = false;
@@ -223,7 +223,7 @@ export class SelfServiceComponent implements OnInit {
         .get<SelfLeaveRow[] | { items?: SelfLeaveRow[] }>(`/hr/company/${this.companyId}/leaves`, {
           params: { company_employeeId: this.companyEmployeeId },
         })
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (res) => {
             this.leaves = Array.isArray(res) ? res : res?.items || [];
             this.loading = false;
@@ -236,7 +236,7 @@ export class SelfServiceComponent implements OnInit {
           {
           params: { company_employeeId: this.companyEmployeeId },
         })
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (res) =>
             (this.leaveBalances = Array.isArray(res) ? res : res?.items || []),
           error: () => undefined,
@@ -247,7 +247,7 @@ export class SelfServiceComponent implements OnInit {
           `/hr/company/${this.companyId}/regularizations`,
           { params: { company_employeeId: this.companyEmployeeId } }
         )
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (res) => {
             this.regularizations = Array.isArray(res) ? res : res?.items || [];
             this.loading = false;
@@ -260,7 +260,7 @@ export class SelfServiceComponent implements OnInit {
           `/hr/company/${this.companyId}/ot-approvals`,
           { params: { company_employeeId: this.companyEmployeeId } }
         )
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (res) => {
             this.otRequests = Array.isArray(res) ? res : res?.items || [];
             this.loading = false;
@@ -272,7 +272,7 @@ export class SelfServiceComponent implements OnInit {
         .get<typeof this.shiftSwaps>(`/hr/company/${this.companyId}/shift-swaps`, {
           params: { company_employeeId: this.companyEmployeeId },
         })
-        .subscribe({
+        .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (rows) => {
             this.shiftSwaps = rows || [];
             this.loading = false;
@@ -282,7 +282,7 @@ export class SelfServiceComponent implements OnInit {
       if (!this.colleagues.length) {
         this.http
           .get<typeof this.colleagues>(`/employees/company/${this.companyId}`)
-          .subscribe({
+          .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: (rows) =>
               (this.colleagues = (rows || []).filter(
                 (e) => e.company_employeeId !== this.companyEmployeeId
@@ -308,7 +308,7 @@ export class SelfServiceComponent implements OnInit {
         attachmentUrl: this.leaveDraft.attachmentUrl?.trim() || null,
         reason: this.leaveDraft.reason,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           swal('สำเร็จ', 'ส่งคำขอลาแล้ว', 'success');
           this.reload();
@@ -330,7 +330,7 @@ export class SelfServiceComponent implements OnInit {
         requestedType: this.regenDraft.requestedType,
         reason: this.regenDraft.reason,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           swal('สำเร็จ', 'ส่งคำขอแก้เวลาแล้ว', 'success');
           this.regenDraft = { workDate: '', requestedTimestamp: '', requestedType: 1, reason: '' };
@@ -349,7 +349,7 @@ export class SelfServiceComponent implements OnInit {
         otMinutes: Number(this.otDraft.otMinutes) || 60,
         reason: this.otDraft.reason,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           swal('สำเร็จ', 'ส่งคำขอ OT แล้ว', 'success');
           this.otDraft = { workDate: '', otMinutes: 60, reason: '' };
@@ -368,7 +368,7 @@ export class SelfServiceComponent implements OnInit {
         workDate: this.swapDraft.workDate,
         reason: this.swapDraft.reason,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           swal('สำเร็จ', 'ส่งคำขอสลับกะแล้ว รอหัวหน้าอนุมัติ', 'success');
           this.swapDraft = { targetEmployeeId: '', workDate: '', reason: '' };

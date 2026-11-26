@@ -10,7 +10,7 @@ import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../../../environments/environment';
 import { firstValueFrom } from 'rxjs';
-import swal from 'sweetalert';
+import swal from '../../../../shared/utils/vault-swal';
 
 interface FaceEncoding {
   faceEncodingId: string;

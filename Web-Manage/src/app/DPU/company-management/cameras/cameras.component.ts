@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, ViewEncapsulation, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { PageToolbarComponent } from '../../../shared/components/page-toolbar/page-toolbar.component';
 import { PillSearchComponent } from '../../../shared/components/pill-search/pill-search.component';
@@ -87,6 +88,7 @@ type RoiMode = 'line' | 'zone' | 'loiter' | 'roi';
     encapsulation: ViewEncapsulation.None
 })
 export class CamerasComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   @ViewChild('roiCanvas') roiCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('roiImg') roiImg?: ElementRef<HTMLImageElement>;
   @ViewChild('csvInput') csvInput?: ElementRef<HTMLInputElement>;
@@ -181,7 +183,7 @@ export class CamerasComponent implements OnInit {
   load(): void {
     if (!this.companyId) return;
     this.loading = true;
-    this.http.get<CameraRow[]>(this.api()).subscribe({
+    this.http.get<CameraRow[]>(this.api()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (rows) => {
         this.items = rows || [];
         this.applyFilter();
@@ -196,7 +198,7 @@ export class CamerasComponent implements OnInit {
 
   loadPeopleMetrics(): void {
     if (!this.companyId) return;
-    this.http.get<PeopleMetrics>(this.peopleApi('/metrics')).subscribe({
+    this.http.get<PeopleMetrics>(this.peopleApi('/metrics')).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (m) => (this.peopleMetrics = m),
       error: () => (this.peopleMetrics = null),
     });
@@ -286,7 +288,7 @@ export class CamerasComponent implements OnInit {
       body['streamUsername'] = this.draft.streamUsername;
       body['streamPassword'] = this.draft.streamPassword || '';
     }
-    this.http.post<CameraRow>(this.api(), body).subscribe({
+    this.http.post<CameraRow>(this.api(), body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.resetDraft();
         this.createOpen = false;
@@ -318,7 +320,7 @@ export class CamerasComponent implements OnInit {
       body['streamUsername'] = this.editDraft.streamUsername;
       body['streamPassword'] = this.editDraft.streamPassword || '';
     }
-    this.http.patch<CameraRow>(this.api(`/${this.selected.cameraId}`), body).subscribe({
+    this.http.patch<CameraRow>(this.api(`/${this.selected.cameraId}`), body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (row) => {
         this.selected = row;
         this.detailOpen = false;
@@ -332,7 +334,7 @@ export class CamerasComponent implements OnInit {
   ping(cam: CameraRow): void {
     this.http
       .get<{ online: boolean; latency_ms?: number; error?: string }>(this.api(`/${cam.cameraId}/ping`))
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           swal(
             res.online ? 'Online' : 'Offline',
@@ -348,7 +350,7 @@ export class CamerasComponent implements OnInit {
   snapshot(cam: CameraRow): void {
     this.http
       .post<{ imageBase64: string; contentType: string }>(this.api(`/${cam.cameraId}/snapshot`), {})
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.snapshotPreview = `data:${res.contentType};base64,${res.imageBase64}`;
         },
@@ -358,7 +360,7 @@ export class CamerasComponent implements OnInit {
 
   toggleAnalysis(cam: CameraRow): void {
     const next = !cam.analysisEnabled;
-    this.http.patch<CameraRow>(this.api(`/${cam.cameraId}`), { analysisEnabled: next }).subscribe({
+    this.http.patch<CameraRow>(this.api(`/${cam.cameraId}`), { analysisEnabled: next }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (row) => {
         cam.analysisEnabled = !!row.analysisEnabled;
       },
@@ -375,7 +377,7 @@ export class CamerasComponent implements OnInit {
       dangerMode: true,
     }).then((ok) => {
       if (!ok) return;
-      this.http.delete(this.api(`/${cam.cameraId}`)).subscribe({
+      this.http.delete(this.api(`/${cam.cameraId}`)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.detailOpen = false;
           this.selected = null;
@@ -399,7 +401,7 @@ export class CamerasComponent implements OnInit {
     this.importing = true;
     const fd = new FormData();
     fd.append('file', file);
-    this.http.post<{ created: number; errors: unknown[] }>(this.peopleApi('/cameras/import-csv'), fd).subscribe({
+    this.http.post<{ created: number; errors: unknown[] }>(this.peopleApi('/cameras/import-csv'), fd).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.importing = false;
         input.value = '';
@@ -430,7 +432,7 @@ export class CamerasComponent implements OnInit {
     this.roiSnapshot = null;
     this.http
       .post<{ imageBase64: string; contentType: string }>(this.api(`/${cam.cameraId}/snapshot`), {})
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.roiSnapshot = `data:${res.contentType};base64,${res.imageBase64}`;
           setTimeout(() => this.redrawRoi(), 50);
@@ -559,7 +561,7 @@ export class CamerasComponent implements OnInit {
     this.roiSaving = true;
     this.http
       .put<CameraRow>(this.peopleApi(`/cameras/${this.roiCamera.cameraId}/ai-config`), { aiConfig: cfg })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (row) => {
           this.roiSaving = false;
           const idx = this.items.findIndex((c) => c.cameraId === row.cameraId);
@@ -588,7 +590,7 @@ export class CamerasComponent implements OnInit {
         `/cameras/company/${this.companyId}/cameras/discover-onvif`,
         { timeoutSeconds: 2.0 }
       )
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.discoveringOnvif = false;
           this.onvifDevices = res.devices || [];
@@ -617,7 +619,7 @@ export class CamerasComponent implements OnInit {
         zoom,
         speed,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => undefined,
         error: (err) => {
           swal('PTZ Error', err?.error?.detail || 'ไม่สามารถสั่ง PTZ กล้องนี้ได้', 'error');
@@ -634,7 +636,7 @@ export class CamerasComponent implements OnInit {
         `/cameras/company/${this.companyId}/cameras/${cam.cameraId}/privacy-masks`,
         { privacyMasks: nextMasks }
       )
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           cam.aiConfig = { ...(cam.aiConfig || {}), privacyMasks: res.privacyMasks } as CameraAiConfig;
           swal('PDPA Privacy Mask', res.count ? 'เปิดใช้งาน PDPA Privacy Mask บนมุมภาพแล้ว' : 'ปิด PDPA Privacy Mask แล้ว', 'success');

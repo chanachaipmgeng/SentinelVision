@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { SharedModule } from '../../../shared/shared.module';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { TokenService } from '../../../shared/services/token.service';
 import {
   LprScanResult,
@@ -37,15 +39,15 @@ interface ParkingOverview {
   imports: [CommonModule, FormsModule, SharedModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'Smart Parking & LPR'" [activeTitle]="'Vehicle & Parking'" [title1]="'SentinelVision'"></app-page-header>
+    <app-page-header [title]="'parking.pageTitle' | translate" [activeTitle]="'Vehicle & Parking'" [title1]="'SentinelVision'"></app-page-header>
 
     <div class="dpu-list-page min-w-0 max-w-full space-y-4">
       <!-- Operational Topbar (Reusable Wrapper) -->
       <app-command-topbar
         icon="ri-parking-box-line"
         accent="cyan"
-        badgeText="AUTOMATED LPR BARRIER & CAPACITY ENGINE"
-        title="ศูนย์บริหารลานจอดรถอัจฉริยะและการตรวจจับป้ายทะเบียน LPR"
+        [badgeText]="'parking.badge' | translate"
+        [title]="'parking.title' | translate"
         [lastUpdated]="lastUpdated"
       >
         <ng-container actions>
@@ -55,7 +57,7 @@ interface ParkingOverview {
             class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-cyan-500/40 text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 flex items-center gap-1.5"
           >
             <i class="ri-barcode-box-line"></i>
-            <span>จำลองสแกน LPR</span>
+            <span>{{ 'parking.simLpr' | translate }}</span>
           </button>
           <button
             type="button"
@@ -63,7 +65,7 @@ interface ParkingOverview {
             class="ti-btn ti-btn-primary-full modern-btn text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
           >
             <i class="ri-add-line"></i>
-            <span>ลงทะเบียนรถ</span>
+            <span>{{ 'parking.addVehicle' | translate }}</span>
           </button>
           <button
             type="button"
@@ -71,7 +73,7 @@ interface ParkingOverview {
             class="ti-btn ti-btn-secondary-full modern-btn text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5"
           >
             <i class="ri-layout-grid-line"></i>
-            <span>เพิ่มช่องจอด</span>
+            <span>{{ 'parking.addSpot' | translate }}</span>
           </button>
           <button
             type="button"
@@ -80,7 +82,7 @@ interface ParkingOverview {
             class="ti-btn ti-btn-light modern-btn text-xs px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5"
           >
             <i class="ri-refresh-line" [class.animate-spin]="loading"></i>
-            <span>รีเฟรช</span>
+            <span>{{ 'parking.refresh' | translate }}</span>
           </button>
         </ng-container>
       </app-command-topbar>
@@ -89,34 +91,34 @@ interface ParkingOverview {
       <app-metric-ribbon [columns]="6">
         <!-- Metric 1: Total Spots -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">ช่องจอดทั้งหมด</span>
+          <span class="text-xs text-slate-400">{{ 'parking.metric.totalSpots' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-slate-100">{{ overview.totalSpots }}</span>
           </div>
           <span class="text-[11px] text-cyan-400 flex items-center gap-1 font-medium">
-            <i class="ri-building-line"></i> ความจุลานจอดรวม
+            <i class="ri-building-line"></i> {{ 'parking.metric.totalCap' | translate }}
           </span>
         </div>
 
         <!-- Metric 2: Occupied Spots -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">กำลังใช้งาน</span>
+          <span class="text-xs text-slate-400">{{ 'parking.metric.occupied' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-amber-400">{{ overview.occupiedSpots }}</span>
           </div>
           <span class="text-[11px] text-amber-300 flex items-center gap-1 font-medium">
-            <i class="ri-car-line"></i> มีรถจอดอยู่
+            <i class="ri-car-line"></i> {{ 'parking.metric.occupied' | translate }}
           </span>
         </div>
 
         <!-- Metric 3: Available Spots -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">ช่องจอดว่าง</span>
+          <span class="text-xs text-slate-400">{{ 'parking.metric.available' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-emerald-400">{{ overview.availableSpots }}</span>
           </div>
           <span class="text-[11px] text-emerald-300 flex items-center gap-1 font-medium">
-            <i class="ri-checkbox-circle-line"></i> พร้อมรองรับ
+            <i class="ri-checkbox-circle-line"></i> {{ 'parking.metric.available' | translate }}
           </span>
         </div>
 
@@ -135,24 +137,24 @@ interface ParkingOverview {
 
         <!-- Metric 5: Registered Vehicles -->
         <div class="p-4 border-b sm:border-b-0 border-r border-dashed border-white/10 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">รถที่ลงทะเบียน</span>
+          <span class="text-xs text-slate-400">{{ 'parking.metric.vehicles' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-slate-100">{{ overview.totalVehicles }}</span>
           </div>
           <span class="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
-            <span class="text-emerald-400 font-mono">{{ overview.activeVehicles }} ใช้งาน</span>
-            <span *ngIf="overview.blacklistedVehicles > 0" class="text-rose-400 font-mono">• {{ overview.blacklistedVehicles }} แบล็กลิสต์</span>
+            <span class="text-emerald-400 font-mono">{{ overview.activeVehicles }} active</span>
+            <span *ngIf="overview.blacklistedVehicles > 0" class="text-rose-400 font-mono">• {{ overview.blacklistedVehicles }} {{ 'parking.metric.blacklist' | translate }}</span>
           </span>
         </div>
 
         <!-- Metric 6: Today's Flow -->
         <div class="p-4 flex flex-col justify-between">
-          <span class="text-xs text-slate-400">การเข้า-ออกวันนี้</span>
+          <span class="text-xs text-slate-400">{{ 'parking.metric.todayTraffic' | translate }}</span>
           <div class="my-1.5">
             <span class="text-2xl font-mono font-bold text-teal-400">{{ overview.entriesToday }} / {{ overview.exitsToday }}</span>
           </div>
           <span class="text-[11px] text-teal-300 flex items-center gap-1 font-medium">
-            <i class="ri-arrow-up-down-line"></i> สแกนผ่านไม้กั้น
+            <i class="ri-arrow-up-down-line"></i> LPR Gate
           </span>
         </div>
       </app-metric-ribbon>
@@ -166,7 +168,7 @@ interface ParkingOverview {
           [ngClass]="activeTab === 'grid' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'"
         >
           <i class="ri-layout-grid-line"></i>
-          <span>ผังช่องจอดสด ({{ parkingSpots.length }})</span>
+          <span>{{ 'parking.tab.grid' | translate }} ({{ parkingSpots.length }})</span>
         </button>
 
         <button
@@ -176,7 +178,7 @@ interface ParkingOverview {
           [ngClass]="activeTab === 'vehicles' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'"
         >
           <i class="ri-car-line"></i>
-          <span>ทะเบียนยานพาหนะ ({{ vehiclesTotal }})</span>
+          <span>{{ 'parking.tab.vehicles' | translate }} ({{ vehiclesTotal }})</span>
         </button>
 
         <button
@@ -186,7 +188,7 @@ interface ParkingOverview {
           [ngClass]="activeTab === 'transactions' ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'"
         >
           <i class="ri-history-line"></i>
-          <span>ประวัติสแกน LPR ({{ transactionsTotal }})</span>
+          <span>{{ 'parking.tab.transactions' | translate }} ({{ transactionsTotal }})</span>
         </button>
       </div>
 
@@ -221,7 +223,7 @@ interface ParkingOverview {
           <div
             *ngFor="let spot of filteredSpots"
             class="p-3.5 rounded-xl border transition-all relative flex flex-col justify-between"
-            [ngClass]="spot.isOccupied ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50' : 'bg-[#0b1320] border-white/10 hover:border-cyan-500/40'"
+            [ngClass]="spot.isOccupied ? 'bg-amber-950/20 border-amber-500/30 hover:border-amber-500/50' : 'sv-subpanel border-white/10 hover:border-cyan-500/40'"
           >
             <div class="flex items-start justify-between">
               <div>
@@ -791,6 +793,8 @@ interface ParkingOverview {
   `,
 })
 export class ParkingComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmDialog = inject(ConfirmDialogService);
   loading = false;
   lastUpdated: Date | null = null;
   activeTab: 'grid' | 'vehicles' | 'transactions' = 'grid';
@@ -879,7 +883,7 @@ export class ParkingComponent implements OnInit {
     this.loading = true;
     this.cdr.markForCheck();
 
-    this.sentinelApi.getParkingOverview(cid).subscribe({
+    this.sentinelApi.getParkingOverview(cid).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.overview = res;
         this.lastUpdated = new Date();
@@ -887,7 +891,7 @@ export class ParkingComponent implements OnInit {
       },
     });
 
-    this.sentinelApi.getParkingSpots(cid).subscribe({
+    this.sentinelApi.getParkingSpots(cid).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (spots) => {
         this.parkingSpots = spots;
         this.cdr.markForCheck();
@@ -903,7 +907,7 @@ export class ParkingComponent implements OnInit {
     if (!cid) return;
     this.sentinelApi
       .getVehicles(cid, this.vehicleSearch, this.vehicleOwnerTypeFilter, 50, 0)
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.vehicles = res.items;
           this.vehiclesTotal = res.total;
@@ -920,7 +924,7 @@ export class ParkingComponent implements OnInit {
   loadTransactions(): void {
     const cid = this.companyId;
     if (!cid) return;
-    this.sentinelApi.getParkingTransactions(cid, undefined, 50, 0).subscribe({
+    this.sentinelApi.getParkingTransactions(cid, undefined, 50, 0).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.transactions = res.items;
         this.transactionsTotal = res.total;
@@ -947,7 +951,7 @@ export class ParkingComponent implements OnInit {
         gateName: this.simGate,
         confidence: 0.98,
       })
-      .subscribe({
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (res) => {
           this.simResult = res;
           this.simLoading = false;
@@ -989,14 +993,14 @@ export class ParkingComponent implements OnInit {
     if (!cid || !this.vehicleForm.licensePlate) return;
 
     if (this.editingVehicleId) {
-      this.sentinelApi.updateVehicle(cid, this.editingVehicleId, this.vehicleForm).subscribe({
+      this.sentinelApi.updateVehicle(cid, this.editingVehicleId, this.vehicleForm).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.showVehicleModal = false;
           this.refreshData();
         },
       });
     } else {
-      this.sentinelApi.createVehicle(cid, this.vehicleForm).subscribe({
+      this.sentinelApi.createVehicle(cid, this.vehicleForm).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.showVehicleModal = false;
           this.refreshData();
@@ -1005,11 +1009,17 @@ export class ParkingComponent implements OnInit {
     }
   }
 
-  deleteVehicle(vehicleId: string): void {
+  async deleteVehicle(vehicleId: string): Promise<void> {
     const cid = this.companyId;
     if (!cid) return;
-    if (confirm('ต้องการลบข้อมูลยานพาหนะนี้หรือไม่?')) {
-      this.sentinelApi.deleteVehicle(cid, vehicleId).subscribe({
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'ลบข้อมูลยานพาหนะ',
+      message: 'ต้องการลบข้อมูลยานพาหนะนี้หรือไม่?',
+      variant: 'danger',
+      confirmText: 'ลบข้อมูล',
+    });
+    if (confirmed) {
+      this.sentinelApi.deleteVehicle(cid, vehicleId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => this.refreshData(),
       });
     }
@@ -1028,7 +1038,7 @@ export class ParkingComponent implements OnInit {
   saveSpot(): void {
     const cid = this.companyId;
     if (!cid || !this.spotForm.spotCode) return;
-    this.sentinelApi.createParkingSpot(cid, this.spotForm).subscribe({
+    this.sentinelApi.createParkingSpot(cid, this.spotForm).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.showSpotModal = false;
         this.refreshData();
@@ -1036,11 +1046,17 @@ export class ParkingComponent implements OnInit {
     });
   }
 
-  deleteSpot(spotId: string): void {
+  async deleteSpot(spotId: string): Promise<void> {
     const cid = this.companyId;
     if (!cid) return;
-    if (confirm('ต้องการลบช่องจอดนี้หรือไม่?')) {
-      this.sentinelApi.deleteParkingSpot(cid, spotId).subscribe({
+    const confirmed = await this.confirmDialog.confirm({
+      title: 'ลบช่องจอดรถ',
+      message: 'ต้องการลบช่องจอดนี้หรือไม่?',
+      variant: 'danger',
+      confirmText: 'ลบช่องจอด',
+    });
+    if (confirmed) {
+      this.sentinelApi.deleteParkingSpot(cid, spotId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => this.refreshData(),
       });
     }

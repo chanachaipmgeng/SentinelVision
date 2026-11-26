@@ -41,11 +41,12 @@
       <section class="dpu-login__hud" aria-label="Biometric System Status">
         <div class="dpu-login__hud-badge">
           <span class="dpu-login__hud-pulse"></span>
-          <span>SENTINEL AI OPERATIONS v4.0</span>
+          <span>{{ lang === 'th' ? 'ศูนย์ปฏิบัติการความปลอดภัยอัจฉริยะ' : 'SENTINEL AI OPERATIONS' }}</span>
         </div>
 
         <h1 class="dpu-login__hud-title text-display-gradient">
-          AI Biometrics &<br />Access Command
+          {{ lang === 'th' ? 'ไบโอเมตริกซ์อัจฉริยะ' : 'AI Biometrics &' }}<br />
+          {{ lang === 'th' ? 'และการควบคุมสิทธิ์องค์กร' : 'Access Command' }}
         </h1>
         <p class="dpu-login__hud-desc">
           {{ lang === 'th'
@@ -84,14 +85,14 @@
           <div class="dpu-login__hud-telemetry">
             <div class="dpu-login__hud-chip">
               <i class="ri-cpu-line text-cyan-400"></i>
-              <span>InsightFace Buffalo-L 512-d</span>
+              <span>{{ lang === 'th' ? 'เอนจินชีวมิติความละเอียด 512 มิติ' : '512-d Biometric Engine' }}</span>
             </div>
             <div class="dpu-login__hud-chip">
               <i class="ri-shield-check-line text-emerald-400"></i>
               <span>
                 {{ loginMode === 'face'
                   ? (lang === 'th' ? 'โหมดสแกนแอดมินระบบ' : 'System Admin Face Gate')
-                  : 'HNSW Cosine Vector Online' }}
+                  : (lang === 'th' ? 'การจับคู่เวกเตอร์เข้ารหัสพร้อมใช้งาน' : 'Encrypted Vector Match Online') }}
               </span>
             </div>
             @if (loginMode === 'face' && faceHint) {
@@ -108,12 +109,12 @@
         </div>
       </section>
 
-      <!-- Right Column: Obsidian Glass Login Card -->
+      <!-- Right Column: Enterprise Login Card -->
       <section class="dpu-auth__panel card-surface-cyan dpu-login__panel" aria-label="Sign in">
         <div class="dpu-auth__brand">
           <img src="./assets/images/brand-logos/ivap-logo-light.png" alt="Sentinel by IVAP">
           <h2 class="dpu-auth__title">Sentinel</h2>
-          <p class="dpu-auth__byline">SECURITY OPERATIONS CONSOLE</p>
+          <p class="dpu-auth__byline">{{ lang === 'th' ? 'คอนโซลปฏิบัติการความปลอดภัย' : 'SECURITY OPERATIONS CONSOLE' }}</p>
           <p class="dpu-auth__subtitle">
             {{ lang === 'th' ? 'เข้าสู่ระบบคอนโซลผู้ดูแลความปลอดภัย' : 'Sign in to Sentinel Security Console' }}
           </p>
@@ -162,7 +163,7 @@
                     type="text"
                     class="form-control vault-input"
                     id="signin-username"
-                    [placeholder]="lang === 'th' ? 'เช่น admin หรือ EMP-001' : 'Username or Employee ID'"
+                    [placeholder]="lang === 'th' ? 'เช่น admin หรือ EMP-001' : 'e.g. admin or EMP-001'"
                     formControlName="username"
                     autocomplete="username">
                   <i class="ri-user-3-line dpu-login__input-icon"></i>
@@ -183,7 +184,7 @@
                     [type]="showPassword ? 'text' : 'password'">
                   <button
                     type="button"
-                    [attr.aria-label]="showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'"
+                    [attr.aria-label]="showPassword ? (lang === 'th' ? 'ซ่อนรหัสผ่าน' : 'Hide password') : (lang === 'th' ? 'แสดงรหัสผ่าน' : 'Show password')"
                     class="dpu-login__toggle-pwd"
                     (click)="toggleVisibility()">
                     <i class="ri-eye-{{ toggleClass }} align-middle"></i>
@@ -246,6 +247,16 @@
               }
             </div>
           </form>
+
+          <div class="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-[0.75rem] text-slate-400">
+            <span class="inline-flex items-center gap-1.5">
+              <i class="ri-shield-keyhole-line text-teal-400"></i>
+              <span>{{ lang === 'th' ? 'รองรับ 2FA & Enterprise SSO' : '2FA TOTP & Enterprise SSO Ready' }}</span>
+            </span>
+            <a routerLink="/kiosk/pair" class="text-teal-300 hover:text-teal-200 underline underline-offset-2 font-medium">
+              {{ lang === 'th' ? 'จับคู่ตู้สแกน Kiosk' : 'Pair a Kiosk Terminal' }}
+            </a>
+          </div>
         } @else {
           <div class="dpu-login__face-panel" [formGroup]="loginForm">
             <!-- Mobile / narrow: live camera inside the card (HUD scanner is hidden). -->

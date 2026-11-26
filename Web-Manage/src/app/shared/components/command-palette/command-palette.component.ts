@@ -130,7 +130,7 @@ export class CommandPaletteComponent implements OnDestroy {
     if (now < this.chordUntil) {
       this.chordUntil = 0;
       const target = CHORD_ROUTES[ev.key.toLowerCase()];
-      if (target) {
+      if (target && this.canNavigateChord(target)) {
         ev.preventDefault();
         this.router.navigateByUrl(target);
       }
@@ -173,6 +173,18 @@ export class CommandPaletteComponent implements OnDestroy {
       ev.preventDefault();
       this.go(this.results[this.activeIndex]);
     }
+  }
+
+  private canNavigateChord(target: string): boolean {
+    const perm = PermissionService.permissionForPath(target);
+    if (perm && !this.permissions.has(perm)) {
+      return false;
+    }
+    if (target.includes('sentinel-center')) {
+      const cid = this.tokenService.getSelectCompany()?.companyId;
+      if (!cid) return false;
+    }
+    return true;
   }
 
   private scrollActiveIntoView(): void {

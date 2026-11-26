@@ -32,8 +32,7 @@
         <button
           type="button"
           class="ti-btn ti-btn-primary-full modern-btn dpu-tool-btn"
-          (click)="new()"
-          data-hs-overlay="#modal-detail">
+          (click)="new()">
           <i class="ri-add-line"></i>
           <span>เพิ่มแผนก</span>
         </button>
@@ -116,8 +115,7 @@
                         type="button"
                         class="dpu-icon-btn"
                         title="แก้ไข"
-                        (click)="view(item)"
-                        data-hs-overlay="#modal-detail">
+                        (click)="view(item)">
                         <i class="ri-pencil-line"></i>
                       </button>
                       <button type="button" class="dpu-icon-btn dpu-icon-btn--danger" title="ลบ" (click)="delete(item)">
@@ -142,43 +140,35 @@
   </div>
 </div>
 
-<div id="modal-detail" class="hs-overlay hidden ti-modal [--overlay-backdrop:static]">
-  <div class="hs-overlay-open:mt-7 ti-modal-box mt-0 ease-out">
-    <div class="ti-modal-content">
-      <div class="ti-modal-header">
-        <h6 class="modal-title text-[1rem] font-semibold">
-          {{ isEdit ? 'แก้ไขแผนก' : 'เพิ่มแผนก' }}
-        </h6>
-        <button type="button" class="hs-dropdown-toggle !text-[1rem] !font-semibold"
-          data-hs-overlay="#modal-detail" #closeModal>
-          <span class="sr-only">Close</span>
-          <i class="ri-close-line"></i>
-        </button>
-      </div>
-      <div class="ti-modal-body px-4">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ชื่อ (TH)</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.thName" placeholder="ชื่อแผนกภาษาไทย">
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <label class="form-label">ชื่อ (EN)</label>
-            <input type="text" class="form-control" [(ngModel)]="selectModel.engName" placeholder="Department name">
-          </div>
-        </div>
-      </div>
-      <div class="ti-modal-footer">
-        <button type="button" class="hs-dropdown-toggle ti-btn ti-btn-light" data-hs-overlay="#modal-detail">
-          ยกเลิก
-        </button>
-        <button
-          type="button"
-          class="ti-btn bg-primary text-white !font-medium"
-          [disabled]="!selectModel.thName || !selectModel.engName"
-          (click)="save()">
-          บันทึก
-        </button>
-      </div>
+<app-surface-modal
+  modalId="modal-detail"
+  [open]="showModal"
+  [title]="isEdit ? 'แก้ไขแผนก' : 'เพิ่มแผนก'"
+  icon="ri-organization-chart"
+  size="lg"
+  [closeOnBackdrop]="false"
+  (closed)="closeModal()"
+>
+  <div class="grid grid-cols-12 gap-4">
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">ชื่อ (TH)</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.thName" placeholder="ชื่อแผนกภาษาไทย">
+    </div>
+    <div class="col-span-12 md:col-span-6">
+      <label class="form-label">ชื่อ (EN)</label>
+      <input type="text" class="form-control sv-input" [(ngModel)]="selectModel.engName" placeholder="Department name">
     </div>
   </div>
-</div>
+  <ng-container footer>
+    <button type="button" class="ti-btn ti-btn-light" (click)="closeModal()">
+      ยกเลิก
+    </button>
+    <button
+      type="button"
+      class="ti-btn bg-primary text-white !font-medium"
+      [disabled]="!selectModel.thName || !selectModel.engName"
+      (click)="save()">
+      บันทึก
+    </button>
+  </ng-container>
+</app-surface-modal>

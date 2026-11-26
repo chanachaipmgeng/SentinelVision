@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import swal from 'sweetalert';
+import swal from '../../../../shared/utils/vault-swal';
 import { TokenService } from '../../../../shared/services/token.service';
 import { buildZoneAllowedIdentityTypes, defaultZoneForm } from '../sentinel.helpers';
 import { SentinelApiService } from '../sentinel-api.service';

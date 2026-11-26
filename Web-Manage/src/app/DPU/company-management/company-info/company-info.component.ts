@@ -18,7 +18,7 @@ import { CompanyService } from '../../services/company.service';
 import { CompanyModel } from '../../models/company.model';
 import { environment } from '../../../../environments/environment';
 import { mountPlaceAutocomplete } from '../../../shared/utils/place-autocomplete';
-import swal from 'sweetalert';
+import swal from '../../../shared/utils/vault-swal';
 
 declare global {
   interface Window {

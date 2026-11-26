@@ -80,12 +80,13 @@ test.describe('Phase 3A — Access Control, Smart Parking LPR & RFID (Module 3)'
         .locator('button[title*="ลบ"], button:has(i.ri-delete-bin-line)')
         .first()
         .click();
-      await page.waitForTimeout(400);
+      await confirmSwal(page);
+      await page.waitForTimeout(300);
     }
     await expect(page.locator('table tbody tr', { hasText: plate })).toHaveCount(0, { timeout: 10_000 });
 
     // 5) Switch back to Spots tab & delete E2E spots
-    await page.getByRole('button', { name: /ผังช่องจอดสด/ }).click();
+    await page.getByRole('button', { name: /แผนผังช่องจอด|ผังช่องจอดสด|Parking Map/i }).click();
     await page.waitForTimeout(400);
     const spotDelBtns = page
       .locator('div', { hasText: 'E2E-P' })
@@ -98,7 +99,8 @@ test.describe('Phase 3A — Access Control, Smart Parking LPR & RFID (Module 3)'
         .first();
       if (await btn.isVisible().catch(() => false)) {
         await btn.click();
-        await page.waitForTimeout(400);
+        await confirmSwal(page);
+        await page.waitForTimeout(300);
       }
     }
 

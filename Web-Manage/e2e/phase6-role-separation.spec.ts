@@ -37,9 +37,11 @@ test.describe('Phase 6 — System Admin vs. Company Admin Role Separation', () =
     await dismissWelcomeWizard(page);
     const banner = page.locator('.sv-sysadmin-banner');
     await expect(banner).toBeVisible({ timeout: 15_000 });
-    await expect(banner).toContainText('โหมด System Admin');
+    await expect(banner).toContainText(/กำลังดูในสิทธิ์ผู้ดูแลระบบสูงสุด|Viewing as System Admin|โหมด System Admin/);
 
-    await banner.getByRole('button', { name: /กลับ System Admin Console/ }).click();
+    await banner
+      .getByRole('button', { name: /กลับภาพรวมแพลตฟอร์ม|Back to Platform Overview|กลับ System Admin Console/ })
+      .click();
     await expect(page).toHaveURL(/\/#\/admin\/manage-companys/, { timeout: 10_000 });
 
     tracker.assertClean();

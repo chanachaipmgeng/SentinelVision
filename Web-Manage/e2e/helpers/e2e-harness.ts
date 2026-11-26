@@ -74,18 +74,23 @@ export async function dismissWelcomeWizard(page: Page): Promise<void> {
 }
 
 /**
- * Clicks through SweetAlert v1 confirmation and follow-up success dialogs cleanly.
+ * Clicks through ConfirmDialogHost (`SurfaceModalComponent`) confirmation and follow-up success dialogs cleanly.
  */
 export async function confirmSwal(page: Page): Promise<void> {
-  const btn = page.locator('.swal-button--confirm');
-  if (await btn.isVisible({ timeout: 4_000 }).catch(() => false)) {
-    await btn.click();
-    await page.waitForTimeout(300);
-  }
-  // Dismiss follow-up "สำเร็จ" alert if shown
-  if (await btn.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await btn.click();
-    await page.waitForTimeout(200);
+  const vaultConfirm = page.locator('app-confirm-dialog-host [role="dialog"] [footer] button').last();
+  const legacySwal = page.locator('.swal-button--confirm');
+
+  for (let step = 0; step < 2; step++) {
+    const timeout = step === 0 ? 4_000 : 2_500;
+    if (await vaultConfirm.isVisible({ timeout }).catch(() => false)) {
+      await vaultConfirm.click();
+      await page.waitForTimeout(300);
+    } else if (await legacySwal.isVisible({ timeout: 300 }).catch(() => false)) {
+      await legacySwal.click();
+      await page.waitForTimeout(300);
+    } else {
+      break;
+    }
   }
 }
 

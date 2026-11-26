@@ -97,9 +97,19 @@ def effective_stream_url(camera: Camera) -> str:
     return urlunparse((parsed.scheme, netloc, parsed.path or "/", "", parsed.query, ""))
 
 
-def serialize_camera(cam: Camera, *, include_secrets: bool = False) -> dict[str, Any]:
+def serialize_camera(
+    cam: Camera,
+    *,
+    include_secrets: bool = False,
+    include_stream_token: bool = True,
+) -> dict[str, Any]:
     creds = _unseal_credentials(cam.credentialsEnc) if include_secrets else {}
     has_creds = bool(cam.credentialsEnc)
+    stream_token: Optional[str] = None
+    if include_stream_token:
+        from ..security.jwt import create_stream_token
+
+        stream_token = create_stream_token(str(cam.companyId), str(cam.cameraId))
     out: dict[str, Any] = {
         "cameraId": str(cam.cameraId),
         "companyId": str(cam.companyId),
@@ -122,12 +132,14 @@ def serialize_camera(cam: Camera, *, include_secrets: bool = False) -> dict[str,
         "analysisEnabled": bool(cam.analysisEnabled),
         "lastAnalyzedAt": cam.lastAnalyzedAt,
         "aiConfig": cam.aiConfig if isinstance(getattr(cam, "aiConfig", None), dict) else (cam.aiConfig or None),
-        "whepPath": mediamtx_service.whep_path(cam.cameraId),
-        "hlsPath": mediamtx_service.hls_path(cam.cameraId),
+        "whepPath": mediamtx_service.whep_path(cam.cameraId, token=stream_token),
+        "hlsPath": mediamtx_service.hls_path(cam.cameraId, token=stream_token),
         "mtxPath": mediamtx_service.path_name_for_camera(cam.cameraId),
         "createdAt": cam.createdAt,
         "updatedAt": cam.updatedAt,
     }
+    if stream_token:
+        out["streamToken"] = stream_token
     if include_secrets and creds.get("username"):
         out["streamUsername"] = creds["username"]
     return out

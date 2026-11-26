@@ -15,16 +15,23 @@ DB_SCHEMA = _db_schema
 
 _metadata = MetaData(schema=DB_SCHEMA if DB_SCHEMA != "public" else None)
 
-_connect_args = {}
+_connect_args: dict = {}
+_server_settings: dict[str, str] = {}
 if DB_SCHEMA != "public":
-    _connect_args["server_settings"] = {"search_path": f"{DB_SCHEMA}, public"}
+    _server_settings["search_path"] = f"{DB_SCHEMA}, public"
+_stmt_timeout_ms = int(os.getenv("DB_STATEMENT_TIMEOUT_MS", "30000"))
+if _stmt_timeout_ms > 0 and "asyncpg" in (DATABASE_URL or ""):
+    _server_settings["statement_timeout"] = str(_stmt_timeout_ms)
+if _server_settings:
+    _connect_args["server_settings"] = _server_settings
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
-    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    pool_size=int(os.getenv("DB_POOL_SIZE", "15")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "25")),
+    pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),
     pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "1800")),
     connect_args=_connect_args,
 )

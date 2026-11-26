@@ -185,24 +185,48 @@ async def start_import_job(
     _: Member = Depends(require_permission("employees.write")),
     _rl=Depends(rate_limit_import),
 ):
+    from pathlib import Path
+    import tempfile
     from fastapi import HTTPException
 
+    from ..config.settings import settings
     from ..models.company import Company
-    from ..services.import_job_service import create_import_job
+    from ..services.import_job_service import create_import_job, import_job_root
 
     if not await db.get(Company, companyId):
         raise HTTPException(status_code=404, detail="Company not found")
     filename = (file.filename or "").lower()
     if not filename.endswith((".xlsx", ".xlsm")):
         raise HTTPException(status_code=400, detail="กรุณาอัปโหลดไฟล์ Excel (.xlsx)")
-    data = await file.read()
+    max_excel_bytes = max(1, int(getattr(settings, "MAX_IMPORT_EXCEL_MB", 25))) * 1024 * 1024
+    data = await file.read(max_excel_bytes + 1)
     if not data:
         raise HTTPException(status_code=400, detail="ไฟล์ว่าง")
-    photos_data = None
+    if len(data) > max_excel_bytes:
+        raise HTTPException(status_code=413, detail="ไฟล์ Excel มีขนาดใหญ่เกินกำหนด")
+
+    photos_tmp_path: Path | None = None
     if photos is not None and photos.filename:
         if not photos.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="ไฟล์รูปต้องเป็น ZIP (.zip) รวมรูป jpg/png")
-        photos_data = await photos.read()
+        max_zip_bytes = max(1, int(getattr(settings, "MAX_IMPORT_PHOTOS_ZIP_MB", 200))) * 1024 * 1024
+        root_dir = import_job_root()
+        root_dir.mkdir(parents=True, exist_ok=True)
+        total_zip = 0
+        with tempfile.NamedTemporaryFile(dir=root_dir, suffix=".zip.part", delete=False) as tf:
+            photos_tmp_path = Path(tf.name)
+            try:
+                while True:
+                    chunk = await photos.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total_zip += len(chunk)
+                    if total_zip > max_zip_bytes:
+                        raise HTTPException(status_code=413, detail="ไฟล์ ZIP รูปภาพมีขนาดใหญ่เกินกำหนด")
+                    tf.write(chunk)
+            except Exception:
+                photos_tmp_path.unlink(missing_ok=True)
+                raise
 
     actor = getattr(request.state, "member", None) or current_member_var.get()
 
@@ -212,14 +236,19 @@ async def start_import_job(
             file_name=file.filename,
             data=data,
             photos_name=getattr(photos, "filename", None),
-            photos_data=photos_data,
+            photos_path=photos_tmp_path,
             requested_by=getattr(actor, "memberId", None),
         )
         return {"jobId": str(job.id), "status": job.status, "progress": job.progress}
 
-    return await idempotent_json(
-        request, scope="employees.import_job", company_id=companyId, compute=_run
-    )
+    try:
+        return await idempotent_json(
+            request, scope="employees.import_job", company_id=companyId, compute=_run
+        )
+    except Exception:
+        if photos_tmp_path is not None and photos_tmp_path.exists():
+            photos_tmp_path.unlink(missing_ok=True)
+        raise
 
 
 @router.get("/company/{companyId}/import-jobs/{jobId}")

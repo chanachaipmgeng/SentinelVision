@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import ipaddress
 import logging
 import socket
 from typing import Any
@@ -117,6 +116,8 @@ async def discover_onvif_devices(timeout_seconds: float = 2.0) -> list[dict[str,
 
 
 def _resolve_ptz_endpoint(camera: Camera, override_url: str | None = None) -> str:
+    from ..security.ssrf import validate_outbound_url
+
     candidate = (override_url or "").strip()
     if not candidate:
         parsed = urlparse(camera.streamUrl or "")
@@ -127,16 +128,7 @@ def _resolve_ptz_endpoint(camera: Camera, override_url: str | None = None) -> st
             )
         candidate = f"http://{parsed.hostname}/onvif/ptz_service"
 
-    p = urlparse(candidate)
-    if p.scheme not in {"http", "https"} or not p.hostname:
-        raise HTTPException(status_code=400, detail="Invalid ONVIF PTZ service URL")
-    try:
-        ip_obj = ipaddress.ip_address(p.hostname)
-        if ip_obj.is_loopback or ip_obj.is_link_local:
-            raise HTTPException(status_code=400, detail="Refusing loopback/link-local ONVIF target")
-    except ValueError:
-        pass
-    return candidate
+    return validate_outbound_url(candidate, allow_private_lan=True)
 
 
 def build_ptz_soap_envelope(
@@ -200,7 +192,7 @@ async def send_ptz_command(
         tilt=tilt,
         zoom=zoom,
     )
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient(timeout=5.0, follow_redirects=False) as client:
         resp = await client.post(
             endpoint,
             content=envelope.encode("utf-8"),

@@ -205,6 +205,7 @@ async def build_dsar_export(
 
     emp_ids = [e.company_employeeId for e in emp_rows]
     timestamps: list[EmployeeTimestamp] = []
+    timestamps_truncated = False
     if emp_ids:
         timestamps = list(
             (
@@ -215,10 +216,13 @@ async def build_dsar_export(
                         EmployeeTimestamp.company_employeeId.in_(emp_ids),
                     )
                     .order_by(EmployeeTimestamp.timestamp.desc())
-                    .limit(5000)
+                    .limit(5001)
                 )
             ).scalars().all()
         )
+        if len(timestamps) > 5000:
+            timestamps_truncated = True
+            timestamps = timestamps[:5000]
 
     encodings = (
         await db.execute(
@@ -229,21 +233,30 @@ async def build_dsar_export(
         )
     ).scalars().all()
 
-    incidents = (
-        await db.execute(
-            select(SentinelIncidentLog)
-            .where(
-                SentinelIncidentLog.companyId == company_id,
-                SentinelIncidentLog.memberId == member_id,
+    incidents = list(
+        (
+            await db.execute(
+                select(SentinelIncidentLog)
+                .where(
+                    SentinelIncidentLog.companyId == company_id,
+                    SentinelIncidentLog.memberId == member_id,
+                )
+                .order_by(SentinelIncidentLog.occurredAt.desc())
+                .limit(1001)
             )
-            .order_by(SentinelIncidentLog.occurredAt.desc())
-            .limit(1000)
-        )
-    ).scalars().all()
+        ).scalars().all()
+    )
+    incidents_truncated = len(incidents) > 1000
+    if incidents_truncated:
+        incidents = incidents[:1000]
 
     return {
         "exportedAt": datetime.now(timezone.utc).isoformat(),
         "companyId": str(company_id),
+        "truncated": {
+            "timestamps": timestamps_truncated,
+            "incidents": incidents_truncated,
+        },
         "member": {
             "memberId": str(member.memberId),
             "username": member.username,
@@ -374,13 +387,28 @@ async def erase_member_personal_data(
         inc.subjectName = None
         incidents_cleared += 1
 
-    cleared = await clear_member_face_encodings(member_id, db)
+    cleared = await clear_member_face_encodings(member_id, db, company_id=company_id)
+
+    # Only clear global Member consent/PII when the member has no active employment in other companies.
+    other_emp = (
+        await db.execute(
+            select(CompanyEmployee.company_employeeId)
+            .where(
+                CompanyEmployee.memberId == member_id,
+                CompanyEmployee.companyId != company_id,
+                CompanyEmployee.deletedAt.is_(None),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
     member = await db.get(Member, member_id)
-    if member and clear_consent:
+    consent_cleared = False
+    if member and clear_consent and other_emp is None:
         member.biometricConsentAt = None
         member.biometricConsentVersion = None
         member.biometricConsentText = None
+        consent_cleared = True
 
     await db.commit()
     return {
@@ -391,7 +419,7 @@ async def erase_member_personal_data(
         "timestampsCleared": timestamps_cleared,
         "incidentSnapshotsRemoved": snapshots_removed,
         "incidentsAnonymized": incidents_cleared,
-        "consentCleared": bool(clear_consent),
+        "consentCleared": consent_cleared,
     }
 
 
@@ -470,11 +498,31 @@ async def company_retention_tick(db: AsyncSession, company_id: UUID) -> dict[str
         logger = __import__("logging").getLogger("dpu.pdpa")
         logger.warning("presence retention failed for %s: %s", company_id, exc)
 
+    bio_days = int(cfg.get("biometricDays") or 0)
+    removed_biometrics = 0
+    if bio_days > 0:
+        bio_cut = (now - timedelta(days=bio_days)).replace(tzinfo=None)
+        old_encs = (
+            await db.execute(
+                select(FaceEncoding)
+                .where(
+                    FaceEncoding.companyId == company_id,
+                    FaceEncoding.createdAt < bio_cut,
+                )
+                .limit(500)
+            )
+        ).scalars().all()
+        for enc in old_encs:
+            delete_stored_image("enrolled_images", f"{enc.faceEncodingId}.jpg")
+            await db.delete(enc)
+            removed_biometrics += 1
+
     await db.commit()
     return {
         "punchPhotosRemoved": removed_photos,
         "incidentSnapshotsRemoved": removed_snaps,
         "videoClipsRemoved": removed_clips,
+        "biometricEncodingsRemoved": removed_biometrics,
         "presenceSightingsRemoved": presence_stats.get("sightingsRemoved", 0),
         "presenceSessionsRemoved": presence_stats.get("sessionsRemoved", 0),
     }

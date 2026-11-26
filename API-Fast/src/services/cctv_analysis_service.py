@@ -431,7 +431,7 @@ async def analyze_camera(db: AsyncSession, cam: Camera) -> dict[str, Any]:
     if not encodings:
         return {"ok": True, "faces": 0, "stationMode": mode}
 
-    snapshot_url = _persist_snapshot(jpeg)
+    snapshot_url = await asyncio.to_thread(_persist_snapshot, jpeg)
     # Incident / attendance still use the largest face (index 0) to avoid
     # multi-punch storms; presence records every accepted face.
     encoding = encodings[0]
@@ -523,11 +523,92 @@ async def list_due_cameras(
     return due
 
 
+async def claim_due_cameras(
+    db: AsyncSession,
+    *,
+    now: Optional[datetime] = None,
+    lease_seconds: int = 90,
+    max_count: int = 20,
+) -> list[Camera]:
+    """Claim active due cameras across workers using FOR UPDATE SKIP LOCKED + lease."""
+    from .company_ai_settings_service import (
+        CCTV_INTERVAL_MIN,
+        resolve_cctv_camera_interval,
+    )
+
+    now = now or _now()
+    floor_seconds = max(CCTV_INTERVAL_MIN, 5)
+    due_before = now - timedelta(seconds=floor_seconds)
+    stmt = (
+        select(Camera)
+        .where(
+            Camera.analysisEnabled.is_(True),
+            Camera.isActive.is_(True),
+            Camera.deletedAt.is_(None),
+            or_(Camera.lastAnalyzedAt.is_(None), Camera.lastAnalyzedAt <= due_before),
+            or_(Camera.analysisLeaseUntil.is_(None), Camera.analysisLeaseUntil <= now),
+        )
+        .order_by(Camera.lastAnalyzedAt.asc().nullsfirst())
+        .with_for_update(skip_locked=True)
+    )
+    candidates = list((await db.execute(stmt)).scalars().all())
+    if not candidates:
+        return []
+
+    interval_cache: dict[UUID, int] = {}
+    lease_until = now + timedelta(seconds=max(15, int(lease_seconds)))
+    claimed: list[Camera] = []
+    for cam in candidates:
+        cid = cam.companyId
+        if cid not in interval_cache:
+            interval_cache[cid] = await resolve_cctv_camera_interval(db, cid)
+        interval = timedelta(seconds=interval_cache[cid])
+        if cam.lastAnalyzedAt is None or cam.lastAnalyzedAt <= now - interval:
+            cam.analysisLeaseUntil = lease_until
+            claimed.append(cam)
+            if len(claimed) >= max(1, int(max_count)):
+                break
+    if claimed:
+        await db.commit()
+    return claimed
+
+
+async def _shared_kiosk_backpressure() -> Optional[dict[str, Any]]:
+    """Query local face_gpu_queue plus shared API /metrics when configured in standalone workers."""
+    local_stats = face_gpu_queue_stats()
+    if _should_pause_for_kiosk(local_stats):
+        return local_stats
+    if (settings.WORKER_PEOPLE_KIOSK_METRICS_URLS or "").strip():
+        try:
+            from .people_count_service import (
+                scrape_kiosk_queue_stats,
+                should_pause_for_kiosk as _people_should_pause,
+            )
+
+            remote_stats = await scrape_kiosk_queue_stats()
+            if _people_should_pause(remote_stats):
+                return remote_stats
+        except Exception:
+            pass
+    return None
+
+
 async def run_cctv_analysis_tick(
     *, stop_event: Optional[asyncio.Event] = None
 ) -> dict[str, Any]:
-    """One worker tick: process due cameras with a concurrency cap."""
+    """One worker tick: process due cameras with lease claiming and kiosk backpressure."""
     await ensure_face_gpu_for_cctv()
+    bp = await _shared_kiosk_backpressure()
+    if bp is not None:
+        return {
+            "due": 0,
+            "analyzed": 0,
+            "skipped": 1,
+            "errors": 0,
+            "reason": "kiosk_backpressure",
+            "kioskPending": bp.get("kioskPending"),
+        }
+
     max_concurrent = max(1, int(settings.WORKER_CCTV_MAX_CONCURRENT))
     sem = asyncio.Semaphore(max_concurrent)
     analyzed = 0
@@ -536,7 +617,7 @@ async def run_cctv_analysis_tick(
     results: list[dict[str, Any]] = []
 
     async with async_session() as db:
-        cameras = await list_due_cameras(db)
+        cameras = await claim_due_cameras(db, max_count=max_concurrent * 4)
 
     if not cameras:
         return {"analyzed": 0, "skipped": 0, "errors": 0, "due": 0}
@@ -569,9 +650,17 @@ async def run_cctv_analysis_tick(
                     return {"cameraId": str(cam_id), "skipped": True, "reason": "stale"}
                 try:
                     outcome = await analyze_camera(db, cam)
+                    cam.analysisLeaseUntil = None
                     await db.commit()
                 except Exception as exc:  # noqa: BLE001
                     await db.rollback()
+                    try:
+                        cam_reset = await db.get(Camera, cam_id)
+                        if cam_reset is not None:
+                            cam_reset.analysisLeaseUntil = None
+                            await db.commit()
+                    except Exception:
+                        await db.rollback()
                     errors += 1
                     logger.exception("CCTV analyze failed cam=%s", cam_id)
                     return {"cameraId": str(cam_id), "ok": False, "error": str(exc)}

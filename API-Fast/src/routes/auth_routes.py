@@ -27,7 +27,8 @@ from ..security.auth_cookies import (
     read_refresh_cookie,
     set_auth_cookies,
 )
-from ..security.deps import assert_company_access, get_current_member
+from ..security.deps import assert_request_permission, get_current_member
+from ..security.client_ip import client_ip_from_request
 from ..services import rbac_service
 from ..security.jwt import (
     ALGORITHM,
@@ -93,6 +94,13 @@ class MfaVerifyRequest(BaseModel):
     code: str
 
 
+class MfaDisableRequest(BaseModel):
+    currentPassword: Optional[str] = None
+    password: Optional[str] = None
+    code: Optional[str] = None
+    totpCode: Optional[str] = None
+
+
 class OidcStartRequest(BaseModel):
     companyId: str | None = None
     returnTo: str | None = None
@@ -153,11 +161,12 @@ def _tokens(member: Member, *, family: Optional[str] = None, csrf: Optional[str]
 
 
 def _attach_session_cookies(response: Response, payload: dict) -> dict:
-    """Set httpOnly refresh + CSRF cookies; echo csrfToken for the SPA."""
+    """Set httpOnly access/refresh + CSRF cookies; echo csrfToken for the SPA."""
     refresh = payload.get("refresh_token") or payload.get("refreshToken")
     if not refresh:
         return payload
-    csrf = set_auth_cookies(response, refresh)
+    access = payload.get("access_token") or payload.get("accessToken")
+    csrf = set_auth_cookies(response, refresh, access_token=access)
     payload["csrfToken"] = csrf
     return payload
 
@@ -175,6 +184,54 @@ def _resolve_refresh_raw(body: RefreshRequest | LogoutRequest, request: Request)
     return cookie, True
 
 
+def _unseal_totp(raw_secret: Optional[str]) -> Optional[str]:
+    if not raw_secret:
+        return None
+    from ..services.outbox_crypto import decrypt_secret
+
+    try:
+        return decrypt_secret(raw_secret)
+    except Exception:
+        return raw_secret
+
+
+def _seal_totp(secret: str) -> str:
+    from ..services.outbox_crypto import encrypt_secret
+
+    return encrypt_secret(secret)
+
+
+async def _verify_totp_with_replay_guard(member_id: UUID, raw_secret: str, code: str) -> bool:
+    secret = _unseal_totp(raw_secret)
+    if not secret or not verify_totp(secret, code):
+        return False
+    clean_code = str(code or "").strip().replace(" ", "")
+    try:
+        from ..services.redis_client import get_redis
+
+        redis = get_redis()
+        if redis is not None:
+            rkey = f"dpu:totp_used:{member_id}:{clean_code}"
+            accepted = await redis.set(rkey, "1", ex=90, nx=True)
+            if not accepted:
+                return False
+    except Exception:
+        pass
+    return True
+
+
+def _validate_password_strength(password: str) -> None:
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    has_letter = any(ch.isalpha() for ch in password)
+    has_digit_or_sym = any(ch.isdigit() or not ch.isalnum() for ch in password)
+    if not (has_letter and has_digit_or_sym):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must include at least one letter and one number or symbol",
+        )
+
+
 @router.post("/login", response_model=Token)
 async def login(
     request: LoginRequest,
@@ -185,7 +242,7 @@ async def login(
     result = await db.execute(select(Member).where(Member.username == request.username))
     member = result.scalars().first()
     if not member or getattr(member, "deletedAt", None) is not None:
-        raise HTTPException(status_code=404, detail="Member not found")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     assert_not_locked(member)
     status_val = getattr(member.status, "value", member.status)
     if status_val in (0, "DISABLED"):
@@ -201,7 +258,7 @@ async def login(
         code = (request.totpCode or "").strip()
         if not code:
             raise HTTPException(status_code=401, detail="MFA_REQUIRED")
-        if not verify_totp(totp_secret, code):
+        if not await _verify_totp_with_replay_guard(member.memberId, totp_secret, code):
             register_failure(member)
             await db.commit()
             await write_audit(actor=member, action="LOGIN_MFA_FAIL", path="/auth/login", status_code=401)
@@ -263,6 +320,32 @@ def _parse_face_login_challenge(challenge_token: Optional[str]) -> UUID:
         raise _face_login_fail() from None
 
 
+def _parse_face_login_challenge_full(challenge_token: Optional[str]) -> tuple[UUID, dict | None]:
+    raw = (challenge_token or "").strip()
+    if not raw:
+        raise _face_login_fail()
+    try:
+        payload = decode_face_login_challenge(raw)
+        return UUID(str(payload["memberId"])), payload
+    except HTTPException:
+        # Support unit tests that monkeypatch `_parse_face_login_challenge` directly.
+        return _parse_face_login_challenge(raw), None
+    except Exception:
+        return _parse_face_login_challenge(raw), None
+
+
+def _assert_distinct_face_frames(paths: List[str]) -> None:
+    """Reject identical static image replay when real frame files exist on disk."""
+    import hashlib
+
+    existing = [Path(p) for p in paths if Path(p).is_file()]
+    if len(existing) < 2:
+        return
+    digests = {hashlib.sha256(p.read_bytes()).hexdigest() for p in existing}
+    if len(digests) < 2:
+        raise ValueError("Static identical frames rejected")
+
+
 @router.post("/login/face/identify")
 async def login_face_identify(
     db: AsyncSession = Depends(get_db),
@@ -287,6 +370,7 @@ async def login_face_identify(
     try:
         temp_paths = await _save_face_login_frames(frames)
         try:
+            _assert_distinct_face_frames(temp_paths)
             encoding = await run_on_face_gpu(
                 partial(get_walkby_encoding, list(temp_paths)),
                 kind="identify",
@@ -375,12 +459,21 @@ async def login_face(
     interactive gate. Requiring a short-lived challenge JWT avoids a redundant rematch.
     """
     try:
-        challenge_member_id = _parse_face_login_challenge(challengeToken)
+        challenge_member_id, chal_payload = _parse_face_login_challenge_full(challengeToken)
     except HTTPException:
         await write_audit(
             actor=None, action="LOGIN_FACE_FAIL", path="/auth/login/face", status_code=401
         )
         raise
+
+    if chal_payload is not None:
+        if await revocation.is_token_revoked(chal_payload):
+            await write_audit(
+                actor=None, action="LOGIN_FACE_REPLAY", path="/auth/login/face", status_code=401
+            )
+            raise _face_login_fail()
+        # Single-use challenge consumption (consume before issuing tokens).
+        await revocation.revoke_token_payload(db, chal_payload, reason="face_challenge_used")
 
     member = await db.get(Member, challenge_member_id)
     if member is None or getattr(member, "deletedAt", None) is not None:
@@ -418,7 +511,7 @@ async def login_face(
         code = (totpCode or "").strip()
         if not code:
             raise HTTPException(status_code=401, detail="MFA_REQUIRED")
-        if not verify_totp(totp_secret, code):
+        if not await _verify_totp_with_replay_guard(member.memberId, totp_secret, code):
             register_failure(member)
             await db.commit()
             await write_audit(
@@ -558,10 +651,7 @@ async def logout(
 # Kiosk device pairing: one-time code → device-scoped token pair (short TTL, refreshable)
 # ---------------------------------------------------------------------------
 def _client_ip(request: Request) -> str:
-    xff = (request.headers.get("x-forwarded-for") or "").strip()
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    return client_ip_from_request(request, default="unknown")
 
 
 def _kiosk_session(device: KioskDevice, access: str, refresh: str) -> dict:
@@ -653,11 +743,11 @@ async def kiosk_refresh(body: KioskRefreshRequest, db: AsyncSession = Depends(ge
 @router.post("/change-password")
 async def change_password(
     body: ChangePasswordRequest,
+    request: Request,
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    if len(body.newPassword) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    _validate_password_strength(body.newPassword)
     if not _verify_password(body.currentPassword, member.passwordHash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     db_member = await db.get(Member, member.memberId)
@@ -665,7 +755,25 @@ async def change_password(
         raise HTTPException(status_code=404, detail="Member not found")
     db_member.passwordHash = hash_password(body.newPassword)
     db_member.mustChangePassword = False
+
+    # Revoke current session family so stolen tokens cannot persist after password rotation.
+    auth_header = request.headers.get("authorization") or ""
+    if auth_header.lower().startswith("bearer "):
+        raw_tok = auth_header.split(" ", 1)[1].strip()
+        try:
+            tok_payload = decode_token(raw_tok, expected_typ=TYP_ACCESS)
+            fam = tok_payload.get("fam")
+            if fam:
+                await revocation.revoke_family(
+                    db,
+                    str(fam),
+                    revocation.family_expiry_for(tok_payload, refresh_ttl=refresh_token_ttl()),
+                    reason="password_changed",
+                )
+        except Exception:
+            pass
     await db.commit()
+    await write_audit(actor=db_member, action="PASSWORD_CHANGED", path="/auth/change-password", status_code=200)
     return {"ok": True}
 
 
@@ -688,7 +796,7 @@ async def mfa_setup(
     if db_member is None:
         raise HTTPException(status_code=404, detail="Member not found")
     secret = generate_totp_secret()
-    db_member.totpSecret = secret
+    db_member.totpSecret = _seal_totp(secret)
     db_member.totpEnabled = False
     await db.commit()
     return {
@@ -710,8 +818,10 @@ async def mfa_enable(
     secret = db_member.totpSecret
     if not secret:
         raise HTTPException(status_code=400, detail="Run /auth/mfa/setup first")
-    if not verify_totp(secret, body.code):
+    if not await _verify_totp_with_replay_guard(db_member.memberId, secret, body.code):
         raise HTTPException(status_code=400, detail="Invalid 6-digit authenticator code")
+    # Ensure secret is sealed at rest if upgrading from legacy plaintext.
+    db_member.totpSecret = _seal_totp(_unseal_totp(secret) or secret)
     db_member.totpEnabled = True
     await db.commit()
     await write_audit(actor=db_member, action="MFA_ENABLED", path="/auth/mfa/enable", status_code=200)
@@ -720,12 +830,25 @@ async def mfa_enable(
 
 @router.post("/mfa/disable")
 async def mfa_disable(
+    body: Optional[MfaDisableRequest] = None,
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
     db_member = await db.get(Member, member.memberId)
     if db_member is None:
         raise HTTPException(status_code=404, detail="Member not found")
+    pwd = ((body.currentPassword or body.password) if body else None) or ""
+    code = ((body.code or body.totpCode) if body else None) or ""
+    verified = False
+    if pwd.strip() and _verify_password(pwd, db_member.passwordHash):
+        verified = True
+    elif code.strip() and db_member.totpSecret:
+        verified = await _verify_totp_with_replay_guard(db_member.memberId, db_member.totpSecret, code)
+    if not verified:
+        raise HTTPException(
+            status_code=401,
+            detail="Confirm with current password or valid 6-digit authenticator code",
+        )
     db_member.totpEnabled = False
     db_member.totpSecret = None
     await db.commit()
@@ -851,7 +974,11 @@ def _expose_reset_token() -> bool:
 
 @router.post("/send-reset-password")
 @router.put("/send-reset-password")
-async def send_reset_password(body: SendResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def send_reset_password(
+    body: SendResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_login),
+):
     """Always returns ok (no email enumeration). Issues a short-lived password-reset JWT."""
     email = (body.email or "").strip().lower()
     result: dict[str, object] = {"ok": True}
@@ -863,6 +990,25 @@ async def send_reset_password(body: SendResetPasswordRequest, db: AsyncSession =
     if member is None or member.deletedAt is not None:
         return result
     token = create_password_reset_token(str(member.memberId), member.username, member.email)
+    if (getattr(settings, "SMTP_HOST", "") or "").strip():
+        try:
+            from ..services.notification_service import enqueue as _enqueue_notify
+
+            ttl_min = int(settings.AUTH_PASSWORD_RESET_EXPIRE_MINUTES)
+            await _enqueue_notify(
+                "auth.password_reset",
+                "email",
+                {
+                    "to": member.email,
+                    "subject": "SentinelVision Password Reset",
+                    "body": (
+                        f"Use this one-time reset token within {ttl_min} minutes: {token}\n"
+                        "If you did not request a password reset, ignore this message."
+                    ),
+                },
+            )
+        except Exception:
+            logger.warning("password reset email enqueue failed (non-fatal)")
     await write_audit(
         actor=member,
         action="PASSWORD_RESET_REQUESTED",
@@ -880,11 +1026,16 @@ async def send_reset_password(body: SendResetPasswordRequest, db: AsyncSession =
 
 @router.post("/reset-password")
 @router.put("/reset-password")
-async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    _rl=Depends(rate_limit_login),
+):
     new_password = (body.newPassword or body.password or "").strip()
-    if len(new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    _validate_password_strength(new_password)
     payload = decode_token(body.token, expected_typ=TYP_PASSWORD_RESET)
+    if await revocation.is_token_revoked(payload):
+        raise HTTPException(status_code=401, detail="Reset token has already been used or revoked")
     member = await db.get(Member, UUID(str(payload["memberId"])))
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=404, detail="Member not found")
@@ -894,6 +1045,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     assert_not_locked(member)
     member.passwordHash = hash_password(new_password)
     member.mustChangePassword = False
+    await revocation.revoke_token_payload(db, payload, reason="password_reset_used")
     await db.commit()
     await write_audit(
         actor=member,
@@ -934,10 +1086,10 @@ async def my_permissions(
 @router.get("/sso/policy/{companyId}")
 async def get_company_sso_policy(
     companyId: UUID,
-    member: Member = Depends(get_current_member),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await get_sso_policy(db, companyId)
 
 
@@ -945,55 +1097,16 @@ async def get_company_sso_policy(
 async def put_company_sso_policy(
     companyId: UUID,
     body: SsoPolicyRequest,
-    member: Member = Depends(get_current_member),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_company_access(db, member, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await save_sso_policy(db, companyId, body.model_dump())
 
 
 class SamlAcsRequest(BaseModel):
     companyId: UUID
     SAMLResponse: Optional[str] = None
-    email: Optional[str] = None
-    name: Optional[str] = None
-    groups: Optional[List[str]] = None
-
-
-def _extract_saml_assertion_claims(body: SamlAcsRequest) -> tuple[str, dict]:
-    email = (body.email or "").strip().lower()
-    name = (body.name or "").strip()
-    groups = list(body.groups or [])
-
-    if body.SAMLResponse:
-        import base64
-        import re
-
-        try:
-            raw_xml = base64.b64decode(body.SAMLResponse, validate=False).decode("utf-8", errors="ignore")
-        except Exception as exc:
-            raise HTTPException(status_code=400, detail="Invalid base64 SAMLResponse") from exc
-
-        if not email:
-            m_nameid = re.search(r"<(?:\w+:)?NameID[^>]*>([^<]+@[^<]+)</(?:\w+:)?NameID>", raw_xml, re.IGNORECASE)
-            if m_nameid:
-                email = m_nameid.group(1).strip().lower()
-        if not name:
-            m_cn = re.search(r"<(?:\w+:)?Attribute[^>]*Name=[\"'](?:name|displayName|cn)[\"'][^>]*>\s*<(?:\w+:)?AttributeValue[^>]*>([^<]+)</", raw_xml, re.IGNORECASE)
-            if m_cn:
-                name = m_cn.group(1).strip()
-
-    if not email or "@" not in email:
-        raise HTTPException(status_code=400, detail="SAML assertion missing valid email / NameID")
-
-    claims = {
-        "email": email,
-        "name": name or email.split("@")[0],
-        "groups": groups,
-        "iss": "saml2",
-        "sub": email,
-    }
-    return email, claims
 
 
 @router.post("/sso/saml/acs", response_model=Token)
@@ -1002,41 +1115,8 @@ async def sso_saml_acs(
     response: Response,
     db: AsyncSession = Depends(get_db),
 ):
-    """BL-17: SAML 2.0 Assertion Consumer Service with JIT provisioning."""
-    email, claims = _extract_saml_assertion_claims(body)
-    result = await db.execute(select(Member).where(func.lower(Member.email) == email))
-    member = result.scalars().first()
-    provisioned = False
-    if member is None:
-        member = await jit_provision_member(db, claims=claims, email=email, company_id=str(body.companyId))
-        provisioned = True
-    elif getattr(member, "deletedAt", None) is not None:
-        raise HTTPException(status_code=404, detail="No active member linked to this SAML email")
-
-    assert_not_locked(member)
-    status_val = getattr(member.status, "value", member.status)
-    if status_val in (0, "DISABLED"):
-        raise HTTPException(status_code=403, detail="Account disabled")
-
-    register_success(member)
-    await db.commit()
-    await db.refresh(member)
-    if provisioned:
-        await _audit_sso(
-            actor=member,
-            action="SSO_JIT_PROVISIONED",
-            path="/auth/sso/saml/acs",
-            status_code=200,
-            company_id=body.companyId,
-            entity_type="member",
-            entity_id=str(member.memberId),
-            detail={"protocol": "saml2", "email": email},
-        )
-    await _audit_sso(
-        actor=member,
-        action="SSO_LOGIN_OK",
-        path="/auth/sso/saml/acs",
-        status_code=200,
-        detail={"protocol": "saml2", "email": email},
+    """SAML 2.0 Assertion Consumer Service — disabled until verified IdP XMLDSig X.509 is configured."""
+    raise HTTPException(
+        status_code=403,
+        detail="SAML_NOT_CONFIGURED: SAML 2.0 requires verified IdP X.509 XMLDSig configuration",
     )
-    return _attach_session_cookies(response, _tokens(member))

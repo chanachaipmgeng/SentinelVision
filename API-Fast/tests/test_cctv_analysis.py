@@ -228,6 +228,6 @@ async def test_run_tick_empty_when_no_due(monkeypatch):
             return False
 
     monkeypatch.setattr(cctv, "async_session", lambda: _CM())
-    monkeypatch.setattr(cctv, "list_due_cameras", AsyncMock(return_value=[]))
+    monkeypatch.setattr(cctv, "claim_due_cameras", AsyncMock(return_value=[]))
     out = await cctv.run_cctv_analysis_tick()
     assert out == {"analyzed": 0, "skipped": 0, "errors": 0, "due": 0}

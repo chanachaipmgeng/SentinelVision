@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -9,6 +10,7 @@ import shutil
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
@@ -324,6 +326,128 @@ def delete_stored_image(folder: str, filename: str) -> bool:
     return removed
 
 
+def _s3_list_objects(prefix: str) -> list[tuple[str, datetime]]:
+    """List up to 1000 S3/MinIO objects matching ``prefix`` using SigV4 ListObjectsV2."""
+    if not is_s3_enabled():
+        return []
+    endpoint = (settings.S3_ENDPOINT_URL or "").strip().rstrip("/")
+    bucket = (settings.S3_BUCKET or "dpu-attendance").strip().strip("/")
+    region = (settings.S3_REGION or "ap-southeast-1").strip()
+    access_key = (settings.S3_ACCESS_KEY or "").strip()
+    secret_key = (settings.S3_SECRET_KEY or "").strip()
+    if not access_key or not secret_key:
+        return []
+
+    dt = datetime.now(timezone.utc)
+    amz_date = dt.strftime("%Y%m%dT%H%M%SZ")
+    date_stamp = dt.strftime("%Y%m%d")
+
+    parsed = urllib.parse.urlparse(endpoint)
+    host = parsed.netloc
+    base_path = parsed.path.rstrip("/")
+    canonical_uri = f"{base_path}/{bucket}"
+    if not canonical_uri.startswith("/"):
+        canonical_uri = "/" + canonical_uri
+
+    params = {"list-type": "2", "prefix": prefix}
+    canonical_querystring = "&".join(
+        f"{urllib.parse.quote(k, safe='~_.-')}={urllib.parse.quote(v, safe='~_.-')}"
+        for k, v in sorted(params.items())
+    )
+    payload_hash = hashlib.sha256(b"").hexdigest()
+    canonical_headers = (
+        f"host:{host}\n"
+        f"x-amz-content-sha256:{payload_hash}\n"
+        f"x-amz-date:{amz_date}\n"
+    )
+    signed_headers = "host;x-amz-content-sha256;x-amz-date"
+    canonical_request = "\n".join(
+        ["GET", canonical_uri, canonical_querystring, canonical_headers, signed_headers, payload_hash]
+    )
+    credential_scope = f"{date_stamp}/{region}/s3/aws4_request"
+    string_to_sign = "\n".join(
+        [
+            "AWS4-HMAC-SHA256",
+            amz_date,
+            credential_scope,
+            hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
+        ]
+    )
+    sig_key = _signing_key(secret_key, date_stamp, region, "s3")
+    signature = hmac.new(sig_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+    auth_header = (
+        f"AWS4-HMAC-SHA256 Credential={access_key}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, Signature={signature}"
+    )
+
+    url = f"{parsed.scheme}://{host}{canonical_uri}?{canonical_querystring}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Host": host,
+            "x-amz-date": amz_date,
+            "x-amz-content-sha256": payload_hash,
+            "Authorization": auth_header,
+        },
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        xml_bytes = resp.read()
+    root_el = ET.fromstring(xml_bytes)
+    results: list[tuple[str, datetime]] = []
+    for item in root_el.iter():
+        if item.tag.endswith("Contents"):
+            key_txt = ""
+            lm_txt = ""
+            for child in item:
+                if child.tag.endswith("Key") and child.text:
+                    key_txt = child.text.strip()
+                elif child.tag.endswith("LastModified") and child.text:
+                    lm_txt = child.text.strip()
+            if key_txt and lm_txt:
+                try:
+                    ts = datetime.fromisoformat(lm_txt.replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                    results.append((key_txt, ts))
+                except ValueError:
+                    continue
+    return results
+
+
+def _purge_s3_older_than(
+    folder: str,
+    max_age_seconds: int,
+    *,
+    exclude_prefixes: tuple[str, ...] = (),
+    include_prefixes: tuple[str, ...] | None = None,
+) -> int:
+    if not is_s3_enabled():
+        return 0
+    prefix = f"{(folder or 'uploaded_images').strip('/')}/"
+    cutoff_dt = datetime.fromtimestamp(time.time() - max_age_seconds, tz=timezone.utc)
+    removed = 0
+    try:
+        objects = _s3_list_objects(prefix)
+    except Exception as exc:
+        logger.warning("S3 list failed during retention for %s: %s", folder, exc)
+        return 0
+    for key, last_mod in objects:
+        if last_mod >= cutoff_dt:
+            continue
+        name = Path(key).name
+        if exclude_prefixes and name.startswith(exclude_prefixes):
+            continue
+        if include_prefixes is not None and not name.startswith(include_prefixes):
+            continue
+        try:
+            _s3_request("DELETE", folder, name)
+            removed += 1
+        except Exception as exc:
+            logger.warning("S3 DELETE failed during retention for %s: %s", key, exc)
+    return removed
+
+
 def purge_older_than(
     folder: str,
     max_age_seconds: int,
@@ -332,24 +456,87 @@ def purge_older_than(
     include_prefixes: tuple[str, ...] | None = None,
 ) -> int:
     root = ROOTS[folder]
-    if not root.exists():
-        return 0
-    cutoff = time.time() - max_age_seconds
     removed = 0
-    for path in root.iterdir():
-        try:
-            if not path.is_file() or path.stat().st_mtime >= cutoff:
+    if root.exists():
+        cutoff = time.time() - max_age_seconds
+        for path in root.iterdir():
+            try:
+                if not path.is_file() or path.stat().st_mtime >= cutoff:
+                    continue
+                name = path.name
+                if exclude_prefixes and name.startswith(exclude_prefixes):
+                    continue
+                if include_prefixes is not None and not name.startswith(include_prefixes):
+                    continue
+                path.unlink()
+                removed += 1
+            except OSError:
                 continue
-            name = path.name
-            if exclude_prefixes and name.startswith(exclude_prefixes):
-                continue
-            if include_prefixes is not None and not name.startswith(include_prefixes):
-                continue
-            path.unlink()
-            removed += 1
-        except OSError:
-            continue
+    removed += _purge_s3_older_than(
+        folder,
+        max_age_seconds,
+        exclude_prefixes=exclude_prefixes,
+        include_prefixes=include_prefixes,
+    )
     return removed
+
+
+async def store_image_bytes_async(
+    folder: str,
+    filename: str,
+    content: bytes,
+    *,
+    content_type: str = "image/jpeg",
+) -> str:
+    return await asyncio.to_thread(
+        store_image_bytes, folder, filename, content, content_type=content_type
+    )
+
+
+async def store_image_file_async(
+    folder: str,
+    filename: str,
+    source_path: str | Path,
+    *,
+    move: bool = False,
+    content_type: str = "image/jpeg",
+) -> str:
+    return await asyncio.to_thread(
+        store_image_file, folder, filename, source_path, move=move, content_type=content_type
+    )
+
+
+async def read_image_bytes_async(folder: str, filename: str) -> Optional[bytes]:
+    return await asyncio.to_thread(read_image_bytes, folder, filename)
+
+
+async def delete_stored_image_async(folder: str, filename: str) -> bool:
+    return await asyncio.to_thread(delete_stored_image, folder, filename)
+
+
+async def store_evidence_image_async(
+    kind: str,
+    filename: str,
+    source_path: str | Path,
+    *,
+    move: bool = False,
+    content_type: str = "image/jpeg",
+) -> str:
+    return await asyncio.to_thread(
+        store_evidence_image, kind, filename, source_path, move=move, content_type=content_type
+    )
+
+
+async def store_evidence_bytes_async(
+    kind: str,
+    filename: str,
+    content: bytes,
+    *,
+    content_type: str = "application/octet-stream",
+) -> str:
+    return await asyncio.to_thread(
+        store_evidence_bytes, kind, filename, content, content_type=content_type
+    )
 
 
 def store_evidence_image(

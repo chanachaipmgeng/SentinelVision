@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, Integer, String, select, text
+from sqlalchemy import DateTime, Index, Integer, String, and_, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -49,10 +49,13 @@ class NotificationOutbox(Base):
     lastError: Mapped[str | None] = mapped_column(String, nullable=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deadLetteredAt: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    nextAttemptAt: Mapped[datetime | None] = mapped_column("next_attempt_at", DateTime(timezone=True), nullable=True)
+    leaseUntil: Mapped[datetime | None] = mapped_column("lease_until", DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index("notification_outbox_status_created_idx", "status", "createdAt"),
         Index("notification_outbox_dead_letter_idx", "status", "deadLetteredAt"),
+        Index("notification_outbox_pending_due_idx", "status", "next_attempt_at", "lease_until"),
     )
 
 
@@ -245,6 +248,9 @@ def _send_webhook(payload: dict, *, delivery_id: str = "") -> None:
     if not url:
         logger.info("notify webhook skipped (no webhookUrl)")
         return
+    from ..security.ssrf import urlopen_no_redirect, validate_outbound_url
+
+    url = validate_outbound_url(url, allow_private_lan=False)
     event_name = str(payload.get("event") or "notification")
     ts_str = str(int(time.time()))
     body = json_bytes(
@@ -275,7 +281,7 @@ def _send_webhook(payload: dict, *, delivery_id: str = "") -> None:
         headers=headers,
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
+    with urlopen_no_redirect(req, timeout=20) as resp:
         if resp.status >= 300:
             raise RuntimeError(f"Webhook HTTP {resp.status}")
 
@@ -320,6 +326,9 @@ def _send_discord(payload: dict) -> None:
     if not url:
         logger.info("notify discord skipped (no webhook url)")
         return
+    from ..security.ssrf import urlopen_no_redirect, validate_outbound_url
+
+    url = validate_outbound_url(url, allow_private_lan=False)
     content = (payload.get("body") or payload.get("subject") or "DPU Attendance")[:2000]
     body = json_bytes({"content": content})
     req = urllib.request.Request(
@@ -328,7 +337,7 @@ def _send_discord(payload: dict) -> None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
+    with urlopen_no_redirect(req, timeout=20) as resp:
         # Discord returns 204 No Content on success.
         if resp.status >= 300:
             raise RuntimeError(f"Discord webhook HTTP {resp.status}")
@@ -352,142 +361,176 @@ def _bangkok_tz():
 
 async def attendance_cutoff_tick() -> int:
     """Enqueue one late/missing notice per company per day after notify:{id}.cutoff (HH:MM)."""
+    from .redis_client import get_redis
+
+    redis = get_redis()
+    lock_key = "sv:lock:attendance_cutoff"
+    lock_token = str(uuid4())
+    lock_acquired = False
+    if redis is not None:
+        try:
+            lock_acquired = bool(await redis.set(lock_key, lock_token, nx=True, ex=55))
+            if not lock_acquired:
+                return 0
+        except Exception:
+            lock_acquired = False
+
     now = datetime.now(_bangkok_tz())
     day = now.date().isoformat()
     queued = 0
-    async with async_session() as db:
-        rows = (
-            await db.execute(text("SELECT key, value FROM system_setting WHERE key LIKE 'notify:%'"))
-        ).all()
-        for key, value in rows:
-            if not isinstance(value, dict):
-                continue
-            cutoff = str(value.get("cutoff") or "")
-            if len(cutoff) < 4 or ":" not in cutoff:
-                continue
-            hour, minute = cutoff.split(":", 1)
-            try:
-                if (now.hour, now.minute) < (int(hour), int(minute)):
+    try:
+        async with async_session() as db:
+            rows = (
+                await db.execute(text("SELECT key, value FROM system_setting WHERE key LIKE 'notify:%'"))
+            ).all()
+            for key, value in rows:
+                if not isinstance(value, dict):
                     continue
-            except ValueError:
-                continue
-            company_id = str(key).split(":", 1)[-1]
-            marker = f"{day}:{company_id}"
-            if marker in _cutoff_sent:
-                continue
-            marker_key = f"cutoff_sent:{company_id}"
-            existing_marker = await db.get(SystemSetting, marker_key)
-            if existing_marker and isinstance(existing_marker.value, dict):
-                if existing_marker.value.get("day") == day:
+                cutoff = str(value.get("cutoff") or "")
+                if len(cutoff) < 4 or ":" not in cutoff:
+                    continue
+                hour, minute = cutoff.split(":", 1)
+                try:
+                    if (now.hour, now.minute) < (int(hour), int(minute)):
+                        continue
+                except ValueError:
+                    continue
+                company_id = str(key).split(":", 1)[-1]
+                marker = f"{day}:{company_id}"
+                if marker in _cutoff_sent:
+                    continue
+                marker_key = f"cutoff_sent:{company_id}"
+                existing_marker = await db.get(SystemSetting, marker_key)
+                if existing_marker and isinstance(existing_marker.value, dict):
+                    if existing_marker.value.get("day") == day:
+                        _cutoff_sent.add(marker)
+                        continue
+
+                # Skip missing check-in alerts on company holidays
+                is_holiday = (
+                    await db.execute(
+                        text(
+                            """
+                            SELECT 1 FROM company_holiday
+                            WHERE "companyId" = :cid
+                              AND holiday_date = :bkk_day
+                              AND deleted_at IS NULL
+                            LIMIT 1
+                            """
+                        ),
+                        {"cid": company_id, "bkk_day": now.date()},
+                    )
+                ).first()
+                if is_holiday:
+                    if existing_marker:
+                        existing_marker.value = {"day": day}
+                    else:
+                        db.add(SystemSetting(key=marker_key, value={"day": day}))
+                    await db.commit()
                     _cutoff_sent.add(marker)
                     continue
 
-            # Skip missing check-in alerts on company holidays
-            is_holiday = (
-                await db.execute(
-                    text(
-                        """
-                        SELECT 1 FROM company_holiday
-                        WHERE "companyId" = :cid
-                          AND holiday_date = :bkk_day
-                          AND deleted_at IS NULL
-                        LIMIT 1
-                        """
-                    ),
-                    {"cid": company_id, "bkk_day": now.date()},
-                )
-            ).first()
-            if is_holiday:
+                # Exclude employees on APPROVED leave today
+                missing = (
+                    await db.execute(
+                        text(
+                            """
+                            SELECT count(*) FROM company_employee ce
+                            WHERE ce."companyId" = :cid AND ce.deleted_at IS NULL
+                              AND NOT EXISTS (
+                                SELECT 1 FROM employee_timestamp t
+                                WHERE t."company_employeeId" = ce."company_employeeId"
+                                  AND (t."timestamp" AT TIME ZONE 'Asia/Bangkok')::date = :bkk_day
+                              )
+                              AND NOT EXISTS (
+                                SELECT 1 FROM leave_request lr
+                                WHERE lr."company_employeeId" = ce."company_employeeId"
+                                  AND lr.status IN ('APPROVED', '1')
+                                  AND lr.start_date <= :bkk_day
+                                  AND lr.end_date >= :bkk_day
+                              )
+                            """
+                        ),
+                        {"cid": company_id, "bkk_day": now.date()},
+                    )
+                ).scalar_one()
                 if existing_marker:
                     existing_marker.value = {"day": day}
                 else:
                     db.add(SystemSetting(key=marker_key, value={"day": day}))
                 await db.commit()
                 _cutoff_sent.add(marker)
-                continue
+                if int(missing or 0) <= 0:
+                    continue
+                from .outbox_crypto import decrypt_secret
 
-            # Exclude employees on APPROVED leave today
-            missing = (
-                await db.execute(
-                    text(
-                        """
-                        SELECT count(*) FROM company_employee ce
-                        WHERE ce."companyId" = :cid AND ce.deleted_at IS NULL
-                          AND NOT EXISTS (
-                            SELECT 1 FROM employee_timestamp t
-                            WHERE t."company_employeeId" = ce."company_employeeId"
-                              AND (t."timestamp" AT TIME ZONE 'Asia/Bangkok')::date = :bkk_day
-                          )
-                          AND NOT EXISTS (
-                            SELECT 1 FROM leave_request lr
-                            WHERE lr."company_employeeId" = ce."company_employeeId"
-                              AND lr.status IN ('APPROVED', '1')
-                              AND lr.start_date <= :bkk_day
-                              AND lr.end_date >= :bkk_day
-                          )
-                        """
-                    ),
-                    {"cid": company_id, "bkk_day": now.date()},
-                )
-            ).scalar_one()
-            if existing_marker:
-                existing_marker.value = {"day": day}
-            else:
-                db.add(SystemSetting(key=marker_key, value={"day": day}))
-            await db.commit()
-            _cutoff_sent.add(marker)
-            if int(missing or 0) <= 0:
-                continue
-            from .outbox_crypto import decrypt_secret
-
-            line_tok = ""
-            try:
-                line_tok = decrypt_secret(
-                    str(value.get("lineChannelAccessToken") or value.get("lineToken") or "")
-                )
-            except RuntimeError:
                 line_tok = ""
-            webhook_secret = ""
+                try:
+                    line_tok = decrypt_secret(
+                        str(value.get("lineChannelAccessToken") or value.get("lineToken") or "")
+                    )
+                except RuntimeError:
+                    line_tok = ""
+                webhook_secret = ""
+                try:
+                    webhook_secret = decrypt_secret(str(value.get("webhookSecret") or ""))
+                except RuntimeError:
+                    webhook_secret = str(value.get("webhookSecret") or "")
+                channel = (
+                    "webhook"
+                    if value.get("webhookUrl")
+                    else ("line" if line_tok else "email")
+                )
+                await enqueue(
+                    "attendance.missing",
+                    channel,
+                    {
+                        "to": value.get("email") or "",
+                        "lineToken": line_tok,
+                        "lineChannelAccessToken": line_tok,
+                        "webhookUrl": value.get("webhookUrl") or "",
+                        "webhookSecret": webhook_secret,
+                        "subject": "DPU missing check-in",
+                        "data": {"missingCount": int(missing), "date": day},
+                    },
+                    company_id=company_id,
+                )
+                queued += 1
+        return queued
+    finally:
+        if redis is not None and lock_acquired:
             try:
-                webhook_secret = decrypt_secret(str(value.get("webhookSecret") or ""))
-            except RuntimeError:
-                webhook_secret = str(value.get("webhookSecret") or "")
-            channel = (
-                "webhook"
-                if value.get("webhookUrl")
-                else ("line" if line_tok else "email")
-            )
-            await enqueue(
-                "attendance.missing",
-                channel,
-                {
-                    "to": value.get("email") or "",
-                    "lineToken": line_tok,
-                    "lineChannelAccessToken": line_tok,
-                    "webhookUrl": value.get("webhookUrl") or "",
-                    "webhookSecret": webhook_secret,
-                    "subject": "DPU missing check-in",
-                    "data": {"missingCount": int(missing), "date": day},
-                },
-                company_id=company_id,
-            )
-            queued += 1
-    return queued
+                if await redis.get(lock_key) == lock_token:
+                    await redis.delete(lock_key)
+            except Exception:
+                pass
+
+
+def _outbox_wait_seconds(attempts: int) -> int:
+    return min(300, (2 ** max(0, attempts - 1)) * 15)
 
 
 def _backoff_ready(row: NotificationOutbox, now_utc: datetime) -> bool:
-    """Exponential backoff gate: 0s on attempt 0, then 15s, 30s, 60s, 120s."""
+    """Exponential backoff gate: 0s on attempt 0, then 15s, 30s, 60s, 120s (max 300s)."""
     attempts = int(row.attempts or 0)
-    if attempts <= 0 or not row.createdAt:
+    if attempts <= 0:
+        return True
+    next_at = getattr(row, "nextAttemptAt", None)
+    if next_at is not None:
+        if next_at.tzinfo is None:
+            next_at = next_at.replace(tzinfo=timezone.utc)
+        return now_utc >= next_at
+    if not row.createdAt:
         return True
     created = row.createdAt
     if created.tzinfo is None:
         created = created.replace(tzinfo=timezone.utc)
-    wait_seconds = min(300, (2 ** (attempts - 1)) * 15)
+    wait_seconds = _outbox_wait_seconds(attempts)
     return (now_utc - created).total_seconds() >= wait_seconds
 
 
 OUTBOX_MAX_ATTEMPTS = 5
+OUTBOX_LEASE_SECONDS = 120
 
 
 async def refresh_outbox_backlog() -> tuple[int, Optional[datetime]]:
@@ -534,21 +577,55 @@ async def retry_dead_letter(outbox_id: UUID) -> bool:
         row.attempts = 0
         row.lastError = None
         row.deadLetteredAt = None
+        row.nextAttemptAt = None
+        row.leaseUntil = None
         await db.commit()
         return True
 
 
-async def drain_outbox(limit: int = 20) -> int:
-    """Claim up to `limit` pending rows (``FOR UPDATE SKIP LOCKED`` — safe across replicas /
-    worker instances) and deliver them. Runs in the worker service, or in the API process when
-    ``RUN_BACKGROUND_JOBS_IN_API=true``."""
-    sent = 0
+def _deliver_external_channel(channel: str, delivery_payload: dict, delivery_id: str) -> None:
+    if channel == "email":
+        _send_email(delivery_payload)
+    elif channel == "line":
+        _send_line(delivery_payload)
+    elif channel == "telegram":
+        _send_telegram(delivery_payload)
+    elif channel == "discord":
+        _send_discord(delivery_payload)
+    elif channel in ("webhook", "siem"):
+        # F4: SIEM export reuses HMAC-signed webhook delivery.
+        _send_webhook(delivery_payload, delivery_id=delivery_id)
+    else:
+        raise RuntimeError(f"unknown channel {channel}")
+
+
+async def drain_outbox(limit: int = 20, concurrency: int = 5) -> int:
+    """Lock-free 3-phase outbox drain (claim+lease -> concurrent I/O -> persist result).
+
+    Releases DB locks before external HTTP/SMTP calls so long-running webhooks never
+    hold database connections or row locks across workers.
+    """
     now_utc = datetime.now(timezone.utc)
+    lease_deadline = now_utc + timedelta(seconds=OUTBOX_LEASE_SECONDS)
+    claimed: list[dict[str, Any]] = []
+
+    # Phase 1: Claim due rows with short FOR UPDATE SKIP LOCKED transaction.
     async with async_session() as db:
+        due_filter = or_(
+            and_(
+                NotificationOutbox.status == "pending",
+                or_(NotificationOutbox.leaseUntil.is_(None), NotificationOutbox.leaseUntil <= now_utc),
+            ),
+            and_(
+                NotificationOutbox.status == "processing",
+                NotificationOutbox.leaseUntil.isnot(None),
+                NotificationOutbox.leaseUntil <= now_utc,
+            ),
+        )
         rows = (
             await db.execute(
                 select(NotificationOutbox)
-                .where(NotificationOutbox.status == "pending")
+                .where(due_filter)
                 .order_by(NotificationOutbox.createdAt)
                 .limit(limit)
                 .with_for_update(skip_locked=True)
@@ -559,44 +636,93 @@ async def drain_outbox(limit: int = 20) -> int:
             if not _backoff_ready(row, now_utc):
                 outbox_deliveries_total.labels(channel=row.channel, result="skipped").inc()
                 continue
-            row.attempts = int(row.attempts or 0) + 1
-            t0 = time.perf_counter()
+            row.status = "processing"
+            row.leaseUntil = lease_deadline
+            claimed.append(
+                {
+                    "id": row.id,
+                    "channel": row.channel,
+                    "payload": dict(row.payload or {}),
+                }
+            )
+        if claimed:
+            await db.commit()
+
+    if not claimed:
+        return 0
+
+    # Phase 2: Deliver external channels concurrently without holding any DB session/lock.
+    sem = asyncio.Semaphore(max(1, int(concurrency or 1)))
+    outcomes: dict[UUID, tuple[bool, Optional[str], float]] = {}
+
+    async def _deliver_one(item: dict[str, Any]) -> None:
+        item_id: UUID = item["id"]
+        channel: str = item["channel"]
+        if channel == "in_app":
+            return
+        t0 = time.perf_counter()
+        async with sem:
             try:
-                delivery_payload = unseal_payload_secrets(row.payload or {})
-                if row.channel == "email":
-                    await asyncio.to_thread(_send_email, delivery_payload)
-                elif row.channel == "line":
-                    await asyncio.to_thread(_send_line, delivery_payload)
-                elif row.channel == "telegram":
-                    await asyncio.to_thread(_send_telegram, delivery_payload)
-                elif row.channel == "discord":
-                    await asyncio.to_thread(_send_discord, delivery_payload)
-                elif row.channel in ("webhook", "siem"):
-                    # F4: SIEM export reuses HMAC-signed webhook delivery.
-                    await asyncio.to_thread(
-                        _send_webhook, delivery_payload, delivery_id=str(row.id)
-                    )
-                elif row.channel == "in_app":
-                    await _deliver_in_app(db, row, delivery_payload)
-                else:
-                    raise RuntimeError(f"unknown channel {row.channel}")
-                row.status = "sent"
-                row.lastError = None
-                row.deadLetteredAt = None
-                sent += 1
-                outbox_deliveries_total.labels(channel=row.channel, result="sent").inc()
-            except Exception as exc:
-                row.lastError = str(exc)[:500]
-                if row.attempts >= OUTBOX_MAX_ATTEMPTS:
-                    row.status = "failed"
-                    row.deadLetteredAt = datetime.now(timezone.utc)
-                    outbox_deliveries_total.labels(channel=row.channel, result="failed").inc()
-                else:
-                    outbox_deliveries_total.labels(channel=row.channel, result="retry").inc()
-                logger.warning("notify %s failed: %s", row.id, exc)
-            finally:
-                outbox_delivery_duration_seconds.labels(channel=row.channel).observe(
-                    time.perf_counter() - t0
+                delivery_payload = unseal_payload_secrets(item["payload"])
+                await asyncio.to_thread(
+                    _deliver_external_channel, channel, delivery_payload, str(item_id)
                 )
+                outcomes[item_id] = (True, None, time.perf_counter() - t0)
+            except Exception as exc:
+                outcomes[item_id] = (False, str(exc)[:500], time.perf_counter() - t0)
+
+    await asyncio.gather(*(_deliver_one(item) for item in claimed))
+
+    # Phase 3: Persist status, nextAttemptAt backoff, and handle DB-backed in_app deliveries.
+    sent = 0
+    finish_utc = datetime.now(timezone.utc)
+    claimed_ids = [item["id"] for item in claimed]
+    async with async_session() as db:
+        locked_rows = (
+            await db.execute(
+                select(NotificationOutbox).where(NotificationOutbox.id.in_(claimed_ids))
+            )
+        ).scalars().all()
+        row_map = {r.id: r for r in locked_rows}
+        for item in claimed:
+            db_row = row_map.get(item["id"])
+            if db_row is None:
+                continue
+            if db_row.channel == "in_app":
+                t0 = time.perf_counter()
+                try:
+                    delivery_payload = unseal_payload_secrets(db_row.payload or {})
+                    await _deliver_in_app(db, db_row, delivery_payload)
+                    ok, err_msg, dur = True, None, time.perf_counter() - t0
+                except Exception as exc:
+                    ok, err_msg, dur = False, str(exc)[:500], time.perf_counter() - t0
+            else:
+                ok, err_msg, dur = outcomes.get(db_row.id, (False, "missing outcome", 0.0))
+
+            db_row.attempts = int(db_row.attempts or 0) + 1
+            db_row.leaseUntil = None
+            outbox_delivery_duration_seconds.labels(channel=db_row.channel).observe(dur)
+
+            if ok:
+                db_row.status = "sent"
+                db_row.lastError = None
+                db_row.deadLetteredAt = None
+                db_row.nextAttemptAt = None
+                sent += 1
+                outbox_deliveries_total.labels(channel=db_row.channel, result="sent").inc()
+            else:
+                db_row.lastError = err_msg or "delivery failed"
+                if db_row.attempts >= OUTBOX_MAX_ATTEMPTS:
+                    db_row.status = "failed"
+                    db_row.deadLetteredAt = finish_utc
+                    db_row.nextAttemptAt = None
+                    outbox_deliveries_total.labels(channel=db_row.channel, result="failed").inc()
+                else:
+                    db_row.status = "pending"
+                    db_row.nextAttemptAt = finish_utc + timedelta(
+                        seconds=_outbox_wait_seconds(db_row.attempts)
+                    )
+                    outbox_deliveries_total.labels(channel=db_row.channel, result="retry").inc()
+                logger.warning("notify %s failed: %s", db_row.id, db_row.lastError)
         await db.commit()
     return sent

@@ -27,7 +27,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
 from ..controllers import sentinel_controller as ctrl
-from ..security.deps import assert_request_company_access, current_member_var
+from ..security.deps import (
+    assert_request_company_access,
+    assert_request_permission,
+    current_member_var,
+    require_request_system_admin,
+)
+from ..services import rbac_service
 from ..services.company_module_service import (
     get_company_module_config,
     save_company_module_config,
@@ -120,7 +126,7 @@ async def put_company_module_config_route(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await save_company_module_config(db, companyId, body or {})
 
 
@@ -157,16 +163,20 @@ async def post_sentinel_assistant_chat(
     companyId: UUID,
     body: dict,
     request: Request,
-    db: AsyncSession = Depends(get_db),
 ):
-    """Company-scoped Security & HR AI Copilot (SSE stream)."""
-    await assert_request_company_access(request, db, companyId)
+    """Company-scoped Security & HR AI Copilot (SSE stream; releases DB session before streaming)."""
+    from ..config.database import async_session
+    from ..services.sentinel_assistant_service import collect_company_snapshot
+
+    async with async_session() as db:
+        await assert_request_company_access(request, db, companyId)
+        snapshot = await collect_company_snapshot(db, companyId)
     question = str((body or {}).get("question") or "").strip()
     history = (body or {}).get("history")
     if not isinstance(history, list):
         history = []
     return StreamingResponse(
-        stream_assistant_chat(db, companyId, question, history),
+        stream_assistant_chat(None, companyId, question, history, snapshot=snapshot),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -194,7 +204,7 @@ async def get_company_siem_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await get_siem_settings(db, companyId)
 
 
@@ -205,7 +215,7 @@ async def put_company_siem_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await save_siem_settings(db, companyId, body or {})
 
 
@@ -215,7 +225,7 @@ async def test_company_siem_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     _ = await get_siem_settings(db, companyId)
     return await enqueue_siem_test(companyId)
 
@@ -243,7 +253,7 @@ async def create_sentinel_identity(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.create_identity(db, companyId, body)
 
 
@@ -255,7 +265,7 @@ async def update_sentinel_identity(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.update_identity(db, companyId, identityId, body)
 
 
@@ -266,7 +276,7 @@ async def delete_sentinel_identity(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.delete_identity(db, companyId, identityId)
 
 
@@ -278,7 +288,7 @@ async def enroll_sentinel_identity_face(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.enroll_identity_face(db, companyId, identityId, file)
 
 
@@ -299,7 +309,7 @@ async def create_access_zone(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.create_zone(db, companyId, body)
 
 
@@ -311,7 +321,7 @@ async def update_access_zone(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.update_zone(db, companyId, zoneId, body)
 
 
@@ -322,7 +332,7 @@ async def delete_access_zone(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.delete_zone(db, companyId, zoneId)
 
 
@@ -334,7 +344,7 @@ async def trigger_zone_door_relay(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.trigger_zone(db, companyId, zoneId, body)
 
 
@@ -346,7 +356,7 @@ async def evaluate_zone_access_route(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.evaluate_zone_access(db, companyId, zoneId, body)
 
 
@@ -358,7 +368,7 @@ async def edge_unlock_zone_route(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.edge_unlock_zone(db, companyId, zoneId, body)
 
 
@@ -368,7 +378,7 @@ async def run_company_health_check_route(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.run_company_health_check(db, companyId)
 
 
@@ -379,7 +389,7 @@ async def reindex_company_vectors_route(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await ctrl.reindex_company_vectors(db, companyId, body)
 
 
@@ -400,7 +410,7 @@ async def trigger_company_fire_alarm(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.trigger_fire_alarm(db, companyId, body)
 
 
@@ -411,7 +421,7 @@ async def reset_company_fire_alarm(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.reset_fire_alarm(db, companyId, body)
 
 
@@ -432,7 +442,7 @@ async def create_sentinel_event(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.create_event(db, companyId, body)
 
 
@@ -443,7 +453,7 @@ async def delete_sentinel_event(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await ctrl.delete_event(db, companyId, eventId)
 
 
@@ -457,7 +467,7 @@ async def checkin_event_breakout_session(
 ):
     from ..services.event_session_service import check_in_breakout_room
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     id_raw = body.get("identityId")
     return await check_in_breakout_room(
         db,
@@ -480,7 +490,7 @@ async def update_event_reg_settings(
 ):
     from ..services.event_registration_service import update_event_registration_settings
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await update_event_registration_settings(db, companyId, eventId, body)
 
 
@@ -532,7 +542,7 @@ async def cancel_event_reg(
 ):
     from ..services.event_registration_service import cancel_event_registration
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await cancel_event_registration(db, companyId, eventId, registrationId)
 
 
@@ -609,7 +619,7 @@ async def put_company_incident_sla_settings(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await put_incident_sla_settings(db, companyId, body or {})
 
 
@@ -645,7 +655,7 @@ async def bulk_acknowledge_sentinel_incidents(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     actor = current_member_var.get()
     return await acknowledge_incidents_bulk(
         db,
@@ -662,7 +672,7 @@ async def bulk_close_sentinel_incidents(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     actor = current_member_var.get()
     return await close_incidents_bulk(
         db,
@@ -679,7 +689,7 @@ async def acknowledge_sentinel_incident(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     actor = current_member_var.get()
     inc = await acknowledge_incident(
         db, companyId, incidentId, actor.memberId if actor else None
@@ -697,7 +707,7 @@ async def assign_sentinel_incident(
     body: Optional[dict] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     actor = current_member_var.get()
     assignee_raw = (body or {}).get("assignedTo") or (body or {}).get("assigneeId")
     assignee_id = UUID(str(assignee_raw)) if assignee_raw else None
@@ -720,7 +730,7 @@ async def close_sentinel_incident(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     actor = current_member_var.get()
     inc = await close_incident(
         db, companyId, incidentId, actor.memberId if actor else None
@@ -749,7 +759,7 @@ async def verify_company_audit_chain(
 ):
     from ..services.audit_service import verify_audit_chain
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_AUDIT_READ, companyId)
     return await verify_audit_chain(db, companyId, limit=limit)
 
 
@@ -774,7 +784,7 @@ async def create_visitor_invite(
 ):
     from ..services.visitor_invite_service import create_visitor_invite_token
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     payload = body or {}
     return create_visitor_invite_token(
         company_id=companyId,
@@ -948,24 +958,38 @@ async def ocr_company_visitor_document(
 @router.websocket("/ws/incidents/{companyId}")
 async def sentinel_incidents_ws(websocket: WebSocket, companyId: UUID):
     """Real-time security/watchlist incident push stream for Security Command Center."""
+    import asyncio
+    import time
+
     from ..config.database import async_session
+    from ..config.settings import settings
     from ..models.member import Member, StatusType
     from ..security.deps import assert_company_access
     from ..security.jwt import decode_token
     from ..services.incident_ws_hub import incident_ws_hub
+    from ..services.token_revocation_service import is_token_revoked
 
-    token = websocket.query_params.get("token") or websocket.cookies.get("dpu_access_token")
+    token = websocket.cookies.get("dpu_access_token")
     if not token:
         auth_header = websocket.headers.get("authorization") or ""
         if auth_header.lower().startswith("bearer "):
             token = auth_header[7:].strip()
+    if not token and getattr(settings, "WS_ALLOW_QUERY_TOKEN", True):
+        token = websocket.query_params.get("token")
     if not token:
         await websocket.close(code=4401)
         return
 
     try:
-        payload = decode_token(token)
-        member_id = UUID(str(payload.get("sub")))
+        payload = decode_token(token, expected_typ="access")
+        raw_mid = payload.get("memberId") or payload.get("sub")
+        if not raw_mid:
+            await websocket.close(code=4401)
+            return
+        member_id = UUID(str(raw_mid))
+        if await is_token_revoked(payload):
+            await websocket.close(code=4401)
+            return
     except Exception:
         await websocket.close(code=4401)
         return
@@ -983,9 +1007,23 @@ async def sentinel_incidents_ws(websocket: WebSocket, companyId: UUID):
 
     await websocket.accept()
     await incident_ws_hub.subscribe(companyId, websocket)
+    last_check = time.monotonic()
     try:
         while True:
-            await websocket.receive_text()
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=60.0)
+            except asyncio.TimeoutError:
+                pass
+            if time.monotonic() - last_check >= 60.0:
+                last_check = time.monotonic()
+                try:
+                    decode_token(token, expected_typ="access")
+                    if await is_token_revoked(payload):
+                        await websocket.close(code=4401)
+                        return
+                except Exception:
+                    await websocket.close(code=4401)
+                    return
     except WebSocketDisconnect:
         pass
     finally:
@@ -1000,7 +1038,7 @@ async def get_dr_topology(
 ):
     from ..services.dr_replication_service import get_region_topology
 
-    await assert_request_company_access(request, db, companyId)
+    require_request_system_admin(request)
     return await get_region_topology(db)
 
 
@@ -1151,7 +1189,7 @@ async def create_parking_spot_endpoint(
 ):
     from ..services.parking_service import upsert_parking_spot
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     spot = await upsert_parking_spot(db, companyId, data)
     return _serialize_spot(spot)
 
@@ -1166,7 +1204,7 @@ async def update_parking_spot_endpoint(
 ):
     from ..services.parking_service import upsert_parking_spot
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     spot = await upsert_parking_spot(db, companyId, data, spot_id=spotId)
     return _serialize_spot(spot)
 
@@ -1180,7 +1218,7 @@ async def delete_parking_spot_endpoint(
 ):
     from ..services.parking_service import delete_parking_spot
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     await delete_parking_spot(db, companyId, spotId)
     return {"success": True, "spotId": str(spotId)}
 
@@ -1219,7 +1257,7 @@ async def create_vehicle_endpoint(
 ):
     from ..services.parking_service import create_or_update_vehicle
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     veh = await create_or_update_vehicle(db, companyId, data)
     return _serialize_vehicle(veh)
 
@@ -1234,7 +1272,7 @@ async def update_vehicle_endpoint(
 ):
     from ..services.parking_service import create_or_update_vehicle
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     veh = await create_or_update_vehicle(db, companyId, data, vehicle_id=vehicleId)
     return _serialize_vehicle(veh)
 
@@ -1248,7 +1286,7 @@ async def delete_vehicle_endpoint(
 ):
     from ..services.parking_service import delete_vehicle
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     await delete_vehicle(db, companyId, vehicleId)
     return {"success": True, "vehicleId": str(vehicleId)}
 
@@ -1262,7 +1300,7 @@ async def post_lpr_scan_endpoint(
 ):
     from ..services.parking_service import lpr_barrier_scan
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await lpr_barrier_scan(db, companyId, data)
 
 
@@ -1328,7 +1366,7 @@ async def create_rfid_card_endpoint(
 ):
     from ..services.rfid_service import issue_or_update_rfid_card
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     card = await issue_or_update_rfid_card(db, companyId, data)
     return _serialize_rfid_card(card)
 
@@ -1343,7 +1381,7 @@ async def update_rfid_card_endpoint(
 ):
     from ..services.rfid_service import issue_or_update_rfid_card
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     card = await issue_or_update_rfid_card(db, companyId, data, card_id=cardId)
     return _serialize_rfid_card(card)
 
@@ -1358,7 +1396,7 @@ async def update_rfid_card_status_endpoint(
 ):
     from ..services.rfid_service import update_rfid_card_status
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     new_status = data.get("cardStatus") or data.get("status") or "ACTIVE"
     notes = data.get("notes")
     card = await update_rfid_card_status(db, companyId, cardId, new_status, notes=notes)
@@ -1374,7 +1412,7 @@ async def delete_rfid_card_endpoint(
 ):
     from ..services.rfid_service import delete_rfid_card
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     await delete_rfid_card(db, companyId, cardId)
     return {"success": True, "cardId": str(cardId)}
 
@@ -1388,6 +1426,6 @@ async def verify_rfid_access_endpoint(
 ):
     from ..services.rfid_service import verify_rfid_access
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_SENTINEL_MANAGE, companyId)
     return await verify_rfid_access(db, companyId, data)
 

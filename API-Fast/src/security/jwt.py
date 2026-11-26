@@ -31,6 +31,7 @@ TYP_KIOSK = "kiosk"
 TYP_KIOSK_REFRESH = "kiosk_refresh"
 TYP_PASSWORD_RESET = "password_reset"
 TYP_FACE_LOGIN_CHAL = "face_login_chal"
+TYP_STREAM = "stream"
 MEMBER_TYPES = (TYP_ACCESS, TYP_REFRESH)
 KIOSK_TYPES = (TYP_KIOSK, TYP_KIOSK_REFRESH)
 
@@ -149,6 +150,28 @@ def decode_face_login_challenge(token: str) -> dict[str, Any]:
     return decode_token(token, expected_typ=TYP_FACE_LOGIN_CHAL)
 
 
+def create_stream_token(
+    company_id: str,
+    camera_id: str,
+    *,
+    ttl_minutes: Optional[int] = None,
+) -> str:
+    """Short-lived scoped JWT for MediaMTX WHEP/HLS stream playback."""
+    mins = max(
+        1,
+        int(ttl_minutes or getattr(settings, "MEDIAMTX_STREAM_TOKEN_TTL_MINUTES", 15) or 15),
+    )
+    return _encode(
+        {
+            "companyId": str(company_id),
+            "cameraId": str(camera_id),
+            "typ": TYP_STREAM,
+        },
+        expires=timedelta(minutes=mins),
+        family=None,
+    )
+
+
 def kiosk_token_ttl() -> timedelta:
     return timedelta(hours=max(1, int(settings.KIOSK_TOKEN_EXPIRE_HOURS)))
 
@@ -224,6 +247,10 @@ def decode_token(token: str, *, expected_typ: Optional[str] = "access") -> dict[
     if typ in KIOSK_TYPES:
         if not payload.get("deviceId") or not payload.get("companyId"):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid kiosk token")
+        return payload
+    if typ == TYP_STREAM:
+        if not payload.get("cameraId") or not payload.get("companyId"):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid stream token")
         return payload
     if not payload.get("memberId"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")

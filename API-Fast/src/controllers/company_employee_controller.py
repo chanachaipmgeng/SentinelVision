@@ -550,7 +550,7 @@ async def offboard_company_employee(
         "company_employeeId": str(company_employee.company_employeeId),
         "memberId": str(mid_uuid),
         "biometricsPurged": True,
-        "facesDeleted": erase_res.get("facesDeleted", 0),
+        "facesDeleted": erase_res.get("deletedEncodings", 0),
     }
 
 # ค้นหาบริษัทที่ memberId อยู่

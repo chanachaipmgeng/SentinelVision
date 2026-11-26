@@ -27,6 +27,7 @@ from .deps import (
 )
 from ..services.approval_gate import assert_company_membership
 from ..services import rbac_service
+from .client_ip import client_ip_from_request
 from .jwt import decode_token
 
 
@@ -141,6 +142,7 @@ _OPEN_PREFIXES = (
     "/sentinel/public/visitor-invite",
     "/sentinel/public/events",
     "/sentinel/dr/replicate",
+    "/internal/mediamtx/auth",
     "/health",
     "/ready",
 )
@@ -210,13 +212,8 @@ def _is_system_admin(member: Member) -> bool:
 
 
 def _client_ip(request: Request) -> Optional[str]:
-    xff = (request.headers.get("x-forwarded-for") or "").strip()
-    if xff:
-        return xff.split(",")[0].strip()
-    xrip = (request.headers.get("x-real-ip") or "").strip()
-    if xrip:
-        return xrip
-    return request.client.host if request.client else None
+    ip = client_ip_from_request(request, default="")
+    return ip or None
 
 
 def _is_api_key_path_allowed(method: str, path: str, scopes: list[str] | None) -> bool:
@@ -359,6 +356,13 @@ def _token_from(request: Request) -> str:
     header = request.headers.get("authorization") or ""
     if header.lower().startswith("bearer "):
         return header.split(" ", 1)[1].strip()
+    # Safe GET/HEAD media requests from <img> tags may carry the session access cookie.
+    if request.method in {"GET", "HEAD"}:
+        cpath = canonical_api_path(request.url.path.rstrip("/") or "/")
+        if cpath.startswith(("/images/", "/enrolled_images/", "/api/get-image/")):
+            cookie_tok = (request.cookies.get("dpu_access_token") or "").strip()
+            if cookie_tok:
+                return cookie_tok
     # `?token=` leaks credentials into proxy/browser logs. Only honoured behind the
     # deprecation flag AUTH_ALLOW_QUERY_TOKEN (default off); will be removed.
     query_token = (request.query_params.get("token") or "").strip()

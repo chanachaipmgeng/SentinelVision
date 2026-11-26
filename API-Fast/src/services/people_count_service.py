@@ -16,7 +16,7 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import async_session
@@ -289,6 +289,7 @@ async def analyze_camera(db: AsyncSession, cam: Camera) -> dict[str, Any]:
         detections=len(tracked),
     )
     cam.lastAnalyzedAt = _now()  # reuse stamp so ops can see activity
+    cam.peopleLeaseUntil = None
     await db.commit()
     return {
         "cameraId": str(cam.cameraId),
@@ -334,6 +335,46 @@ async def due_people_cameras(
     return due
 
 
+async def claim_due_people_cameras(
+    db: AsyncSession, *, limit: int = 20, lease_seconds: int = 90
+) -> list[Camera]:
+    """Claim due peopleEnabled cameras across workers with FOR UPDATE SKIP LOCKED + lease."""
+    now = _now()
+    interval = timedelta(seconds=max(5, int(settings.WORKER_PEOPLE_CAMERA_INTERVAL_SECONDS)))
+    cutoff = now - interval
+    rows = (
+        await db.execute(
+            select(Camera)
+            .where(
+                Camera.deletedAt.is_(None),
+                Camera.isActive.is_(True),
+                Camera.aiConfig.isnot(None),
+                or_(Camera.peopleLeaseUntil.is_(None), Camera.peopleLeaseUntil <= now),
+            )
+            .order_by(Camera.lastAnalyzedAt.asc().nullsfirst())
+            .limit(limit * 3)
+            .with_for_update(skip_locked=True)
+        )
+    ).scalars().all()
+    lease_until = now + timedelta(seconds=max(15, int(lease_seconds)))
+    claimed: list[Camera] = []
+    for cam in rows:
+        cfg = analytics.normalize_ai_config(
+            cam.aiConfig if isinstance(cam.aiConfig, dict) else None
+        )
+        if not cfg.get("peopleEnabled"):
+            continue
+        if cam.lastAnalyzedAt is not None and cam.lastAnalyzedAt > cutoff:
+            continue
+        cam.peopleLeaseUntil = lease_until
+        claimed.append(cam)
+        if len(claimed) >= limit:
+            break
+    if claimed:
+        await db.commit()
+    return claimed
+
+
 async def run_people_count_tick(
     *, stop_event: Optional[asyncio.Event] = None
 ) -> dict[str, Any]:
@@ -354,7 +395,7 @@ async def run_people_count_tick(
     results: list[dict[str, Any]] = []
 
     async with async_session() as db:
-        cameras = await due_people_cameras(db, limit=max_conc * 4)
+        cameras = await claim_due_people_cameras(db, limit=max_conc * 4)
 
     async def _one(cam_id: UUID) -> dict[str, Any]:
         async with sem:
@@ -367,6 +408,14 @@ async def run_people_count_tick(
                 try:
                     return await analyze_camera(db, cam)
                 except Exception as exc:  # noqa: BLE001
+                    await db.rollback()
+                    try:
+                        cam_reset = await db.get(Camera, cam_id)
+                        if cam_reset is not None:
+                            cam_reset.peopleLeaseUntil = None
+                            await db.commit()
+                    except Exception:
+                        await db.rollback()
                     logger.warning("people analyze failed cam=%s: %s", cam_id, exc)
                     return {"cameraId": str(cam_id), "error": str(exc)}
 

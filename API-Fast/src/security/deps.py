@@ -49,8 +49,17 @@ async def verify_kiosk_token_db(token: str, db: AsyncSession) -> KioskDevice:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is suspended")
         if life == LifecycleStatus.OFFBOARDED:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Company is offboarded")
-    device.lastSeenAt = datetime.now(timezone.utc)
-    await db.commit()
+    now = datetime.now(timezone.utc)
+    last_seen = getattr(device, "lastSeenAt", None)
+    if isinstance(last_seen, datetime):
+        if last_seen.tzinfo is None:
+            last_seen = last_seen.replace(tzinfo=timezone.utc)
+        due = (now - last_seen).total_seconds() >= 60
+    else:
+        due = True
+    if due:
+        device.lastSeenAt = now
+        await db.commit()
     return device
 
 

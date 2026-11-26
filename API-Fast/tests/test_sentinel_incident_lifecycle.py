@@ -269,21 +269,20 @@ async def test_bulk_acknowledge_and_close(monkeypatch):
     open_a = _make_incident()
     open_b = _make_incident()
     closed = _make_incident(status=svc.STATUS_CLOSED)
-    by_id = {
-        open_a.incidentId: open_a,
-        open_b.incidentId: open_b,
-        closed.incidentId: closed,
-    }
+    rows_pool = [open_a, open_b, closed]
 
     db = AsyncMock()
-
-    async def _get(_model, iid):
-        return by_id.get(iid)
-
-    db.get = AsyncMock(side_effect=_get)
+    db.execute = AsyncMock(
+        return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=rows_pool))))
+    )
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
     monkeypatch.setattr(svc, "queue_siem_incident_export", AsyncMock(return_value=False))
+    monkeypatch.setattr(
+        svc,
+        "enrich_incidents_location_metadata",
+        AsyncMock(side_effect=lambda _db, _cid, items: items),
+    )
 
     ack = await svc.acknowledge_incidents_bulk(
         db,

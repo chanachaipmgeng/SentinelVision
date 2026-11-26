@@ -152,6 +152,13 @@ class WorkerRunner:
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
         self._tasks = []
+        try:
+            from ..utils.face_gpu_queue import face_gpu_queue_stats, stop_face_gpu_workers
+
+            if face_gpu_queue_stats().get("started"):
+                await stop_face_gpu_workers()
+        except Exception:
+            pass
 
     async def run_forever(self, *, handle_signals: bool = True) -> None:
         if handle_signals:

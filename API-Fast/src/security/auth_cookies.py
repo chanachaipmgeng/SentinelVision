@@ -7,7 +7,11 @@ from typing import Literal, Optional
 from fastapi import Request, Response
 
 from ..config.settings import settings
-from .jwt import refresh_token_ttl
+from .jwt import access_token_ttl, refresh_token_ttl
+
+
+def access_cookie_name() -> str:
+    return "dpu_access_token"
 
 
 def refresh_cookie_name() -> str:
@@ -63,8 +67,14 @@ def csrf_ok(request: Request) -> bool:
     return secrets.compare_digest(cookie, header)
 
 
-def set_auth_cookies(response: Response, refresh_token: str, *, csrf: Optional[str] = None) -> str:
-    """Attach httpOnly refresh + readable CSRF cookies. Returns the CSRF value used."""
+def set_auth_cookies(
+    response: Response,
+    refresh_token: str,
+    *,
+    csrf: Optional[str] = None,
+    access_token: Optional[str] = None,
+) -> str:
+    """Attach httpOnly refresh + optional access + readable CSRF cookies. Returns the CSRF value used."""
     csrf_value = csrf or new_csrf_token()
     secure = cookie_secure()
     samesite = cookie_samesite()
@@ -78,6 +88,16 @@ def set_auth_cookies(response: Response, refresh_token: str, *, csrf: Optional[s
         max_age=max_age,
         path="/",
     )
+    if access_token:
+        response.set_cookie(
+            key=access_cookie_name(),
+            value=access_token,
+            httponly=True,
+            secure=secure,
+            samesite=samesite,
+            max_age=int(access_token_ttl().total_seconds()),
+            path="/",
+        )
     response.set_cookie(
         key=csrf_cookie_name(),
         value=csrf_value,
@@ -93,11 +113,11 @@ def set_auth_cookies(response: Response, refresh_token: str, *, csrf: Optional[s
 def clear_auth_cookies(response: Response) -> None:
     secure = cookie_secure()
     samesite = cookie_samesite()
-    for name in (refresh_cookie_name(), csrf_cookie_name()):
+    for name in (refresh_cookie_name(), access_cookie_name(), csrf_cookie_name()):
         response.set_cookie(
             key=name,
             value="",
-            httponly=name == refresh_cookie_name(),
+            httponly=name in (refresh_cookie_name(), access_cookie_name()),
             secure=secure,
             samesite=samesite,
             max_age=0,

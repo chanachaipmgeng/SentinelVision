@@ -18,14 +18,16 @@ def path_name_for_camera(camera_id: UUID) -> str:
     return str(camera_id).replace("-", "")
 
 
-def whep_path(camera_id: UUID) -> str:
+def whep_path(camera_id: UUID, *, token: Optional[str] = None) -> str:
     base = (settings.MEDIAMTX_WHEP_BASE_PATH or "/mediamtx").rstrip("/")
-    return f"{base}/{path_name_for_camera(camera_id)}/whep"
+    path = f"{base}/{path_name_for_camera(camera_id)}/whep"
+    return f"{path}?jwt={token}" if token else path
 
 
-def hls_path(camera_id: UUID) -> str:
+def hls_path(camera_id: UUID, *, token: Optional[str] = None) -> str:
     base = (settings.MEDIAMTX_HLS_BASE_PATH or "/mediamtx-hls").rstrip("/")
-    return f"{base}/{path_name_for_camera(camera_id)}/index.m3u8"
+    path = f"{base}/{path_name_for_camera(camera_id)}/index.m3u8"
+    return f"{path}?jwt={token}" if token else path
 
 
 def _api_base() -> str:

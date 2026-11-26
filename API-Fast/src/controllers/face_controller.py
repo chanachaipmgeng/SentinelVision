@@ -1241,8 +1241,13 @@ async def delete_face_encoding(faceEncodingId: UUID, db: AsyncSession):
     return {"message": "Face encoding deleted successfully"}
 
 
-async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
-    """Delete all enrolled face encodings for one member (no check-in side effects)."""
+async def clear_member_face_encodings(
+    memberId: UUID,
+    db: AsyncSession,
+    *,
+    company_id: Optional[UUID] = None,
+):
+    """Delete enrolled face encodings for one member (scoped to ``company_id`` when provided)."""
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -1251,21 +1256,21 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
     deleted_ids: List[str] = []
 
     if face_core_enabled():
-        company_ids = await _member_company_ids(db, memberId)
+        company_ids = [company_id] if company_id is not None else await _member_company_ids(db, memberId)
         client = get_face_core_client()
         subject_id = str(memberId)
-        for company_id in company_ids:
-            code = _company_code(company_id)
+        for cid in company_ids:
+            code = _company_code(cid)
             result = await client.clear_subject_faces(code, subject_id)
             deleted_ids.extend(result.get("faceIds") or [])
-        if is_sys_admin:
+        if is_sys_admin and company_id is None:
             try:
                 await client.ensure_company("system")
                 result = await client.clear_subject_faces("system", subject_id)
                 deleted_ids.extend(result.get("faceIds") or [])
             except Exception:
                 pass
-        if not is_sys_admin:
+        if not is_sys_admin or company_id is not None:
             return {
                 "message": "All face encodings cleared",
                 "deleted": len(deleted_ids),
@@ -1273,7 +1278,9 @@ async def clear_member_face_encodings(memberId: UUID, db: AsyncSession):
             }
 
     enc_stmt = select(FaceEncoding).where(FaceEncoding.memberId == memberId)
-    if face_core_enabled() and is_sys_admin:
+    if company_id is not None:
+        enc_stmt = enc_stmt.where(FaceEncoding.companyId == company_id)
+    elif face_core_enabled() and is_sys_admin:
         enc_stmt = enc_stmt.where(FaceEncoding.companyId.is_(None))
     enc_result = await db.execute(enc_stmt)
     encodings = list(enc_result.scalars().all())

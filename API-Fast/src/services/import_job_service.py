@@ -88,6 +88,7 @@ async def create_import_job(
     data: bytes,
     photos_name: Optional[str] = None,
     photos_data: Optional[bytes] = None,
+    photos_path: Optional[Path] = None,
     requested_by: Optional[UUID | str] = None,
 ) -> ImportJob:
     job_id = uuid4()
@@ -96,7 +97,10 @@ async def create_import_job(
     safe_file = _safe_name(file_name, "import.xlsx")
     (job_dir / safe_file).write_bytes(data)
     safe_photos = None
-    if photos_data:
+    if photos_path is not None and photos_path.is_file():
+        safe_photos = PHOTOS_FILE_NAME
+        shutil.move(str(photos_path), str(job_dir / safe_photos))
+    elif photos_data:
         safe_photos = PHOTOS_FILE_NAME
         (job_dir / safe_photos).write_bytes(photos_data)
 

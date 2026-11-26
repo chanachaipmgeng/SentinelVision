@@ -127,6 +127,13 @@ class Settings(BaseSettings):
     OIDC_JWKS_CACHE_SECONDS: int = 3600
     OIDC_LOGIN_TXN_TTL_SECONDS: int = 600
     OIDC_CLOCK_SKEW_SECONDS: int = 60
+    # SAML 2.0 ACS requires verified XMLDSig + per-tenant X.509 certificate (Wave 4).
+    # Disabled by default in v7.0.0 to prevent unverified assertion forgery.
+    SAML_ACS_ENABLED: bool = False
+    # Outbound SSRF allowlists (comma-separated CIDRs).
+    OUTBOUND_ALLOW_CIDRS: str = ""
+    DEVICE_LAN_ALLOW_CIDRS: str = ""
+    MEDIAMTX_STREAM_TOKEN_TTL_MINUTES: int = 15
     CORS_ORIGINS: str = (
         "http://localhost,http://127.0.0.1,http://localhost:80,http://127.0.0.1:80,"
         "http://localhost:4200,http://localhost:4201,http://127.0.0.1:4200,"
@@ -151,9 +158,14 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = True
     EXPOSE_API_DOCS: bool = False
-    DB_POOL_SIZE: int = 10
-    DB_MAX_OVERFLOW: int = 20
+    DB_POOL_SIZE: int = 15
+    DB_MAX_OVERFLOW: int = 25
     DB_POOL_RECYCLE: int = 1800
+    DB_STATEMENT_TIMEOUT_MS: int = 30000
+    FACE_GPU_ENQUEUE_TIMEOUT_SECONDS: float = 5.0
+    WS_ALLOW_QUERY_TOKEN: bool = True
+    MAX_IMPORT_EXCEL_MB: int = 25
+    MAX_IMPORT_PHOTOS_ZIP_MB: int = 200
     HNSW_EF_SEARCH: int = 40
     HNSW_ITERATIVE_SCAN: str = "relaxed_order"
     CACHE_TTL_SECONDS: int = 300

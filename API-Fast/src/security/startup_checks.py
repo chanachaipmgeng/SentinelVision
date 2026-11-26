@@ -87,3 +87,8 @@ def assert_runtime_secrets_configured() -> None:
         return
     assert_secret_configured()
     assert_database_credentials_configured()
+    if is_production() and not (getattr(settings, "OUTBOX_ENCRYPTION_KEY", "") or "").strip():
+        logger.error(
+            "OUTBOX_ENCRYPTION_KEY is not set in production — webhook/relay/TOTP secrets "
+            "cannot be sealed with Fernet at rest. Set OUTBOX_ENCRYPTION_KEY in .env."
+        )

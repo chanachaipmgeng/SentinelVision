@@ -76,6 +76,10 @@ async def pending_count(
     member=Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
+    is_sys = rbac_service.is_system_admin_member(member)
+    if companyId is None and not is_sys:
+        raise HTTPException(status_code=400, detail="companyId is required")
+
     stmt = select(func.count()).select_from(NotificationOutbox).where(
         NotificationOutbox.status == "pending"
     )

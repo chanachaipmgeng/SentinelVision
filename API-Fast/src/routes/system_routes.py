@@ -11,7 +11,8 @@ from ..controllers.system_controller import (
     update_tts_settings,
 )
 from ..schemas.page_schema import page_envelope
-from ..security.deps import get_current_member, require_system_admin
+from ..security.client_ip import client_ip_from_request
+from ..security.deps import require_system_admin
 from ..services.error_log_service import (
     SOURCE_CLIENT,
     ClientErrorIn,
@@ -71,7 +72,7 @@ async def put_tts_settings_route(
     tags=["System"],
     summary="Live Prometheus latency histograms, GPU queue, and Cloud Storage status",
 )
-async def get_observability_summary_route(_member=Depends(get_current_member)):
+async def get_observability_summary_route(_admin=Depends(require_system_admin)):
     return get_observability_summary()
 
 
@@ -97,10 +98,7 @@ async def post_client_error(
         or getattr(request.state, "kiosk_company_id", None)
     )
     headers = request.headers
-    xff = (headers.get("x-forwarded-for") or "").strip()
-    ip = xff.split(",")[0].strip() if xff else (headers.get("x-real-ip") or "").strip() or None
-    if not ip and request.client:
-        ip = request.client.host
+    ip = client_ip_from_request(request, default="") or None
 
     schedule_error_log(
         source=SOURCE_CLIENT,

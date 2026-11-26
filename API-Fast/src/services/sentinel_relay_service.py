@@ -130,6 +130,13 @@ async def dispatch_relay_webhook(
     """
     if not webhook_url or not webhook_url.startswith(("http://", "https://")):
         return False
+    from ..security.ssrf import validate_outbound_url
+
+    try:
+        webhook_url = validate_outbound_url(webhook_url, allow_private_lan=True)
+    except Exception as exc:
+        logger.warning("IoT relay URL blocked by SSRF policy (%s): %s", webhook_url, exc)
+        return False
 
     if not await _allow_request(webhook_url):
         logger.warning("IoT relay circuit open; skipping %s", webhook_url)

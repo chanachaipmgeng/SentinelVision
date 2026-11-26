@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
-from ..security.deps import assert_request_company_access
-from ..services import site_floor_service
+from ..security.deps import assert_request_permission
+from ..services import rbac_service, site_floor_service
 
 router = APIRouter()
 
@@ -20,7 +20,7 @@ async def list_floors(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_READ, companyId)
     return await site_floor_service.list_floors(db, companyId)
 
 
@@ -31,7 +31,7 @@ async def create_floor(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.create_floor(db, companyId, body or {})
 
 
@@ -42,7 +42,7 @@ async def get_floor(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_READ, companyId)
     floor = await site_floor_service.get_company_floor(db, companyId, floorId)
     return site_floor_service.serialize_floor(floor)
 
@@ -55,7 +55,7 @@ async def update_floor(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.update_floor(db, companyId, floorId, body or {})
 
 
@@ -66,7 +66,7 @@ async def delete_floor(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.delete_floor(db, companyId, floorId)
 
 
@@ -80,7 +80,7 @@ async def upload_plan_image(
     heightPx: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.upload_plan_image(
         db, companyId, floorId, file, width_px=widthPx, height_px=heightPx
     )
@@ -93,7 +93,7 @@ async def get_emap(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_CAMERAS_READ, companyId)
     return await site_floor_service.get_emap_payload(db, companyId, floorId)
 
 
@@ -105,7 +105,7 @@ async def update_camera_pin(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.update_camera_pin(db, companyId, cameraId, body or {})
 
 
@@ -117,7 +117,7 @@ async def update_zone_pin(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.update_zone_pin(db, companyId, zoneId, body or {})
 
 
@@ -129,5 +129,5 @@ async def update_kiosk_pin(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await site_floor_service.update_kiosk_pin(db, companyId, deviceId, body or {})

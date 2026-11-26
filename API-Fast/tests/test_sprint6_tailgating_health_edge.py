@@ -230,10 +230,10 @@ async def test_edge_unlock_osdp_and_saml_acs_sso(world):
         saml_b64 = base64.b64encode(saml_xml.encode("utf-8")).decode("ascii")
         acs_resp = await c.post(
             "/auth/sso/saml/acs",
-            json={"companyId": cid, "SAMLResponse": saml_b64, "name": "SAML JIT User"},
+            json={"companyId": cid, "SAMLResponse": saml_b64},
         )
-        assert acs_resp.status_code == 200, acs_resp.text
-        assert acs_resp.json().get("accessToken")
+        assert acs_resp.status_code == 403, acs_resp.text
+        assert "SAML_NOT_CONFIGURED" in acs_resp.text
 
     async with async_session() as db:
         from src.models.company_employee import CompanyEmployee

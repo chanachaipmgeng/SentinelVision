@@ -8,10 +8,19 @@ from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config.database import get_db
-from ..security.deps import assert_request_company_access
-from ..services import scim_service
+from ..security.deps import assert_request_company_access, assert_request_permission
+from ..services import rbac_service, scim_service
 
 router = APIRouter()
+
+
+async def _assert_scim_access(
+    request: Request, db: AsyncSession, company_id: UUID, permission: str
+) -> None:
+    if getattr(request.state, "api_key_company_id", None) is not None:
+        await assert_request_company_access(request, db, company_id)
+        return
+    await assert_request_permission(request, db, permission, company_id)
 
 
 @router.get("/v2/company/{companyId}/ServiceProviderConfig")
@@ -20,7 +29,7 @@ async def scim_service_provider_config(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_READ)
     return scim_service.service_provider_config()
 
 
@@ -33,7 +42,7 @@ async def scim_list_users(
     filter: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_READ)
     return await scim_service.list_scim_users(
         db, companyId, start_index=startIndex, count=count, filter_str=filter
     )
@@ -46,7 +55,7 @@ async def scim_create_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_WRITE)
     return await scim_service.create_scim_user(db, companyId, body)
 
 
@@ -57,7 +66,7 @@ async def scim_get_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_READ)
     return await scim_service.get_scim_user(db, companyId, memberId)
 
 
@@ -69,7 +78,7 @@ async def scim_patch_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_WRITE)
     return await scim_service.patch_scim_user(db, companyId, memberId, body)
 
 
@@ -80,6 +89,6 @@ async def scim_delete_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await _assert_scim_access(request, db, companyId, rbac_service.PERM_EMPLOYEES_WRITE)
     await scim_service.delete_scim_user(db, companyId, memberId)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -535,22 +535,58 @@ async def acknowledge_incidents_bulk(
     incident_ids: Optional[list],
     actor_id: Optional[UUID],
 ) -> dict:
-    """Acknowledge many incidents; skip closed / missing without failing the batch."""
+    """Acknowledge many incidents in one batch; skip closed / missing without failing."""
     ids = _parse_incident_ids(incident_ids)
     acknowledged: list[dict] = []
     skipped: list[dict] = []
+    if not ids:
+        return {
+            "acknowledged": acknowledged,
+            "skipped": skipped,
+            "acknowledgedCount": 0,
+            "skippedCount": 0,
+        }
+
+    stmt = select(SentinelIncidentLog).where(
+        SentinelIncidentLog.companyId == company_id,
+        SentinelIncidentLog.incidentId.in_(ids),
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    by_id = {row.incidentId: row for row in rows}
+    now = datetime.now(timezone.utc)
+    dirty = False
+
     for incident_id in ids:
-        try:
-            inc = await acknowledge_incident(db, company_id, incident_id, actor_id)
-            acknowledged.append(serialize_incident(inc))
-        except HTTPException as exc:
+        inc = by_id.get(incident_id)
+        if inc is None:
             skipped.append(
                 {
                     "incidentId": str(incident_id),
-                    "status": exc.status_code,
-                    "detail": exc.detail,
+                    "status": status.HTTP_404_NOT_FOUND,
+                    "detail": "Incident not found",
                 }
             )
+            continue
+        if (inc.status or STATUS_OPEN) == STATUS_CLOSED:
+            skipped.append(
+                {
+                    "incidentId": str(incident_id),
+                    "status": status.HTTP_409_CONFLICT,
+                    "detail": "Closed incidents cannot be acknowledged",
+                }
+            )
+            continue
+        inc.acknowledgedBy = actor_id
+        inc.acknowledgedAt = now
+        inc.status = STATUS_ACKNOWLEDGED
+        acknowledged.append(serialize_incident(inc))
+        dirty = True
+
+    if dirty:
+        await db.commit()
+    if acknowledged:
+        acknowledged = await enrich_incidents_location_metadata(db, company_id, acknowledged)
+
     return {
         "acknowledged": acknowledged,
         "skipped": skipped,
@@ -569,22 +605,49 @@ async def close_incidents_bulk(
     ids = _parse_incident_ids(incident_ids)
     closed: list[dict] = []
     skipped: list[dict] = []
+    if not ids:
+        return {
+            "closed": closed,
+            "skipped": skipped,
+            "closedCount": 0,
+            "skippedCount": 0,
+        }
+
+    stmt = select(SentinelIncidentLog).where(
+        SentinelIncidentLog.companyId == company_id,
+        SentinelIncidentLog.incidentId.in_(ids),
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    by_id = {row.incidentId: row for row in rows}
+    now = datetime.now(timezone.utc)
+    dirty = False
+
     for incident_id in ids:
-        try:
-            inc = await close_incident(
-                db, company_id, incident_id, actor_id, commit=False
-            )
-            closed.append(serialize_incident(inc))
-        except HTTPException as exc:
+        inc = by_id.get(incident_id)
+        if inc is None:
             skipped.append(
                 {
                     "incidentId": str(incident_id),
-                    "status": exc.status_code,
-                    "detail": exc.detail,
+                    "status": status.HTTP_404_NOT_FOUND,
+                    "detail": "Incident not found",
                 }
             )
-    if closed:
+            continue
+        if (inc.status or STATUS_OPEN) != STATUS_CLOSED:
+            inc.closedBy = actor_id
+            inc.closedAt = now
+            inc.status = STATUS_CLOSED
+            await queue_siem_incident_export(
+                db, company_id, inc, event="sentinel.incident.closed"
+            )
+            dirty = True
+        closed.append(serialize_incident(inc))
+
+    if dirty:
         await db.commit()
+    if closed:
+        closed = await enrich_incidents_location_metadata(db, company_id, closed)
+
     return {
         "closed": closed,
         "skipped": skipped,

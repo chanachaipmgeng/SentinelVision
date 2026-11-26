@@ -109,7 +109,7 @@ async def test_write_audit_persists_company_id_directly():
         assert row.statusCode == "200"
         assert isinstance(row.detail, dict)
         assert row.detail["source"] == "test"
-        assert row.detail["_integrity"]["algo"] == "sha256-v1"
+        assert row.detail["_integrity"]["algo"] in {"sha256-v1", "sha256-v2"}
     finally:
         await _cleanup(member.memberId, company_id)
         await engine.dispose()

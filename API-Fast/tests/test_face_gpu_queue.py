@@ -132,14 +132,16 @@ async def test_cctv_lane_below_checkin():
     """Phase 4A: ``cctv`` kind is lower priority than kiosk ``checkin``."""
     release = threading.Event()
     markers: dict[str, float] = {}
-    t0 = time.monotonic()
+    order: list[str] = []
+    t0 = time.perf_counter()
 
     def hold():
         release.wait(timeout=2.0)
 
     def mark(name: str):
         def work():
-            markers[name] = time.monotonic() - t0
+            order.append(name)
+            markers[name] = time.perf_counter() - t0
             time.sleep(0.01)
             return name
 
@@ -160,6 +162,7 @@ async def test_cctv_lane_below_checkin():
     release.set()
     await hold_task
     await asyncio.gather(cctv_task, check_task)
+    assert order == ["checkin", "cctv"]
     assert markers["checkin"] < markers["cctv"]
 
 

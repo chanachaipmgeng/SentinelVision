@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.system_setting import SystemSetting
+from ..security.ssrf import validate_outbound_url
 from .notification_service import NotificationOutbox, enqueue
 from .outbox_crypto import decrypt_secret, encrypt_secret
 
@@ -62,9 +63,12 @@ async def save_siem_settings(
         if raw_secret is not None and str(raw_secret).strip() != ""
         else str(existing.get("siemWebhookSecret") or "")
     )
+    siem_url = str((body or {}).get("siemWebhookUrl") or "").strip()
+    if siem_url:
+        siem_url = validate_outbound_url(siem_url, allow_private_lan=False)
     sealed = encrypt_secret(secret) if secret else ""
     value: dict[str, str] = {
-        "siemWebhookUrl": str((body or {}).get("siemWebhookUrl") or "").strip(),
+        "siemWebhookUrl": siem_url,
         "siemWebhookSecret": sealed,
     }
     if row:
@@ -125,6 +129,7 @@ async def queue_siem_incident_export(
     url = str(value.get("siemWebhookUrl") or "").strip()
     if not url.startswith(("http://", "https://")):
         return False
+    url = validate_outbound_url(url, allow_private_lan=False)
     secret = decrypt_secret(str(value.get("siemWebhookSecret") or ""))
     data = _incident_payload_data(incident)
     subject = data.get("subjectName") or data.get("eventType") or "SentinelVision incident"

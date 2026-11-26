@@ -68,7 +68,7 @@ from ..services.holiday_service import (
     upsert_holidays,
 )
 from ..services.notification_service import emit_company_webhook_event
-from ..services import pdpa_service
+from ..services import pdpa_service, rbac_service
 from ..services.payroll_period_service import (
     assert_date_not_locked,
     assert_range_not_locked,
@@ -786,7 +786,7 @@ async def put_consent_policy(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await pdpa_service.put_consent_policy(db, companyId, body or {})
 
 
@@ -796,7 +796,7 @@ async def get_pdpa_retention(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_READ, companyId)
     return await pdpa_service.get_retention_settings(db, companyId)
 
 
@@ -807,7 +807,7 @@ async def put_pdpa_retention(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     return await pdpa_service.put_retention_settings(db, companyId, body or {})
 
 
@@ -819,7 +819,7 @@ async def dsar_export(
     db: AsyncSession = Depends(get_db),
 ):
     """PDPA subject-access request: export personal data for one member (no raw embeddings)."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     await assert_member_company_access(request, db, memberId)
     payload = await pdpa_service.build_dsar_export(db, companyId, memberId)
     if payload.get("error") == "member_not_found":
@@ -835,7 +835,7 @@ async def erase_member_data(
     db: AsyncSession = Depends(get_db),
 ):
     """PDPA right-to-erasure: punch photos, encodings, incident snapshots + clear consent."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     await assert_member_company_access(request, db, memberId)
     return await pdpa_service.erase_member_personal_data(db, companyId, memberId)
 
@@ -847,7 +847,7 @@ async def grant_biometric_consent(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_EMPLOYEES_WRITE, companyId)
     await assert_member_company_access(request, db, memberId)
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
@@ -871,7 +871,7 @@ async def revoke_biometric_consent(
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke PDPA biometric consent and erase biometric + punch/incident media."""
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_COMPANY_SETTINGS, companyId)
     await assert_member_company_access(request, db, memberId)
     member = await db.get(Member, memberId)
     if not member or getattr(member, "deletedAt", None) is not None:
@@ -1929,7 +1929,7 @@ async def get_payroll_summary(
 ):
     from ..services.ot_leave_engine_service import build_payroll_summary
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_PAYROLL_EXPORT, companyId)
     try:
         start_d = date.fromisoformat(startDate[:10])
         end_d = date.fromisoformat(endDate[:10])
@@ -1951,7 +1951,7 @@ async def export_payroll_connector(
     from ..services.hris_connector_service import format_payroll_for_connector
     from ..services.ot_leave_engine_service import build_payroll_summary
 
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_PAYROLL_EXPORT, companyId)
     try:
         start_d = date.fromisoformat(startDate[:10])
         end_d = date.fromisoformat(endDate[:10])
@@ -2005,7 +2005,7 @@ async def get_company_roster(
     company_employeeId: Optional[UUID] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    await assert_request_company_access(request, db, companyId)
+    await assert_request_permission(request, db, rbac_service.PERM_HR_SHIFTS, companyId)
     try:
         start_d = date.fromisoformat(startDate[:10])
         end_d = date.fromisoformat(endDate[:10])

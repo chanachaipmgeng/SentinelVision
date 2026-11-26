@@ -182,6 +182,7 @@ services:
       - "9108"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-dpu}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env (no default)}@db:5432/${POSTGRES_DB:-dpu}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY must be set in .env (random, >= 32 chars)}
       AUTH_FAIL_FAST: ${AUTH_FAIL_FAST:-true}
       APP_ENV: ${APP_ENV:-production}
@@ -245,6 +246,8 @@ services:
       - mediamtx_recordings:/recordings:ro
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       # service_started (not healthy): API migrate + InsightFace warmup can exceed
       # compose depends_on wait on cold CI hosts; worker jobs retry on empty schema.

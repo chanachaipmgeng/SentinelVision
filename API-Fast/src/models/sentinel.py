@@ -53,6 +53,12 @@ class SentinelIdentity(Base):
     __table_args__ = (
         Index("sentinel_identity_company_type_idx", "companyId", "identity_type", "status"),
         Index(
+            "sentinel_identity_company_event_idx",
+            "companyId",
+            "event_id",
+            postgresql_where=text("event_id IS NOT NULL"),
+        ),
+        Index(
             "sentinel_identity_embedding_hnsw_idx",
             "embedding",
             postgresql_using="hnsw",
@@ -216,6 +222,13 @@ class SentinelIncidentLog(Base):
             occurredAt.desc(),
         ),
         Index("sentinel_incident_company_hour_idx", "companyId", "occurred_at"),
+        Index(
+            "sentinel_incident_company_event_idx",
+            "companyId",
+            "event_id",
+            "event_type",
+            postgresql_where=text("event_id IS NOT NULL"),
+        ),
         Index(
             "sentinel_incident_sla_due_idx",
             "companyId",

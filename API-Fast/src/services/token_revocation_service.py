@@ -164,7 +164,16 @@ async def is_token_revoked(payload: dict[str, Any], *, db_factory=None) -> bool:
         async with db_factory() as db:
             hit = await lookup_revocation(db, jti, family)
     except Exception:
-        logger.exception("revocation lookup failed; failing open for this request")
+        is_prod = (settings.APP_ENV or "production").strip().lower() not in {
+            "development",
+            "dev",
+            "local",
+            "test",
+        }
+        if is_prod:
+            logger.exception("revocation lookup failed; failing closed in production")
+            return True
+        logger.exception("revocation lookup failed; failing open in non-production")
         return False
     _prune_caches(now)
     if hit is not None:

@@ -141,14 +141,20 @@ def _fallback_answer(question: str, snap: dict[str, Any]) -> str:
 
 
 async def stream_assistant_chat(
-    db: AsyncSession,
+    db: AsyncSession | None,
     company_id: UUID,
     question: str,
     history: list[dict[str, str]] | None = None,
+    *,
+    snapshot: dict[str, Any] | None = None,
 ) -> AsyncIterator[str]:
     """Yield SSE frames: status -> token* -> done."""
-    yield _sse("status", {"stage": "retrieving", "label": "กำลังดึงข้อมูลองค์กรแบบเรียลไทม์..."})
-    snap = await collect_company_snapshot(db, company_id)
+    if snapshot is not None:
+        snap = snapshot
+    else:
+        yield _sse("status", {"stage": "retrieving", "label": "กำลังดึงข้อมูลองค์กรแบบเรียลไทม์..."})
+        assert db is not None
+        snap = await collect_company_snapshot(db, company_id)
 
     api_key = (settings.GOOGLE_API_KEY or "").strip()
     if not api_key:

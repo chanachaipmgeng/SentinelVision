@@ -207,13 +207,6 @@ async def permissions_for_member(
         emp = await get_company_employment(db, member.memberId, company_id)
         if emp is not None and is_legacy_company_admin(emp.companyRoleType):
             perms |= set(COMPANY_ADMIN_PERMISSIONS)
-        # Member.role ADMIN_COMPANY without employment row (rare legacy)
-        if emp is None and _role_value(member.role) in (
-            RoleType.ADMIN_COMPANY.value,
-            1,
-            "ADMIN_COMPANY",
-        ):
-            perms |= set(COMPANY_ADMIN_PERMISSIONS)
 
     assignments = await list_role_assignments(db, member.memberId, company_id)
     for asg in assignments:
@@ -467,8 +460,12 @@ async def allowed_location_ids(
     if emp is not None and is_legacy_company_admin(emp.companyRoleType):
         return None
 
-    role_codes = await roles_for_member(db, member, company_id)
-    if any(r in _UNRESTRICTED_LOCATION_ROLES for r in role_codes):
+    role_entries = await roles_for_member(db, member, company_id)
+    role_codes = {
+        str(r.get("role") or "") if isinstance(r, dict) else str(r)
+        for r in role_entries
+    }
+    if any(code in _UNRESTRICTED_LOCATION_ROLES for code in role_codes):
         return None
 
     if emp is not None and emp.locationId is not None:

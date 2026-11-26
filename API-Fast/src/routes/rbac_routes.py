@@ -183,6 +183,13 @@ async def create_company_role_assignment(
     target_member = await db.get(Member, body.memberId)
     if target_member is None or target_member.deletedAt is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    if not rbac_service.is_system_admin_member(caller):
+        target_emp = await rbac_service.get_company_employment(db, body.memberId, companyId)
+        if target_emp is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Target member does not belong to this company",
+            )
 
     if body.departmentId is not None:
         dept = await db.get(Department, body.departmentId)

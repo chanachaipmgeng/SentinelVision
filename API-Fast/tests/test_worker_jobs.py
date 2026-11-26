@@ -276,6 +276,7 @@ async def test_outbox_failures_back_off_and_eventually_fail(fx, monkeypatch):
         # Force the backoff window to elapse and exhaust the remaining attempts.
         row.attempts = ns.OUTBOX_MAX_ATTEMPTS - 1
         row.createdAt = datetime.now(timezone.utc) - timedelta(hours=1)
+        row.nextAttemptAt = None
         await db.commit()
     await ns.drain_outbox()
     async with async_session() as db:

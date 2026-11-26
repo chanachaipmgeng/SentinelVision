@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse
 
 from ..config.settings import settings
 from ..schemas.error_schema import error_body
+from ..security.client_ip import client_ip_from_request
 from .redis_client import get_redis
 
 _memory: dict[str, list[float]] = defaultdict(list)
@@ -22,13 +23,7 @@ _lock = Lock()
 
 
 def _client_ip(request: Request) -> str:
-    xff = (request.headers.get("x-forwarded-for") or "").strip()
-    if xff:
-        return xff.split(",")[0].strip()
-    xrip = (request.headers.get("x-real-ip") or "").strip()
-    if xrip:
-        return xrip
-    return request.client.host if request.client else "unknown"
+    return client_ip_from_request(request, default="unknown")
 
 
 def _window_key(bucket: str, key: str, window_seconds: int) -> str:

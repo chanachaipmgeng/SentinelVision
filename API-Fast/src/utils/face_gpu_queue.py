@@ -41,6 +41,7 @@ _company_order: Dict[JobKind, list[str]] = {k: [] for k in _KIND_ORDER}
 _devices: list[str] = ["cpu"]
 _rr_device = 0
 _worker_tasks: list[asyncio.Task] = []
+_company_priority: Dict[str, int] = {}
 
 
 @dataclass
@@ -49,6 +50,7 @@ class _Job:
     device: str = "cpu"
     kind: JobKind = "other"
     company_key: str = "_"
+    company_priority: int = 0
     enqueued_at: float = field(default_factory=time.monotonic)
     stale_ms: Optional[float] = None
     future: asyncio.Future[Any] = field(
@@ -118,6 +120,48 @@ async def start_face_gpu_workers(
     )
 
 
+async def stop_face_gpu_workers(drain_timeout: float = 5.0) -> None:
+    """Gracefully stop Face GPU workers and clean up executor on shutdown."""
+    global _started, _worker_count, _active, _pending_total, _wake, _worker_tasks
+    if not _started and not _worker_tasks:
+        return
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    for kind in _KIND_ORDER:
+        for dq in list(_buckets[kind].values()):
+            while dq:
+                job = dq.popleft()
+                if not job.future.done():
+                    job.future.cancel()
+        _buckets[kind].clear()
+        _rr_company[kind] = 0
+        _company_order[kind] = []
+    _company_priority.clear()
+    _pending_total = 0
+
+    tasks = list(_worker_tasks)
+    _worker_tasks = []
+    _started = False
+    _worker_count = 0
+    _wake = None
+    if running is not None and not running.is_closed():
+        same_loop = [t for t in tasks if t.get_loop() is running]
+        for task in same_loop:
+            task.cancel()
+        if same_loop:
+            try:
+                await asyncio.wait_for(
+                    asyncio.gather(*same_loop, return_exceptions=True),
+                    timeout=max(0.1, float(drain_timeout)),
+                )
+            except asyncio.TimeoutError:
+                pass
+    _active = 0
+    _executor.shutdown(wait=False, cancel_futures=True)
+
+
 async def stop_face_gpu_workers_for_tests() -> None:
     """Cancel workers and clear buckets (test harness only)."""
     global _started, _worker_count, _active, _completed, _pending_total, _wake, _worker_tasks
@@ -140,6 +184,7 @@ async def stop_face_gpu_workers_for_tests() -> None:
         _buckets[kind].clear()
         _rr_company[kind] = 0
         _company_order[kind] = []
+    _company_priority.clear()
     _pending_total = 0
     _active = 0
     _completed = 0
@@ -153,7 +198,7 @@ def _pending_count() -> int:
 
 
 def _pop_next_job() -> Optional[_Job]:
-    """Pick highest-priority kind, then round-robin across companies."""
+    """Pick highest-priority kind, highest company tier, then round-robin across companies."""
     global _pending_total
     for kind in _KIND_ORDER:
         buckets = _buckets[kind]
@@ -164,11 +209,14 @@ def _pop_next_job() -> Optional[_Job]:
         if not order:
             continue
         _company_order[kind] = order
+        top_prio = max(_company_priority.get(k, 0) for k in order)
         n = len(order)
         start = _rr_company[kind] % n
         for i in range(n):
             idx = (start + i) % n
             key = order[idx]
+            if _company_priority.get(key, 0) < top_prio:
+                continue
             dq = buckets.get(key)
             if not dq:
                 continue
@@ -251,10 +299,13 @@ async def run_on_face_gpu(
     kind: str = "other",
     company_id: Optional[UUID | str] = None,
     stale_ms: Optional[float] = None,
+    timeout: Optional[float] = None,
+    company_priority: int = 0,
 ) -> T:
     """
     Enqueue a blocking InsightFace callable and await its result.
-    Priority: checkin > identify > detect > other; fair round-robin per company.
+    Priority: checkin > identify > detect > other > cctv; fair round-robin per company.
+    Raises ``asyncio.QueueFull`` if saturated past ``FACE_GPU_ENQUEUE_TIMEOUT_SECONDS``.
     """
     global _pending_total
     if not _started or _wake is None:
@@ -274,17 +325,29 @@ async def run_on_face_gpu(
                 result=outcome,
             )
 
-    # Soft backpressure: wait until under maxsize (same as old Queue.put).
+    if timeout is not None:
+        wait_limit = max(0.0, float(timeout))
+    else:
+        from ..config.settings import settings
+
+        wait_limit = max(0.0, float(getattr(settings, "FACE_GPU_ENQUEUE_TIMEOUT_SECONDS", 5.0)))
+    deadline = time.monotonic() + wait_limit
     while _pending_total >= _maxsize:
-        await asyncio.sleep(0.01)
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise asyncio.QueueFull("Face GPU queue is saturated")
+        await asyncio.sleep(min(0.02, remaining))
 
     job_kind = _normalize_kind(kind)
     key = _company_key(company_id)
+    if company_priority > 0:
+        _company_priority[key] = max(_company_priority.get(key, 0), int(company_priority))
     job = _Job(
         fn=fn,
         device=_next_device(),
         kind=job_kind,
         company_key=key,
+        company_priority=int(company_priority),
         stale_ms=stale_ms,
     )
     buckets = _buckets[job_kind]

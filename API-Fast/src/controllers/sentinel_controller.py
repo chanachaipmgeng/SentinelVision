@@ -718,32 +718,40 @@ async def list_events(db: AsyncSession, company_id: UUID) -> list[dict]:
         )
     ).scalars().all()
 
-    result = []
-    for ev in events:
-        attendee_cnt = (
-            await db.execute(
-                select(func.count())
-                .select_from(SentinelIdentity)
-                .where(
-                    SentinelIdentity.companyId == company_id,
-                    SentinelIdentity.eventId == ev.eventId,
-                    SentinelIdentity.deletedAt.is_(None),
-                )
+    if not events:
+        return []
+
+    event_ids = [ev.eventId for ev in events]
+    attendee_rows = (
+        await db.execute(
+            select(SentinelIdentity.eventId, func.count())
+            .where(
+                SentinelIdentity.companyId == company_id,
+                SentinelIdentity.eventId.in_(event_ids),
+                SentinelIdentity.deletedAt.is_(None),
             )
-        ).scalar() or 0
-        checkin_cnt = (
-            await db.execute(
-                select(func.count())
-                .select_from(SentinelIncidentLog)
-                .where(
-                    SentinelIncidentLog.companyId == company_id,
-                    SentinelIncidentLog.eventId == ev.eventId,
-                    SentinelIncidentLog.eventType == "EVENT_CHECKIN",
-                )
+            .group_by(SentinelIdentity.eventId)
+        )
+    ).all()
+    attendee_counts = {ev_id: int(cnt or 0) for ev_id, cnt in attendee_rows}
+
+    checkin_rows = (
+        await db.execute(
+            select(SentinelIncidentLog.eventId, func.count())
+            .where(
+                SentinelIncidentLog.companyId == company_id,
+                SentinelIncidentLog.eventId.in_(event_ids),
+                SentinelIncidentLog.eventType == "EVENT_CHECKIN",
             )
-        ).scalar() or 0
-        result.append(serialize_event(ev, int(attendee_cnt), int(checkin_cnt)))
-    return result
+            .group_by(SentinelIncidentLog.eventId)
+        )
+    ).all()
+    checkin_counts = {ev_id: int(cnt or 0) for ev_id, cnt in checkin_rows}
+
+    return [
+        serialize_event(ev, attendee_counts.get(ev.eventId, 0), checkin_counts.get(ev.eventId, 0))
+        for ev in events
+    ]
 
 
 async def create_event(db: AsyncSession, company_id: UUID, body: dict) -> dict:

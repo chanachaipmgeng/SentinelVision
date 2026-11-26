@@ -158,6 +158,31 @@ async def control_camera_ptz(
     )
 
 
+@router.post("/company/{companyId}/cameras/{cameraId}/stream-token")
+async def issue_camera_stream_token(
+    companyId: UUID,
+    cameraId: UUID,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    from ..config.settings import settings
+    from ..security.jwt import create_stream_token
+    from ..services import mediamtx_service
+
+    await assert_request_permission(request, db, "cameras.read", companyId)
+    cam = await camera_service.get_company_camera(db, companyId, cameraId)
+    ttl_min = max(
+        1, int(getattr(settings, "MEDIAMTX_STREAM_TOKEN_TTL_MINUTES", 15) or 15)
+    )
+    tok = create_stream_token(str(cam.companyId), str(cam.cameraId), ttl_minutes=ttl_min)
+    return {
+        "token": tok,
+        "whepPath": mediamtx_service.whep_path(cam.cameraId, token=tok),
+        "hlsPath": mediamtx_service.hls_path(cam.cameraId, token=tok),
+        "expiresInSeconds": ttl_min * 60,
+    }
+
+
 @router.put("/company/{companyId}/cameras/{cameraId}/privacy-masks")
 async def update_camera_privacy_masks(
     companyId: UUID,

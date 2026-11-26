@@ -793,13 +793,13 @@ async def _reject(
         pass
 
 
-async def _authenticate_session(data: dict) -> Tuple[UUID, int, Optional[UUID]]:
-    """Resolve (companyId, token_exp, kiosk_device_id) from a `session` payload."""
+async def _authenticate_session(data: dict) -> Tuple[UUID, int, Optional[UUID], Optional[dict]]:
+    """Resolve (companyId, token_exp, kiosk_device_id, decoded_payload) from a `session` payload."""
     from ..config.settings import settings as _settings
 
     raw_cid = data.get("companyId")
     if not _settings.FACE_ROUTES_REQUIRE_JWT:
-        return UUID(str(raw_cid)), 0, None
+        return UUID(str(raw_cid)), 0, None, None
 
     from ..config.database import async_session as _async_session
     from ..security.deps import (
@@ -823,11 +823,11 @@ async def _authenticate_session(data: dict) -> Tuple[UUID, int, Optional[UUID]]:
             if raw_cid and UUID(str(raw_cid)) != device.companyId:
                 raise HTTPException(status_code=403, detail="Kiosk token companyId mismatch")
             # Bind device stationMode/zoneId from provisioned device when session omits them.
-            return device.companyId, token_exp, device.deviceId
+            return device.companyId, token_exp, device.deviceId, decoded
         company_id = UUID(str(raw_cid))
         member = await member_from_token(token, db)
         await assert_company_access(db, member, company_id)
-        return company_id, token_exp, None
+        return company_id, token_exp, None, decoded
 
 
 async def kiosk_websocket(websocket: WebSocket) -> None:
@@ -861,6 +861,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
     session_event_id: Optional[str] = None
     session_totp_or_pin: Optional[str] = None
     kiosk_device_id: Optional[UUID] = None
+    session_payload: Optional[dict] = None
+    last_revocation_check = 0.0
     send_lock = asyncio.Lock()
     task_sem = asyncio.Semaphore(4)
     token_exp = 0
@@ -941,7 +943,7 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                         session_event_id = str(data.get("eventId") or "").strip() or None
                     if data.get("totpOrPin") is not None:
                         session_totp_or_pin = str(data.get("totpOrPin") or "").strip() or None
-                    new_company_id, new_token_exp, new_device_id = await _authenticate_session(data)
+                    new_company_id, new_token_exp, new_device_id, new_payload = await _authenticate_session(data)
                 except Exception as exc:
                     detail = getattr(exc, "detail", None) or "Invalid session payload"
                     if not authenticated:
@@ -984,6 +986,8 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                 company_id = new_company_id
                 token_exp = new_token_exp
                 kiosk_device_id = new_device_id
+                session_payload = new_payload
+                last_revocation_check = time.monotonic()
                 token_warned = False
                 authenticated = True
                 # Apply provisioned stationMode/zoneId when session omitted them.
@@ -1110,6 +1114,28 @@ async def kiosk_websocket(websocket: WebSocket) -> None:
                     lock=send_lock,
                 )
                 continue
+
+            if session_payload is not None and (time.monotonic() - last_revocation_check) >= 60.0:
+                last_revocation_check = time.monotonic()
+                from ..services.token_revocation_service import is_token_revoked
+
+                revoked = await is_token_revoked(session_payload)
+                if not revoked and kiosk_device_id is not None:
+                    from ..config.database import async_session as _async_session
+                    from ..models.hr_schedule import KioskDevice
+
+                    async with _async_session() as db:
+                        dev = await db.get(KioskDevice, kiosk_device_id)
+                        if dev is None or dev.revokedAt is not None:
+                            revoked = True
+                if revoked:
+                    await _reject(
+                        websocket,
+                        code="device_revoked",
+                        detail="Session or kiosk device has been revoked",
+                        send_lock=send_lock,
+                    )
+                    return
 
             if msg_type == "detect":
                 if task_sem.locked():

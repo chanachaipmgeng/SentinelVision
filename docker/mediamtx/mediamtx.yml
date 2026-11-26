@@ -7,17 +7,10 @@ logDestinations: [stdout]
 api: yes
 apiAddress: :9997
 
-# Allow Control API from the Docker network (default is localhost-only → 401 from api).
-authMethod: internal
-authInternalUsers:
-  - user: any
-    pass:
-    permissions:
-      - action: api
-      - action: publish
-      - action: read
-      - action: playback
-      - action: metrics
+# Authorize all MediaMTX actions via internal FastAPI endpoint (stream JWT for read/playback,
+# private-network RTSP only for publish, internal IP only for Control API/metrics).
+authMethod: http
+authHTTPAddress: http://api:8000/internal/mediamtx/auth
 
 rtsp: yes
 rtspAddress: :8554

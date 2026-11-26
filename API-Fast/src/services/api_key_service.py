@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.company_api_key import CompanyApiKey
 
 API_KEY_PREFIX = "sv_"
-VALID_SCOPES = frozenset({"cameras.read", "incidents.read"})
+VALID_SCOPES = frozenset({"cameras.read", "incidents.read", "scim.write"})
 # sv_ + 8 hex prefix chars shown in UI; remainder is secret.
 _PREFIX_HEX_LEN = 8
 _SECRET_BYTES = 24
@@ -92,7 +92,7 @@ async def create_api_key(
     if not clean_scopes:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="scopes must include cameras.read and/or incidents.read",
+            detail="scopes must include cameras.read, incidents.read, and/or scim.write",
         )
     plaintext, display_prefix = mint_api_key_plaintext()
     row = CompanyApiKey(
@@ -149,8 +149,17 @@ async def verify_bearer_api_key(
         life = (company.lifecycleStatus or LifecycleStatus.ACTIVE).upper()
         if life != LifecycleStatus.ACTIVE:
             return None
-    row.lastUsedAt = datetime.now(timezone.utc)
-    await db.commit()
+    now = datetime.now(timezone.utc)
+    last_used = getattr(row, "lastUsedAt", None)
+    if isinstance(last_used, datetime):
+        if last_used.tzinfo is None:
+            last_used = last_used.replace(tzinfo=timezone.utc)
+        due = (now - last_used).total_seconds() >= 60
+    else:
+        due = True
+    if due:
+        row.lastUsedAt = now
+        await db.commit()
     return row
 
 

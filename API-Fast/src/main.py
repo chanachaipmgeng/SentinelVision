@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
 import asyncio
 import logging
 
@@ -50,6 +49,7 @@ from .routes import (
     people_count_routes,
     presence_routes,
     rbac_routes,
+    mediamtx_auth_routes,
 )
 
 assert_runtime_secrets_configured()
@@ -138,6 +138,20 @@ async def validation_error(request: Request, exc: RequestValidationError):
     )
 
 
+@app.exception_handler(asyncio.QueueFull)
+async def queue_full_error(request: Request, exc: asyncio.QueueFull):
+    return JSONResponse(
+        error_body(
+            code="service_unavailable",
+            message="Face processing queue is saturated; please retry shortly",
+            status_code=503,
+            request_id=_request_id(request),
+        ),
+        status_code=503,
+        headers={"Retry-After": "2"},
+    )
+
+
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
     logger.exception("unhandled %s", request.url.path)
@@ -201,8 +215,10 @@ async def startup():
             devices=devices,
         )
     from .services.token_revocation_service import revocation_purge_loop
+    from .services.incident_ws_hub import start_incident_ws_subscriber
 
     asyncio.create_task(revocation_purge_loop())
+    await start_incident_ws_subscriber()
 
     global _in_process_jobs
     if settings.RUN_BACKGROUND_JOBS_IN_API:
@@ -219,8 +235,13 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
+    from .services.incident_ws_hub import stop_incident_ws_subscriber
+    from .utils.face_gpu_queue import stop_face_gpu_workers
+
+    await stop_incident_ws_subscriber()
     if _in_process_jobs is not None:
         await _in_process_jobs.stop()
+    await stop_face_gpu_workers()
     shutdown_tracing()
 
 
@@ -347,6 +368,12 @@ app.include_router(file_upload_router.router, prefix="/api", tags=["File Upload"
 app.include_router(
     file_upload_router.router, prefix=f"{API_V1_PREFIX}/files", tags=["File Upload"]
 )
-
-app.mount("/images", StaticFiles(directory="uploaded_images"), name="images")
-app.mount("/enrolled_images", StaticFiles(directory="enrolled_images"), name="enrolled_images")
+# Tenant-isolated authenticated media endpoints (replaces public StaticFiles mounts).
+app.include_router(file_upload_router.media_router)
+# Internal MediaMTX HTTP authentication callback (blocked externally by Nginx gateway).
+app.include_router(
+    mediamtx_auth_routes.router,
+    prefix="/internal/mediamtx",
+    tags=["Internal MediaMTX Auth"],
+    include_in_schema=False,
+)

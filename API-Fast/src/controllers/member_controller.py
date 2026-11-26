@@ -71,6 +71,8 @@ async def update_user(id: UUID, user_data: MemberUpdate, db: AsyncSession):
         await db.refresh(member)
 
         return member
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

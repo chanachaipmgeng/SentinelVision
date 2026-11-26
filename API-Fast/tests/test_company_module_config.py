@@ -319,6 +319,11 @@ def _ws_station_env(monkeypatch):
             m.role = RoleType.ADMIN_SYSTEM
             return m
 
+        async def execute(self, *args, **kwargs):
+            res = MagicMock()
+            res.scalars.return_value.all.return_value = []
+            return res
+
         async def commit(self):
             return None
 

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 
 if not os.environ.get("DPU_TEST_DB_READY"):
     pytest.skip(
@@ -159,12 +159,13 @@ async def test_drain_failure_increments_attempts_then_fails_after_five(monkeypat
         # push to the edge: 4 attempts, old enough -> 5th failure flips to "failed"
         async with async_session() as db:
             await db.execute(
-                NotificationOutbox.__table__.update()
+                update(NotificationOutbox)
                 .where(NotificationOutbox.id == ids[0])
                 .values(
                     attempts=4,
                     createdAt=datetime.now(timezone.utc) - timedelta(minutes=10),
                     nextAttemptAt=None,
+                    leaseUntil=None,
                 )
             )
             await db.commit()

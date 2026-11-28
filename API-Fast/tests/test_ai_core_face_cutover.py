@@ -102,8 +102,13 @@ def test_walkby_remote_rejects_mixed_identity(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(settings_mod.settings, "AI_CORE_API_KEY", "dev-key")
     monkeypatch.setattr(settings_mod.settings, "LIVENESS_SAME_PERSON_MAX_DISTANCE", 0.35)
 
-    a = _unit512(0.1)
-    b = _unit512(0.9)  # far from a under cosine distance after L2-norm
+    # Orthogonal-ish unit vectors (constant seeds collapse after L2-norm).
+    a = np.zeros(512, dtype=np.float64)
+    a[:256] = 1.0
+    a = (a / np.linalg.norm(a)).tolist()
+    b = np.zeros(512, dtype=np.float64)
+    b[256:] = 1.0
+    b = (b / np.linalg.norm(b)).tolist()
     fake = MagicMock()
     fake.liveness.return_value = {"passed": True, "scores": {}}
     # Two frames → two embeds with different identity

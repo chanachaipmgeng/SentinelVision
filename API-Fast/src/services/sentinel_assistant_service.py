@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from typing import Any, AsyncIterator
 from uuid import UUID
@@ -19,6 +20,9 @@ from ..models.sentinel import (
     SentinelIdentity,
     SentinelIncidentLog,
 )
+from .ai_core.flags import ai_core_enabled
+
+logger = logging.getLogger(__name__)
 
 BANGKOK_TZ = ZoneInfo("Asia/Bangkok")
 
@@ -136,42 +140,95 @@ def _fallback_answer(question: str, snap: dict[str, Any]) -> str:
                 f"- [{inc['severity']}] {inc['eventType']} ({inc['subject']}) @ {inc['zone']} เวลา {inc['occurredAt']}"
             )
     if question.strip():
-        lines.append("\n(หมายเหตุ: ระบบทำงานในโหมดสรุปข้อมูลสดจากฐานข้อมูล — ตั้งค่า GOOGLE_API_KEY เพื่อเปิดใช้ Gemini Flash เต็มรูปแบบ)")
+        lines.append(
+            "\n(หมายเหตุ: ระบบทำงานในโหมดสรุปข้อมูลสดจากฐานข้อมูล — "
+            "ตั้งค่า AI_CORE_URL+AI_CORE_API_KEY หรือ GOOGLE_API_KEY เพื่อเปิดใช้ Gemini เต็มรูปแบบ)"
+        )
     return "\n".join(lines)
 
 
-async def stream_assistant_chat(
-    db: AsyncSession | None,
-    company_id: UUID,
-    question: str,
-    history: list[dict[str, str]] | None = None,
-    *,
-    snapshot: dict[str, Any] | None = None,
-) -> AsyncIterator[str]:
-    """Yield SSE frames: status -> token* -> done."""
-    if snapshot is not None:
-        snap = snapshot
-    else:
-        yield _sse("status", {"stage": "retrieving", "label": "กำลังดึงข้อมูลองค์กรแบบเรียลไทม์..."})
-        assert db is not None
-        snap = await collect_company_snapshot(db, company_id)
-
-    api_key = (settings.GOOGLE_API_KEY or "").strip()
-    if not api_key:
-        yield _sse("status", {"stage": "answering", "label": "กำลังสรุปข้อมูลจากฐานข้อมูล..."})
-        answer = _fallback_answer(question, snap)
-        for chunk in [answer[i : i + 64] for i in range(0, len(answer), 64)]:
-            yield _sse("token", {"text": chunk})
-        yield _sse("done", {"provider": "db-snapshot", "snapshot": snap})
-        return
-
-    yield _sse("status", {"stage": "answering", "label": "กำลังวิเคราะห์ด้วย Gemini Flash..."})
-    system_prompt = (
+def _system_prompt(snap: dict[str, Any]) -> str:
+    return (
         "You are SentinelVision AI Copilot for an enterprise biometric attendance, "
         "access control, and security command center. Answer concisely in the user's language (Thai or English), "
         "grounded ONLY in the live company snapshot below. Never invent numbers.\n\n"
         f"LIVE_COMPANY_SNAPSHOT:\n{json.dumps(snap, ensure_ascii=False)}"
     )
+
+
+def _history_to_core_messages(
+    question: str,
+    history: list[dict[str, str]] | None,
+) -> list[dict[str, str]]:
+    messages: list[dict[str, str]] = []
+    for turn in (history or [])[-6:]:
+        role = "assistant" if turn.get("role") == "assistant" else "user"
+        text = (turn.get("content") or "").strip()
+        if text:
+            messages.append({"role": role, "content": text})
+    messages.append({"role": "user", "content": question})
+    return messages
+
+
+async def _stream_via_ai_core(
+    question: str,
+    snap: dict[str, Any],
+    history: list[dict[str, str]] | None,
+) -> AsyncIterator[str]:
+    """Stream tokens from ai-core `/v1/llm/stream`; on failure yield db-snapshot fallback."""
+    from .ai_core.client import get_ai_core_client
+
+    yield _sse("status", {"stage": "answering", "label": "กำลังวิเคราะห์ผ่าน ai-core..."})
+    answer_parts: list[str] = []
+    completed = False
+    done_meta: dict[str, Any] = {"provider": "ai-core"}
+
+    try:
+        async for evt in get_ai_core_client().stream(
+            _history_to_core_messages(question, history),
+            system=_system_prompt(snap),
+            mode="answer",
+            temperature=0.2,
+            max_output_tokens=768,
+            model=(settings.GEMINI_MODEL or None),
+        ):
+            name = evt.get("event")
+            data = evt.get("data") or {}
+            if name == "token":
+                text = str(data.get("text") or "")
+                if text:
+                    answer_parts.append(text)
+                    yield _sse("token", {"text": text})
+            elif name == "done":
+                completed = True
+                if data.get("model"):
+                    done_meta["model"] = data["model"]
+                if data.get("provider"):
+                    done_meta["upstream"] = data["provider"]
+            elif name == "error":
+                logger.warning("AI core stream error: %s", data)
+                break
+    except Exception:
+        logger.warning("AI core stream failed; falling back to db-snapshot", exc_info=True)
+
+    if completed or answer_parts:
+        yield _sse("done", done_meta)
+        return
+
+    fallback = _fallback_answer(question, snap)
+    for chunk in [fallback[i : i + 64] for i in range(0, len(fallback), 64)]:
+        yield _sse("token", {"text": chunk})
+    yield _sse("done", {"provider": "db-fallback", "via": "ai-core-error"})
+
+
+async def _stream_via_gemini(
+    question: str,
+    snap: dict[str, Any],
+    history: list[dict[str, str]] | None,
+    api_key: str,
+) -> AsyncIterator[str]:
+    """Existing direct Gemini SSE path (flag-off)."""
+    yield _sse("status", {"stage": "answering", "label": "กำลังวิเคราะห์ด้วย Gemini Flash..."})
 
     contents: list[dict[str, Any]] = []
     for turn in (history or [])[-6:]:
@@ -186,7 +243,7 @@ async def stream_assistant_chat(
         f"{settings.GEMINI_MODEL}:streamGenerateContent?alt=sse&key={api_key}"
     )
     payload = {
-        "systemInstruction": {"parts": [{"text": system_prompt}]},
+        "systemInstruction": {"parts": [{"text": _system_prompt(snap)}]},
         "contents": contents,
         "generationConfig": {"temperature": 0.2, "maxOutputTokens": 768},
     }
@@ -223,3 +280,38 @@ async def stream_assistant_chat(
         fallback = _fallback_answer(question, snap)
         yield _sse("token", {"text": fallback})
         yield _sse("done", {"provider": "db-fallback"})
+
+
+async def stream_assistant_chat(
+    db: AsyncSession | None,
+    company_id: UUID,
+    question: str,
+    history: list[dict[str, str]] | None = None,
+    *,
+    snapshot: dict[str, Any] | None = None,
+) -> AsyncIterator[str]:
+    """Yield SSE frames: status -> token* -> done."""
+    if snapshot is not None:
+        snap = snapshot
+    else:
+        yield _sse("status", {"stage": "retrieving", "label": "กำลังดึงข้อมูลองค์กรแบบเรียลไทม์..."})
+        assert db is not None
+        snap = await collect_company_snapshot(db, company_id)
+
+    # 2A flag: prefer shared ai-core-service when URL + API key are both set.
+    if ai_core_enabled():
+        async for frame in _stream_via_ai_core(question, snap, history):
+            yield frame
+        return
+
+    api_key = (settings.GOOGLE_API_KEY or "").strip()
+    if not api_key:
+        yield _sse("status", {"stage": "answering", "label": "กำลังสรุปข้อมูลจากฐานข้อมูล..."})
+        answer = _fallback_answer(question, snap)
+        for chunk in [answer[i : i + 64] for i in range(0, len(answer), 64)]:
+            yield _sse("token", {"text": chunk})
+        yield _sse("done", {"provider": "db-snapshot", "snapshot": snap})
+        return
+
+    async for frame in _stream_via_gemini(question, snap, history, api_key):
+        yield frame

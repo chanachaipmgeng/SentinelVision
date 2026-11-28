@@ -37,4 +37,6 @@ npm run fetch-silero-vad
 - **AI Copilot (`app-ask-dock` → `POST /sentinel/company/{companyId}/assistant/chat`):**
   - สตรีมคำตอบแบบ Server-Sent Events (`event: status`, `event: token`)
   - รองรับการเปิด/ปิดเสียง (`Speak Orb` + Silero VAD)
-  - หากไม่ได้ตั้งค่า `GOOGLE_API_KEY` ระบบจะ Fallback ไปสรุปข้อมูลสดจาก PostgreSQL ของบริษัทนั้นอย่างปลอดภัย
+  - เมื่อตั้งครบทั้ง `AI_CORE_URL` + `AI_CORE_API_KEY` จะเรียก **ai-core-service** (`/v1/llm/stream`) โดยยังฝัง `LIVE_COMPANY_SNAPSHOT` ในพรอมป์ของ Sentinel
+  - ไม่ตั้ง ai-core → ใช้ Gemini ตรงผ่าน `GOOGLE_API_KEY`; ไม่มีคีย์ → Fallback สรุปข้อมูลสดจาก PostgreSQL ของบริษัทนั้น
+  - Face / vision / YOLO / InsightFace ยังรันใน Sentinel (ยังไม่ cut over ไป ai-core)

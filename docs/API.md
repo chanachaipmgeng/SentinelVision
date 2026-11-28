@@ -167,7 +167,7 @@ All `/sentinel/company/{companyId}/*` routes enforce multi-tenant company author
 | GET | `/sentinel/company/{companyId}/edge-sync` | JWT / Kiosk | Offline-First Edge Kiosk embedding manifest (`manifestVersion`, `employeeVectorsCount`, `sentinelVectorsCount`, `totalActiveVectors`, `activeZones`). |
 | GET/PUT | `/sentinel/company/{companyId}/module-config` | JWT | Get or update enabled SentinelVision modules for the company (`moduleGroups` / dual-rail sidebar visibility). |
 | GET | `/sentinel/company/{companyId}/graph` | JWT | Security Investigation Graph (nodes & edges linking company cameras, access zones, identities, and incidents). |
-| POST | `/sentinel/company/{companyId}/assistant/chat` | JWT | AI Copilot SSE chat stream (`question`, `history`); uses `GOOGLE_API_KEY` or falls back to live PostgreSQL company summaries. |
+| POST | `/sentinel/company/{companyId}/assistant/chat` | JWT | AI Copilot SSE chat stream (`question`, `history`); prefers `AI_CORE_URL`+`AI_CORE_API_KEY` → ai-core `/v1/llm/stream`, else `GOOGLE_API_KEY` Gemini, else live PostgreSQL company summaries. |
 | GET | `/sentinel/company/{companyId}/muster` | JWT | Live Emergency Muster Roll (on-site employees/visitors/incidents). |
 | GET/PUT | `/sentinel/company/{companyId}/siem-settings` | JWT | Configure SIEM webhook forwarding for security incidents (`POST .../siem-settings/test` sends a test event). |
 | POST | `/sentinel/company/{companyId}/zones/{zoneId}/evaluate-access` | JWT / Kiosk | Evaluate zone access rules without manual override; `POST .../edge-unlock` logs/validates offline edge relay unlock. |

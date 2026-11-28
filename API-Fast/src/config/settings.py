@@ -311,6 +311,9 @@ class Settings(BaseSettings):
     # AI Copilot (Ask Dock) — optional Gemini Flash API; falls back to live DB summary if unset.
     GOOGLE_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    # Shared ai-core-service gateway (Phase 1 LLM). Enabled only when BOTH are set (2A flag).
+    AI_CORE_URL: str = ""
+    AI_CORE_API_KEY: str = ""
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

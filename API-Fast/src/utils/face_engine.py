@@ -761,11 +761,11 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
         if remote_ok is True:
             # Remote liveness is PAD/motion only — still enforce same-person
             # consistency across embeddings (local walk-by / secure gate).
-            candidates = _remote_embeddings_for_frames(frame_bytes)
-            if not candidates:
+            remote_candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not remote_candidates:
                 raise ValueError("Could not generate face encoding from validation frame.")
-            _assert_same_person_embeddings(candidates)
-            return candidates[len(candidates) // 2]
+            _assert_same_person_embeddings(remote_candidates)
+            return remote_candidates[len(remote_candidates) // 2]
 
     frames = []
     for path in image_paths:
@@ -807,11 +807,11 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
         remote_ok = _remote_liveness_bytes(frame_bytes)
         if remote_ok is True:
             # Keep same-person cosine gate even when remote PAD/liveness passes.
-            candidates = _remote_embeddings_for_frames(frame_bytes)
-            if not candidates:
+            remote_candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not remote_candidates:
                 raise ValueError("No face detected for walk-by check-in")
-            _assert_same_person_embeddings(candidates)
-            return candidates[len(candidates) // 2]
+            _assert_same_person_embeddings(remote_candidates)
+            return remote_candidates[len(remote_candidates) // 2]
 
     candidates: List[List[float]] = []
 

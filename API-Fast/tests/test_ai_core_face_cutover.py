@@ -10,13 +10,13 @@ sys.modules.setdefault("insightface", MagicMock())
 sys.modules.setdefault("insightface.app", MagicMock())
 sys.modules.setdefault("insightface.app.common", MagicMock())
 
-import numpy as np
-import pytest
+import numpy as np  # noqa: E402
+import pytest  # noqa: E402
 
-from src.config import settings as settings_mod
-from src.services.ai_core.face_client import reset_face_ai_core_client
-from src.services.ai_core.flags import ai_core_face_enabled
-from src.utils import face_engine
+from src.config import settings as settings_mod  # noqa: E402
+from src.services.ai_core.face_client import reset_face_ai_core_client  # noqa: E402
+from src.services.ai_core.flags import ai_core_face_enabled  # noqa: E402
+from src.utils import face_engine  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

@@ -45,7 +45,7 @@ On a dual-GPU host the GPU overlay runs **two API processes** (`sentinel-api` on
 - **Same-Origin Edge AI Assets (`Web-Manage/public/`):** `angular.json` ignores `**/models/**` under `src/assets`, so MediaPipe (`@mediapipe/tasks-vision`), ONNX Runtime Web (`onnxruntime-web`), `hand_landmarker.task`, and Silero VAD (`@ricky0123/vad-web`) are served from `Web-Manage/public/` (`/mediapipe/*`, `/ort/*`, `/models/*`). Nginx CSP (`docker/nginx/entrypoint/30-dpu-runtime.sh`) permits `'wasm-unsafe-eval'` and `microphone=(self)`.
 - **MediaPipe Gesture on Kiosk (`KioskGestureService`):** Opt-in, throttled (~4 Hz) hand-gesture recognition on Kiosk stations without blocking InsightFace WebSocket frames.
 - **Security Investigation Graph (`/sentinel/company/{companyId}/graph`):** Company-scoped node/edge graph linking cameras, zones, identities, and incidents.
-- **AI Copilot (`app-ask-dock` → `POST /sentinel/company/{companyId}/assistant/chat`):** SSE-streamed operational Q&A backed by `GOOGLE_API_KEY` with automatic fallback to live PostgreSQL company summaries when no API key is configured.
+- **AI Copilot (`app-ask-dock` → `POST /sentinel/company/{companyId}/assistant/chat`):** SSE-streamed operational Q&A. When both `AI_CORE_URL` and `AI_CORE_API_KEY` are set, the LLM path calls shared **ai-core-service** (`POST /v1/llm/stream`) while keeping `LIVE_COMPANY_SNAPSHOT` grounding in Sentinel prompts; otherwise it uses direct Gemini via `GOOGLE_API_KEY`, with automatic fallback to live PostgreSQL company summaries. Face/vision/YOLO/InsightFace stay local (not cut over).
 
 ## Unified Biometric, Security & Attendance Pipeline
 

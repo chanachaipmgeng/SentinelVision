@@ -94,12 +94,8 @@ def test_detect_persons_jpeg_falls_back_on_error(monkeypatch: pytest.MonkeyPatch
 
     # Force local ONNX missing so fallback returns []
     monkeypatch.setattr(people_yolo, "_ensure_session", lambda: False)
-
-    import cv2
-
-    frame = np.zeros((64, 64, 3), dtype=np.uint8)
-    ok, buf = cv2.imencode(".jpg", frame)
-    assert ok
-    dets = people_yolo.detect_persons_jpeg(buf.tobytes())
+    # Minimal JPEG SOI/EOI markers — remote fails first, then decode may fail → []
+    # Avoid cv2.imencode (OpenCV 5.x CI wheel return shape differs).
+    dets = people_yolo.detect_persons_jpeg(b"\xff\xd8\xff\xd9")
     assert dets == []
     fake.detect.assert_called()

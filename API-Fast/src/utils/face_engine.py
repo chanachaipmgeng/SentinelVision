@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Tuple
@@ -19,12 +20,133 @@ from .liveness_detection import (
 )
 from ..config.settings import settings
 
+logger = logging.getLogger(__name__)
+
 _face_apps: dict = {}
 _face_app_lock = threading.Lock()
 _thread_device = threading.local()
 # Separate from the GPU ThreadPoolExecutor so JPEG decode does not steal
 # inference worker slots (and so decode can oversubscribe CPU cores).
 _decode_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="face-decode")
+
+
+def _ai_core_face_on() -> bool:
+    try:
+        from ..services.ai_core.flags import ai_core_face_enabled
+
+        return ai_core_face_enabled()
+    except Exception:
+        return False
+
+
+def _bgr_to_jpeg(image: np.ndarray) -> bytes:
+    ok, buf = cv2.imencode(".jpg", image, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+    if not ok:
+        raise ValueError("Could not encode frame as JPEG")
+    return buf.tobytes()
+
+
+def _remote_detect_bytes(image_bytes: bytes) -> Optional[dict]:
+    if not _ai_core_face_on():
+        return None
+    try:
+        from ..services.ai_core.face_client import get_face_ai_core_client
+
+        raw = get_face_ai_core_client().detect(image_bytes)
+        faces = [
+            {
+                "x": float(f["x"]),
+                "y": float(f["y"]),
+                "width": float(f["width"]),
+                "height": float(f["height"]),
+                "score": float(f.get("score") or 0.0),
+            }
+            for f in raw.get("faces") or []
+        ]
+        return {
+            "frameWidth": int(raw.get("width") or 0),
+            "frameHeight": int(raw.get("height") or 0),
+            "faces": faces,
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai-core face detect failed; falling back to local: %s", exc)
+        return None
+
+
+def _remote_embed_bytes(
+    image_bytes: bytes,
+    *,
+    max_faces: int = 1,
+    pre_cropped: bool = False,
+) -> Optional[list[Tuple[List[float], np.ndarray]]]:
+    if not _ai_core_face_on():
+        return None
+    try:
+        from ..services.ai_core.face_client import get_face_ai_core_client
+
+        raw = get_face_ai_core_client().embed(
+            image_bytes,
+            max_faces=max_faces,
+            pre_cropped=pre_cropped,
+        )
+        out: list[Tuple[List[float], np.ndarray]] = []
+        for item in raw.get("faces") or []:
+            emb = item.get("embedding") or []
+            if len(emb) != 512:
+                raise RuntimeError(f"ai-core face embed dim {len(emb)} != 512")
+            bb = item.get("bbox") or {}
+            x = float(bb.get("x") or 0.0)
+            y = float(bb.get("y") or 0.0)
+            w = float(bb.get("width") or 0.0)
+            h = float(bb.get("height") or 0.0)
+            bbox = np.asarray([x, y, x + w, y + h], dtype=np.float32)
+            out.append((list(map(float, emb)), bbox))
+        return out
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai-core face embed failed; falling back to local: %s", exc)
+        return None
+
+
+def _remote_liveness_bytes(frames: list[bytes]) -> Optional[bool]:
+    """Return True/False when remote answers; None when unavailable (use local)."""
+    if not _ai_core_face_on() or not frames:
+        return None
+    try:
+        from ..services.ai_core.face_client import get_face_ai_core_client
+
+        raw = get_face_ai_core_client().liveness(frames)
+        if not bool(raw.get("passed")):
+            raise ValueError(raw.get("reason") or "Liveness check failed")
+        return True
+    except ValueError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai-core face liveness failed; falling back to local: %s", exc)
+        return None
+
+
+def _assert_same_person_embeddings(candidates: List[List[float]]) -> None:
+    """Reject mixed-identity multi-frame sequences (buddy-punch / swap)."""
+    if len(candidates) < 2:
+        return
+    max_dist = float(settings.LIVENESS_SAME_PERSON_MAX_DISTANCE)
+    anchor = candidates[0]
+    for emb in candidates[1:]:
+        dist = cosine_distance(anchor, emb)
+        if dist > max_dist:
+            raise ValueError(
+                f"Face identity inconsistent across frames (distance={dist:.3f})."
+            )
+
+
+def _remote_embeddings_for_frames(frame_bytes: list[bytes]) -> List[List[float]]:
+    """Embed each frame via ai-core; skip frames with no face."""
+    out: List[List[float]] = []
+    for blob in frame_bytes:
+        remote = _remote_embed_bytes(blob, max_faces=1)
+        if remote:
+            out.append(remote[0][0])
+    return out
 
 
 def get_decode_executor() -> ThreadPoolExecutor:
@@ -224,6 +346,14 @@ def detect_faces_bgr(image: np.ndarray, *, for_enrollment: bool = False) -> dict
         raise ValueError("Could not decode frame")
     height, width = image.shape[:2]
 
+    remote = _remote_detect_bytes(_bgr_to_jpeg(image))
+    if remote is not None:
+        if for_enrollment:
+            from .enrollment_quality import enrich_detect_with_enroll_quality
+
+            return enrich_detect_with_enroll_quality(image, remote, [None] * len(remote["faces"]))
+        return remote
+
     app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
     bboxes, kpss = app.det_model.detect(image, max_num=0, metric="default")
 
@@ -258,6 +388,9 @@ def detect_faces_bgr(image: np.ndarray, *, for_enrollment: bool = False) -> dict
 
 def detect_faces_bytes(image_bytes: bytes, *, for_enrollment: bool = False) -> dict:
     """Decode + detect (prefer decode_image_bytes + detect_faces_bgr off the GPU path)."""
+    remote = _remote_detect_bytes(image_bytes)
+    if remote is not None and not for_enrollment:
+        return remote
     return detect_faces_bgr(
         decode_image_bytes(image_bytes, for_detect=True),
         for_enrollment=for_enrollment,
@@ -316,6 +449,18 @@ def extract_face_features_multi_bgr(
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
     cap = max(1, int(max_faces or 1))
+    remote = _remote_embed_bytes(_bgr_to_jpeg(image), max_faces=cap)
+    if remote is not None:
+        if require_quality:
+            filtered = []
+            for vec, bbox in remote:
+                is_good, _message = check_image_quality_bgr(
+                    image, bbox, blur_threshold=blur_threshold
+                )
+                if is_good:
+                    filtered.append((vec, bbox))
+            return filtered
+        return remote
     det_app = get_face_app(det_size=int(settings.FACE_DETECT_DET_SIZE))
     bboxes, kpss = det_app.det_model.detect(image, max_num=0, metric="default")
     if bboxes is None or len(bboxes) == 0:
@@ -340,8 +485,8 @@ def extract_face_features_multi_bgr(
         embedding = _embed_from_det(image, bbox, kps, score)
         if embedding is None:
             continue
-        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-        out.append((vec, bbox.astype(np.float32)))
+        local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        out.append((local_vec, bbox.astype(np.float32)))
     return out
 
 
@@ -355,6 +500,19 @@ def extract_face_features_bgr(
     """Detect the largest face and return (normed_embedding list, bbox)."""
     if image is None or not hasattr(image, "shape"):
         raise ValueError("Could not decode frame")
+
+    remote = _remote_embed_bytes(_bgr_to_jpeg(image), max_faces=1)
+    if remote is not None:
+        if not remote:
+            return None
+        vec, bbox = remote[0]
+        if require_quality:
+            is_good, message = check_image_quality_bgr(
+                image, bbox, blur_threshold=blur_threshold
+            )
+            if not is_good:
+                raise ValueError(message)
+        return vec, bbox
 
     use_fast = bool(fast_detect) and bool(getattr(settings, "FACE_FAST_EMBED_DETECT", True))
     if use_fast:
@@ -376,8 +534,8 @@ def extract_face_features_bgr(
         embedding = _embed_from_det(image, bbox, kps, score)
         if embedding is None:
             return None
-        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-        return vec, bbox.astype(np.float32)
+        local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        return local_vec, bbox.astype(np.float32)
 
     faces = get_face_app().get(image)
     face = _largest_face(faces)
@@ -428,6 +586,19 @@ def extract_face_features_from_crop_bgr(
     if height < 32 or width < 32:
         raise ValueError("Crop too small for embedding")
 
+    remote = _remote_embed_bytes(_bgr_to_jpeg(image), max_faces=1, pre_cropped=True)
+    if remote is not None:
+        if not remote:
+            return None
+        vec, bbox = remote[0]
+        if require_quality:
+            is_good, message = check_image_quality_bgr(
+                image, bbox, blur_threshold=blur_threshold
+            )
+            if not is_good:
+                raise ValueError(message)
+        return vec, bbox
+
     try:
         features = extract_face_features_bgr(
             image,
@@ -463,8 +634,8 @@ def extract_face_features_from_crop_bgr(
     embedding = _embed_from_det(image, bbox, kps, det_score=1.0)
     if embedding is None:
         return None
-    vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-    return vec, bbox
+    local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+    return local_vec, bbox
 
 
 def extract_face_features_from_crop(
@@ -514,6 +685,36 @@ def generate_face_encoding(
         image = _read_bgr(image_path)
         if image is None:
             return None
+        if _ai_core_face_on():
+            jpeg = _bgr_to_jpeg(image)
+            use_remote_quality = (
+                for_enrollment
+                and require_quality
+                and bool(getattr(settings, "ENROLL_QUALITY_GATE_ENABLED", True))
+            )
+            quality_ok = True
+            if use_remote_quality:
+                try:
+                    from ..services.ai_core.face_client import get_face_ai_core_client
+
+                    q = get_face_ai_core_client().quality(jpeg)
+                    if not q.get("ok"):
+                        raise ValueError(q.get("reason") or "Enrollment quality failed")
+                except ValueError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("ai-core face quality failed; using local gate: %s", exc)
+                    quality_ok = False
+            if quality_ok:
+                remote = _remote_embed_bytes(jpeg, max_faces=1)
+                if remote:
+                    if require_quality and not use_remote_quality:
+                        is_good, message = check_image_quality_bgr(
+                            image, remote[0][1], blur_threshold=blur_threshold
+                        )
+                        if not is_good:
+                            raise ValueError(message)
+                    return remote[0][0]
         # Prefer detector path so we get landmarks for the enrollment pose gate.
         faces = get_face_app().get(image)
         face = _largest_face(faces)
@@ -551,6 +752,21 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
     if not image_paths:
         raise ValueError("No image frames provided for liveness check")
 
+    if _ai_core_face_on():
+        frame_bytes: list[bytes] = []
+        for path in image_paths:
+            with open(path, "rb") as fh:
+                frame_bytes.append(fh.read())
+        remote_ok = _remote_liveness_bytes(frame_bytes)
+        if remote_ok is True:
+            # Remote liveness is PAD/motion only — still enforce same-person
+            # consistency across embeddings (local walk-by / secure gate).
+            remote_candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not remote_candidates:
+                raise ValueError("Could not generate face encoding from validation frame.")
+            _assert_same_person_embeddings(remote_candidates)
+            return remote_candidates[len(remote_candidates) // 2]
+
     frames = []
     for path in image_paths:
         bbox = detect_bbox(path)
@@ -586,6 +802,17 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
     if not frames:
         raise ValueError("No image frames provided for walk-by check-in")
 
+    if _ai_core_face_on():
+        frame_bytes = [_bgr_to_jpeg(img) for img in frames]
+        remote_ok = _remote_liveness_bytes(frame_bytes)
+        if remote_ok is True:
+            # Keep same-person cosine gate even when remote PAD/liveness passes.
+            remote_candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not remote_candidates:
+                raise ValueError("No face detected for walk-by check-in")
+            _assert_same_person_embeddings(remote_candidates)
+            return remote_candidates[len(remote_candidates) // 2]
+
     candidates: List[List[float]] = []
 
     for image in frames:
@@ -606,14 +833,7 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
     if not candidates:
         raise ValueError("No face detected for walk-by check-in")
 
-    if len(candidates) >= 2:
-        anchor = candidates[0]
-        for emb in candidates[1:]:
-            dist = cosine_distance(anchor, emb)
-            if dist > settings.LIVENESS_SAME_PERSON_MAX_DISTANCE:
-                raise ValueError(
-                    f"Face identity inconsistent across walk-by frames (distance={dist:.3f})."
-                )
+    _assert_same_person_embeddings(candidates)
 
     return candidates[len(candidates) // 2]
 

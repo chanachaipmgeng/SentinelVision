@@ -314,6 +314,9 @@ class Settings(BaseSettings):
     # Shared ai-core-service gateway (Phase 1 LLM). Enabled only when BOTH are set (2A flag).
     AI_CORE_URL: str = ""
     AI_CORE_API_KEY: str = ""
+    # Phase 2 face-inference process (apps/face :8089). Enabled only with API key.
+    AI_CORE_FACE_URL: str = ""
+    AI_CORE_FACE_TIMEOUT_SECONDS: float = 30.0
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

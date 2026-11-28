@@ -461,8 +461,8 @@ def extract_face_features_multi_bgr(
         embedding = _embed_from_det(image, bbox, kps, score)
         if embedding is None:
             continue
-        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-        out.append((vec, bbox.astype(np.float32)))
+        local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        out.append((local_vec, bbox.astype(np.float32)))
     return out
 
 
@@ -510,8 +510,8 @@ def extract_face_features_bgr(
         embedding = _embed_from_det(image, bbox, kps, score)
         if embedding is None:
             return None
-        vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-        return vec, bbox.astype(np.float32)
+        local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+        return local_vec, bbox.astype(np.float32)
 
     faces = get_face_app().get(image)
     face = _largest_face(faces)
@@ -610,8 +610,8 @@ def extract_face_features_from_crop_bgr(
     embedding = _embed_from_det(image, bbox, kps, det_score=1.0)
     if embedding is None:
         return None
-    vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
-    return vec, bbox
+    local_vec: List[float] = np.asarray(embedding, dtype=np.float32).reshape(-1).tolist()
+    return local_vec, bbox
 
 
 def extract_face_features_from_crop(

@@ -125,6 +125,30 @@ def _remote_liveness_bytes(frames: list[bytes]) -> Optional[bool]:
         return None
 
 
+def _assert_same_person_embeddings(candidates: List[List[float]]) -> None:
+    """Reject mixed-identity multi-frame sequences (buddy-punch / swap)."""
+    if len(candidates) < 2:
+        return
+    max_dist = float(settings.LIVENESS_SAME_PERSON_MAX_DISTANCE)
+    anchor = candidates[0]
+    for emb in candidates[1:]:
+        dist = cosine_distance(anchor, emb)
+        if dist > max_dist:
+            raise ValueError(
+                f"Face identity inconsistent across frames (distance={dist:.3f})."
+            )
+
+
+def _remote_embeddings_for_frames(frame_bytes: list[bytes]) -> List[List[float]]:
+    """Embed each frame via ai-core; skip frames with no face."""
+    out: List[List[float]] = []
+    for blob in frame_bytes:
+        remote = _remote_embed_bytes(blob, max_faces=1)
+        if remote:
+            out.append(remote[0][0])
+    return out
+
+
 def get_decode_executor() -> ThreadPoolExecutor:
     return _decode_executor
 
@@ -735,11 +759,13 @@ def verify_liveness_and_get_encoding(image_paths: List[str]) -> List[float]:
                 frame_bytes.append(fh.read())
         remote_ok = _remote_liveness_bytes(frame_bytes)
         if remote_ok is True:
-            mid = image_paths[len(image_paths) // 2]
-            encoding = generate_face_encoding(mid, for_enrollment=False)
-            if encoding is None:
+            # Remote liveness is PAD/motion only — still enforce same-person
+            # consistency across embeddings (local walk-by / secure gate).
+            candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not candidates:
                 raise ValueError("Could not generate face encoding from validation frame.")
-            return encoding
+            _assert_same_person_embeddings(candidates)
+            return candidates[len(candidates) // 2]
 
     frames = []
     for path in image_paths:
@@ -780,11 +806,12 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
         frame_bytes = [_bgr_to_jpeg(img) for img in frames]
         remote_ok = _remote_liveness_bytes(frame_bytes)
         if remote_ok is True:
-            mid = frames[len(frames) // 2]
-            remote = _remote_embed_bytes(_bgr_to_jpeg(mid), max_faces=1)
-            if remote:
-                return remote[0][0]
-            raise ValueError("No face detected for walk-by check-in")
+            # Keep same-person cosine gate even when remote PAD/liveness passes.
+            candidates = _remote_embeddings_for_frames(frame_bytes)
+            if not candidates:
+                raise ValueError("No face detected for walk-by check-in")
+            _assert_same_person_embeddings(candidates)
+            return candidates[len(candidates) // 2]
 
     candidates: List[List[float]] = []
 
@@ -806,14 +833,7 @@ def get_walkby_encoding_frames(frames: List[np.ndarray]) -> List[float]:
     if not candidates:
         raise ValueError("No face detected for walk-by check-in")
 
-    if len(candidates) >= 2:
-        anchor = candidates[0]
-        for emb in candidates[1:]:
-            dist = cosine_distance(anchor, emb)
-            if dist > settings.LIVENESS_SAME_PERSON_MAX_DISTANCE:
-                raise ValueError(
-                    f"Face identity inconsistent across walk-by frames (distance={dist:.3f})."
-                )
+    _assert_same_person_embeddings(candidates)
 
     return candidates[len(candidates) // 2]
 

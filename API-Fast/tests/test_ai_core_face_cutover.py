@@ -97,6 +97,39 @@ def test_embed_bgr_uses_ai_core(monkeypatch: pytest.MonkeyPatch) -> None:
     fake.embed.assert_called()
 
 
+def test_walkby_remote_rejects_mixed_identity(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings_mod.settings, "AI_CORE_FACE_URL", "http://127.0.0.1:8089")
+    monkeypatch.setattr(settings_mod.settings, "AI_CORE_API_KEY", "dev-key")
+    monkeypatch.setattr(settings_mod.settings, "LIVENESS_SAME_PERSON_MAX_DISTANCE", 0.35)
+
+    a = _unit512(0.1)
+    b = _unit512(0.9)  # far from a under cosine distance after L2-norm
+    fake = MagicMock()
+    fake.liveness.return_value = {"passed": True, "scores": {}}
+    # Two frames → two embeds with different identity
+    fake.embed.side_effect = [
+        {
+            "modelVersion": "buffalo_l",
+            "faces": [{"bbox": {"x": 0, "y": 0, "width": 10, "height": 10, "score": 1}, "embedding": a}],
+        },
+        {
+            "modelVersion": "buffalo_l",
+            "faces": [{"bbox": {"x": 0, "y": 0, "width": 10, "height": 10, "score": 1}, "embedding": b}],
+        },
+    ]
+    monkeypatch.setattr(
+        "src.services.ai_core.face_client.get_face_ai_core_client",
+        lambda: fake,
+    )
+
+    frames = [
+        np.zeros((64, 64, 3), dtype=np.uint8),
+        np.ones((64, 64, 3), dtype=np.uint8) * 40,
+    ]
+    with pytest.raises(ValueError, match="identity inconsistent"):
+        face_engine.get_walkby_encoding_frames(frames)
+
+
 def test_detect_falls_back_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings_mod.settings, "AI_CORE_FACE_URL", "http://127.0.0.1:8089")
     monkeypatch.setattr(settings_mod.settings, "AI_CORE_API_KEY", "dev-key")

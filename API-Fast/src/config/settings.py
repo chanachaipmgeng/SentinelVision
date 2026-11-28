@@ -317,6 +317,9 @@ class Settings(BaseSettings):
     # Phase 2 face-inference process (apps/face :8089). Enabled only with API key.
     AI_CORE_FACE_URL: str = ""
     AI_CORE_FACE_TIMEOUT_SECONDS: float = 30.0
+    # Phase 2B vision-inference process (apps/vision :8090). Enabled only with API key.
+    AI_CORE_VISION_URL: str = ""
+    AI_CORE_VISION_TIMEOUT_SECONDS: float = 30.0
 
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

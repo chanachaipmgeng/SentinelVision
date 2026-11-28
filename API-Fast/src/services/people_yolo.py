@@ -33,8 +33,67 @@ def providers() -> list[str]:
     return [p.strip() for p in raw.split(",") if p.strip()]
 
 
+def _ai_core_vision_on() -> bool:
+    try:
+        from .ai_core.flags import ai_core_vision_enabled
+
+        return ai_core_vision_enabled()
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def model_available() -> bool:
+    """Local ONNX file present, or shared ai-core vision cutover is configured."""
+    if _ai_core_vision_on():
+        return True
     return model_path().is_file()
+
+
+def _map_remote_detections(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Map ai-core VisionDetection rows to people_yolo det shape."""
+    out: list[dict[str, Any]] = []
+    for det in payload.get("detections") or []:
+        bbox = det.get("bbox")
+        if not isinstance(bbox, list) or len(bbox) != 4:
+            continue
+        label = str(det.get("label") or "person")
+        if label.lower() != "person":
+            continue
+        out.append(
+            {
+                "bbox": [float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])],
+                "confidence": float(det.get("confidence") or 0.0),
+                "label": "person",
+            }
+        )
+    return out
+
+
+def _remote_detect_persons_jpeg(
+    jpeg: bytes,
+    *,
+    confidence: Optional[float] = None,
+    iou: Optional[float] = None,
+) -> Optional[list[dict[str, Any]]]:
+    if not _ai_core_vision_on():
+        return None
+    try:
+        from .ai_core.vision_client import get_vision_ai_core_client
+
+        conf = float(confidence if confidence is not None else settings.PEOPLE_YOLO_CONFIDENCE)
+        nms = float(iou if iou is not None else settings.PEOPLE_YOLO_IOU)
+        size = int(settings.PEOPLE_YOLO_INPUT_SIZE or 640)
+        raw = get_vision_ai_core_client().detect(
+            jpeg,
+            confidence=conf,
+            iou=nms,
+            imgsz=size,
+            classes="person",
+        )
+        return _map_remote_detections(raw)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ai-core vision detect failed; falling back to local ONNX: %s", exc)
+        return None
 
 
 def _letterbox(
@@ -130,10 +189,23 @@ def detect_persons_bgr(
     *,
     confidence: Optional[float] = None,
     iou: Optional[float] = None,
+    allow_remote: bool = True,
 ) -> list[dict[str, Any]]:
     """Run YOLOv8n person detection on a BGR uint8 frame. Returns list of dets."""
     if frame_bgr is None or getattr(frame_bgr, "size", 0) == 0:
         return []
+    if allow_remote and _ai_core_vision_on():
+        import cv2
+
+        ok, buf = cv2.imencode(".jpg", frame_bgr)
+        if ok:
+            remote = _remote_detect_persons_jpeg(
+                buf.tobytes(),
+                confidence=confidence,
+                iou=iou,
+            )
+            if remote is not None:
+                return remote
     if not _ensure_session():
         return []
     assert _session is not None and _input_name
@@ -211,10 +283,14 @@ def detect_persons_jpeg(
     confidence: Optional[float] = None,
     iou: Optional[float] = None,
 ) -> list[dict[str, Any]]:
+    remote = _remote_detect_persons_jpeg(jpeg, confidence=confidence, iou=iou)
+    if remote is not None:
+        return remote
+
     import cv2
 
     arr = np.frombuffer(jpeg, dtype=np.uint8)
     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if frame is None:
         return []
-    return detect_persons_bgr(frame, confidence=confidence, iou=iou)
+    return detect_persons_bgr(frame, confidence=confidence, iou=iou, allow_remote=False)

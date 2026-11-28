@@ -15,3 +15,10 @@ def ai_core_face_enabled() -> bool:
     return bool(
         (settings.AI_CORE_FACE_URL or "").strip() and (settings.AI_CORE_API_KEY or "").strip()
     )
+
+
+def ai_core_vision_enabled() -> bool:
+    """Phase 2B vision-inference (`AI_CORE_VISION_URL`) — independent of LLM / face URL."""
+    return bool(
+        (settings.AI_CORE_VISION_URL or "").strip() and (settings.AI_CORE_API_KEY or "").strip()
+    )
